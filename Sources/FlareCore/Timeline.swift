@@ -32,6 +32,22 @@ public enum Timeline {
         return Int(f)
     }
 
+    /// The frame to show `elapsed` seconds into playback of a `durationFrames`
+    /// long timeline. Looping wraps; play-once clamps to the last frame.
+    /// Negative elapsed and a duration of 0 or less give frame 0.
+    public static func playbackFrame(elapsed: Double, fps: Int, durationFrames: Int, loop: Bool) throws -> Int {
+        guard fps > 0 else { throw TimelineError.invalidFPS(fps) }
+        guard elapsed.isFinite else { throw TimelineError.invalidTime(elapsed) }
+        guard durationFrames > 0, elapsed > 0 else { return 0 }
+        // Same epsilon as frame(atTime:). Stays in Double so huge times cannot overflow Int.
+        let f = (elapsed * Double(fps) + 1e-9).rounded(.down)
+        let last = durationFrames - 1
+        if !loop, f >= Double(last) { return last }  // compare before Int(): Double(Int.max) traps
+        let mapped = loop ? f.truncatingRemainder(dividingBy: Double(durationFrames)) : f
+        // mapped < 2^63 here; min guards Double rounding of durations near Int.max.
+        return min(Int(mapped), last)
+    }
+
     /// Value of a sorted keyframe track at `frame`. Holds the first value
     /// before the first keyframe and the last value after the last one.
     /// Returns nil for an empty track or a non-finite frame.
