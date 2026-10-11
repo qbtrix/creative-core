@@ -1,5 +1,6 @@
 // StateMachineTests.swift: state machine model. Old files decode with none, a
-// document with one round-trips byte-stable, and every bad reference throws.
+// document with one round-trips byte-stable, every bad reference throws, and
+// `next` steps through transitions (first match wins, unknown trigger stays).
 import FlareCore
 import Foundation
 import Testing
@@ -86,6 +87,47 @@ import Testing
             guard case FormatError.invalid = error else { return false }
             return true
         }
+    }
+
+    static let button = StateMachine(
+        id: "b", name: "Button",
+        states: ["idle", "hover", "pressed"].map {
+            MachineState(id: $0, name: $0, sceneID: "s", startFrame: 0, endFrame: 0)
+        },
+        transitions: [
+            Transition(from: "idle", to: "hover", trigger: "enter"),
+            Transition(from: "hover", to: "idle", trigger: "exit"),
+            Transition(from: "hover", to: "pressed", trigger: "down"),
+            Transition(from: "pressed", to: "hover", trigger: "up"),
+            Transition(from: "pressed", to: "idle", trigger: "exit"),
+        ],
+        initialState: "idle")
+
+    @Test func buttonFollowsTriggerScript() {
+        let script: [(trigger: String, expected: String)] = [
+            ("enter", "hover"), ("down", "pressed"), ("down", "pressed"), ("up", "hover"),
+            ("enter", "hover"), ("exit", "idle"), ("up", "idle"), ("enter", "hover"),
+            ("down", "pressed"), ("exit", "idle"),
+        ]
+        var state = Self.button.initialState
+        for (i, step) in script.enumerated() {
+            state = Self.button.next(from: state, trigger: step.trigger)
+            #expect(state == step.expected, "step \(i): \(step.trigger)")
+        }
+    }
+
+    @Test func unknownTriggerIsNoOp() {
+        for state in ["idle", "hover", "pressed"] {
+            #expect(Self.button.next(from: state, trigger: "teleport") == state)
+        }
+        #expect(Self.button.next(from: "nowhere", trigger: "enter") == "nowhere")
+    }
+
+    @Test func firstMatchingTransitionWins() {
+        var machine = Self.button
+        machine.transitions.insert(Transition(from: "idle", to: "pressed", trigger: "enter"), at: 0)
+        #expect(machine.next(from: "idle", trigger: "enter") == "pressed")
+        #expect(Self.button.next(from: "idle", trigger: "enter") == "hover")
     }
 
     @Test func fuzzedMachineJSONThrowsInsteadOfCrashing() throws {
