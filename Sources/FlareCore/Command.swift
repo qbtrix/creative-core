@@ -35,6 +35,10 @@ public enum CommandError: Error, Equatable, Sendable {
     case keyframeNotFound(property: String, frame: Int)
     case frameOccupied(property: String, frame: Int)
     case invalidFrame(Int)
+    /// Scene fps must be > 0.
+    case invalidFPS(Int)
+    /// Scene duration must be >= 0 frames.
+    case invalidDuration(Int)
     case shapeNotFound(Int)
     /// `undo` was called on a command that never executed.
     case notExecuted
