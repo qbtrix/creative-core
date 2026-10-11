@@ -98,6 +98,26 @@
                 ]
               }
             ]
+          },
+          {
+            "id": "corecolor",
+            "name": "CoreColor library",
+            "description": "Shared color module (Sources/CoreColor): color spaces and conversions for every app. Linux-safe, Foundation only, no dependencies.",
+            "technology": "Swift 6, SwiftPM",
+            "tags": [
+              "internal"
+            ],
+            "components": []
+          },
+          {
+            "id": "coreraster",
+            "name": "CoreRaster library",
+            "description": "Shared raster module (Sources/CoreRaster): pixel buffers, compositing and image operations for Photo, Library and Halo. Linux-safe, Foundation only.",
+            "technology": "Swift 6, SwiftPM",
+            "tags": [
+              "internal"
+            ],
+            "components": []
           }
         ]
       }
@@ -143,6 +163,12 @@
         "source": "export",
         "target": "document-commands",
         "description": "reads scenes, layers, shapes and fills",
+        "style": "sync"
+      },
+      {
+        "source": "coreraster",
+        "target": "corecolor",
+        "description": "pixels carry colors in CoreColor's spaces",
         "style": "sync"
       }
     ]
