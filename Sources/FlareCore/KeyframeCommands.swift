@@ -23,6 +23,8 @@ public struct SetKeyframeEasing: Command {
     public var easing: Easing
     var oldEasing: Easing?
 
+    private enum CodingKeys: String, CodingKey { case sceneID, layerID, property, frame, easing }
+
     public init(sceneID: String, layerID: String, property: String, frame: Int, easing: Easing) {
         self.sceneID = sceneID
         self.layerID = layerID
@@ -72,6 +74,8 @@ public struct ShiftKeyframes: Command {
     public var toFrame: Int
     public var delta: Int
     var oldTracks: [String: [Keyframe]]?
+
+    private enum CodingKeys: String, CodingKey { case sceneID, layerID, fromFrame, toFrame, delta }
 
     public init(sceneID: String, layerID: String, fromFrame: Int, toFrame: Int, delta: Int) {
         self.sceneID = sceneID

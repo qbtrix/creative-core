@@ -20,11 +20,12 @@ import FoundationEssentials
 import Foundation
 #endif
 
-/// A document change. Stored properties are the command's params, so a
-/// command encodes to JSON as-is (journals, scripting, replay).
+/// A document change. Its encoded form holds only its params (journals,
+/// scripting, replay), so a decoded command is always a fresh, unexecuted one.
 ///
 /// `execute` may record what it needs for `undo` in its own properties, which
-/// is why it is `mutating`. `undo` must restore the document exactly.
+/// is why it is `mutating`. Those properties stay out of `CodingKeys`. `undo`
+/// must restore the document exactly.
 public protocol Command: Codable, Sendable {
     /// Stable machine name, e.g. "keyframe.move". Never reuse a retired id.
     static var id: String { get }

@@ -1,6 +1,7 @@
 // CommandRegistryTests.swift: every built-in command round-trips through the
 // {"id", "params"} envelope and behaves the same after decoding (the ids are
-// checked against a hand-written list of all 23); unknown ids
+// checked against a hand-written list of all 23), and encode only their
+// params, so a command decoded after execute is fresh; unknown ids
 // and malformed envelopes throw a CommandError, never crash (seeded fuzz).
 import FlareCore
 import Foundation
@@ -94,6 +95,46 @@ import Testing
             try b.undo(&docB)
             #expect(docA == start)
             #expect(docB == start)
+        }
+    }
+
+    @Test func encodedCommandCarriesParamsOnly() throws {
+        var cmd = RemoveLayer(sceneID: "s1", layerID: "ball")
+        var d = Fixtures.document()
+        try cmd.execute(&d)
+        let data = try Self.registry.encode(cmd)
+        let json = String(decoding: data, as: UTF8.self)
+        #expect(json == #"{"id":"layer.remove","params":{"layerID":"ball","sceneID":"s1"}}"#)
+
+        // A decoded command is fresh: undo before execute throws, execute works.
+        let decoded = try Self.registry.decode(data)
+        var fresh = Fixtures.document()
+        #expect(throws: CommandError.notExecuted) { try decoded.undo(&fresh) }
+        var e = CommandEngine(document: Fixtures.document())
+        try e.perform(decoded)
+        #expect(e.document.scenes[0].layers.map(\.id) == ["bg"])
+        try e.undo()
+        #expect(e.document == Fixtures.document())
+    }
+
+    /// Executing a command never changes its encoding, and the copy decoded
+    /// from an executed command performs and undoes exactly on a fresh document.
+    @Test func everyBuiltInEncodesTheSameAfterExecute() throws {
+        let start = Self.sampleDocument()
+        for original in Self.samples() {
+            let id = type(of: original).id
+            let before = try Self.registry.encode(original)
+            var executed = original
+            var doc = start
+            try executed.execute(&doc)
+            let after = try Self.registry.encode(executed)
+            #expect(after == before, "\(id) encodes undo state")
+
+            var e = CommandEngine(document: start)
+            try e.perform(try Self.registry.decode(after))
+            #expect(e.document == doc, "\(id)")
+            try e.undo()
+            #expect(e.document == start, "\(id)")
         }
     }
 

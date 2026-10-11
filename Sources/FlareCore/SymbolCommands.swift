@@ -74,6 +74,8 @@ public struct RemoveSymbol: Command {
     var removed: Symbol?
     var removedIndex: Int?
 
+    private enum CodingKeys: String, CodingKey { case symbolID }
+
     public init(symbolID: String) {
         self.symbolID = symbolID
     }
@@ -105,6 +107,8 @@ public struct ConvertToSymbol: Command {
     public var symbolID: String
     public var name: String
     var oldLayers: [Layer]?
+
+    private enum CodingKeys: String, CodingKey { case sceneID, layerIDs, symbolID, name }
 
     public init(sceneID: String, layerIDs: [String], symbolID: String, name: String) {
         self.sceneID = sceneID
