@@ -1,7 +1,8 @@
 // UndoPropertyTests.swift: the cross-family undo property. Random command
 // sequences drawn from every family (some invalid, some grouped), then undo
 // everything, must give back the original document; redo everything must give
-// back the final one. Seeded, so failures reproduce. Each family's own test
+// back the final one. Every perform, undo and redo must leave a document that
+// passes FlareFormat.validate. Seeded, so failures reproduce. Each family's own test
 // file runs the same property with only its steps (see Support.swift).
 import FlareCore
 import Testing
@@ -14,6 +15,8 @@ import Testing
         + LayerFlagsTests.undoSteps
         + ShapeCommandsTests.undoSteps
         + SymbolCommandsTests.undoSteps
+        + LabelCommandsTests.undoSteps
+        + MetadataCommandsTests.undoSteps
 
     @Test(arguments: 0..<200)
     func undoAllRestoresOriginal(seed: UInt64) throws {
