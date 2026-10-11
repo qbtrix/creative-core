@@ -194,6 +194,12 @@ evaluate() {
       write gh pr merge "$n" -R "$REPO" --squash --delete-branch=false --match-head-commit "$sha" \
         --subject "$title (#$n)" --body "$body"
       MERGED_ANY=1
+      # GitHub does not auto-close linked issues when GITHUB_TOKEN merges, so close them here.
+      local issue
+      for issue in $(gh pr view "$n" -R "$REPO" --json closingIssuesReferences --jq '.closingIssuesReferences[].number'); do
+        write gh issue close "$issue" -R "$REPO" --reason completed --comment "Done in #$n (fast lane)." || log "could not close #$issue"
+        write gh issue edit "$issue" -R "$REPO" --remove-label in-progress || true
+      done
       write gh pr edit "$n" -R "$REPO" --add-label "$MERGED_LABEL" || log "could not add $MERGED_LABEL label"
       comment_once "$n" "Fast lane: merged ($lines lines, $files files, $green checks green)."
       ;;
