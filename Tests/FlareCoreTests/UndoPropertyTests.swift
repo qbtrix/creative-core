@@ -47,7 +47,8 @@ import Testing
         let layer = (layers + ["missing"]).randomElement(using: &rng) ?? "missing"
         let prop = props.randomElement(using: &rng) ?? "x"
         let frame = Int.random(in: -1...30, using: &rng)
-        switch Int.random(in: 0..<7, using: &rng) {
+        let scene = (e.document.scenes.map(\.id) + ["missing"]).randomElement(using: &rng) ?? "missing"
+        switch Int.random(in: 0..<10, using: &rng) {
         case 0:
             nextID += 1
             let index = Int.random(in: -2...5, using: &rng)
@@ -65,6 +66,17 @@ import Testing
                                        from: frame, to: Int.random(in: -1...30, using: &rng)))
         case 5:
             try e.perform(RemoveKeyframe(sceneID: s, layerID: layer, property: prop, frame: frame))
+        case 7:
+            nextID += 1
+            let id = Bool.random(using: &rng) ? scene : "S\(nextID)"
+            let fps = Int.random(in: -1...60, using: &rng)
+            try e.perform(AddScene(scene: Scene(id: id, name: "Scene \(nextID)", fps: fps, durationFrames: frame),
+                                   index: Int.random(in: -2...5, using: &rng)))
+        case 8:
+            try e.perform(RemoveScene(sceneID: scene))
+        case 9:
+            try e.perform(SetSceneTiming(sceneID: scene, fps: Int.random(in: -1...60, using: &rng),
+                                         durationFrames: frame))
         default:
             let shape = Shape(points: [Point(x: Double(frame), y: 0), Point(x: 1, y: 1)], closed: false)
             try e.perform(AddShape(sceneID: s, layerID: layer, shape: shape))
