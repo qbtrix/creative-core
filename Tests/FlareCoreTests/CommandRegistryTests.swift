@@ -9,7 +9,15 @@ import Testing
     static let registry = CommandRegistry.builtIn
 
     /// One sample of every built-in command, each valid on the fixture document.
+    /// A new family adds one line here; a new command goes in its family's samples.
     static func samples() -> [any Command] {
+        coreSamples()
+            + SceneCommandTests.registrySamples()
+            + KeyframeCommandsTests.registrySamples()
+    }
+
+    /// One sample of each layer, keyframe and shape command.
+    static func coreSamples() -> [any Command] {
         let s = Fixtures.sceneID
         return [
             AddLayer(sceneID: s, layer: Layer(id: "new", name: "New"), index: 1),
@@ -27,7 +35,8 @@ import Testing
     @Test func samplesCoverEveryBuiltIn() {
         let sampled = Set(Self.samples().map { type(of: $0).id })
         #expect(sampled == Set(Self.registry.ids))
-        #expect(Self.registry.ids.count == 7)
+        #expect(Self.registry.ids.count == Self.samples().count)
+        #expect(Self.registry.ids.count == 11)
     }
 
     @Test func everyBuiltInRoundTripsAndBehavesTheSame() throws {

@@ -53,4 +53,25 @@ import Testing
         try decoded.execute(&doc)
         #expect(doc.scenes[0].layers[1].tracks["x"]?[0].easing == cmd.easing)
     }
+
+    /// One valid sample of each keyframe command here, for CommandRegistryTests.
+    static func registrySamples() -> [any Command] {
+        [SetKeyframeEasing(sceneID: Fixtures.sceneID, layerID: "ball", property: "x", frame: 24, easing: .easeOut)]
+    }
+
+    /// Random keyframe steps, valid and invalid, for assertUndoRestoresDocument.
+    static let undoSteps: [UndoStep] = [
+        { e, rng, _ in
+            let layer = UndoPropertyTests.anyLayer(e, &rng), prop = UndoPropertyTests.anyProp(&rng)
+            let easing: Easing = Bool.random(using: &rng) ? .easeIn : .linear
+            try e.perform(SetKeyframeEasing(sceneID: Fixtures.sceneID, layerID: layer, property: prop,
+                                            frame: Int.random(in: -1...30, using: &rng), easing: easing))
+        },
+    ]
+
+    @Test(arguments: 0..<200)
+    func undoAllRestoresOriginal(seed: UInt64) throws {
+        // Mixed with the core steps so there are keyframes to change.
+        try assertUndoRestoresDocument(seed: seed, steps: UndoPropertyTests.coreSteps + Self.undoSteps)
+    }
 }

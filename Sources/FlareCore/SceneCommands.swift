@@ -7,6 +7,11 @@ import FoundationEssentials
 import Foundation
 #endif
 
+/// The scene commands, registered in `CommandRegistry.builtIn`.
+public enum SceneCommands {
+    public static let all: [any Command.Type] = [AddScene.self, RemoveScene.self, SetSceneTiming.self]
+}
+
 public struct AddScene: Command {
     public static let id = "scene.add"
     public var label: String { "Add Scene" }
