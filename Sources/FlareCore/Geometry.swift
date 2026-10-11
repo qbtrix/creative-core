@@ -25,6 +25,8 @@ import Darwin
 
 public enum GeometryError: Error, Equatable, Sendable {
     case singularMatrix
+    /// A flattening tolerance that is zero, negative, NaN or infinite.
+    case invalidTolerance
 }
 
 public struct Matrix: Codable, Sendable, Hashable {
