@@ -8,6 +8,8 @@
 //   state before the group and nothing is pushed
 // - one undo-stack entry per perform() outside a group, one per outermost group
 // - performing anything new clears the redo stack
+// - consecutive top-level performs with the same non-nil coalesce key share one
+//   entry; a different or nil key, an undo, a redo or a group ends coalescing
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -63,6 +65,8 @@ public struct CommandEngine: Sendable {
     private var undoStack: [Entry] = []
     private var redoStack: [Entry] = []
     private var pending: Entry?
+    /// Key of the last top-level perform, while it may still absorb more.
+    private var coalesceKey: String?
 
     public init(document: Document) {
         self.document = document
@@ -74,15 +78,22 @@ public struct CommandEngine: Sendable {
     public var undoActionName: String? { undoStack.last.map { "Undo \($0.label)" } }
     public var redoActionName: String? { redoStack.last.map { "Redo \($0.label)" } }
 
-    public mutating func perform(_ command: some Command) throws {
+    /// Runs `command` as one undo step. Consecutive calls with the same non-nil
+    /// `coalesceKey` merge into a single step (a drag undoes in one go). Inside
+    /// a group the key is ignored: the group is already one step.
+    public mutating func perform(_ command: some Command, coalesceKey key: String? = nil) throws {
         var cmd: any Command = command
         var doc = document
         try cmd.execute(&doc)
         document = doc
         if pending != nil {
             pending?.commands.append(cmd)
+        } else if let key, key == coalesceKey, let last = undoStack.indices.last {
+            undoStack[last].commands.append(cmd)
+            redoStack.removeAll()
         } else {
             push(Entry(label: cmd.label, commands: [cmd]))
+            coalesceKey = key
         }
     }
 
@@ -91,6 +102,7 @@ public struct CommandEngine: Sendable {
     public mutating func group(_ label: String, _ body: (inout CommandEngine) throws -> Void) throws {
         let outer = pending
         let before = document
+        coalesceKey = nil
         pending = Entry(label: label, commands: [])
         do {
             try body(&self)
@@ -119,6 +131,7 @@ public struct CommandEngine: Sendable {
         document = doc
         undoStack.removeLast()
         redoStack.append(entry)
+        coalesceKey = nil
     }
 
     public mutating func redo() throws {
@@ -131,6 +144,7 @@ public struct CommandEngine: Sendable {
         document = doc
         redoStack.removeLast()
         undoStack.append(entry)
+        coalesceKey = nil
     }
 
     private mutating func push(_ entry: Entry) {
