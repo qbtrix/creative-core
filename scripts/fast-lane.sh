@@ -39,6 +39,8 @@ BASE_BRANCH="${FAST_LANE_BASE:-main}"
 LABEL="fast-lane"
 MERGED_LABEL="fast-lane-merged"
 CI_WORKFLOWS=("CI")
+# CI job names, so CI runs started by workflow_dispatch (no PR association) still count.
+CI_CHECKS=("Linux" "macOS")
 CI_FILE="ci.yml"  # the CI workflow file, for run lookups and dispatch
 SELF_WORKFLOW="Fast Lane"
 DENY_RE='^\.github/|^\.claude/|(^|/)(CLAUDE|AGENTS)\.md$|^scripts/(ci|cloud-setup\.sh|fast-lane\.sh)$|(^|/)Package\.(swift|resolved)$|^LICENSE'
@@ -111,7 +113,7 @@ decide() {
 
   # Drop our own check and Copilot review checks, then classify the rest.
   local ci_json summary
-  ci_json=$(printf '%s\n' "${CI_WORKFLOWS[@]}" | jq -R . | jq -s .)
+  ci_json=$(printf '%s\n' "${CI_WORKFLOWS[@]}" "${CI_CHECKS[@]}" | jq -R . | jq -s .)
   summary=$(jq -c --arg self "$SELF_WORKFLOW" --argjson ci "$ci_json" '
     [ .[]
       | select((.workflowName // "") != $self)
@@ -128,7 +130,7 @@ decide() {
     | { red: [ .[] | select(.s == "red") | .name ],
         pending: [ .[] | select(.s == "pending") | .name ],
         green: ([ .[] | select(.s == "ok") ] | length),
-        ci_passed: ([ .[] | select(.s == "ok" and (.wf as $w | $ci | index($w) != null)) ] | length) }' "$checks")
+        ci_passed: ([ .[] | select(.s == "ok" and ((.wf as $w | $ci | index($w) != null) or (.name as $n | $ci | index($n) != null))) ] | length) }' "$checks")
   red=$(jq -r '.red | join(", ")' <<<"$summary")
   ngreen=$(jq -r '.green' <<<"$summary")
   local npending nci
@@ -211,7 +213,20 @@ evaluate() {
     (( tries++ < UNKNOWN_RETRIES )) || break
     sleep 5
   done
-  jq '.statusCheckRollup // []' "$tmp/pr.json" >"$tmp/checks.json"
+  # Read check runs off the head commit itself, newest per name. The PR's rollup
+  # misses CI that the lane dispatched after refreshing a branch, and keeps the
+  # PR-event run that GitHub parks as action_required for bot pushes.
+  local head
+  head=$(jq -r '.headRefOid' "$tmp/pr.json")
+  if gh api "repos/$REPO/commits/$head/check-runs?per_page=100" --jq '.check_runs' >"$tmp/runs.json" 2>/dev/null; then
+    jq '[ group_by(.name)[] | sort_by(.started_at // "") | last
+          | select(.conclusion != "action_required")
+          | { __typename: "CheckRun", name, status: (.status | ascii_upcase),
+              conclusion: ((.conclusion // "") | ascii_upcase), workflowName: "" } ]' \
+      "$tmp/runs.json" >"$tmp/checks.json"
+  else
+    jq '.statusCheckRollup // []' "$tmp/pr.json" >"$tmp/checks.json"
+  fi
   gh api "repos/$REPO/pulls/$n/files" --paginate --jq '.[].filename' >"$tmp/files.txt"
 
   local base_head base_date health is_fresh
