@@ -24,15 +24,21 @@ public struct Document: Codable, Sendable, Hashable {
     public var symbols: [Symbol]
     /// Title, author and generator. Missing in older v1 files means empty.
     public var metadata: Metadata
+    /// Interactive state machines. Missing in older v1 files means empty.
+    public var stateMachines: [StateMachine]
 
-    public init(scenes: [Scene] = [], symbols: [Symbol] = [], metadata: Metadata = Metadata()) {
+    public init(
+        scenes: [Scene] = [], symbols: [Symbol] = [], metadata: Metadata = Metadata(),
+        stateMachines: [StateMachine] = []
+    ) {
         self.scenes = scenes
         self.symbols = symbols
         self.metadata = metadata
+        self.stateMachines = stateMachines
     }
 
     private enum CodingKeys: String, CodingKey {
-        case scenes, symbols, metadata
+        case scenes, symbols, metadata, stateMachines
     }
 
     public init(from decoder: any Decoder) throws {
@@ -40,14 +46,17 @@ public struct Document: Codable, Sendable, Hashable {
         scenes = try container.decode([Scene].self, forKey: .scenes)
         symbols = try container.decodeIfPresent([Symbol].self, forKey: .symbols) ?? []
         metadata = try container.decodeIfPresent(Metadata.self, forKey: .metadata) ?? Metadata()
+        stateMachines = try container.decodeIfPresent([StateMachine].self, forKey: .stateMachines) ?? []
     }
 
-    /// Empty metadata is left out, so documents without it encode as before.
+    /// Empty metadata and state machines are left out, so documents without
+    /// them encode as before.
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(scenes, forKey: .scenes)
         try container.encode(symbols, forKey: .symbols)
         if !metadata.isEmpty { try container.encode(metadata, forKey: .metadata) }
+        if !stateMachines.isEmpty { try container.encode(stateMachines, forKey: .stateMachines) }
     }
 }
 
