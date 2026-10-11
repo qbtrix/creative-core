@@ -8,18 +8,25 @@
 #
 # Eligibility (all must hold): open, not draft, base BASE_BRANCH, label
 # `fast-lane`, author in FAST_LANE_AUTHORS, size within MAX_LINES/MAX_FILES, no
-# changed path matching DENY_RE, MERGEABLE, and every check green with at least
-# one passing check from CI_WORKFLOWS (no checks at all fails closed).
+# changed path matching DENY_RE, MERGEABLE, every check green with at least one
+# passing check from CI_WORKFLOWS (no checks at all fails closed), CI on the
+# base branch's head is green (not red, running, or missing), and the PR's CI
+# ran after the base branch's latest commit. A stale PR is refreshed: its branch
+# is updated and CI is dispatched on it. Merges made with GITHUB_TOKEN fire no
+# workflows, so after any merge (or when the base head has no CI run) the lane
+# dispatches CI on the base branch; that run's completion re-triggers the lane.
 #
 # `decide` is the pure decision function (no network). It reads a PR JSON file,
-# a file-list file (one path per line) and a check-rollup JSON file, logs each
-# rule to stderr, and prints one line to stdout:
+# a file-list file (one path per line), a check-rollup JSON file, the base
+# branch's CI health (green|red|running) and a freshness flag (true|false), logs
+# each rule to stderr, and prints one line to stdout:
 #   skip|<why>  not-eligible|<reasons>  pending|<why>  red|<checks>
 #   eligible|<lines>|<files>|<green checks>
 # Tests/fast_lane/test_fast_lane.sh sources this file and feeds `decide` fixtures.
 #
 # Usage: scripts/fast-lane.sh [--dry-run] [PR ...]   (no PR: every open fast-lane PR)
-#        scripts/fast-lane.sh [--dry-run] --sha SHA  (open fast-lane PRs at head SHA)
+#        scripts/fast-lane.sh [--dry-run] --sha SHA  (open fast-lane PRs at head
+#        SHA; if none matches, e.g. a CI run on main, every open fast-lane PR)
 # --dry-run prints the decision and makes no API writes. Needs gh and jq.
 set -euo pipefail
 
@@ -32,12 +39,15 @@ BASE_BRANCH="${FAST_LANE_BASE:-main}"
 LABEL="fast-lane"
 MERGED_LABEL="fast-lane-merged"
 CI_WORKFLOWS=("CI")
+CI_FILE="ci.yml"  # the CI workflow file, for run lookups and dispatch
 SELF_WORKFLOW="Fast Lane"
 DENY_RE='^\.github/|^\.claude/|(^|/)(CLAUDE|AGENTS)\.md$|^scripts/(ci|cloud-setup\.sh|fast-lane\.sh)$|(^|/)Package\.(swift|resolved)$|^LICENSE'
 
 REPO="${GH_REPO:-qbtrix/flare-core}"
 DRY_RUN=0
 MERGED_ANY=0
+DISPATCH_BASE_CI=0  # set when the base branch needs a CI run at the end
+MAIN_RED_URL=""
 # GitHub recomputes `mergeable` lazily after any push to the base branch and
 # reports UNKNOWN meanwhile. Re-read the PR this many times, 5s apart, before
 # calling it not ready; otherwise a PR checked right after another merge stalls.
@@ -50,9 +60,9 @@ strip_attribution() {
 
 log() { printf '  %s\n' "$*" >&2; }
 
-# decide <pr.json> <files.txt> <checks.json>
+# decide <pr.json> <files.txt> <checks.json> <main health> <fresh>
 decide() {
-  local pr="$1" files="$2" checks="$3"
+  local pr="$1" files="$2" checks="$3" main_health="$4" fresh="$5"
   local state draft base has_label author adds dels nfiles lines mergeable mstate
   state=$(jq -r '.state' "$pr")
   draft=$(jq -r '.isDraft' "$pr")
@@ -136,6 +146,10 @@ decide() {
   if [[ -n "$pending" ]]; then echo "pending|$pending"; return; fi
   if (( npending )); then echo "pending|$npending checks still running"; return; fi
   if (( nci == 0 )); then local IFS=,; echo "pending|no passing check from ${CI_WORKFLOWS[*]} yet"; return; fi
+  log "main: $main_health, fresh: $fresh"
+  if [[ "$main_health" == "red" ]]; then echo "pending|main is red"; return; fi
+  if [[ "$main_health" != "green" ]]; then echo "pending|main CI running"; return; fi
+  if [[ "$fresh" != "true" ]]; then echo "pending|refreshing against main"; return; fi
   echo "eligible|$lines|$nfiles|$ngreen"
 }
 
@@ -154,13 +168,45 @@ comment_once() {  # comment unless an identical comment already exists
   write gh pr comment "$n" -R "$REPO" --body "$body"
 }
 
+# Prints green|red|running for CI on the base branch's head. Sets MAIN_RED_URL.
+# No run at all for the head (a GITHUB_TOKEN merge fires none) counts as
+# running and asks for a dispatch at the end of this run.
+main_health() {
+  local head="$1" runs
+  runs=$(gh run list -R "$REPO" --workflow "$CI_FILE" --branch "$BASE_BRANCH" --limit 5 \
+    --json headSha,conclusion,status,url)
+  if jq -e --arg h "$head" 'any(.[]; .headSha == $h and .status != "completed")' <<<"$runs" >/dev/null; then
+    echo running; return
+  fi
+  if ! jq -e --arg h "$head" 'any(.[]; .headSha == $h)' <<<"$runs" >/dev/null; then
+    DISPATCH_BASE_CI=1; echo running; return
+  fi
+  # Newest completed run, ignoring cancelled/skipped ones.
+  local last
+  last=$(jq -c '[.[] | select(.status == "completed" and .conclusion != "cancelled" and .conclusion != "skipped")][0] // empty' <<<"$runs")
+  if [[ -n "$last" && "$(jq -r .conclusion <<<"$last")" != "success" ]]; then
+    MAIN_RED_URL=$(jq -r .url <<<"$last"); echo red; return
+  fi
+  echo green
+}
+
+# fresh <head sha> <base head commit date>: true unless the newest successful CI
+# run for the head was created before the base branch's latest commit.
+fresh() {
+  local created
+  created=$(gh run list -R "$REPO" --workflow "$CI_FILE" --commit "$1" --limit 20 \
+    --json createdAt,conclusion --jq '[.[] | select(.conclusion == "success") | .createdAt] | max // ""')
+  # No successful run: the "no passing check" rule already holds the PR.
+  if [[ -z "$created" || ! "$created" < "$2" ]]; then echo true; else echo false; fi
+}
+
 evaluate() {
   local n="$1" tmp
   [[ "$n" =~ ^[0-9]+$ ]] || { echo "fast-lane: bad PR number: $n" >&2; return 1; }
   tmp=$(mktemp -d)
   local tries=0
   while :; do
-    gh pr view "$n" -R "$REPO" --json number,state,isDraft,baseRefName,labels,author,additions,deletions,changedFiles,mergeable,mergeStateStatus,headRefOid,statusCheckRollup >"$tmp/pr.json"
+    gh pr view "$n" -R "$REPO" --json number,state,isDraft,baseRefName,labels,author,additions,deletions,changedFiles,mergeable,mergeStateStatus,headRefOid,headRefName,statusCheckRollup >"$tmp/pr.json"
     [[ "$(jq -r '.mergeable' "$tmp/pr.json")" == "UNKNOWN" ]] || break
     (( tries++ < UNKNOWN_RETRIES )) || break
     sleep 5
@@ -168,14 +214,40 @@ evaluate() {
   jq '.statusCheckRollup // []' "$tmp/pr.json" >"$tmp/checks.json"
   gh api "repos/$REPO/pulls/$n/files" --paginate --jq '.[].filename' >"$tmp/files.txt"
 
+  local base_head base_date health is_fresh
+  read -r base_head base_date < <(gh api "repos/$REPO/commits/$BASE_BRANCH" --jq '"\(.sha) \(.commit.committer.date)"')
+  # Not in a $(...) subshell: main_health sets globals.
+  main_health "$base_head" >"$tmp/health"
+  health=$(<"$tmp/health")
+  is_fresh=$(fresh "$(jq -r .headRefOid "$tmp/pr.json")" "$base_date")
+
   echo "PR #$n:" >&2
   local decision kind rest
-  decision=$(decide "$tmp/pr.json" "$tmp/files.txt" "$tmp/checks.json")
+  decision=$(decide "$tmp/pr.json" "$tmp/files.txt" "$tmp/checks.json" "$health" "$is_fresh")
   echo "decision: $decision"
   kind="${decision%%|*}"; rest="${decision#*|}"
 
   case "$kind" in
-    skip|pending) ;;
+    skip) ;;
+    pending)
+      case "$rest" in
+        "main is red")
+          comment_once "$n" "Fast lane: waiting, main is red ($MAIN_RED_URL)" ;;
+        "refreshing against main")
+          local old_sha ref i
+          old_sha=$(jq -r .headRefOid "$tmp/pr.json")
+          ref=$(jq -r .headRefName "$tmp/pr.json")
+          write gh pr update-branch "$n" -R "$REPO" || { log "could not update branch"; rm -rf "$tmp"; return; }
+          # update-branch is async; dispatch only once the new head exists, or CI
+          # would run on the old one. A GITHUB_TOKEN push fires no pull_request CI.
+          for (( i = 0; !DRY_RUN && i < 12; i++ )); do
+            [[ "$(gh api "repos/$REPO/pulls/$n" --jq .head.sha)" != "$old_sha" ]] && break
+            sleep 5
+          done
+          write gh workflow run "$CI_FILE" -R "$REPO" --ref "$ref" || log "could not dispatch CI on $ref"
+          ;;
+      esac
+      ;;
     not-eligible)
       write gh pr edit "$n" -R "$REPO" --remove-label "$LABEL" || log "could not remove label"
       comment_once "$n" "Fast lane: not eligible. ${rest//;/; }. This PR now needs normal captain review."
@@ -185,6 +257,7 @@ evaluate() {
       ;;
     eligible)
       local lines files green sha
+      DISPATCH_BASE_CI=1  # this merge fires no CI on main by itself
       IFS='|' read -r lines files green <<<"$rest"
       sha=$(jq -r '.headRefOid' "$tmp/pr.json")
       # Squash message = PR title + body, minus any AI attribution lines.
@@ -207,7 +280,7 @@ main() {
     case "$1" in
       --dry-run) DRY_RUN=1 ;;
       --sha) sha="${2:?--sha needs a value}"; shift ;;
-      -h|--help) sed -n '2,23p' "$0"; return 0 ;;
+      -h|--help) sed -n '2,30p' "$0"; return 0 ;;
       *) prs+=("$1") ;;
     esac
     shift
@@ -219,6 +292,12 @@ main() {
     while read -r n; do [[ -n "$n" ]] && prs+=("$n"); done < <(
       gh pr list -R "$REPO" --state open --base "$BASE_BRANCH" --label "$LABEL" \
         --limit 100 --json number,headRefOid --jq "$q")
+    # A SHA no PR has (CI finished on main, or on a superseded head): sweep all.
+    if [[ -n "$sha" && ${#prs[@]} -eq 0 ]]; then
+      while read -r n; do [[ -n "$n" ]] && prs+=("$n"); done < <(
+        gh pr list -R "$REPO" --state open --base "$BASE_BRANCH" --label "$LABEL" \
+          --limit 100 --json number --jq '.[].number')
+    fi
   fi
   (( ${#prs[@]} )) || { echo "fast-lane: no matching open $LABEL PRs" >&2; return 0; }
   local n pass
@@ -228,10 +307,16 @@ main() {
   # merge, sweep every open fast-lane PR, until a pass merges nothing.
   for (( pass = 0; MERGED_ANY && pass < 5; pass++ )); do
     MERGED_ANY=0
+DISPATCH_BASE_CI=0  # set when the base branch needs a CI run at the end
+MAIN_RED_URL=""
     while read -r n; do [[ -n "$n" ]] && evaluate "$n"; done < <(
       gh pr list -R "$REPO" --state open --base "$BASE_BRANCH" --label "$LABEL" \
         --limit 100 --json number --jq '.[].number')
   done
+  # GITHUB_TOKEN merges fire no workflows; workflow_dispatch is the exception.
+  if (( DISPATCH_BASE_CI )); then
+    write gh workflow run "$CI_FILE" -R "$REPO" --ref "$BASE_BRANCH" || log "could not dispatch CI on $BASE_BRANCH"
+  fi
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then main "$@"; fi

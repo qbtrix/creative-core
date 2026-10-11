@@ -6,7 +6,8 @@
 # workflow's Linux and macOS jobs plus one SKIPPED CI job, a non-CI workflow
 # check, a commit status, the fast-lane workflow's own in-progress check and a
 # Copilot review check (decide must ignore the last two). Each case mutates a
-# base PR / file list / rollup with jq.
+# base PR / file list / rollup with jq and may pass main CI health
+# (green/red/running, default green) and freshness (default true).
 #
 # Run: bash Tests/fast_lane/test_fast_lane.sh   (exit 0 = all pass)
 set -euo pipefail
@@ -25,13 +26,13 @@ BASE_PR='{"number":1,"state":"OPEN","isDraft":false,"baseRefName":"main",
   "mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","headRefOid":"abc123"}'
 BASE_FILES=$'Sources/FlareCore/Timeline.swift\nTests/FlareCoreTests/TimelineTests.swift'
 
-# check <name> <expected stdout prefix> <pr jq> <files> <checks jq>
+# check <name> <expected stdout prefix> <pr jq> <files> <checks jq> [main health] [fresh]
 check() {
-  local name="$1" want="$2" prq="$3" files="$4" chq="$5" got
+  local name="$1" want="$2" prq="$3" files="$4" chq="$5" health="${6:-green}" fresh="${7:-true}" got
   jq "$prq" <<<"$BASE_PR" >"$tmp/pr.json"
   printf '%s\n' "$files" >"$tmp/files.txt"
   jq "$chq" "$here/checks-green.json" >"$tmp/checks.json"
-  got=$(decide "$tmp/pr.json" "$tmp/files.txt" "$tmp/checks.json" 2>/dev/null)
+  got=$(decide "$tmp/pr.json" "$tmp/files.txt" "$tmp/checks.json" "$health" "$fresh" 2>/dev/null)
   if [[ "$got" == "$want"* ]]; then
     echo "ok   $name -> $got"
   else
@@ -74,5 +75,10 @@ check "mergeable unknown" "pending|not mergeable yet (UNKNOWN/UNKNOWN)" \
   '.mergeable = "UNKNOWN" | .mergeStateStatus = "UNKNOWN"' "$BASE_FILES" .
 check "conflicting" "pending|not mergeable yet (CONFLICTING/DIRTY)" \
   '.mergeable = "CONFLICTING" | .mergeStateStatus = "DIRTY"' "$BASE_FILES" .
+check "main red" "pending|main is red" . "$BASE_FILES" . red true
+check "main CI running" "pending|main CI running" . "$BASE_FILES" . running true
+check "stale result refreshes" "pending|refreshing against main" . "$BASE_FILES" . green false
+check "fresh and main green" "eligible|150|2|5" . "$BASE_FILES" . green true
+check "red main does not mask hard rules" "not-eligible|too big" '.additions = 999' "$BASE_FILES" . red false
 
 exit "$fail"
