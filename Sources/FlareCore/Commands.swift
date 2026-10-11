@@ -127,7 +127,7 @@ public struct SetKeyframe: Command {
     public mutating func execute(_ document: inout Document) throws {
         guard keyframe.frame >= 0 else { throw CommandError.invalidFrame(keyframe.frame) }
         let (k, p) = (keyframe, property)
-        previous = try document.withLayer(scene: sceneID, layer: layerID) { $0.setKeyframe(k, property: p) }
+        previous = try document.withEditableLayer(scene: sceneID, layer: layerID) { $0.setKeyframe(k, property: p) }
         executed = true
     }
 
@@ -162,18 +162,20 @@ public struct MoveKeyframe: Command {
     }
 
     public mutating func execute(_ document: inout Document) throws {
-        try Self.move(&document, sceneID, layerID, property, from, to)
+        try Self.move(&document, sceneID, layerID, property, from, to, checkLock: true)
     }
 
     public func undo(_ document: inout Document) throws {
-        try Self.move(&document, sceneID, layerID, property, to, from)
+        try Self.move(&document, sceneID, layerID, property, to, from, checkLock: false)
     }
 
     private static func move(
-        _ document: inout Document, _ scene: String, _ layer: String, _ p: String, _ from: Int, _ to: Int
+        _ document: inout Document, _ scene: String, _ layer: String, _ p: String, _ from: Int, _ to: Int,
+        checkLock: Bool
     ) throws {
         guard to >= 0 else { throw CommandError.invalidFrame(to) }
         try document.withLayer(scene: scene, layer: layer) { layer in
+            guard !checkLock || !layer.isLocked else { throw CommandError.layerLocked(layer.id) }
             guard var k = layer.keyframe(at: from, property: p) else {
                 throw CommandError.keyframeNotFound(property: p, frame: from)
             }
@@ -206,7 +208,7 @@ public struct RemoveKeyframe: Command {
 
     public mutating func execute(_ document: inout Document) throws {
         let (f, p) = (frame, property)
-        removed = try document.withLayer(scene: sceneID, layer: layerID) { layer in
+        removed = try document.withEditableLayer(scene: sceneID, layer: layerID) { layer in
             guard let k = layer.removeKeyframe(at: f, property: p) else {
                 throw CommandError.keyframeNotFound(property: p, frame: f)
             }
@@ -237,7 +239,7 @@ public struct AddShape: Command {
 
     public mutating func execute(_ document: inout Document) throws {
         let shape = shape
-        insertedAt = try document.withLayer(scene: sceneID, layer: layerID) { layer in
+        insertedAt = try document.withEditableLayer(scene: sceneID, layer: layerID) { layer in
             layer.shapes.append(shape)
             return layer.shapes.count - 1
         }
