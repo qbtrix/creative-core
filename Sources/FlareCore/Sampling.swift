@@ -2,6 +2,7 @@
 //
 // Every track is sampled with Timeline.value; standard transform properties
 // without a track get their defaults. Opacity is clamped to 0...1.
+// `placement` packs the standard properties into a Transform and opacity.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -28,5 +29,18 @@ extension Layer {
             values["opacity"] = opacity.isNaN ? 1 : min(max(opacity, 0), 1)
         }
         return values
+    }
+}
+
+extension Layer {
+    /// The layer's sampled position, scale and rotation, and its opacity, at `frame`.
+    public func placement(at frame: Double) -> (transform: Transform, opacity: Double) {
+        let s = sample(at: frame)
+        let transform = Transform(
+            x: s["x"] ?? 0, y: s["y"] ?? 0,
+            scaleX: s["scaleX"] ?? 1, scaleY: s["scaleY"] ?? 1,
+            rotation: s["rotation"] ?? 0
+        )
+        return (transform, s["opacity"] ?? 1)
     }
 }

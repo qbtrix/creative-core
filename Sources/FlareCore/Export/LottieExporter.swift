@@ -11,9 +11,11 @@
 // (`p.s` true) with one animated property per axis: a keyframe has `t`, `s`,
 // and either `h: 1` for hold or `o`/`i` tangents (linear is (0,0)/(1,1); a
 // cubic Bezier gives (x1,y1)/(x2,y2) with x clamped to 0...1 as `Easing` does).
-// Each shape becomes a group (`gr`) of its subpaths (`sh`), its fill (`fl`
-// for a solid color, `gf` for a gradient) and an identity group transform
-// (`tr`). A radial gradient's end point is its center moved right by the
+// Each shape becomes a group (`gr`) of its subpaths (`sh`), its stroke (`st`)
+// if any, its fill (`fl` for a solid color, `gf` for a gradient) and an
+// identity group transform (`tr`). Each instance becomes a group, above the
+// layer's shapes, holding one group per visible symbol layer sampled at the
+// symbol frame (`Instance.resolve`), each with its own `tr`. A radial gradient's end point is its center moved right by the
 // radius. Gradient stop alpha is not written; the fill is opaque. Bezier tangents are relative
 // to their vertex; quads are raised to cubics. A non-finite value throws.
 #if canImport(FoundationEssentials)
@@ -24,15 +26,19 @@ import Foundation
 
 public enum LottieExportError: Error, Equatable, Sendable {
     case nonFiniteValue
+    /// An instance names a symbol that is missing, contains itself, or is
+    /// nested deeper than `Instance.maxNestingDepth`.
+    case unresolvedSymbol(String)
 }
 
 public enum LottieExporter {
     /// The Lottie format version written in `v`.
     public static let version = "5.7.0"
 
-    public static func export(scene: Scene) throws -> Data {
+    /// `symbols` are the document's symbols, which the scene's instances name.
+    public static func export(scene: Scene, symbols: [Symbol] = []) throws -> Data {
         let layers = try scene.layers.enumerated().reversed().map { index, layer in
-            try LottieLayer(layer, index: index + 1, durationFrames: scene.durationFrames)
+            try LottieLayer(layer, index: index + 1, durationFrames: scene.durationFrames, symbols: symbols)
         }
         let root = LottieRoot(
             v: version, fr: scene.fps, ip: 0, op: scene.durationFrames,
@@ -47,6 +53,30 @@ public enum LottieExporter {
     static func finite(_ value: Double) throws -> Double {
         guard value.isFinite else { throw LottieExportError.nonFiniteValue }
         return value
+    }
+
+    /// A layer's shape items at `frame`: one group per instance, holding the
+    /// symbol's visible layers, on top of one group per shape. `path` is the
+    /// ids of the symbols being drawn around the layer.
+    static func content(of layer: Layer, frame: Double, symbols: [Symbol], path: [String]) throws -> [LottieItem] {
+        let instances = try layer.instances.reversed().map { instance in
+            guard let (symbol, local) = instance.resolve(in: symbols, frame: frame, path: path) else {
+                throw LottieExportError.unresolvedSymbol(instance.symbolID)
+            }
+            let layers = try symbol.layers.reversed().filter(\.isVisible).map { inner in
+                let (transform, opacity) = inner.placement(at: local)
+                let items = try content(of: inner, frame: local, symbols: symbols, path: path + [symbol.id])
+                return group(items + [try LottieItem.transform(transform, opacity: opacity)])
+            }
+            return group(layers + [try LottieItem.transform(instance.transform, opacity: 1)])
+        }
+        return try instances + layer.shapes.map(LottieItem.init(shape:))
+    }
+
+    static func group(_ items: [LottieItem]) -> LottieItem {
+        var group = LottieItem(ty: "gr")
+        group.it = items
+        return group
     }
 
     /// One `sh` bezier per subpath of `path`. Empty subpaths are dropped.
@@ -138,9 +168,9 @@ struct LottieLayer: Encodable, Sendable {
     var sr = 1
     var hd: Bool
     var ks: LottieTransform
-    var shapes: [LottieGroup]
+    var shapes: [LottieItem]
 
-    init(_ layer: Layer, index: Int, durationFrames: Int) throws {
+    init(_ layer: Layer, index: Int, durationFrames: Int, symbols: [Symbol]) throws {
         let s = layer.sample(at: 0)
         func value(_ key: String, _ fallback: Double) throws -> Double {
             try LottieExporter.finite(s[key] ?? fallback)
@@ -164,7 +194,7 @@ struct LottieLayer: Encodable, Sendable {
             r: LottieStatic(try value("rotation", 0)),
             o: LottieStatic(min(max(try value("opacity", 1), 0), 1) * 100)
         )
-        shapes = try layer.shapes.map(LottieGroup.init)
+        shapes = try LottieExporter.content(of: layer, frame: 0, symbols: symbols, path: [])
     }
 }
 
@@ -272,8 +302,26 @@ struct LottieItem: Encodable, Sendable {
     var t: Int?
     var e: LottieStatic<[Double]>?
     var g: LottieGradientStops?
+    /// Stroke width, line cap and line join on `st`.
+    var w: LottieStatic<Double>?
+    var lc: Int?
+    var lj: Int?
+    /// The items of a `gr` group, the first drawn on top.
+    var it: [LottieItem]?
 
     init(ty: String) { self.ty = ty }
+
+    /// A group transform (`tr`) placing the group's items.
+    static func transform(_ t: Transform, opacity: Double) throws -> LottieItem {
+        func f(_ v: Double) throws -> Double { try LottieExporter.finite(v) }
+        var item = LottieItem(ty: "tr")
+        item.p = LottieStatic([try f(t.x), try f(t.y)])
+        item.a = LottieStatic([0, 0])
+        item.s = LottieStatic([try f(t.scaleX) * 100, try f(t.scaleY) * 100])
+        item.r = .rotation(LottieStatic(try f(t.rotation)))
+        item.o = LottieStatic(min(max(try f(opacity), 0), 1) * 100)
+        return item
+    }
 }
 
 /// Gradient stops: `p` stops, flattened as offset, r, g, b for each.
@@ -295,11 +343,9 @@ enum LottieR: Encodable, Sendable {
     }
 }
 
-struct LottieGroup: Encodable, Sendable {
-    var ty = "gr"
-    var it: [LottieItem]
-
-    init(_ shape: Shape) throws {
+extension LottieItem {
+    /// A group of the shape's subpaths, its stroke, its fill and an identity transform.
+    init(shape: Shape) throws {
         var items = try LottieExporter.beziers(shape.outline).map { bezier in
             var item = LottieItem(ty: "sh")
             item.ks = LottieStatic(bezier)
@@ -335,14 +381,18 @@ struct LottieGroup: Encodable, Sendable {
         }
         if fill.ty == "gf" { fill.o = LottieStatic(100) }
         fill.r = .rule(1)
-        var transform = LottieItem(ty: "tr")
-        transform.p = LottieStatic([0, 0])
-        transform.a = LottieStatic([0, 0])
-        transform.s = LottieStatic([100, 100])
-        transform.r = .rotation(LottieStatic(0))
-        transform.o = LottieStatic(100)
-        items += [fill, transform]
-        it = items
+        if let stroke = shape.stroke {
+            var item = LottieItem(ty: "st")
+            item.c = LottieStatic([try channel(stroke.color.r), try channel(stroke.color.g),
+                                   try channel(stroke.color.b), 1])
+            item.o = LottieStatic(try channel(stroke.color.a) * 100)
+            item.w = LottieStatic(try LottieExporter.finite(stroke.width))
+            item.lc = [.butt: 1, .round: 2, .square: 3][stroke.cap]
+            item.lj = [.miter: 1, .round: 2, .bevel: 3][stroke.join]
+            items.append(item)
+        }
+        items += [fill, try LottieItem.transform(.identity, opacity: 1)]
+        self = LottieExporter.group(items)
     }
 }
 

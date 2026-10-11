@@ -2,7 +2,10 @@
 //
 // Layers render bottom to top (the first layer is drawn first). Each visible
 // layer is a <g> carrying its sampled transform as a matrix and its opacity;
-// each shape is a <path> built from `Shape.outline`, so curves stay curves.
+// each shape is a <path> built from `Shape.outline`, so curves stay curves,
+// with its stroke as stroke attributes. After its shapes, each instance on a
+// layer is a nested <g> with the instance transform holding the symbol's
+// layers sampled at the symbol frame (`Instance.resolve`).
 // Coordinates are written as-is: scene space maps straight to SVG user space.
 // A gradient fill is written as a gradient element (in user space) just before
 // its path, which refers to it by id ("g0", "g1", ... in document order).
@@ -16,10 +19,14 @@ import Foundation
 
 public enum SVGExportError: Error, Equatable, Sendable {
     case nonFiniteValue
+    /// An instance names a symbol that is missing, contains itself, or is
+    /// nested deeper than `Instance.maxNestingDepth`.
+    case unresolvedSymbol(String)
 }
 
 public enum SVGExporter {
-    public static func export(scene: Scene, frame: Double) throws -> String {
+    /// `symbols` are the document's symbols, which the scene's instances name.
+    public static func export(scene: Scene, frame: Double, symbols: [Symbol] = []) throws -> String {
         let w = try number(scene.width)
         let h = try number(scene.height)
         var lines = [
@@ -27,37 +34,59 @@ public enum SVGExporter {
             "<rect width=\"\(w)\" height=\"\(h)\"\(try fill(scene.background))/>",
         ]
         var gradients = 0
-        for layer in scene.layers where layer.isVisible {
-            let s = layer.sample(at: frame)
-            let transform = Transform(
-                x: s["x"] ?? 0, y: s["y"] ?? 0,
-                scaleX: s["scaleX"] ?? 1, scaleY: s["scaleY"] ?? 1,
-                rotation: s["rotation"] ?? 0
-            )
-            let m = transform.matrix
-            let values = try [m.a, m.b, m.c, m.d, m.tx, m.ty].map(number).joined(separator: " ")
-            let opacity = s["opacity"] ?? 1
-            let opacityAttr = opacity == 1 ? "" : " opacity=\"\(try number(opacity))\""
-            let ids = " id=\"\(escape(layer.id))\" data-name=\"\(escape(layer.name))\""
-            lines.append("<g\(ids) transform=\"matrix(\(values))\"\(opacityAttr)>")
-            for shape in layer.shapes {
-                let d = try pathData(shape.outline)
-                if d.isEmpty { continue }
-                let attr: String
-                if case .solid(let color) = shape.fill {
-                    attr = try fill(color)
-                } else {
-                    let id = "g\(gradients)"
-                    gradients += 1
-                    lines.append(try gradient(shape.fill, id: id))
-                    attr = " fill=\"url(#\(id))\""
-                }
-                lines.append("<path d=\"\(d)\"\(attr)/>")
-            }
-            lines.append("</g>")
+        for layer in scene.layers {
+            try render(layer, frame: frame, symbols: symbols, path: [], into: &lines, gradients: &gradients)
         }
         lines.append("</svg>")
         return lines.joined(separator: "\n") + "\n"
+    }
+
+    /// Appends a visible layer as a <g> holding its shapes, then one nested
+    /// <g> per instance holding the symbol's layers at the symbol frame.
+    /// `path` is the ids of the symbols being drawn around this layer.
+    static func render(
+        _ layer: Layer, frame: Double, symbols: [Symbol], path: [String],
+        into lines: inout [String], gradients: inout Int
+    ) throws {
+        guard layer.isVisible else { return }
+        let (transform, opacity) = layer.placement(at: frame)
+        let opacityAttr = opacity == 1 ? "" : " opacity=\"\(try number(opacity))\""
+        // Symbol layers repeat once per instance, so only scene layers get an id.
+        let idName = path.isEmpty ? "id" : "data-id"
+        let ids = " \(idName)=\"\(escape(layer.id))\" data-name=\"\(escape(layer.name))\""
+        lines.append("<g\(ids)\(try matrix(transform))\(opacityAttr)>")
+        for shape in layer.shapes {
+            let d = try pathData(shape.outline)
+            if d.isEmpty { continue }
+            let attr: String
+            if case .solid(let color) = shape.fill {
+                attr = try fill(color)
+            } else {
+                let id = "g\(gradients)"
+                gradients += 1
+                lines.append(try gradient(shape.fill, id: id))
+                attr = " fill=\"url(#\(id))\""
+            }
+            lines.append("<path d=\"\(d)\"\(attr)\(try stroke(shape.stroke))/>")
+        }
+        for instance in layer.instances {
+            guard let (symbol, local) = instance.resolve(in: symbols, frame: frame, path: path) else {
+                throw SVGExportError.unresolvedSymbol(instance.symbolID)
+            }
+            lines.append("<g data-symbol=\"\(escape(symbol.id))\"\(try matrix(instance.transform))>")
+            for inner in symbol.layers {
+                try render(inner, frame: local, symbols: symbols, path: path + [symbol.id],
+                           into: &lines, gradients: &gradients)
+            }
+            lines.append("</g>")
+        }
+        lines.append("</g>")
+    }
+
+    /// ` transform="matrix(a b c d tx ty)"`.
+    static func matrix(_ transform: Transform) throws -> String {
+        let m = transform.matrix
+        return " transform=\"matrix(\(try [m.a, m.b, m.c, m.d, m.tx, m.ty].map(number).joined(separator: " ")))\""
     }
 
     /// SVG path data: M, L, Q, C and Z commands with absolute coordinates.
@@ -74,6 +103,16 @@ public enum SVGExporter {
             }
         }
         return parts.joined(separator: " ")
+    }
+
+    /// ` stroke`, ` stroke-opacity` (when translucent), width, join and cap;
+    /// empty when there is no stroke.
+    static func stroke(_ stroke: Stroke?) throws -> String {
+        guard let stroke else { return "" }
+        let (hex, alpha) = try paint(stroke.color)
+        let opacity = alpha.map { " stroke-opacity=\"\($0)\"" } ?? ""
+        return " stroke=\"\(hex)\"\(opacity) stroke-width=\"\(try number(stroke.width))\""
+            + " stroke-linejoin=\"\(stroke.join.rawValue)\" stroke-linecap=\"\(stroke.cap.rawValue)\""
     }
 
     /// ` fill="#rrggbb"`, plus ` fill-opacity` when the color is translucent.
