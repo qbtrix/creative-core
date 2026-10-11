@@ -24,6 +24,8 @@ public struct CommandRegistry: Sendable {
     /// family adds one line here.
     static let builtInFamilies: [[any Command.Type]] = [
         CoreCommands.all,
+        LayerCommands.all,
+        ShapeCommands.all,
         SceneCommands.all,
         KeyframeCommands.all,
         MetadataCommands.all,

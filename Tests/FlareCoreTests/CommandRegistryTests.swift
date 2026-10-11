@@ -1,5 +1,6 @@
 // CommandRegistryTests.swift: every built-in command round-trips through the
-// {"id", "params"} envelope and behaves the same after decoding; unknown ids
+// {"id", "params"} envelope and behaves the same after decoding (the ids are
+// checked against a hand-written list of all 23); unknown ids
 // and malformed envelopes throw a CommandError, never crash (seeded fuzz).
 import FlareCore
 import Foundation
@@ -7,6 +8,18 @@ import Testing
 
 @Suite struct CommandRegistryTests {
     static let registry = CommandRegistry.builtIn
+
+    /// Every built-in command id, written out by hand so a command that no
+    /// family lists, or a family missing from the registry, fails the tests.
+    static let expectedIDs: Set<String> = [
+        "document.metadata",
+        "keyframe.move", "keyframe.remove", "keyframe.set", "keyframe.setEasing", "keyframe.shift",
+        "label.remove", "label.set",
+        "layer.add", "layer.remove", "layer.rename", "layer.reorder", "layer.setFlags",
+        "scene.add", "scene.remove", "scene.timing",
+        "shape.add", "shape.remove", "shape.setFill", "shape.translate",
+        "symbol.add", "symbol.convert", "symbol.remove",
+    ]
 
     /// One sample of every built-in command, each valid on the fixture document.
     /// A new family adds one line here; a new command goes in its family's samples.
@@ -40,14 +53,22 @@ import Testing
             AddShape(sceneID: s, layerID: "bg",
                      shape: Shape(points: [Point(x: 1, y: 2), Point(x: 3, y: 4)], closed: false)),
             ReorderLayer(sceneID: s, layerID: "bg", toIndex: 1),
+            SetLayerFlags(sceneID: s, layerID: "ball", isVisible: false, isLocked: true),
+            RemoveShape(sceneID: s, layerID: "ball", index: 0),
+            SetShapeFill(sceneID: s, layerID: "ball", index: 0, fill: .solid(Color(r: 0, g: 0, b: 1))),
+            TranslateShape(sceneID: s, layerID: "ball", index: 0, dx: 1, dy: 1),
         ]
+    }
+
+    @Test func everyBuiltInCommandIsRegistered() {
+        #expect(Self.expectedIDs.count == 23)
+        #expect(Set(Self.registry.ids) == Self.expectedIDs)
     }
 
     @Test func samplesCoverEveryBuiltIn() {
         let sampled = Set(Self.samples().map { type(of: $0).id })
-        #expect(sampled == Set(Self.registry.ids))
-        #expect(Self.registry.ids.count == Self.samples().count)
-        #expect(Self.registry.ids.count == 19)
+        #expect(sampled == Self.expectedIDs)
+        #expect(Self.samples().count == Self.expectedIDs.count)
     }
 
     @Test func everyBuiltInRoundTripsAndBehavesTheSame() throws {

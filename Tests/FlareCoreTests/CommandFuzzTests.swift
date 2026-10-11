@@ -111,7 +111,7 @@ import Testing
 
     @Test func structuredFuzzNeverCrashesAndThrowsCleanly() throws {
         let templates = try Self.templates()
-        #expect(Set(templates.map(\.id)) == Set(CommandRegistry.builtIn.ids))
+        #expect(Set(templates.map(\.id)) == CommandRegistryTests.expectedIDs)
         var rng = SplitMix64(seed: 38)
         var decoded = 0, performed = 0
         let clock = ContinuousClock()
