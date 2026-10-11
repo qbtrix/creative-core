@@ -70,6 +70,15 @@ that safe and fast. AGENTS.md points here.
   GPL-incompatible sources. Behavior may come only from public documentation
   and specs. This repo is GPL-3.0.
 
+## Quality
+
+- Read `docs/engineering.md` before you write code. It holds the design rules
+  for this codebase (layers, errors, reuse, validity, commands, export, tests).
+- Before you open a PR, check your diff against `docs/review-rubric.md` and
+  fix every "no".
+- `scripts/ci` enforces the mechanical rules (no-crash lint, duplicate code,
+  build, tests). The rest are review-only, and the reviewer applies the rubric.
+
 ## Parallel agents
 
 - Many agents work at once. Keep to your issue's files. Prefer adding a new

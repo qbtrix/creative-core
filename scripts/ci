@@ -1,10 +1,17 @@
 #!/usr/bin/env bash
-# scripts/ci: the one gate. Runs the no-crash lint, swift build and swift test,
-# then prints PASS or FAIL and exits with the real status. CI runs exactly this
-# on Linux and macOS; run it locally before every PR.
+# scripts/ci: the one gate. Runs the no-crash lint, the duplicate-code check,
+# swift build and swift test, then prints PASS or FAIL and exits with the real
+# status. CI runs exactly this on Linux and macOS; run it locally before every
+# PR.
 #
 # The lint fails on crash-prone constructs in Sources/ (tests are exempt):
 #   try!  as!  fatalError(  preconditionFailure(  precondition(  unowned  .first!  .last!
+#
+# The duplicate check runs jscpd (pinned) over Sources/ and fails when duplicated
+# lines exceed JSCPD_THRESHOLD percent. Baseline on main: 3 clones, 27 lines,
+# 0.76%. The threshold only ever goes down: lower it when you remove a clone,
+# never raise it. Without npx, or when npm can't fetch jscpd (offline, registry
+# not allowlisted), the check prints SKIP and the gate goes on; CI enforces it.
 #
 # On a Mac with only the Command Line Tools (no Xcode), Swift Testing lives in
 # a framework directory swift does not search by default, so we add it.
@@ -20,6 +27,19 @@ if grep -rnE "$pattern" Sources/; then
   fail "no-crash lint: replace the lines above with throwing code"
 fi
 echo "ok"
+
+echo "== duplicate code (jscpd, Sources/)"
+JSCPD_VERSION=5.3.2
+JSCPD_THRESHOLD=0.8
+if ! command -v npx >/dev/null 2>&1; then
+  echo "SKIP (npx not found; install Node 18+ to run this check)"
+elif ! npx --yes "jscpd@$JSCPD_VERSION" --version >/dev/null 2>&1; then
+  echo "SKIP (npx could not fetch jscpd@$JSCPD_VERSION from the npm registry)"
+else
+  JSCPD_NO_TIPS=1 npx --yes "jscpd@$JSCPD_VERSION" --format swift --reporters console \
+    --threshold "$JSCPD_THRESHOLD" Sources/ \
+    || fail "jscpd: duplicated lines over $JSCPD_THRESHOLD%; reuse the existing helper instead of copying it"
+fi
 
 flags=()
 if [[ "$(uname)" == Darwin ]]; then
