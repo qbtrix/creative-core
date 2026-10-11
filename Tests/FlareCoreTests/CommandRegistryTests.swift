@@ -14,6 +14,7 @@ import Testing
         coreSamples()
             + SceneCommandTests.registrySamples()
             + KeyframeCommandsTests.registrySamples()
+            + MetadataCommandsTests.registrySamples()
     }
 
     /// One sample of each layer, keyframe and shape command.
@@ -37,7 +38,7 @@ import Testing
         let sampled = Set(Self.samples().map { type(of: $0).id })
         #expect(sampled == Set(Self.registry.ids))
         #expect(Self.registry.ids.count == Self.samples().count)
-        #expect(Self.registry.ids.count == 13)
+        #expect(Self.registry.ids.count == 14)
     }
 
     @Test func everyBuiltInRoundTripsAndBehavesTheSame() throws {

@@ -20,21 +20,49 @@ public struct Document: Codable, Sendable, Hashable {
     public var scenes: [Scene]
     /// Reusable symbol definitions. Missing in older v1 files means empty.
     public var symbols: [Symbol]
+    /// Title, author and generator. Missing in older v1 files means empty.
+    public var metadata: Metadata
 
-    public init(scenes: [Scene] = [], symbols: [Symbol] = []) {
+    public init(scenes: [Scene] = [], symbols: [Symbol] = [], metadata: Metadata = Metadata()) {
         self.scenes = scenes
         self.symbols = symbols
+        self.metadata = metadata
     }
 
     private enum CodingKeys: String, CodingKey {
-        case scenes, symbols
+        case scenes, symbols, metadata
     }
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         scenes = try container.decode([Scene].self, forKey: .scenes)
         symbols = try container.decodeIfPresent([Symbol].self, forKey: .symbols) ?? []
+        metadata = try container.decodeIfPresent(Metadata.self, forKey: .metadata) ?? Metadata()
     }
+
+    /// Empty metadata is left out, so documents without it encode as before.
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(scenes, forKey: .scenes)
+        try container.encode(symbols, forKey: .symbols)
+        if !metadata.isEmpty { try container.encode(metadata, forKey: .metadata) }
+    }
+}
+
+/// Descriptive document info. Every field is optional; nil fields are not encoded.
+public struct Metadata: Codable, Sendable, Hashable {
+    public var title: String?
+    public var author: String?
+    /// The app or tool that wrote the file, e.g. "Flare 1.0".
+    public var generator: String?
+
+    public init(title: String? = nil, author: String? = nil, generator: String? = nil) {
+        self.title = title
+        self.author = author
+        self.generator = generator
+    }
+
+    public var isEmpty: Bool { title == nil && author == nil && generator == nil }
 }
 
 /// A reusable animation with its own timeline. Its layers follow the same
