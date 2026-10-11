@@ -15,7 +15,7 @@ import Testing
 
     static func document(with path: Path?) -> Document {
         var doc = Fixtures.document()
-        doc.scenes[0].layers[0].shapes.append(Shape(points: [], fill: Color(r: 1, g: 0, b: 0), path: path))
+        doc.scenes[0].layers[0].shapes.append(Shape(points: [], fill: .solid(Color(r: 1, g: 0, b: 0)), path: path))
         return doc
     }
 

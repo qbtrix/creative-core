@@ -35,8 +35,8 @@ import Testing
     @Test func setShapeFillUndoRestores() throws {
         var engine = CommandEngine(document: Fixtures.document())
         let original = engine.document
-        try engine.perform(SetShapeFill(sceneID: Self.s, layerID: "ball", index: 0, fill: .white))
-        #expect(try Self.ball(engine).shapes.first?.fill == .white)
+        try engine.perform(SetShapeFill(sceneID: Self.s, layerID: "ball", index: 0, fill: .solid(.white)))
+        #expect(try Self.ball(engine).shapes.first?.fill == .solid(.white))
         try engine.undo()
         #expect(engine.document == original)
     }
@@ -74,7 +74,7 @@ import Testing
     static func edits(index: Int) -> [any Command] {
         [
             RemoveShape(sceneID: s, layerID: "ball", index: index),
-            SetShapeFill(sceneID: s, layerID: "ball", index: index, fill: .white),
+            SetShapeFill(sceneID: s, layerID: "ball", index: index, fill: .solid(.white)),
             TranslateShape(sceneID: s, layerID: "ball", index: index, dx: 1, dy: 1),
         ]
     }
@@ -120,7 +120,9 @@ import Testing
         },
         { e, rng, _ in
             let layer = UndoPropertyTests.anyLayer(e, &rng)
-            let fill = Color(r: Double.random(in: 0...1, using: &rng), g: 0, b: 1)
+            let color = Color(r: Double.random(in: 0...1, using: &rng), g: 0, b: 1)
+            let fill = Bool.random(using: &rng) ? Fill.solid(color)
+                : .linear(stops: [GradientStop(offset: 0, color: color)], start: Point(x: 0, y: 0), end: Point(x: 1, y: 1))
             try e.perform(SetShapeFill(sceneID: Fixtures.sceneID, layerID: layer,
                                        index: anyIndex(e, layer, &rng), fill: fill))
         },

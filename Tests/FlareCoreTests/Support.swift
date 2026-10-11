@@ -24,7 +24,7 @@ enum Fixtures {
     static func document() -> Document {
         let square = Shape(
             points: [Point(x: 0, y: 0), Point(x: 10, y: 0), Point(x: 10, y: 10), Point(x: 0, y: 10)],
-            fill: Color(r: 1, g: 0.5, b: 0.25)
+            fill: .solid(Color(r: 1, g: 0.5, b: 0.25))
         )
         let ball = Layer(
             id: "ball", name: "Ball", shapes: [square],
