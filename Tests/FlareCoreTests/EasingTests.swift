@@ -15,7 +15,7 @@ import Testing
     }
 
     @Test(arguments: [Easing.linear, .ease, .easeIn, .easeOut, .easeInOut,
-                      .cubicBezier(x1: 0, y1: 1.5, x2: 1, y2: -0.5)])
+                      .cubicBezier(x1: 0, y1: 1.5, x2: 1, y2: -0.5), .hold])
     func endpointsAreExact(_ easing: Easing) {
         #expect(easing.value(at: 0) == 0)
         #expect(easing.value(at: 1) == 1)
@@ -24,7 +24,7 @@ import Testing
     }
 
     @Test(arguments: [Easing.linear, .ease, .easeIn, .easeOut, .easeInOut,
-                      .cubicBezier(x1: 1, y1: 0, x2: 0, y2: 1)])
+                      .cubicBezier(x1: 1, y1: 0, x2: 0, y2: 1), .hold])
     func monotonicWhenControlPointsStayInUnitBox(_ easing: Easing) {
         var previous = -Double.infinity
         for i in 0...1000 {
@@ -59,9 +59,16 @@ import Testing
     }
 
     @Test func easingRoundTripsThroughCodable() throws {
-        for e in [Easing.linear, .easeInOut] {
+        for e in [Easing.linear, .easeInOut, .hold] {
             let data = try JSONEncoder().encode(e)
             #expect(try JSONDecoder().decode(Easing.self, from: data) == e)
         }
+    }
+
+    @Test func holdStaysAtZeroUntilTheEnd() {
+        #expect(Easing.hold.value(at: 0.5) == 0)
+        #expect(Easing.hold.value(at: 0.999999) == 0)
+        #expect(Easing.hold.value(at: .nan) == 0)
+        #expect(Easing.hold.value(at: 1) == 1)
     }
 }

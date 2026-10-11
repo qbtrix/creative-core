@@ -1,5 +1,6 @@
 // Easing.swift: easing curves that map tween progress (0...1) to eased
-// progress. `linear` and CSS-style `cubicBezier(x1, y1, x2, y2)`.
+// progress. `linear`, CSS-style `cubicBezier(x1, y1, x2, y2)`, and `hold`
+// (stays at 0 until progress reaches 1, i.e. a step at the next keyframe).
 //
 // Invariants:
 // - value(at:) is total: any Double in (NaN, infinities, out of range) gives a
@@ -17,6 +18,8 @@ import Foundation
 public enum Easing: Codable, Sendable, Hashable {
     case linear
     case cubicBezier(x1: Double, y1: Double, x2: Double, y2: Double)
+    /// Keeps the keyframe's value until the next keyframe, then jumps.
+    case hold
 
     public static let ease = Easing.cubicBezier(x1: 0.25, y1: 0.1, x2: 0.25, y2: 1)
     public static let easeIn = Easing.cubicBezier(x1: 0.42, y1: 0, x2: 1, y2: 1)
@@ -30,6 +33,8 @@ public enum Easing: Codable, Sendable, Hashable {
         switch self {
         case .linear:
             return progress
+        case .hold:
+            return 0
         case let .cubicBezier(x1, y1, x2, y2):
             guard let curve = CubicBezier(x1: x1, y1: y1, x2: x2, y2: y2) else { return progress }
             return curve.y(curve.parameter(forX: progress))
