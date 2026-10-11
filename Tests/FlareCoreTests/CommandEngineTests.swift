@@ -121,4 +121,59 @@ import Testing
             from: Data(#"{"sceneID":"s1","layerID":"ball","property":"x","keyframe":{"frame":1,"value":2,"easing":{"linear":{}}}}"#.utf8))
         #expect(fresh.keyframe.frame == 1)
     }
+
+    @Test func performRejectsCommandsThatBreakTheFormat() throws {
+        var doc = Fixtures.document()
+        doc.stateMachines = [StateMachine(id: "m", name: "M",
+            states: [MachineState(id: "a", name: "A", sceneID: s, startFrame: 0, endFrame: 40)],
+            initialState: "a")]
+        var e = CommandEngine(document: doc)
+        let before = e.document
+
+        #expect(throws: CommandError.self) { try e.perform(SetSceneTiming(sceneID: s, fps: 24, durationFrames: 10)) }
+        #expect(throws: CommandError.self) { try e.perform(RemoveScene(sceneID: s)) }
+        #expect(throws: CommandError.self) {
+            try e.perform(SetKeyframe(sceneID: s, layerID: "ball", property: "x", keyframe: Keyframe(frame: 5, value: .nan)))
+        }
+        #expect(throws: CommandError.self) {
+            try e.perform(AddLayer(sceneID: s, layer: Layer(id: "bad", name: "b", tracks: ["x": []])))
+        }
+        // Every rejected command left the document untouched and saveable.
+        #expect(e.document == before)
+        #expect(!e.canUndo)
+        _ = try FlareFormat.encode(e.document)
+    }
+
+    @Test func invalidStepInGroupRollsBackTheGroup() throws {
+        var e = CommandEngine(document: Fixtures.document())
+        let before = e.document
+        #expect(throws: CommandError.self) {
+            try e.group("Mixed") { g in
+                try g.perform(RenameLayer(sceneID: s, layerID: "ball", name: "Planet"))
+                try g.perform(AddLayer(sceneID: s, layer: Layer(id: "bad", name: "b", tracks: ["x": []])))
+            }
+        }
+        #expect(e.document == before)
+        #expect(!e.canUndo)
+        // A valid command still commits after the rejections.
+        try e.perform(RenameLayer(sceneID: s, layerID: "ball", name: "Planet"))
+        #expect(e.document.scenes[0].layers[1].name == "Planet")
+    }
+
+    @Test func layerScopedValidateCatchesTheTouchedLayer() {
+        let before = Fixtures.document()
+        var dup = before
+        dup.scenes[0].layers.insert(Layer(id: "ball", name: "Copy"), at: 0)
+        #expect(throws: FormatError.invalid("scene s1: duplicate layer id ball")) {
+            try FlareFormat.validate(dup, layer: "ball", scene: "s1", since: before)
+        }
+        var emptyTrack = before
+        emptyTrack.scenes[0].layers[1].tracks["y"] = []
+        #expect(throws: FormatError.invalid("layer ball: empty track y")) {
+            try FlareFormat.validate(emptyTrack, layer: "ball", scene: "s1", since: before)
+        }
+        var renamed = before
+        renamed.scenes[0].layers[1].name = "Planet"
+        #expect(throws: Never.self) { try FlareFormat.validate(renamed, layer: "ball", scene: "s1", since: before) }
+    }
 }

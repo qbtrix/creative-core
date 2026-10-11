@@ -62,7 +62,13 @@ The module has four layers. Each depends only on the ones above it.
 - **Commands keep the document valid.** For any valid document, a command that
   succeeds leaves a document that passes `FlareFormat.validate`, and its undo
   does too. Reject bad params with a `CommandError` before you mutate.
-  Review-only; Q1 (#97) adds the test.
+  Test: `CommandEngine.perform` validates every result and throws
+  `CommandError.invalidDocument` instead of committing a broken one
+  (`CommandEngineTests.performRejectsCommandsThatBreakTheFormat`). The guard
+  is a backstop, not a substitute for rejecting bad params up front. A command
+  that changes only one layer conforms to `LayerCommand` (listed in
+  `LayerCommand.swift`) so the check is scoped to that layer; the undo property
+  tests validate the whole document after every step to keep the scope honest.
 - **Types first, guards second.** When a value can be wrong (a negative
   duration, an empty track), prefer a type that can't hold the wrong value.
   When that is impractical, validate at the boundary (decode, command params)

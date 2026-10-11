@@ -64,6 +64,14 @@ import Testing
         #expect(throws: FormatError.self) { try FlareFormat.encode(doc) }
     }
 
+    @Test func validateRejectsNonFiniteKeyframeValues() {
+        var doc = Fixtures.document()
+        doc.scenes[0].layers[1].tracks["x"]?[1].value = .infinity
+        #expect(throws: FormatError.invalid("layer ball: track x has a non-finite value at frame 24")) {
+            try FlareFormat.validate(doc)
+        }
+    }
+
     @Test func everyTruncationThrowsOrDecodes() throws {
         let bytes = Array(try FlareFormat.encode(Fixtures.document()))
         for n in 0..<bytes.count {
