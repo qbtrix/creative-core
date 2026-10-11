@@ -8,6 +8,7 @@
 // - Scene.width and Scene.height are finite and > 0
 // - layer ids are unique within a scene or symbol
 // - symbol ids are unique, Symbol.durationFrames >= 0
+// - every layer instance names a known symbol and has firstFrame >= 0
 // - each track is sorted by frame, frames are unique and >= 0, and a track is
 //   never stored empty (an empty track is removed, so undo restores equality)
 #if canImport(FoundationEssentials)
@@ -137,10 +138,12 @@ public struct Layer: Codable, Sendable, Hashable {
     public var isVisible: Bool
     /// Locked layers reject commands that edit their shapes or keyframes.
     public var isLocked: Bool
+    /// Symbol placements on this layer. Missing in older v1 files means empty.
+    public var instances: [Instance]
 
     public init(
         id: String, name: String, shapes: [Shape] = [], tracks: [String: [Keyframe]] = [:],
-        isVisible: Bool = true, isLocked: Bool = false
+        isVisible: Bool = true, isLocked: Bool = false, instances: [Instance] = []
     ) {
         self.id = id
         self.name = name
@@ -148,13 +151,15 @@ public struct Layer: Codable, Sendable, Hashable {
         self.tracks = tracks
         self.isVisible = isVisible
         self.isLocked = isLocked
+        self.instances = instances
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, name, shapes, tracks, isVisible, isLocked
+        case id, name, shapes, tracks, isVisible, isLocked, instances
     }
 
-    /// Files written before the flags existed decode as visible and unlocked.
+    /// Files written before the flags existed decode as visible and unlocked,
+    /// and files without instances decode with none.
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(String.self, forKey: .id)
@@ -163,6 +168,7 @@ public struct Layer: Codable, Sendable, Hashable {
         tracks = try c.decode([String: [Keyframe]].self, forKey: .tracks)
         isVisible = try c.decodeIfPresent(Bool.self, forKey: .isVisible) ?? true
         isLocked = try c.decodeIfPresent(Bool.self, forKey: .isLocked) ?? false
+        instances = try c.decodeIfPresent([Instance].self, forKey: .instances) ?? []
     }
 
     /// Inserts or replaces the keyframe at `keyframe.frame`, keeping the track
