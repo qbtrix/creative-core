@@ -48,7 +48,7 @@ import Testing
         let prop = props.randomElement(using: &rng) ?? "x"
         let frame = Int.random(in: -1...30, using: &rng)
         let scene = (e.document.scenes.map(\.id) + ["missing"]).randomElement(using: &rng) ?? "missing"
-        switch Int.random(in: 0..<10, using: &rng) {
+        switch Int.random(in: 0..<11, using: &rng) {
         case 0:
             nextID += 1
             let index = Int.random(in: -2...5, using: &rng)
@@ -77,6 +77,9 @@ import Testing
         case 9:
             try e.perform(SetSceneTiming(sceneID: scene, fps: Int.random(in: -1...60, using: &rng),
                                          durationFrames: frame))
+        case 10:
+            let easing: Easing = Bool.random(using: &rng) ? .easeIn : .linear
+            try e.perform(SetKeyframeEasing(sceneID: s, layerID: layer, property: prop, frame: frame, easing: easing))
         default:
             let shape = Shape(points: [Point(x: Double(frame), y: 0), Point(x: 1, y: 1)], closed: false)
             try e.perform(AddShape(sceneID: s, layerID: layer, shape: shape))
