@@ -29,6 +29,7 @@ import Testing
             RemoveKeyframe(sceneID: s, layerID: "ball", property: "x", frame: 0),
             AddShape(sceneID: s, layerID: "bg",
                      shape: Shape(points: [Point(x: 1, y: 2), Point(x: 3, y: 4)], closed: false)),
+            ReorderLayer(sceneID: s, layerID: "bg", toIndex: 1),
         ]
     }
 
@@ -36,7 +37,7 @@ import Testing
         let sampled = Set(Self.samples().map { type(of: $0).id })
         #expect(sampled == Set(Self.registry.ids))
         #expect(Self.registry.ids.count == Self.samples().count)
-        #expect(Self.registry.ids.count == 12)
+        #expect(Self.registry.ids.count == 13)
     }
 
     @Test func everyBuiltInRoundTripsAndBehavesTheSame() throws {

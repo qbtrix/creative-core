@@ -13,7 +13,7 @@ public enum CoreCommands {
     public static let all: [any Command.Type] = [
         AddLayer.self, RemoveLayer.self, RenameLayer.self,
         SetKeyframe.self, MoveKeyframe.self, RemoveKeyframe.self,
-        AddShape.self,
+        AddShape.self, ReorderLayer.self,
     ]
 }
 
