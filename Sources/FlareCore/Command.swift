@@ -38,6 +38,8 @@ public enum CommandError: Error, Equatable, Sendable {
     case keyframeNotFound(property: String, frame: Int)
     case frameOccupied(property: String, frame: Int)
     case invalidFrame(Int)
+    /// The scene has no frame label with this name.
+    case labelNotFound(String)
     /// Scene fps must be > 0.
     case invalidFPS(Int)
     /// Scene duration must be >= 0 frames.
@@ -45,6 +47,9 @@ public enum CommandError: Error, Equatable, Sendable {
     case shapeNotFound(Int)
     /// The layer is locked, so its shapes and keyframes cannot be edited.
     case layerLocked(String)
+    case symbolNotFound(String)
+    /// The symbol cannot be removed because an instance still uses it.
+    case symbolInUse(String)
     /// An index outside the valid range, e.g. a layer position.
     case invalidIndex(Int)
     /// `undo` was called on a command that never executed.
