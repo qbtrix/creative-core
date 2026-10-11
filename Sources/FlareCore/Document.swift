@@ -212,20 +212,47 @@ public struct Color: Codable, Sendable, Hashable {
 }
 
 /// Minimal vector shape: a polyline through `points`, optionally closed, with
-/// a solid fill. When `path` is set it wins over `points` and `closed` (see
-/// `outline`). Strokes and gradients come later (see docs/gaps.md).
+/// a solid fill and an optional stroke. When `path` is set it wins over
+/// `points` and `closed` (see `outline`). Gradients come later (see docs/gaps.md).
 public struct Shape: Codable, Sendable, Hashable {
     public var points: [Point]
     public var closed: Bool
     public var fill: Color
     /// Curved geometry. Optional so v1 files without it still decode.
     public var path: Path?
+    /// Outline style. Nil means no stroke; v1 files without it decode as nil.
+    public var stroke: Stroke?
 
-    public init(points: [Point], closed: Bool = true, fill: Color = .black, path: Path? = nil) {
+    public init(points: [Point], closed: Bool = true, fill: Color = .black, path: Path? = nil, stroke: Stroke? = nil) {
         self.points = points
         self.closed = closed
         self.fill = fill
         self.path = path
+        self.stroke = stroke
+    }
+}
+
+/// How a shape's outline is drawn. `width` is in points, finite and >= 0
+/// (checked by `FlareFormat.validate`).
+public struct Stroke: Codable, Sendable, Hashable {
+    public enum Join: String, Codable, Sendable, Hashable, CaseIterable {
+        case miter, round, bevel
+    }
+
+    public enum Cap: String, Codable, Sendable, Hashable, CaseIterable {
+        case butt, round, square
+    }
+
+    public var color: Color
+    public var width: Double
+    public var join: Join
+    public var cap: Cap
+
+    public init(color: Color = .black, width: Double = 1, join: Join = .miter, cap: Cap = .butt) {
+        self.color = color
+        self.width = width
+        self.join = join
+        self.cap = cap
     }
 }
 
