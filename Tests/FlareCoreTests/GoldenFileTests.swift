@@ -29,6 +29,9 @@ import Testing
             "layers" : [
               {
                 "id" : "bg",
+                "instances" : [
+
+                ],
                 "isLocked" : false,
                 "isVisible" : true,
                 "name" : "Background",
@@ -41,6 +44,9 @@ import Testing
               },
               {
                 "id" : "ball",
+                "instances" : [
+
+                ],
                 "isLocked" : false,
                 "isVisible" : true,
                 "name" : "Ball",
