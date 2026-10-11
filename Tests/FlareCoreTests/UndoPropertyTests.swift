@@ -12,6 +12,7 @@ import Testing
         + SceneCommandTests.undoSteps
         + KeyframeCommandsTests.undoSteps
         + LayerFlagsTests.undoSteps
+        + ShapeCommandsTests.undoSteps
 
     @Test(arguments: 0..<200)
     func undoAllRestoresOriginal(seed: UInt64) throws {
