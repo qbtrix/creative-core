@@ -27,6 +27,8 @@ public struct RemoveShape: Command {
     public var index: Int
     var removed: Shape?
 
+    private enum CodingKeys: String, CodingKey { case sceneID, layerID, index }
+
     public init(sceneID: String, layerID: String, index: Int) {
         self.sceneID = sceneID
         self.layerID = layerID
@@ -59,6 +61,8 @@ public struct SetShapeFill: Command {
     public var index: Int
     public var fill: Fill
     var oldFill: Fill?
+
+    private enum CodingKeys: String, CodingKey { case sceneID, layerID, index, fill }
 
     public init(sceneID: String, layerID: String, index: Int, fill: Fill) {
         self.sceneID = sceneID
@@ -96,6 +100,8 @@ public struct TranslateShape: Command {
     public var dx: Double
     public var dy: Double
     var oldShape: Shape?
+
+    private enum CodingKeys: String, CodingKey { case sceneID, layerID, index, dx, dy }
 
     public init(sceneID: String, layerID: String, index: Int, dx: Double, dy: Double) {
         self.sceneID = sceneID

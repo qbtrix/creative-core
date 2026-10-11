@@ -48,6 +48,8 @@ public struct RemoveScene: Command {
     var removed: Scene?
     var removedIndex: Int?
 
+    private enum CodingKeys: String, CodingKey { case sceneID }
+
     public init(sceneID: String) {
         self.sceneID = sceneID
     }
@@ -73,6 +75,8 @@ public struct SetSceneTiming: Command {
     public var durationFrames: Int
     var oldFPS: Int?
     var oldDurationFrames: Int?
+
+    private enum CodingKeys: String, CodingKey { case sceneID, fps, durationFrames }
 
     public init(sceneID: String, fps: Int, durationFrames: Int) {
         self.sceneID = sceneID

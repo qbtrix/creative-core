@@ -21,6 +21,8 @@ public struct SetFrameLabel: Command {
     public var frame: Int
     var oldLabels: [String: Int]?
 
+    private enum CodingKeys: String, CodingKey { case sceneID, name, frame }
+
     public init(sceneID: String, name: String, frame: Int) {
         self.sceneID = sceneID
         self.name = name
@@ -48,6 +50,8 @@ public struct RemoveFrameLabel: Command {
     public var sceneID: String
     public var name: String
     var oldLabels: [String: Int]?
+
+    private enum CodingKeys: String, CodingKey { case sceneID, name }
 
     public init(sceneID: String, name: String) {
         self.sceneID = sceneID

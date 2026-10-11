@@ -18,6 +18,8 @@ public struct SetMetadata: Command {
     public var metadata: Metadata
     var old: Metadata?
 
+    private enum CodingKeys: String, CodingKey { case metadata }
+
     public init(metadata: Metadata) {
         self.metadata = metadata
     }

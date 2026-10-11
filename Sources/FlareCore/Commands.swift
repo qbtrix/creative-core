@@ -1,7 +1,8 @@
 // Commands.swift: the built-in document commands. Each one validates its
 // params, throws a CommandError instead of crashing, and records just enough
 // in execute() for undo() to restore the document exactly. New commands follow
-// the same shape: params first, undo state as optional vars last.
+// the same shape: params first, undo state as optional vars last, and
+// CodingKeys that list only the params, so undo state is never encoded.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -57,6 +58,8 @@ public struct RemoveLayer: Command {
     var removed: Layer?
     var removedIndex: Int?
 
+    private enum CodingKeys: String, CodingKey { case sceneID, layerID }
+
     public init(sceneID: String, layerID: String) {
         self.sceneID = sceneID
         self.layerID = layerID
@@ -87,6 +90,8 @@ public struct RenameLayer: Command {
     public var name: String
     var oldName: String?
 
+    private enum CodingKeys: String, CodingKey { case sceneID, layerID, name }
+
     public init(sceneID: String, layerID: String, name: String) {
         self.sceneID = sceneID
         self.layerID = layerID
@@ -116,6 +121,8 @@ public struct SetKeyframe: Command {
     public var keyframe: Keyframe
     var previous: Keyframe?
     var executed: Bool?
+
+    private enum CodingKeys: String, CodingKey { case sceneID, layerID, property, keyframe }
 
     public init(sceneID: String, layerID: String, property: String, keyframe: Keyframe) {
         self.sceneID = sceneID
@@ -199,6 +206,8 @@ public struct RemoveKeyframe: Command {
     public var frame: Int
     var removed: Keyframe?
 
+    private enum CodingKeys: String, CodingKey { case sceneID, layerID, property, frame }
+
     public init(sceneID: String, layerID: String, property: String, frame: Int) {
         self.sceneID = sceneID
         self.layerID = layerID
@@ -230,6 +239,8 @@ public struct AddShape: Command {
     public var layerID: String
     public var shape: Shape
     var insertedAt: Int?
+
+    private enum CodingKeys: String, CodingKey { case sceneID, layerID, shape }
 
     public init(sceneID: String, layerID: String, shape: Shape) {
         self.sceneID = sceneID

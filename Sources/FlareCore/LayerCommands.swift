@@ -24,6 +24,8 @@ public struct SetLayerFlags: Command {
     var oldVisible: Bool?
     var oldLocked: Bool?
 
+    private enum CodingKeys: String, CodingKey { case sceneID, layerID, isVisible, isLocked }
+
     public init(sceneID: String, layerID: String, isVisible: Bool? = nil, isLocked: Bool? = nil) {
         self.sceneID = sceneID
         self.layerID = layerID
@@ -60,6 +62,8 @@ public struct ReorderLayer: Command {
     public var layerID: String
     public var toIndex: Int
     var fromIndex: Int?
+
+    private enum CodingKeys: String, CodingKey { case sceneID, layerID, toIndex }
 
     public init(sceneID: String, layerID: String, toIndex: Int) {
         self.sceneID = sceneID
