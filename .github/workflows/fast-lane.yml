@@ -21,6 +21,7 @@ on:
         required: false
 
 permissions:
+  issues: write
   contents: write
   pull-requests: write
   checks: read
