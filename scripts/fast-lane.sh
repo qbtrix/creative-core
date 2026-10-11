@@ -33,7 +33,7 @@ LABEL="fast-lane"
 MERGED_LABEL="fast-lane-merged"
 CI_WORKFLOWS=("CI")
 SELF_WORKFLOW="Fast Lane"
-DENY_RE='^\.github/|(^|/)(CLAUDE|AGENTS)\.md$|^scripts/(ci|cloud-setup\.sh|fast-lane\.sh)$|(^|/)Package\.(swift|resolved)$|^LICENSE'
+DENY_RE='^\.github/|^\.claude/|(^|/)(CLAUDE|AGENTS)\.md$|^scripts/(ci|cloud-setup\.sh|fast-lane\.sh)$|(^|/)Package\.(swift|resolved)$|^LICENSE'
 
 REPO="${GH_REPO:-qbtrix/flare-core}"
 DRY_RUN=0
@@ -42,6 +42,11 @@ MERGED_ANY=0
 # reports UNKNOWN meanwhile. Re-read the PR this many times, 5s apart, before
 # calling it not ready; otherwise a PR checked right after another merge stalls.
 UNKNOWN_RETRIES="${FAST_LANE_UNKNOWN_RETRIES:-8}"
+
+# Drops AI attribution lines (co-author trailers, session links, "Generated with" footers).
+strip_attribution() {
+  grep -v -i -E '^[[:space:]]*(co-authored-by:.*(claude|anthropic)|claude-session:|_?generated (with|by) \[?claude)' || true
+}
 
 log() { printf '  %s\n' "$*" >&2; }
 
@@ -182,7 +187,12 @@ evaluate() {
       local lines files green sha
       IFS='|' read -r lines files green <<<"$rest"
       sha=$(jq -r '.headRefOid' "$tmp/pr.json")
-      write gh pr merge "$n" -R "$REPO" --squash --delete-branch=false --match-head-commit "$sha"
+      # Squash message = PR title + body, minus any AI attribution lines.
+      local title body
+      title=$(gh pr view "$n" -R "$REPO" --json title --jq .title)
+      body=$(gh pr view "$n" -R "$REPO" --json body --jq .body | strip_attribution)
+      write gh pr merge "$n" -R "$REPO" --squash --delete-branch=false --match-head-commit "$sha" \
+        --subject "$title (#$n)" --body "$body"
       MERGED_ANY=1
       write gh pr edit "$n" -R "$REPO" --add-label "$MERGED_LABEL" || log "could not add $MERGED_LABEL label"
       comment_once "$n" "Fast lane: merged ($lines lines, $files files, $green checks green)."
