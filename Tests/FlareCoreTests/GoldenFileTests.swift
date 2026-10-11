@@ -103,6 +103,9 @@ import Testing
             "name" : "Main",
             "width" : 550
           }
+        ],
+        "symbols" : [
+
         ]
       },
       "format" : "flare",
