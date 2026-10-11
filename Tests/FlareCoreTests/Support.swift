@@ -41,8 +41,9 @@ enum Fixtures {
 typealias UndoStep = @Sendable (inout CommandEngine, inout SplitMix64, inout Int) throws -> Void
 
 /// Runs `length` random steps (some grouped, some invalid) from `start`, then
-/// checks that a failed step left the document untouched, undo-all gives back
-/// `start` and redo-all gives back the final document. Each command family's
+/// checks that a failed step left the document untouched, every step left a
+/// valid document, undo-all gives back `start` and redo-all gives back the
+/// final document. Each command family's
 /// test file calls this with its own steps; UndoPropertyTests mixes them all.
 func assertUndoRestoresDocument(seed: UInt64, steps: [UndoStep], start: Document = Fixtures.document(),
                                 length: Int = 40) throws {
@@ -68,6 +69,8 @@ func assertUndoRestoresDocument(seed: UInt64, steps: [UndoStep], start: Document
                 #expect(engine.document == before, "failed command mutated the document")
             }
         }
+        // perform validates (scoped for a LayerCommand); the full check must agree.
+        #expect(throws: Never.self) { try FlareFormat.validate(engine.document) }
     }
 
     let final = engine.document

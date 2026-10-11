@@ -86,6 +86,48 @@ public enum FlareFormat {
     /// Checks the invariants listed in Document.swift.
     public static func validate(_ document: Document) throws {
         try checkLimits(document)
+        let symbolIDs = try validateHeaders(document)
+        for scene in document.scenes {
+            try validate(scene.layers, owner: "scene \(scene.id)", symbols: symbolIDs)
+        }
+        for symbol in document.symbols {
+            try validate(symbol.layers, owner: "symbol \(symbol.id)", symbols: symbolIDs)
+        }
+        try checkSymbolCycles(document.symbols)
+        try validateStateMachines(document)
+    }
+
+    /// Like `validate(_:)`, after a change to layer `layerID` of scene `sceneID`
+    /// only (an edit, insert, removal or move) of `previous`, which was valid.
+    /// Other layers are trusted, so the cost does not grow with the scene.
+    static func validate(_ document: Document, layer layerID: String, scene sceneID: String,
+                         since previous: Document) throws {
+        let symbolIDs = try validateHeaders(document)
+        guard let new = document.scenes.first(where: { $0.id == sceneID })?.layers,
+              let old = previous.scenes.first(where: { $0.id == sceneID })?.layers else {
+            return try validate(document)
+        }
+        if let i = new.firstIndex(where: { $0.id == layerID }) {
+            let layer = new[i]
+            try validate([layer], owner: "scene \(sceneID)", symbols: symbolIDs)
+            let inserted = new.count > old.count
+            // The other ids were unique before, so only a later copy of this one can clash.
+            if inserted, new[(i + 1)...].contains(where: { $0.id == layerID }) {
+                throw FormatError.invalid("scene \(sceneID): duplicate layer id \(layerID)")
+            }
+            let before = inserted ? nil
+                : old.indices.contains(i) && old[i].id == layerID ? old[i] : old.first { $0.id == layerID }
+            // The total was within the limits before, so only growth can break them.
+            if new.count > maxLayersPerScene || pointCount(layer.shapes) > pointCount(before?.shapes ?? []) {
+                try checkLimits(document)
+            }
+        }
+        try checkSymbolCycles(document.symbols)
+        try validateStateMachines(document)
+    }
+
+    /// Scene and symbol fields, without their layers. Returns the symbol ids.
+    static func validateHeaders(_ document: Document) throws -> Set<String> {
         var sceneIDs = Set<String>()
         for scene in document.scenes {
             guard sceneIDs.insert(scene.id).inserted else { throw FormatError.invalid("duplicate scene id \(scene.id)") }
@@ -103,25 +145,15 @@ public enum FlareFormat {
             guard symbolIDs.insert(symbol.id).inserted else { throw FormatError.invalid("duplicate symbol id \(symbol.id)") }
             guard symbol.durationFrames >= 0 else { throw FormatError.invalid("symbol \(symbol.id): negative duration") }
         }
-        for scene in document.scenes {
-            try validate(scene.layers, owner: "scene \(scene.id)", symbols: symbolIDs)
-        }
-        for symbol in document.symbols {
-            try validate(symbol.layers, owner: "symbol \(symbol.id)", symbols: symbolIDs)
-        }
-        try checkSymbolCycles(document.symbols)
-        try validateStateMachines(document)
+        return symbolIDs
     }
 
     /// Layer invariants shared by scenes and symbols. `owner` names the
     /// container in error messages, e.g. "scene s1". `symbols` holds the
     /// document's symbol ids, which instances must name.
     static func validate(_ layers: [Layer], owner: String, symbols: Set<String>) throws {
-        var layerIDs = Set<String>()
+        try checkUniqueIDs(layers, owner: owner)
         for layer in layers {
-            guard layerIDs.insert(layer.id).inserted else {
-                throw FormatError.invalid("\(owner): duplicate layer id \(layer.id)")
-            }
             for shape in layer.shapes {
                 try shape.fill.validate()
                 if let width = shape.stroke?.width, !(width.isFinite && width >= 0) {
@@ -136,6 +168,9 @@ public enum FlareFormat {
                         throw FormatError.invalid("layer \(layer.id): track \(property) not sorted or has duplicates")
                     }
                     previous = k.frame
+                    guard k.value.isFinite else {
+                        throw FormatError.invalid("layer \(layer.id): track \(property) has a non-finite value at frame \(k.frame)")
+                    }
                 }
             }
             for instance in layer.instances {
@@ -146,6 +181,13 @@ public enum FlareFormat {
                     throw FormatError.invalid("layer \(layer.id): instance firstFrame must be >= 0")
                 }
             }
+        }
+    }
+
+    static func checkUniqueIDs(_ layers: [Layer], owner: String) throws {
+        var layerIDs = Set<String>()
+        for layer in layers where !layerIDs.insert(layer.id).inserted {
+            throw FormatError.invalid("\(owner): duplicate layer id \(layer.id)")
         }
     }
 
@@ -160,17 +202,24 @@ public enum FlareFormat {
                 throw FormatError.tooLarge("\(owner): \(layers.count) layers, limit \(maxLayersPerScene)")
             }
             for layer in layers {
-                for shape in layer.shapes {
-                    points += shape.points.count
-                    for element in shape.path?.elements ?? [] {
-                        points += element.pointCount
-                    }
-                    guard points <= maxTotalPoints else {
-                        throw FormatError.tooLarge("more than \(maxTotalPoints) points")
-                    }
+                points += pointCount(layer.shapes)
+                guard points <= maxTotalPoints else {
+                    throw FormatError.tooLarge("more than \(maxTotalPoints) points")
                 }
             }
         }
+    }
+
+    /// Points stored in `shapes`, counting path elements, for the size limit.
+    static func pointCount(_ shapes: [Shape]) -> Int {
+        var points = 0
+        for shape in shapes {
+            points += shape.points.count
+            for element in shape.path?.elements ?? [] {
+                points += element.pointCount
+            }
+        }
+        return points
     }
 }
 

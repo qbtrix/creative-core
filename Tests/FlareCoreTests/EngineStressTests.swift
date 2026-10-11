@@ -1,13 +1,15 @@
 // EngineStressTests.swift: the engine stress budget. perform and undo copy the
 // document and rely on copy-on-write, so a command on a big document should
 // cost the arrays it touches, not a deep copy. 1,000 random commands from every
-// family on a 10,000-layer document, then undo-all, must stay within budget and
-// give back the original document.
+// family on a document near the per-scene layer limit, then undo-all, must stay
+// within budget and give back the original document. perform validates every
+// result, so the start document must itself be valid.
 import FlareCore
 import Testing
 
 @Suite struct EngineStressTests {
-    static let layerCount = 10_000
+    /// Near `maxLayersPerScene`, with room left for AddLayer steps to succeed.
+    static let layerCount = FlareFormat.maxLayersPerScene - 100
     static let commandCount = 1_000
     static let budget: Duration = .seconds(5)
     /// Every family that edits the big scene. Scene steps are left out: one
@@ -32,7 +34,7 @@ import Testing
         return doc
     }
 
-    @Test func thousandCommandsOnTenThousandLayersStayInBudget() throws {
+    @Test func thousandCommandsNearTheLayerLimitStayInBudget() throws {
         let start = Self.bigDocument(seed: 40)
         #expect(start.scenes.first?.layers.count == Self.layerCount + 2)
 
@@ -56,6 +58,6 @@ import Testing
 
         #expect(performed > Self.commandCount / 2, "too few commands succeeded to exercise the engine")
         #expect(engine.document == start)
-        #expect(elapsed < Self.budget, "1,000 commands + undo-all on 10,000 layers took \(elapsed)")
+        #expect(elapsed < Self.budget, "1,000 commands + undo-all near the layer limit took \(elapsed)")
     }
 }

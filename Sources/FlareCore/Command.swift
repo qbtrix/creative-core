@@ -4,6 +4,9 @@
 //
 // Invariants:
 // - a command that throws leaves the document untouched (engine runs it on a copy)
+// - perform commits only a result that passes FlareFormat.validate; otherwise it
+//   throws CommandError.invalidDocument and changes nothing. A LayerCommand gets
+//   the same check scoped to its layer, so a drag on a big scene stays cheap
 // - a group is atomic: if its body throws, the document rolls back to the
 //   state before the group and nothing is pushed
 // - one undo-stack entry per perform() outside a group, one per outermost group
@@ -29,6 +32,15 @@ public protocol Command: Codable, Sendable {
     var label: String { get }
     mutating func execute(_ document: inout Document) throws
     func undo(_ document: inout Document) throws
+}
+
+/// A command whose `execute` changes one layer of one scene and nothing else:
+/// it edits, inserts, removes or moves that layer. CommandEngine then checks
+/// only that layer, plus the document-wide rules that do not scan layers.
+public protocol LayerCommand: Command {
+    var sceneID: String { get }
+    /// The one layer `execute` may change.
+    var layerID: String { get }
 }
 
 public enum CommandError: Error, Equatable, Sendable {
@@ -62,6 +74,8 @@ public enum CommandError: Error, Equatable, Sendable {
     case unknownCommand(String)
     /// A command envelope or its params could not be decoded or encoded.
     case malformedCommand(String)
+    /// The command would leave a document that fails `FlareFormat.validate`.
+    case invalidDocument(String)
 }
 
 public struct CommandEngine: Sendable {
@@ -99,6 +113,15 @@ public struct CommandEngine: Sendable {
         var cmd: any Command = command
         var doc = document
         try cmd.execute(&doc)
+        do {
+            if let scoped = cmd as? any LayerCommand {
+                try FlareFormat.validate(doc, layer: scoped.layerID, scene: scoped.sceneID, since: document)
+            } else {
+                try FlareFormat.validate(doc)
+            }
+        } catch {
+            throw CommandError.invalidDocument("\(cmd.label): \(error)")
+        }
         document = doc
         if pending != nil {
             pending?.commands.append(cmd)
