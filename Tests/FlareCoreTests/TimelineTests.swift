@@ -100,4 +100,39 @@ import Testing
         let extreme = [Keyframe(frame: Int.min, value: 0), Keyframe(frame: Int.max, value: 1)]
         #expect(Timeline.value(of: extreme, at: 0) != nil)
     }
+
+    /// The pre-G39 linear scan, kept as the oracle for the binary search.
+    static func linearScanValue(of keyframes: [Keyframe], at frame: Double) -> Double? {
+        guard frame.isFinite, let first = keyframes.first, let last = keyframes.last else { return nil }
+        if frame <= Double(first.frame) { return first.value }
+        if frame >= Double(last.frame) { return last.value }
+        for (a, b) in zip(keyframes, keyframes.dropFirst()) where frame < Double(b.frame) {
+            let span = Double(b.frame) - Double(a.frame)
+            guard span > 0 else { return b.value }
+            let t = a.easing.value(at: (frame - Double(a.frame)) / span)
+            return a.value + (b.value - a.value) * t
+        }
+        return last.value
+    }
+
+    @Test func binarySearchMatchesLinearScan() {
+        var rng = SplitMix64(seed: 39)
+        let easings: [Easing] = [.linear, .hold, .easeIn, .easeInOut]
+        for trial in 0..<200 {
+            let count = trial == 0 ? 1 : (trial == 1 ? 1_000 : Int.random(in: 1...1_000, using: &rng))
+            var frame = Int.random(in: -50...50, using: &rng)
+            var track: [Keyframe] = []
+            for _ in 0..<count {
+                frame += Int.random(in: 0...5, using: &rng)  // 0 makes duplicate frames
+                track.append(Keyframe(frame: frame, value: Double.random(in: -100...100, using: &rng),
+                                      easing: easings[Int.random(in: 0..<easings.count, using: &rng)]))
+            }
+            let lo = Double(track[0].frame) - 3, hi = Double(frame) + 3
+            for _ in 0..<50 {
+                let exact = Double(track[Int.random(in: 0..<count, using: &rng)].frame)
+                let sample = Bool.random(using: &rng) ? exact : Double.random(in: lo...hi, using: &rng)
+                #expect(Timeline.value(of: track, at: sample) == Self.linearScanValue(of: track, at: sample))
+            }
+        }
+    }
 }
