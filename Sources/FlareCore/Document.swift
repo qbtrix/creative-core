@@ -6,7 +6,8 @@
 // - every type here is a Codable, Sendable value type; no classes, no shared state
 // - Scene.fps > 0, Scene.durationFrames >= 0
 // - Scene.width and Scene.height are finite and > 0
-// - layer ids are unique within a scene
+// - layer ids are unique within a scene or symbol
+// - symbol ids are unique, Symbol.durationFrames >= 0
 // - each track is sorted by frame, frames are unique and >= 0, and a track is
 //   never stored empty (an empty track is removed, so undo restores equality)
 #if canImport(FoundationEssentials)
@@ -17,9 +18,38 @@ import Foundation
 
 public struct Document: Codable, Sendable, Hashable {
     public var scenes: [Scene]
+    /// Reusable symbol definitions. Missing in older v1 files means empty.
+    public var symbols: [Symbol]
 
-    public init(scenes: [Scene] = []) {
+    public init(scenes: [Scene] = [], symbols: [Symbol] = []) {
         self.scenes = scenes
+        self.symbols = symbols
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case scenes, symbols
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        scenes = try container.decode([Scene].self, forKey: .scenes)
+        symbols = try container.decodeIfPresent([Symbol].self, forKey: .symbols) ?? []
+    }
+}
+
+/// A reusable animation with its own timeline. Its layers follow the same
+/// invariants as scene layers.
+public struct Symbol: Codable, Sendable, Hashable {
+    public var id: String
+    public var name: String
+    public var durationFrames: Int
+    public var layers: [Layer]
+
+    public init(id: String, name: String, durationFrames: Int = 48, layers: [Layer] = []) {
+        self.id = id
+        self.name = name
+        self.durationFrames = durationFrames
+        self.layers = layers
     }
 }
 

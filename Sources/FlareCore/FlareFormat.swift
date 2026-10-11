@@ -94,20 +94,32 @@ public enum FlareFormat {
             guard scene.width.isFinite, scene.width > 0, scene.height.isFinite, scene.height > 0 else {
                 throw FormatError.invalid("scene \(scene.id): canvas size must be finite and > 0")
             }
-            var layerIDs = Set<String>()
-            for layer in scene.layers {
-                guard layerIDs.insert(layer.id).inserted else {
-                    throw FormatError.invalid("scene \(scene.id): duplicate layer id \(layer.id)")
-                }
-                for (property, track) in layer.tracks {
-                    guard !track.isEmpty else { throw FormatError.invalid("layer \(layer.id): empty track \(property)") }
-                    var previous = -1
-                    for k in track {
-                        guard k.frame > previous else {
-                            throw FormatError.invalid("layer \(layer.id): track \(property) not sorted or has duplicates")
-                        }
-                        previous = k.frame
+            try validate(scene.layers, owner: "scene \(scene.id)")
+        }
+        var symbolIDs = Set<String>()
+        for symbol in document.symbols {
+            guard symbolIDs.insert(symbol.id).inserted else { throw FormatError.invalid("duplicate symbol id \(symbol.id)") }
+            guard symbol.durationFrames >= 0 else { throw FormatError.invalid("symbol \(symbol.id): negative duration") }
+            try validate(symbol.layers, owner: "symbol \(symbol.id)")
+        }
+    }
+
+    /// Layer invariants shared by scenes and symbols. `owner` names the
+    /// container in error messages, e.g. "scene s1".
+    static func validate(_ layers: [Layer], owner: String) throws {
+        var layerIDs = Set<String>()
+        for layer in layers {
+            guard layerIDs.insert(layer.id).inserted else {
+                throw FormatError.invalid("\(owner): duplicate layer id \(layer.id)")
+            }
+            for (property, track) in layer.tracks {
+                guard !track.isEmpty else { throw FormatError.invalid("layer \(layer.id): empty track \(property)") }
+                var previous = -1
+                for k in track {
+                    guard k.frame > previous else {
+                        throw FormatError.invalid("layer \(layer.id): track \(property) not sorted or has duplicates")
                     }
+                    previous = k.frame
                 }
             }
         }
