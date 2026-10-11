@@ -26,6 +26,7 @@ permissions:
   pull-requests: write
   checks: read
   statuses: read
+  actions: write  # dispatch CI on main and refreshed PR heads
 
 concurrency:
   group: fast-lane-${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha || inputs.pr || github.run_id }}
