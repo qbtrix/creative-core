@@ -94,19 +94,24 @@ public enum FlareFormat {
             guard scene.width.isFinite, scene.width > 0, scene.height.isFinite, scene.height > 0 else {
                 throw FormatError.invalid("scene \(scene.id): canvas size must be finite and > 0")
             }
-            try validate(scene.layers, owner: "scene \(scene.id)")
         }
         var symbolIDs = Set<String>()
         for symbol in document.symbols {
             guard symbolIDs.insert(symbol.id).inserted else { throw FormatError.invalid("duplicate symbol id \(symbol.id)") }
             guard symbol.durationFrames >= 0 else { throw FormatError.invalid("symbol \(symbol.id): negative duration") }
-            try validate(symbol.layers, owner: "symbol \(symbol.id)")
+        }
+        for scene in document.scenes {
+            try validate(scene.layers, owner: "scene \(scene.id)", symbols: symbolIDs)
+        }
+        for symbol in document.symbols {
+            try validate(symbol.layers, owner: "symbol \(symbol.id)", symbols: symbolIDs)
         }
     }
 
     /// Layer invariants shared by scenes and symbols. `owner` names the
-    /// container in error messages, e.g. "scene s1".
-    static func validate(_ layers: [Layer], owner: String) throws {
+    /// container in error messages, e.g. "scene s1". `symbols` holds the
+    /// document's symbol ids, which instances must name.
+    static func validate(_ layers: [Layer], owner: String, symbols: Set<String>) throws {
         var layerIDs = Set<String>()
         for layer in layers {
             guard layerIDs.insert(layer.id).inserted else {
@@ -121,6 +126,14 @@ public enum FlareFormat {
                         throw FormatError.invalid("layer \(layer.id): track \(property) not sorted or has duplicates")
                     }
                     previous = k.frame
+                }
+            }
+            for instance in layer.instances {
+                guard symbols.contains(instance.symbolID) else {
+                    throw FormatError.invalid("layer \(layer.id): instance of unknown symbol \(instance.symbolID)")
+                }
+                guard instance.firstFrame >= 0 else {
+                    throw FormatError.invalid("layer \(layer.id): instance firstFrame must be >= 0")
                 }
             }
         }
