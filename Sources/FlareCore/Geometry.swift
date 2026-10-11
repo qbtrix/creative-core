@@ -1,5 +1,6 @@
 // Geometry.swift: 2D affine `Matrix` and the `Transform` (position, scale,
-// rotation) that layers and instances use to place content.
+// rotation) that layers and instances use to place content, plus the
+// axis-aligned `Rect` used for bounds.
 //
 // Invariants:
 // - a Matrix maps (x, y) to (a*x + c*y + tx, b*x + d*y + ty)
@@ -116,6 +117,44 @@ public struct Transform: Codable, Sendable, Hashable {
     public var matrix: Matrix {
         Matrix.translation(x: x, y: y) * Matrix.rotation(degrees: rotation) * Matrix.scale(x: scaleX, y: scaleY)
     }
+}
+
+/// Axis-aligned rectangle given by its edges. `minX <= maxX` and
+/// `minY <= maxY` hold for rects built with `Rect(enclosing:)`.
+public struct Rect: Codable, Sendable, Hashable {
+    public var minX: Double
+    public var minY: Double
+    public var maxX: Double
+    public var maxY: Double
+
+    public init(minX: Double, minY: Double, maxX: Double, maxY: Double) {
+        self.minX = minX
+        self.minY = minY
+        self.maxX = maxX
+        self.maxY = maxY
+    }
+
+    /// The smallest rect holding every finite point; nil when there is none.
+    /// Points with a NaN or infinite coordinate are skipped.
+    public init?(enclosing points: [Point]) {
+        var rect: Rect?
+        for p in points where p.x.isFinite && p.y.isFinite {
+            if var r = rect {
+                r.minX = Swift.min(r.minX, p.x)
+                r.minY = Swift.min(r.minY, p.y)
+                r.maxX = Swift.max(r.maxX, p.x)
+                r.maxY = Swift.max(r.maxY, p.y)
+                rect = r
+            } else {
+                rect = Rect(minX: p.x, minY: p.y, maxX: p.x, maxY: p.y)
+            }
+        }
+        guard let rect else { return nil }
+        self = rect
+    }
+
+    public var width: Double { maxX - minX }
+    public var height: Double { maxY - minY }
 }
 
 /// Sine and cosine of an angle in degrees, exact at multiples of 90.
