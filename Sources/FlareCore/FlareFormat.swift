@@ -94,6 +94,9 @@ public enum FlareFormat {
             guard scene.width.isFinite, scene.width > 0, scene.height.isFinite, scene.height > 0 else {
                 throw FormatError.invalid("scene \(scene.id): canvas size must be finite and > 0")
             }
+            for (name, frame) in scene.labels where frame < 0 || frame > scene.durationFrames {
+                throw FormatError.invalid("scene \(scene.id): label \(name) at frame \(frame) is outside the scene")
+            }
         }
         var symbolIDs = Set<String>()
         for symbol in document.symbols {
