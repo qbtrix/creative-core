@@ -10,7 +10,7 @@
 # a framework directory swift does not search by default, so we add it.
 # bash 3.2 compatible (macOS /bin/bash).
 set -uo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit 1
 
 fail() { echo; echo "CI: FAIL ($1)"; exit 1; }
 
