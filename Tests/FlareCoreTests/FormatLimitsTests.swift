@@ -1,6 +1,6 @@
 // FormatLimitsTests.swift: decoder size limits. Oversize input throws
 // `tooLarge` before parsing; documents exactly at the layer and point limits
-// still decode; one over each limit throws.
+// still decode; one over each limit throws. Symbols count like scenes.
 import FlareCore
 import Foundation
 import Testing
@@ -78,6 +78,22 @@ import Testing
         other.id = "t"
         let doc = Document(scenes: [half.scenes[0], other])
         #expect(performing: { try FlareFormat.validate(doc) }, throws: Self.isTooLarge)
+    }
+
+    @Test func symbolPointsCountTowardLimit() {
+        // Over the limit only inside a symbol: the scene itself is empty.
+        let big = Self.document(points: FlareFormat.maxTotalPoints + 1)
+        let symbol = Symbol(id: "sym", name: "Sym", layers: big.scenes[0].layers)
+        let doc = Document(scenes: [Scene(id: "s", name: "S")], symbols: [symbol])
+        #expect(performing: { try FlareFormat.validate(doc) }, throws: Self.isTooLarge)
+    }
+
+    @Test func symbolLayersOverLimitThrow() {
+        let layers = Self.document(layers: FlareFormat.maxLayersPerScene + 1).scenes[0].layers
+        let doc = Document(symbols: [Symbol(id: "sym", name: "Sym", layers: layers)])
+        #expect(throws: FormatError.tooLarge("symbol sym: \(layers.count) layers, limit \(FlareFormat.maxLayersPerScene)")) {
+            try FlareFormat.validate(doc)
+        }
     }
 }
 

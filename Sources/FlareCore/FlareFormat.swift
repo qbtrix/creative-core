@@ -31,7 +31,7 @@ public enum FlareFormat {
 
     /// Largest input `decode` will parse: 64 MB.
     public static let maxFileBytes = 64 * 1024 * 1024
-    /// Most layers allowed in any one scene.
+    /// Most layers allowed in any one scene or symbol.
     public static let maxLayersPerScene = 10_000
     /// Most points allowed in the whole document, counting `Shape.points` and
     /// the points of every path element.
@@ -149,14 +149,17 @@ public enum FlareFormat {
         }
     }
 
-    /// Throws `tooLarge` if a scene has too many layers or the document too many points.
+    /// Throws `tooLarge` if a scene or symbol has too many layers or the
+    /// document too many points. Points are counted across scenes and symbols.
     static func checkLimits(_ document: Document) throws {
+        let containers = document.scenes.map { ("scene \($0.id)", $0.layers) }
+            + document.symbols.map { ("symbol \($0.id)", $0.layers) }
         var points = 0
-        for scene in document.scenes {
-            guard scene.layers.count <= maxLayersPerScene else {
-                throw FormatError.tooLarge("scene \(scene.id): \(scene.layers.count) layers, limit \(maxLayersPerScene)")
+        for (owner, layers) in containers {
+            guard layers.count <= maxLayersPerScene else {
+                throw FormatError.tooLarge("\(owner): \(layers.count) layers, limit \(maxLayersPerScene)")
             }
-            for layer in scene.layers {
+            for layer in layers {
                 for shape in layer.shapes {
                     points += shape.points.count
                     for element in shape.path?.elements ?? [] {
