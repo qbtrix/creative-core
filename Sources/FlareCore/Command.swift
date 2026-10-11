@@ -42,6 +42,8 @@ public enum CommandError: Error, Equatable, Sendable {
     /// Scene duration must be >= 0 frames.
     case invalidDuration(Int)
     case shapeNotFound(Int)
+    /// The layer is locked, so its shapes and keyframes cannot be edited.
+    case layerLocked(String)
     /// `undo` was called on a command that never executed.
     case notExecuted
     case nothingToUndo

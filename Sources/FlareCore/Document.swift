@@ -75,12 +75,36 @@ public struct Layer: Codable, Sendable, Hashable {
     public var name: String
     public var shapes: [Shape]
     public var tracks: [String: [Keyframe]]
+    /// Hidden layers are skipped when rendering; they stay editable.
+    public var isVisible: Bool
+    /// Locked layers reject commands that edit their shapes or keyframes.
+    public var isLocked: Bool
 
-    public init(id: String, name: String, shapes: [Shape] = [], tracks: [String: [Keyframe]] = [:]) {
+    public init(
+        id: String, name: String, shapes: [Shape] = [], tracks: [String: [Keyframe]] = [:],
+        isVisible: Bool = true, isLocked: Bool = false
+    ) {
         self.id = id
         self.name = name
         self.shapes = shapes
         self.tracks = tracks
+        self.isVisible = isVisible
+        self.isLocked = isLocked
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, shapes, tracks, isVisible, isLocked
+    }
+
+    /// Files written before the flags existed decode as visible and unlocked.
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        shapes = try c.decode([Shape].self, forKey: .shapes)
+        tracks = try c.decode([String: [Keyframe]].self, forKey: .tracks)
+        isVisible = try c.decodeIfPresent(Bool.self, forKey: .isVisible) ?? true
+        isLocked = try c.decodeIfPresent(Bool.self, forKey: .isLocked) ?? false
     }
 
     /// Inserts or replaces the keyframe at `keyframe.frame`, keeping the track
@@ -191,5 +215,16 @@ extension Document {
             throw CommandError.layerNotFound(layer)
         }
         return try body(&scenes[s].layers[l])
+    }
+
+    /// Like `withLayer`, but throws `layerLocked` if the layer is locked. Content
+    /// edits (shapes, keyframes) use this in `execute`; `undo` uses `withLayer`
+    /// so it always restores exactly.
+    @discardableResult
+    mutating func withEditableLayer<T>(scene: String, layer: String, _ body: (inout Layer) throws -> T) throws -> T {
+        try withLayer(scene: scene, layer: layer) { l in
+            guard !l.isLocked else { throw CommandError.layerLocked(l.id) }
+            return try body(&l)
+        }
     }
 }

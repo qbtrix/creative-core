@@ -32,20 +32,22 @@ public struct SetKeyframeEasing: Command {
     }
 
     public mutating func execute(_ document: inout Document) throws {
-        oldEasing = try Self.replace(&document, sceneID, layerID, property, frame, easing)
+        oldEasing = try Self.replace(&document, sceneID, layerID, property, frame, easing, checkLock: true)
     }
 
     public func undo(_ document: inout Document) throws {
         guard let oldEasing else { throw CommandError.notExecuted }
-        try Self.replace(&document, sceneID, layerID, property, frame, oldEasing)
+        try Self.replace(&document, sceneID, layerID, property, frame, oldEasing, checkLock: false)
     }
 
     /// Sets the easing in place and returns the one it replaced.
     @discardableResult
     private static func replace(
-        _ document: inout Document, _ scene: String, _ layer: String, _ p: String, _ frame: Int, _ easing: Easing
+        _ document: inout Document, _ scene: String, _ layer: String, _ p: String, _ frame: Int, _ easing: Easing,
+        checkLock: Bool
     ) throws -> Easing {
         try document.withLayer(scene: scene, layer: layer) { layer in
+            guard !checkLock || !layer.isLocked else { throw CommandError.layerLocked(layer.id) }
             guard var k = layer.keyframe(at: frame, property: p) else {
                 throw CommandError.keyframeNotFound(property: p, frame: frame)
             }
@@ -81,7 +83,7 @@ public struct ShiftKeyframes: Command {
 
     public mutating func execute(_ document: inout Document) throws {
         let (from, to, delta) = (fromFrame, toFrame, self.delta)
-        oldTracks = try document.withLayer(scene: sceneID, layer: layerID) { layer in
+        oldTracks = try document.withEditableLayer(scene: sceneID, layer: layerID) { layer in
             var shifted: [String: [Keyframe]] = [:]
             for (property, track) in layer.tracks {
                 let outside = Set(track.filter { $0.frame < from || $0.frame > to }.map(\.frame))
