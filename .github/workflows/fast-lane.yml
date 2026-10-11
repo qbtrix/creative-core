@@ -37,7 +37,7 @@ jobs:
       (github.event.action == 'labeled' && github.event.label.name == 'fast-lane') ||
       (github.event.action != 'labeled' && contains(github.event.pull_request.labels.*.name, 'fast-lane'))
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:

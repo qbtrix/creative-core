@@ -40,7 +40,7 @@ check() {
 }
 
 check "happy path" "eligible|150|2|5" . "$BASE_FILES" .
-check "claude app bot author" "eligible|150|2|5" '.author.login = "app/claude"' "$BASE_FILES" .
+check "claude app bot author is not allowlisted" "not-eligible|author app/claude is not on the fast-lane allowlist" '.author.login = "app/claude"' "$BASE_FILES" .
 check "deny path hit" "not-eligible|touches protected paths: .github/workflows/ci.yml" \
   . $'.github/workflows/ci.yml\nsrc/x.py' .
 check "deny Package.swift" "not-eligible|touches protected paths: Package.swift" \

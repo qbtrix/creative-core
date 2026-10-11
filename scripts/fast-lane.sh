@@ -24,10 +24,8 @@
 set -euo pipefail
 
 # Logins as `gh pr view --json author` reports them. Cloud Claude Code sessions
-# open PRs as the Claude GitHub App, which gh reports as `app/claude` (REST and
-# the web UI show `claude[bot]`; both are listed). Verify on the first bot PR:
-#   gh pr view <n> --json author --jq .author.login
-FAST_LANE_AUTHORS="prakashUXtech app/claude claude[bot]"
+# open PRs with the captain's own GitHub token, so they appear as prakashUXtech.
+FAST_LANE_AUTHORS="prakashUXtech"
 MAX_LINES=400
 MAX_FILES=15
 BASE_BRANCH="${FAST_LANE_BASE:-main}"
@@ -39,6 +37,11 @@ DENY_RE='^\.github/|(^|/)(CLAUDE|AGENTS)\.md$|^scripts/(ci|cloud-setup\.sh|fast-
 
 REPO="${GH_REPO:-qbtrix/flare-core}"
 DRY_RUN=0
+MERGED_ANY=0
+# GitHub recomputes `mergeable` lazily after any push to the base branch and
+# reports UNKNOWN meanwhile. Re-read the PR this many times, 5s apart, before
+# calling it not ready; otherwise a PR checked right after another merge stalls.
+UNKNOWN_RETRIES="${FAST_LANE_UNKNOWN_RETRIES:-8}"
 
 log() { printf '  %s\n' "$*" >&2; }
 
@@ -150,7 +153,13 @@ evaluate() {
   local n="$1" tmp
   [[ "$n" =~ ^[0-9]+$ ]] || { echo "fast-lane: bad PR number: $n" >&2; return 1; }
   tmp=$(mktemp -d)
-  gh pr view "$n" -R "$REPO" --json number,state,isDraft,baseRefName,labels,author,additions,deletions,changedFiles,mergeable,mergeStateStatus,headRefOid,statusCheckRollup >"$tmp/pr.json"
+  local tries=0
+  while :; do
+    gh pr view "$n" -R "$REPO" --json number,state,isDraft,baseRefName,labels,author,additions,deletions,changedFiles,mergeable,mergeStateStatus,headRefOid,statusCheckRollup >"$tmp/pr.json"
+    [[ "$(jq -r '.mergeable' "$tmp/pr.json")" == "UNKNOWN" ]] || break
+    (( tries++ < UNKNOWN_RETRIES )) || break
+    sleep 5
+  done
   jq '.statusCheckRollup // []' "$tmp/pr.json" >"$tmp/checks.json"
   gh api "repos/$REPO/pulls/$n/files" --paginate --jq '.[].filename' >"$tmp/files.txt"
 
@@ -174,6 +183,7 @@ evaluate() {
       IFS='|' read -r lines files green <<<"$rest"
       sha=$(jq -r '.headRefOid' "$tmp/pr.json")
       write gh pr merge "$n" -R "$REPO" --squash --delete-branch=false --match-head-commit "$sha"
+      MERGED_ANY=1
       write gh pr edit "$n" -R "$REPO" --add-label "$MERGED_LABEL" || log "could not add $MERGED_LABEL label"
       comment_once "$n" "Fast lane: merged ($lines lines, $files files, $green checks green)."
       ;;
@@ -201,8 +211,17 @@ main() {
         --limit 100 --json number,headRefOid --jq "$q")
   fi
   (( ${#prs[@]} )) || { echo "fast-lane: no matching open $LABEL PRs" >&2; return 0; }
-  local n
+  local n pass
   for n in "${prs[@]}"; do evaluate "$n"; done
+  # A merge made with GITHUB_TOKEN triggers no workflows, so PRs that went
+  # green while it was settling would never be looked at again. After any
+  # merge, sweep every open fast-lane PR, until a pass merges nothing.
+  for (( pass = 0; MERGED_ANY && pass < 5; pass++ )); do
+    MERGED_ANY=0
+    while read -r n; do [[ -n "$n" ]] && evaluate "$n"; done < <(
+      gh pr list -R "$REPO" --state open --base "$BASE_BRANCH" --label "$LABEL" \
+        --limit 100 --json number --jq '.[].number')
+  done
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then main "$@"; fi
