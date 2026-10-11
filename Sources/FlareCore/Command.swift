@@ -38,6 +38,8 @@ public enum CommandError: Error, Equatable, Sendable {
     case keyframeNotFound(property: String, frame: Int)
     case frameOccupied(property: String, frame: Int)
     case invalidFrame(Int)
+    /// The scene has no frame label with this name.
+    case labelNotFound(String)
     /// Scene fps must be > 0.
     case invalidFPS(Int)
     /// Scene duration must be >= 0 frames.

@@ -6,6 +6,7 @@
 // - every type here is a Codable, Sendable value type; no classes, no shared state
 // - Scene.fps > 0, Scene.durationFrames >= 0
 // - Scene.width and Scene.height are finite and > 0
+// - Scene label frames are in 0...durationFrames
 // - layer ids are unique within a scene or symbol
 // - symbol ids are unique, Symbol.durationFrames >= 0
 // - every layer instance names a known symbol and has firstFrame >= 0
@@ -92,6 +93,8 @@ public struct Scene: Codable, Sendable, Hashable {
     public var height: Double
     public var background: Color
     public var layers: [Layer]
+    /// Named frames, label name to frame in `0...durationFrames`.
+    public var labels: [String: Int]
 
     public static let defaultWidth: Double = 550
     public static let defaultHeight: Double = 400
@@ -99,7 +102,7 @@ public struct Scene: Codable, Sendable, Hashable {
     public init(
         id: String, name: String, fps: Int = 24, durationFrames: Int = 48,
         width: Double = Scene.defaultWidth, height: Double = Scene.defaultHeight,
-        background: Color = .white, layers: [Layer] = []
+        background: Color = .white, layers: [Layer] = [], labels: [String: Int] = [:]
     ) {
         self.id = id
         self.name = name
@@ -109,13 +112,14 @@ public struct Scene: Codable, Sendable, Hashable {
         self.height = height
         self.background = background
         self.layers = layers
+        self.labels = labels
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, name, fps, durationFrames, width, height, background, layers
+        case id, name, fps, durationFrames, width, height, background, layers, labels
     }
 
-    /// Files written before the canvas fields existed decode with the defaults.
+    /// Files written before the canvas fields or labels existed decode with the defaults.
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(String.self, forKey: .id)
@@ -126,6 +130,7 @@ public struct Scene: Codable, Sendable, Hashable {
         height = try c.decodeIfPresent(Double.self, forKey: .height) ?? Scene.defaultHeight
         background = try c.decodeIfPresent(Color.self, forKey: .background) ?? .white
         layers = try c.decode([Layer].self, forKey: .layers)
+        labels = try c.decodeIfPresent([String: Int].self, forKey: .labels) ?? [:]
     }
 }
 

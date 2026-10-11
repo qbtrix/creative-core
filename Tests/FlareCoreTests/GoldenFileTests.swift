@@ -26,6 +26,9 @@ import Testing
             "fps" : 24,
             "height" : 400,
             "id" : "s1",
+            "labels" : {
+              "start" : 0
+            },
             "layers" : [
               {
                 "id" : "bg",
