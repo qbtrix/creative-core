@@ -16,6 +16,14 @@ import Testing
             + KeyframeCommandsTests.registrySamples()
             + MetadataCommandsTests.registrySamples()
             + LabelCommandsTests.registrySamples()
+            + SymbolCommandsTests.registrySamples()
+    }
+
+    /// The fixture document plus one unused symbol, so every sample is valid on it.
+    static func sampleDocument() -> Document {
+        var doc = Fixtures.document()
+        doc.symbols = [Symbol(id: "spark", name: "Spark", durationFrames: 6)]
+        return doc
     }
 
     /// One sample of each layer, keyframe and shape command.
@@ -39,7 +47,7 @@ import Testing
         let sampled = Set(Self.samples().map { type(of: $0).id })
         #expect(sampled == Set(Self.registry.ids))
         #expect(Self.registry.ids.count == Self.samples().count)
-        #expect(Self.registry.ids.count == 16)
+        #expect(Self.registry.ids.count == 18)
     }
 
     @Test func everyBuiltInRoundTripsAndBehavesTheSame() throws {
@@ -55,15 +63,16 @@ import Testing
             #expect(try Self.registry.encode(decoded) == data)
 
             var a = original, b = decoded
-            var docA = Fixtures.document(), docB = Fixtures.document()
+            let start = Self.sampleDocument()
+            var docA = start, docB = start
             try a.execute(&docA)
             try b.execute(&docB)
             #expect(docA == docB, "\(type(of: original).id) behaves differently after decoding")
-            #expect(docA != Fixtures.document())
+            #expect(docA != start)
             try a.undo(&docA)
             try b.undo(&docB)
-            #expect(docA == Fixtures.document())
-            #expect(docB == Fixtures.document())
+            #expect(docA == start)
+            #expect(docB == start)
         }
     }
 

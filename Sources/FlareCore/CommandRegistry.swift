@@ -28,6 +28,7 @@ public struct CommandRegistry: Sendable {
         KeyframeCommands.all,
         MetadataCommands.all,
         LabelCommands.all,
+        SymbolCommands.all,
     ]
 
     /// Every built-in command.
