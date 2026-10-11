@@ -7,6 +7,11 @@ import FoundationEssentials
 import Foundation
 #endif
 
+/// The layer flag and order commands.
+public enum LayerCommands {
+    public static let all: [any Command.Type] = [SetLayerFlags.self, ReorderLayer.self]
+}
+
 /// Sets a layer's visibility and lock flags. A nil flag is left unchanged.
 /// Works on locked layers, so a layer can always be unlocked.
 public struct SetLayerFlags: Command {
