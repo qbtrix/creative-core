@@ -1,0 +1,150 @@
+{
+  "version": "1.0",
+  "scope": "creative-core",
+  "generated_at": "2026-10-12T00:00:00Z",
+  "source_path": ".",
+  "authored": true,
+  "model": {
+    "people": [],
+    "systems": [
+      {
+        "id": "creative-core",
+        "name": "FlareCore",
+        "description": "The pure-Swift engine of a Mac-native 2D vector animation studio: document model, commands with undo, timeline, easing, file format and export. Linux-safe, Foundation only. The Mac app lives in another repo.",
+        "tags": [
+          "internal"
+        ],
+        "containers": [
+          {
+            "id": "flarecore",
+            "name": "FlareCore library",
+            "description": "The FlareCore Swift package (Sources/FlareCore). Value types only, Codable and Sendable, and nothing crashes on untrusted input.",
+            "technology": "Swift 6, SwiftPM",
+            "tags": [
+              "internal"
+            ],
+            "components": [
+              {
+                "id": "document-commands",
+                "name": "Document and Command Engine",
+                "description": "The document model (Document > Scene > Layer > Shape, keyframe tracks, fills, metadata, frame labels), the Command protocol and CommandEngine with exact undo/redo, groups, coalescing and an undo depth limit, the CommandRegistry that decodes any command from a JSON envelope, the built-in command families, and the .flare v1 file format with validation. Every document change goes through a Command.",
+                "technology": "Swift 6, Foundation",
+                "paths": [
+                  "Sources/FlareCore/Document.swift",
+                  "Sources/FlareCore/Fill.swift",
+                  "Sources/FlareCore/Command.swift",
+                  "Sources/FlareCore/CommandRegistry.swift",
+                  "Sources/FlareCore/Commands.swift",
+                  "Sources/FlareCore/KeyframeCommands.swift",
+                  "Sources/FlareCore/LabelCommands.swift",
+                  "Sources/FlareCore/LayerCommands.swift",
+                  "Sources/FlareCore/MetadataCommands.swift",
+                  "Sources/FlareCore/SceneCommands.swift",
+                  "Sources/FlareCore/ShapeCommands.swift",
+                  "Sources/FlareCore/FlareFormat.swift"
+                ]
+              },
+              {
+                "id": "geometry",
+                "name": "Geometry",
+                "description": "2D affine Matrix, the Transform (position, scale, rotation) layers and instances use, axis-aligned Rect, vector Paths with line, quadratic and cubic segments, and tight shape bounds. Never returns non-finite values.",
+                "technology": "Swift 6, Foundation",
+                "paths": [
+                  "Sources/FlareCore/Geometry.swift",
+                  "Sources/FlareCore/Path.swift",
+                  "Sources/FlareCore/ShapeBounds.swift"
+                ]
+              },
+              {
+                "id": "timeline",
+                "name": "Timeline",
+                "description": "Frame/time conversion, keyframe interpolation with binary-search segment lookup, easing curves (linear, cubic bezier, hold), and sampling a layer's property values at a frame for rendering and export.",
+                "technology": "Swift 6, Foundation",
+                "paths": [
+                  "Sources/FlareCore/Timeline.swift",
+                  "Sources/FlareCore/Easing.swift",
+                  "Sources/FlareCore/Sampling.swift"
+                ]
+              },
+              {
+                "id": "export",
+                "name": "Export",
+                "description": "Exporters that turn a scene into other formats: one frame as an SVG document, and a scene as a Lottie JSON document with animated position and easing. Output is byte-stable and throws on non-finite values.",
+                "technology": "Swift 6, Foundation",
+                "paths": [
+                  "Sources/FlareCore/Export/*.swift"
+                ]
+              },
+              {
+                "id": "symbols",
+                "name": "Symbols",
+                "description": "Reusable symbol definitions and their instances on layers: how an instance maps the host timeline onto the symbol's own timeline, the add/remove/convert-to-symbol commands, and the check that rejects symbols that contain themselves.",
+                "technology": "Swift 6, Foundation",
+                "paths": [
+                  "Sources/FlareCore/Symbols.swift",
+                  "Sources/FlareCore/Instance.swift",
+                  "Sources/FlareCore/SymbolCommands.swift",
+                  "Sources/FlareCore/SymbolCycles.swift"
+                ]
+              },
+              {
+                "id": "statemachine",
+                "name": "State Machine",
+                "description": "Interactive state machines: states that play a frame range of a scene, transitions fired by named triggers, and typed bool/number inputs with transition conditions.",
+                "technology": "Swift 6, Foundation",
+                "paths": [
+                  "Sources/FlareCore/StateMachine.swift",
+                  "Sources/FlareCore/MachineInputs.swift"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "relationships": [
+      {
+        "source": "document-commands",
+        "target": "geometry",
+        "description": "shapes and layers are placed with Transform and Path",
+        "style": "sync"
+      },
+      {
+        "source": "document-commands",
+        "target": "timeline",
+        "description": "keyframe tracks carry easing; commands keep keyframes sorted",
+        "style": "sync"
+      },
+      {
+        "source": "symbols",
+        "target": "document-commands",
+        "description": "symbols hold layers and change the document through commands",
+        "style": "sync"
+      },
+      {
+        "source": "statemachine",
+        "target": "document-commands",
+        "description": "states play frame ranges of a document's scenes; validated by FlareFormat",
+        "style": "sync"
+      },
+      {
+        "source": "export",
+        "target": "timeline",
+        "description": "samples layer properties at a frame",
+        "style": "sync"
+      },
+      {
+        "source": "export",
+        "target": "geometry",
+        "description": "writes transforms as matrices and shapes as paths",
+        "style": "sync"
+      },
+      {
+        "source": "export",
+        "target": "document-commands",
+        "description": "reads scenes, layers, shapes and fills",
+        "style": "sync"
+      }
+    ]
+  }
+}
