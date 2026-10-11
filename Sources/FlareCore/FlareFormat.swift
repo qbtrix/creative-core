@@ -117,7 +117,12 @@ public enum FlareFormat {
             guard layerIDs.insert(layer.id).inserted else {
                 throw FormatError.invalid("\(owner): duplicate layer id \(layer.id)")
             }
-            for shape in layer.shapes { try shape.fill.validate() }
+            for shape in layer.shapes {
+                try shape.fill.validate()
+                if let width = shape.stroke?.width, !(width.isFinite && width >= 0) {
+                    throw FormatError.invalid("layer \(layer.id): stroke width must be finite and >= 0")
+                }
+            }
             for (property, track) in layer.tracks {
                 guard !track.isEmpty else { throw FormatError.invalid("layer \(layer.id): empty track \(property)") }
                 var previous = -1
