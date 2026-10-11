@@ -29,6 +29,13 @@ public struct StateMachine: Codable, Sendable, Hashable {
         self.transitions = transitions
         self.initialState = initialState
     }
+
+    /// The state reached from `state` when `trigger` fires. The first transition
+    /// in declaration order whose `from` and `trigger` match wins; if none
+    /// matches, the machine stays in `state`.
+    public func next(from state: String, trigger: String) -> String {
+        transitions.first { $0.from == state && $0.trigger == trigger }?.to ?? state
+    }
 }
 
 /// One state: plays frames `startFrame...endFrame` of scene `sceneID`.
