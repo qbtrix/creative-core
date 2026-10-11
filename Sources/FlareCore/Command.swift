@@ -10,6 +10,7 @@
 // - performing anything new clears the redo stack
 // - consecutive top-level performs with the same non-nil coalesce key share one
 //   entry; a different or nil key, an undo, a redo or a group ends coalescing
+// - the undo stack holds at most maxUndoDepth entries; the oldest is dropped
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -64,14 +65,18 @@ public struct CommandEngine: Sendable {
     }
 
     public private(set) var document: Document
+    /// Most undo steps kept. When full, the oldest entry is dropped.
+    public let maxUndoDepth: Int
     private var undoStack: [Entry] = []
     private var redoStack: [Entry] = []
     private var pending: Entry?
     /// Key of the last top-level perform, while it may still absorb more.
     private var coalesceKey: String?
 
-    public init(document: Document) {
+    /// `maxUndoDepth` below 0 is treated as 0 (no undo history).
+    public init(document: Document, maxUndoDepth: Int = 500) {
         self.document = document
+        self.maxUndoDepth = max(0, maxUndoDepth)
     }
 
     public var canUndo: Bool { !undoStack.isEmpty }
@@ -151,6 +156,9 @@ public struct CommandEngine: Sendable {
 
     private mutating func push(_ entry: Entry) {
         undoStack.append(entry)
+        if undoStack.count > maxUndoDepth {
+            undoStack.removeFirst(undoStack.count - maxUndoDepth)
+        }
         redoStack.removeAll()
     }
 }
