@@ -212,16 +212,16 @@ public struct Color: Codable, Sendable, Hashable {
 }
 
 /// Minimal vector shape: a polyline through `points`, optionally closed, with
-/// a solid fill. When `path` is set it wins over `points` and `closed` (see
-/// `outline`). Strokes and gradients come later (see docs/gaps.md).
+/// a solid or gradient fill. When `path` is set it wins over `points` and
+/// `closed` (see `outline`). Strokes come later (see docs/gaps.md).
 public struct Shape: Codable, Sendable, Hashable {
     public var points: [Point]
     public var closed: Bool
-    public var fill: Color
+    public var fill: Fill
     /// Curved geometry. Optional so v1 files without it still decode.
     public var path: Path?
 
-    public init(points: [Point], closed: Bool = true, fill: Color = .black, path: Path? = nil) {
+    public init(points: [Point], closed: Bool = true, fill: Fill = .solid(.black), path: Path? = nil) {
         self.points = points
         self.closed = closed
         self.fill = fill

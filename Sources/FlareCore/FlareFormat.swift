@@ -112,6 +112,7 @@ public enum FlareFormat {
             guard layerIDs.insert(layer.id).inserted else {
                 throw FormatError.invalid("\(owner): duplicate layer id \(layer.id)")
             }
+            for shape in layer.shapes { try shape.fill.validate() }
             for (property, track) in layer.tracks {
                 guard !track.isEmpty else { throw FormatError.invalid("layer \(layer.id): empty track \(property)") }
                 var previous = -1

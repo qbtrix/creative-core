@@ -57,10 +57,10 @@ public struct SetShapeFill: Command {
     public var sceneID: String
     public var layerID: String
     public var index: Int
-    public var fill: Color
-    var oldFill: Color?
+    public var fill: Fill
+    var oldFill: Fill?
 
-    public init(sceneID: String, layerID: String, index: Int, fill: Color) {
+    public init(sceneID: String, layerID: String, index: Int, fill: Fill) {
         self.sceneID = sceneID
         self.layerID = layerID
         self.index = index

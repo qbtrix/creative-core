@@ -5,7 +5,7 @@ struct SVGExporterTests {
     private func squareScene() -> Scene {
         let square = Shape(points: [
             Point(x: 0, y: 0), Point(x: 10, y: 0), Point(x: 10, y: 10), Point(x: 0, y: 10),
-        ], fill: Color(r: 1, g: 0, b: 0))
+        ], fill: .solid(Color(r: 1, g: 0, b: 0)))
         let layer = Layer(id: "sq", name: "Square", shapes: [square], tracks: [
             "x": [Keyframe(frame: 0, value: 0), Keyframe(frame: 10, value: 100)],
             "y": [Keyframe(frame: 0, value: 20)],
@@ -38,7 +38,7 @@ struct SVGExporterTests {
 
     @Test func layersRenderBottomToTopAndHiddenAreSkipped() throws {
         var scene = squareScene()
-        let top = Layer(id: "top", name: "Top", shapes: [Shape(points: [Point(x: 1, y: 1)], fill: .white)],
+        let top = Layer(id: "top", name: "Top", shapes: [Shape(points: [Point(x: 1, y: 1)], fill: .solid(.white))],
                         tracks: ["opacity": [Keyframe(frame: 0, value: 0.5)], "rotation": [Keyframe(frame: 0, value: 90)]])
         let hidden = Layer(id: "h", name: "H", shapes: [Shape(points: [Point(x: 7, y: 7)])], isVisible: false)
         scene.layers += [top, hidden]
