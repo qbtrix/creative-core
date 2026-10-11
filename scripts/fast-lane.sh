@@ -16,7 +16,7 @@
 # rule to stderr, and prints one line to stdout:
 #   skip|<why>  not-eligible|<reasons>  pending|<why>  red|<checks>
 #   eligible|<lines>|<files>|<green checks>
-# tests/fast_lane/test_fast_lane.sh sources this file and feeds `decide` fixtures.
+# Tests/fast_lane/test_fast_lane.sh sources this file and feeds `decide` fixtures.
 #
 # Usage: scripts/fast-lane.sh [--dry-run] [PR ...]   (no PR: every open fast-lane PR)
 #        scripts/fast-lane.sh [--dry-run] --sha SHA  (open fast-lane PRs at head SHA)

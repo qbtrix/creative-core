@@ -42,4 +42,4 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - run: bash tests/fast_lane/test_fast_lane.sh
+      - run: bash Tests/fast_lane/test_fast_lane.sh

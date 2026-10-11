@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# tests/fast_lane/test_fast_lane.sh — fixture tests for the pure `decide`
+# Tests/fast_lane/test_fast_lane.sh: fixture tests for the pure `decide`
 # function in scripts/fast-lane.sh. No network, needs bash and jq.
 #
 # checks-green.json is a check rollup shaped like a green flare-core PR: the CI
@@ -8,7 +8,7 @@
 # Copilot review check (decide must ignore the last two). Each case mutates a
 # base PR / file list / rollup with jq.
 #
-# Run: bash tests/fast_lane/test_fast_lane.sh   (exit 0 = all pass)
+# Run: bash Tests/fast_lane/test_fast_lane.sh   (exit 0 = all pass)
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
