@@ -13,6 +13,7 @@ import Testing
         + KeyframeCommandsTests.undoSteps
         + LayerFlagsTests.undoSteps
         + ShapeCommandsTests.undoSteps
+        + SymbolCommandsTests.undoSteps
 
     @Test(arguments: 0..<200)
     func undoAllRestoresOriginal(seed: UInt64) throws {
@@ -28,8 +29,10 @@ import Testing
 
     /// A layer of the first scene, or "missing", so steps hit both valid and invalid params.
     static func anyLayer(_ e: CommandEngine, _ rng: inout SplitMix64) -> String {
-        let layers = e.document.scenes.first?.layers.map(\.id) ?? []
-        return (layers + ["missing"]).randomElement(using: &rng) ?? "missing"
+        // Index instead of mapping ids: O(1), so EngineStressTests' big scene stays cheap.
+        let layers = e.document.scenes.first?.layers ?? []
+        let i = Int.random(in: 0..<(layers.count + 1), using: &rng)
+        return layers.indices.contains(i) ? layers[i].id : "missing"
     }
 
     static func anyProp(_ rng: inout SplitMix64) -> String { props.randomElement(using: &rng) ?? "x" }
