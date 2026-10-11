@@ -102,6 +102,7 @@ public enum FlareFormat {
             guard symbol.durationFrames >= 0 else { throw FormatError.invalid("symbol \(symbol.id): negative duration") }
             try validate(symbol.layers, owner: "symbol \(symbol.id)")
         }
+        try validateStateMachines(document)
     }
 
     /// Layer invariants shared by scenes and symbols. `owner` names the

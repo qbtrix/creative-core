@@ -20,20 +20,24 @@ public struct Document: Codable, Sendable, Hashable {
     public var scenes: [Scene]
     /// Reusable symbol definitions. Missing in older v1 files means empty.
     public var symbols: [Symbol]
+    /// Interactive state machines. Missing in older v1 files means empty.
+    public var stateMachines: [StateMachine]
 
-    public init(scenes: [Scene] = [], symbols: [Symbol] = []) {
+    public init(scenes: [Scene] = [], symbols: [Symbol] = [], stateMachines: [StateMachine] = []) {
         self.scenes = scenes
         self.symbols = symbols
+        self.stateMachines = stateMachines
     }
 
     private enum CodingKeys: String, CodingKey {
-        case scenes, symbols
+        case scenes, symbols, stateMachines
     }
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         scenes = try container.decode([Scene].self, forKey: .scenes)
         symbols = try container.decodeIfPresent([Symbol].self, forKey: .symbols) ?? []
+        stateMachines = try container.decodeIfPresent([StateMachine].self, forKey: .stateMachines) ?? []
     }
 }
 
