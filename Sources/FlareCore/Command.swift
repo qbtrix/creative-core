@@ -42,6 +42,10 @@ public enum CommandError: Error, Equatable, Sendable {
     case nothingToRedo
     /// undo/redo was called from inside a group body.
     case groupInProgress
+    /// No command with this id is registered.
+    case unknownCommand(String)
+    /// A command envelope or its params could not be decoded or encoded.
+    case malformedCommand(String)
 }
 
 public struct CommandEngine: Sendable {
