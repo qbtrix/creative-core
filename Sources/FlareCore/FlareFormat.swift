@@ -21,11 +21,21 @@ public enum FormatError: Error, Equatable, Sendable {
     case unsupportedVersion(Int)
     /// Parsed fine but breaks a document invariant.
     case invalid(String)
+    /// Over one of the size limits in `FlareFormat` (bytes, layers or points).
+    case tooLarge(String)
 }
 
 public enum FlareFormat {
     public static let formatName = "flare"
     public static let currentVersion = 1
+
+    /// Largest input `decode` will parse: 64 MB.
+    public static let maxFileBytes = 64 * 1024 * 1024
+    /// Most layers allowed in any one scene.
+    public static let maxLayersPerScene = 10_000
+    /// Most points allowed in the whole document, counting `Shape.points` and
+    /// the points of every path element.
+    public static let maxTotalPoints = 1_000_000
 
     struct Header: Decodable {
         var format: String?
@@ -50,6 +60,9 @@ public enum FlareFormat {
     }
 
     public static func decode(_ data: Data) throws -> Document {
+        guard data.count <= maxFileBytes else {
+            throw FormatError.tooLarge("file is \(data.count) bytes, limit \(maxFileBytes)")
+        }
         let decoder = JSONDecoder()
         let header: Header
         do {
@@ -72,6 +85,7 @@ public enum FlareFormat {
 
     /// Checks the invariants listed in Document.swift.
     public static func validate(_ document: Document) throws {
+        try checkLimits(document)
         var sceneIDs = Set<String>()
         for scene in document.scenes {
             guard sceneIDs.insert(scene.id).inserted else { throw FormatError.invalid("duplicate scene id \(scene.id)") }
@@ -96,6 +110,39 @@ public enum FlareFormat {
                     }
                 }
             }
+        }
+    }
+
+    /// Throws `tooLarge` if a scene has too many layers or the document too many points.
+    static func checkLimits(_ document: Document) throws {
+        var points = 0
+        for scene in document.scenes {
+            guard scene.layers.count <= maxLayersPerScene else {
+                throw FormatError.tooLarge("scene \(scene.id): \(scene.layers.count) layers, limit \(maxLayersPerScene)")
+            }
+            for layer in scene.layers {
+                for shape in layer.shapes {
+                    points += shape.points.count
+                    for element in shape.path?.elements ?? [] {
+                        points += element.pointCount
+                    }
+                    guard points <= maxTotalPoints else {
+                        throw FormatError.tooLarge("more than \(maxTotalPoints) points")
+                    }
+                }
+            }
+        }
+    }
+}
+
+extension PathElement {
+    /// Points stored in this element, for the size limit.
+    var pointCount: Int {
+        switch self {
+        case .move, .line: 1
+        case .quad: 2
+        case .cubic: 3
+        case .close: 0
         }
     }
 }
