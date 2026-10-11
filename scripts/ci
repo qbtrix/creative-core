@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# scripts/ci: the one gate. Runs the no-crash lint, swift build and swift test,
+# then prints PASS or FAIL and exits with the real status. CI runs exactly this
+# on Linux and macOS; run it locally before every PR.
+#
+# The lint fails on crash-prone constructs in Sources/ (tests are exempt):
+#   try!  as!  fatalError(  preconditionFailure(  precondition(  unowned  .first!  .last!
+#
+# On a Mac with only the Command Line Tools (no Xcode), Swift Testing lives in
+# a framework directory swift does not search by default, so we add it.
+# bash 3.2 compatible (macOS /bin/bash).
+set -uo pipefail
+cd "$(dirname "$0")/.." || exit 1
+
+fail() { echo; echo "CI: FAIL ($1)"; exit 1; }
+
+echo "== no-crash lint (Sources/)"
+pattern='try!|as!|fatalError\(|preconditionFailure\(|precondition\(|unowned |\.first!|\.last!'
+if grep -rnE "$pattern" Sources/; then
+  fail "no-crash lint: replace the lines above with throwing code"
+fi
+echo "ok"
+
+flags=()
+if [[ "$(uname)" == Darwin ]]; then
+  clt=/Library/Developer/CommandLineTools/Library/Developer
+  if [[ "$(xcode-select -p 2>/dev/null)" == /Library/Developer/CommandLineTools* && -d "$clt/Frameworks/Testing.framework" ]]; then
+    flags=(-Xswiftc -F -Xswiftc "$clt/Frameworks" -Xlinker -F -Xlinker "$clt/Frameworks"
+           -Xlinker -rpath -Xlinker "$clt/Frameworks" -Xlinker -rpath -Xlinker "$clt/usr/lib")
+  fi
+fi
+
+echo "== swift build"
+swift build ${flags[@]+"${flags[@]}"} || fail "swift build"
+
+echo "== swift test"
+log="$(mktemp)"
+trap 'rm -f "$log"' EXIT
+swift test ${flags[@]+"${flags[@]}"} 2>&1 | tee "$log"
+status=${PIPESTATUS[0]}
+(( status == 0 )) || fail "swift test exited $status"
+
+echo
+grep -E "Test run with [0-9]+ tests?" "$log" | tail -1
+echo "CI: PASS"

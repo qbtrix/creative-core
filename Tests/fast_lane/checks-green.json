@@ -1,0 +1,49 @@
+[
+  {
+    "__typename": "CheckRun",
+    "name": "Linux",
+    "workflowName": "CI",
+    "status": "COMPLETED",
+    "conclusion": "SUCCESS"
+  },
+  {
+    "__typename": "CheckRun",
+    "name": "macOS",
+    "workflowName": "CI",
+    "status": "COMPLETED",
+    "conclusion": "SUCCESS"
+  },
+  {
+    "__typename": "CheckRun",
+    "name": "label",
+    "workflowName": "Labeler",
+    "status": "COMPLETED",
+    "conclusion": "SUCCESS"
+  },
+  {
+    "__typename": "CheckRun",
+    "name": "Benchmarks",
+    "workflowName": "CI",
+    "status": "COMPLETED",
+    "conclusion": "SKIPPED"
+  },
+  {
+    "__typename": "StatusContext",
+    "context": "ci/external",
+    "state": "SUCCESS"
+  },
+  {
+    "__typename": "CheckRun",
+    "name": "fast-lane",
+    "workflowName": "Fast Lane",
+    "status": "IN_PROGRESS",
+    "conclusion": null
+  },
+  {
+    "__typename": "CheckRun",
+    "name": "Copilot code review",
+    "workflowName": "",
+    "status": "IN_PROGRESS",
+    "conclusion": null
+  }
+]
