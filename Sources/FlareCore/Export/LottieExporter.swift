@@ -6,7 +6,11 @@
 // on top, so the order is reversed (Flare draws its first layer first).
 // Hidden layers are kept with `hd: true`.
 //
-// Static subset: each layer's transform and opacity are sampled at frame 0.
+// Each layer's scale, rotation and opacity are sampled at frame 0. When its x
+// or y track has more than one keyframe, the position is written split
+// (`p.s` true) with one animated property per axis: a keyframe has `t`, `s`,
+// and either `h: 1` for hold or `o`/`i` tangents (linear is (0,0)/(1,1); a
+// cubic Bezier gives (x1,y1)/(x2,y2) with x clamped to 0...1 as `Easing` does).
 // Each shape becomes a group (`gr`) of its subpaths (`sh`), its fill (`fl`
 // for a solid color, `gf` for a gradient) and an identity group transform
 // (`tr`). A radial gradient's end point is its center moved right by the
@@ -117,7 +121,7 @@ struct LottieRoot: Encodable, Sendable {
 
 struct LottieTransform: Encodable, Sendable {
     var a = LottieStatic([0.0, 0.0])
-    var p: LottieStatic<[Double]>
+    var p: LottiePosition
     var s: LottieStatic<[Double]>
     var r: LottieStatic<Double>
     var o: LottieStatic<Double>
@@ -145,13 +149,111 @@ struct LottieLayer: Encodable, Sendable {
         nm = layer.name
         op = durationFrames
         hd = !layer.isVisible
+        let xs = layer.tracks["x"] ?? []
+        let ys = layer.tracks["y"] ?? []
+        let position: LottiePosition
+        if xs.count > 1 || ys.count > 1 {
+            position = .split(x: try LottieScalar(xs, at0: try value("x", 0)),
+                              y: try LottieScalar(ys, at0: try value("y", 0)))
+        } else {
+            position = .combined(LottieStatic([try value("x", 0), try value("y", 0)]))
+        }
         ks = LottieTransform(
-            p: LottieStatic([try value("x", 0), try value("y", 0)]),
+            p: position,
             s: LottieStatic([try value("scaleX", 1) * 100, try value("scaleY", 1) * 100]),
             r: LottieStatic(try value("rotation", 0)),
             o: LottieStatic(min(max(try value("opacity", 1), 0), 1) * 100)
         )
         shapes = try layer.shapes.map(LottieGroup.init)
+    }
+}
+
+/// A layer position: one static point, or split into per-axis properties.
+enum LottiePosition: Encodable, Sendable {
+    case combined(LottieStatic<[Double]>)
+    case split(x: LottieScalar, y: LottieScalar)
+
+    private enum Keys: String, CodingKey { case s, x, y }
+
+    func encode(to encoder: any Encoder) throws {
+        switch self {
+        case .combined(let point):
+            try point.encode(to: encoder)
+        case .split(let x, let y):
+            var container = encoder.container(keyedBy: Keys.self)
+            try container.encode(true, forKey: .s)
+            try container.encode(x, forKey: .x)
+            try container.encode(y, forKey: .y)
+        }
+    }
+}
+
+/// A scalar property: static (`a` 0) or animated (`a` 1) from a track.
+enum LottieScalar: Encodable, Sendable {
+    case fixed(LottieStatic<Double>)
+    case animated([LottieKeyframe])
+
+    /// `at0` is the track's value at frame 0, used when it has under two keyframes.
+    init(_ track: [Keyframe], at0: Double) throws {
+        guard track.count > 1 else {
+            self = .fixed(LottieStatic(at0))
+            return
+        }
+        var frames: [LottieKeyframe] = []
+        for (index, keyframe) in track.enumerated() {
+            var out = LottieKeyframe(t: keyframe.frame, s: [try LottieExporter.finite(keyframe.value)])
+            if index < track.count - 1 {
+                switch keyframe.easing {
+                case .hold:
+                    out.h = 1
+                case .linear:
+                    out.o = LottieEase(0, 0)
+                    out.i = LottieEase(1, 1)
+                case let .cubicBezier(x1, y1, x2, y2):
+                    if x1.isFinite, y1.isFinite, x2.isFinite, y2.isFinite {
+                        out.o = LottieEase(min(max(x1, 0), 1), y1)
+                        out.i = LottieEase(min(max(x2, 0), 1), y2)
+                    } else {
+                        out.o = LottieEase(0, 0)
+                        out.i = LottieEase(1, 1)
+                    }
+                }
+            }
+            frames.append(out)
+        }
+        self = .animated(frames)
+    }
+
+    private enum Keys: String, CodingKey { case a, k }
+
+    func encode(to encoder: any Encoder) throws {
+        switch self {
+        case .fixed(let value):
+            try value.encode(to: encoder)
+        case .animated(let frames):
+            var container = encoder.container(keyedBy: Keys.self)
+            try container.encode(1, forKey: .a)
+            try container.encode(frames, forKey: .k)
+        }
+    }
+}
+
+/// One keyframe of an animated property. The last one carries only `t` and `s`.
+struct LottieKeyframe: Encodable, Sendable {
+    var t: Int
+    var s: [Double]
+    var o: LottieEase?
+    var i: LottieEase?
+    var h: Int?
+}
+
+/// An easing tangent: `{"x": [x], "y": [y]}` on the 0...1 progress square.
+struct LottieEase: Encodable, Sendable {
+    var x: [Double]
+    var y: [Double]
+    init(_ x: Double, _ y: Double) {
+        self.x = [x]
+        self.y = [y]
     }
 }
 

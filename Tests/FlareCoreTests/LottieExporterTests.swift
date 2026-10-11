@@ -104,4 +104,48 @@ struct LottieExporterTests {
         wide.width = .infinity
         #expect(throws: LottieExportError.nonFiniteValue) { try LottieExporter.export(scene: wide) }
     }
+
+    private func position(_ data: Data) throws -> [String: Any] {
+        let layer = try #require((try object(data)["layers"] as? [[String: Any]])?.first)
+        return try #require((layer["ks"] as? [String: Any])?["p"] as? [String: Any])
+    }
+
+    @Test func ballEaseInOutBecomesTangents() throws {
+        let p = try position(LottieExporter.export(scene: fixtureScene()))
+        #expect(p["s"] as? Bool == true)
+        let x = try #require(p["x"] as? [String: Any])
+        #expect(x["a"] as? Int == 1)
+        let keys = try #require(x["k"] as? [[String: Any]])
+        #expect(keys.map { $0["t"] as? Int } == [0, 24])
+        #expect(keys.map { $0["s"] as? [Double] } == [[0], [100]])
+        let o = try #require(keys[0]["o"] as? [String: Any])
+        let i = try #require(keys[0]["i"] as? [String: Any])
+        #expect(o["x"] as? [Double] == [0.42] && o["y"] as? [Double] == [0])
+        #expect(i["x"] as? [Double] == [0.58] && i["y"] as? [Double] == [1])
+        #expect(keys[1]["o"] == nil && keys[1]["h"] == nil)
+        let y = try #require(p["y"] as? [String: Any])
+        #expect(y["a"] as? Int == 0)
+        #expect(y["k"] as? Double == 0)
+    }
+
+    @Test func holdAndLinearKeyframes() throws {
+        let layer = Layer(id: "a", name: "A", tracks: [
+            "y": [Keyframe(frame: 0, value: 1, easing: .hold), Keyframe(frame: 5, value: 2),
+                  Keyframe(frame: 9, value: 3)],
+        ])
+        let data = try LottieExporter.export(scene: Scene(id: "s", name: "S", layers: [layer]))
+        let keys = try #require((try position(data)["y"] as? [String: Any])?["k"] as? [[String: Any]])
+        #expect(keys.count == 3)
+        #expect(keys[0]["h"] as? Int == 1)
+        #expect(keys[0]["o"] == nil)
+        #expect((keys[1]["o"] as? [String: Any])?["x"] as? [Double] == [0])
+        #expect((keys[1]["i"] as? [String: Any])?["y"] as? [Double] == [1])
+        #expect(data == (try LottieExporter.export(scene: Scene(id: "s", name: "S", layers: [layer]))))
+        let bad = Layer(id: "b", name: "B", tracks: [
+            "x": [Keyframe(frame: 0, value: .nan), Keyframe(frame: 5, value: 2)],
+        ])
+        #expect(throws: LottieExportError.nonFiniteValue) {
+            try LottieExporter.export(scene: Scene(id: "s", name: "S", layers: [bad]))
+        }
+    }
 }
