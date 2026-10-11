@@ -1,5 +1,6 @@
 // TimelineTests.swift: frame/time conversion and keyframe interpolation.
 import FlareCore
+import Foundation
 import Testing
 
 @Suite struct TimelineTests {
@@ -42,6 +43,15 @@ import Testing
         let eased = Timeline.value(of: track, at: 3)
         #expect(eased != nil && eased! < 3)  // ease-in starts slow
         #expect(Timeline.value(of: track, at: 15) == 5)  // second segment is linear
+    }
+
+    @Test func holdEasingJumpsAtNextKeyframe() throws {
+        let track = [Keyframe(frame: 0, value: 0, easing: .hold), Keyframe(frame: 10, value: 10)]
+        #expect(Timeline.value(of: track, at: 5) == 0)
+        #expect(Timeline.value(of: track, at: 9.99) == 0)
+        #expect(Timeline.value(of: track, at: 10) == 10)
+        let data = try JSONEncoder().encode(track)
+        #expect(try JSONDecoder().decode([Keyframe].self, from: data) == track)
     }
 
     @Test func degenerateInputReturnsNilOrHolds() {
