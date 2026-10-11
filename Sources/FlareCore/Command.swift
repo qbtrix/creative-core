@@ -45,6 +45,8 @@ public enum CommandError: Error, Equatable, Sendable {
     case shapeNotFound(Int)
     /// The layer is locked, so its shapes and keyframes cannot be edited.
     case layerLocked(String)
+    /// An index outside the valid range, e.g. a layer position.
+    case invalidIndex(Int)
     /// `undo` was called on a command that never executed.
     case notExecuted
     case nothingToUndo

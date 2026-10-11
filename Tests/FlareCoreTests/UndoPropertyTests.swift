@@ -74,5 +74,11 @@ import Testing
             let shape = Shape(points: [Point(x: x, y: 0), Point(x: 1, y: 1)], closed: false)
             try e.perform(AddShape(sceneID: Fixtures.sceneID, layerID: layer, shape: shape))
         },
+        { e, rng, _ in
+            let layer = anyLayer(e, &rng)
+            let count = e.document.scenes.first?.layers.count ?? 0
+            let to = Int.random(in: -1...count, using: &rng)
+            try e.perform(ReorderLayer(sceneID: Fixtures.sceneID, layerID: layer, toIndex: to))
+        },
     ]
 }
