@@ -61,6 +61,11 @@ that safe and fast. AGENTS.md points here.
 - **No new dependencies** without an issue that approves them.
 - **PR title** in Conventional Commits (`feat(timeline): hold easing`). The body
   says what changed, why, and which test proves it.
+- **No AI attribution anywhere.** Commits, PR titles and bodies, and issue
+  comments carry no `Co-Authored-By: Claude`, no `Claude-Session:` link and no
+  "Generated with Claude Code" line. `.claude/settings.json` turns these off;
+  if your tooling adds one anyway, delete it before you push. The fast lane
+  also strips them from the squash commit.
 - **Clean-room.** Never copy code, files or text from Adobe products or from
   GPL-incompatible sources. Behavior may come only from public documentation
   and specs. This repo is GPL-3.0.
