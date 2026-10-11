@@ -28,8 +28,10 @@ import Testing
 
     /// A layer of the first scene, or "missing", so steps hit both valid and invalid params.
     static func anyLayer(_ e: CommandEngine, _ rng: inout SplitMix64) -> String {
-        let layers = e.document.scenes.first?.layers.map(\.id) ?? []
-        return (layers + ["missing"]).randomElement(using: &rng) ?? "missing"
+        // Index instead of mapping every id: StressBudgetTests runs this on 10,000 layers.
+        let layers = e.document.scenes.first?.layers ?? []
+        let i = Int.random(in: 0...layers.count, using: &rng)
+        return layers.indices.contains(i) ? layers[i].id : "missing"
     }
 
     static func anyProp(_ rng: inout SplitMix64) -> String { props.randomElement(using: &rng) ?? "x" }
