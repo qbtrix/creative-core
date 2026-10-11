@@ -1,6 +1,7 @@
-// SymbolCommandsTests.swift: AddSymbol and RemoveSymbol. Add, undo and redo
-// restore the document exactly; removing a symbol an instance still uses
-// throws symbolInUse and changes nothing.
+// SymbolCommandsTests.swift: AddSymbol, RemoveSymbol and ConvertToSymbol. Add,
+// undo and redo restore the document exactly; removing a symbol an instance
+// still uses throws symbolInUse and changes nothing; converting layers moves
+// them into a new symbol and one undo restores the original.
 import FlareCore
 import Testing
 
@@ -87,11 +88,63 @@ import Testing
         #expect(throws: CommandError.symbolNotFound("nope")) { try engine.perform(RemoveSymbol(symbolID: "nope")) }
     }
 
+    @Test func convertTwoLayersAndUndo() throws {
+        let start = Fixtures.document()
+        var engine = CommandEngine(document: start)
+        try engine.perform(ConvertToSymbol(sceneID: Fixtures.sceneID, layerIDs: ["ball", "bg"],
+                                           symbolID: "group", name: "Group"))
+        let converted = engine.document
+        let scene = converted.scenes[0]
+        #expect(scene.layers.map(\.id) == ["bg"])
+        #expect(scene.layers.first?.name == "Group")
+        #expect(scene.layers.first?.instances == [Instance(symbolID: "group")])
+        #expect(converted.symbols == [Symbol(id: "group", name: "Group", durationFrames: 48,
+                                             layers: start.scenes[0].layers)])
+        try engine.undo()
+        #expect(engine.document == start)
+        try engine.redo()
+        #expect(engine.document == converted)
+    }
+
+    @Test func convertKeepsUnconvertedLayersInPlace() throws {
+        var start = Fixtures.document()
+        start.scenes[0].layers.append(Layer(id: "top", name: "Top"))
+        var engine = CommandEngine(document: start)
+        try engine.perform(ConvertToSymbol(sceneID: Fixtures.sceneID, layerIDs: ["top", "ball"],
+                                           symbolID: "g", name: "G"))
+        #expect(engine.document.scenes[0].layers.map(\.id) == ["bg", "ball"])
+        #expect(engine.document.symbols.first?.layers.map(\.id) == ["ball", "top"])
+    }
+
+    @Test func convertRejectsInvalidParamsWithoutChanges() throws {
+        var engine = CommandEngine(document: Self.documentUsingFan())
+        let before = engine.document
+        let s = Fixtures.sceneID
+        #expect(throws: CommandError.layerNotFound("ghost")) {
+            try engine.perform(ConvertToSymbol(sceneID: s, layerIDs: ["bg", "ghost"], symbolID: "g", name: "G"))
+        }
+        #expect(throws: CommandError.layerNotFound("bg")) {
+            try engine.perform(ConvertToSymbol(sceneID: s, layerIDs: ["bg", "bg"], symbolID: "g", name: "G"))
+        }
+        #expect(throws: CommandError.invalidIndex(0)) {
+            try engine.perform(ConvertToSymbol(sceneID: s, layerIDs: [], symbolID: "g", name: "G"))
+        }
+        #expect(throws: CommandError.duplicateID("fan")) {
+            try engine.perform(ConvertToSymbol(sceneID: s, layerIDs: ["bg"], symbolID: "fan", name: "G"))
+        }
+        #expect(throws: CommandError.sceneNotFound("nope")) {
+            try engine.perform(ConvertToSymbol(sceneID: "nope", layerIDs: ["bg"], symbolID: "g", name: "G"))
+        }
+        #expect(engine.document == before)
+        #expect(throws: CommandError.nothingToUndo) { try engine.undo() }
+    }
+
     /// One sample of each symbol command, valid on `CommandRegistryTests.sampleDocument()`.
     static func registrySamples() -> [any Command] {
         [
             AddSymbol(symbol: Symbol(id: "new", name: "New", durationFrames: 4), index: 0),
             RemoveSymbol(symbolID: "spark"),
+            ConvertToSymbol(sceneID: Fixtures.sceneID, layerIDs: ["ball"], symbolID: "wrap", name: "Wrap"),
         ]
     }
 
@@ -112,6 +165,13 @@ import Testing
         },
         { e, rng, _ in
             try e.perform(RemoveSymbol(symbolID: anySymbol(e, &rng)))
+        },
+        { e, rng, nextID in
+            nextID += 1
+            let ids = (e.document.scenes.first?.layers.map(\.id) ?? []) + ["missing"]
+            let picked = (0..<Int.random(in: 0...2, using: &rng)).compactMap { _ in ids.randomElement(using: &rng) }
+            let symbolID = Bool.random(using: &rng) ? anySymbol(e, &rng) : "C\(nextID)"
+            try e.perform(ConvertToSymbol(sceneID: Fixtures.sceneID, layerIDs: picked, symbolID: symbolID, name: "C"))
         },
     ]
 

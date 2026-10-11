@@ -1,4 +1,5 @@
-// SymbolCommands.swift: commands that add and remove symbol definitions. Same
+// SymbolCommands.swift: commands that add, remove and create symbol
+// definitions. Same
 // shape as SceneCommands.swift: params first, undo state as optional vars
 // last. Undo restores the document exactly, including symbol order.
 //
@@ -12,7 +13,7 @@ import Foundation
 
 /// The symbol commands, registered in `CommandRegistry.builtIn`.
 public enum SymbolCommands {
-    public static let all: [any Command.Type] = [AddSymbol.self, RemoveSymbol.self]
+    public static let all: [any Command.Type] = [AddSymbol.self, RemoveSymbol.self, ConvertToSymbol.self]
 }
 
 extension Document {
@@ -88,5 +89,60 @@ public struct RemoveSymbol: Command {
         guard let removed, let removedIndex else { throw CommandError.notExecuted }
         let at = min(max(removedIndex, 0), document.symbols.count)
         document.symbols.insert(removed, at: at)
+    }
+}
+
+/// Moves layers of a scene into a new symbol and puts one layer holding an
+/// instance of it where the topmost moved layer was. The symbol keeps the
+/// layers in scene order and takes the scene's duration. The new layer takes
+/// the first moved layer's id, so layer ids stay unique.
+public struct ConvertToSymbol: Command {
+    public static let id = "symbol.convert"
+    public var label: String { "Convert to Symbol" }
+    public var sceneID: String
+    /// Must be non-empty, without repeats, and every id in the scene.
+    public var layerIDs: [String]
+    public var symbolID: String
+    public var name: String
+    var oldLayers: [Layer]?
+
+    public init(sceneID: String, layerIDs: [String], symbolID: String, name: String) {
+        self.sceneID = sceneID
+        self.layerIDs = layerIDs
+        self.symbolID = symbolID
+        self.name = name
+    }
+
+    public mutating func execute(_ document: inout Document) throws {
+        let si = try document.sceneIndex(sceneID)
+        let scene = document.scenes[si]
+        guard !layerIDs.isEmpty else { throw CommandError.invalidIndex(0) }
+        var seen = Set<String>()
+        for id in layerIDs {
+            guard seen.insert(id).inserted, scene.layers.contains(where: { $0.id == id }) else {
+                throw CommandError.layerNotFound(id)
+            }
+        }
+        guard !document.symbols.contains(where: { $0.id == symbolID }) else {
+            throw CommandError.duplicateID(symbolID)
+        }
+        let moved = scene.layers.filter { seen.contains($0.id) }
+        guard let at = scene.layers.firstIndex(where: { seen.contains($0.id) }), let first = moved.first else {
+            throw CommandError.invalidIndex(0)
+        }
+        let host = Layer(id: first.id, name: name, instances: [Instance(symbolID: symbolID)])
+        var layers = scene.layers.filter { !seen.contains($0.id) }
+        layers.insert(host, at: min(at, layers.count))
+        document.symbols.append(Symbol(id: symbolID, name: name, durationFrames: scene.durationFrames, layers: moved))
+        document.scenes[si].layers = layers
+        oldLayers = scene.layers
+    }
+
+    public func undo(_ document: inout Document) throws {
+        guard let oldLayers else { throw CommandError.notExecuted }
+        let si = try document.sceneIndex(sceneID)
+        let i = try document.symbolIndex(symbolID)
+        document.symbols.remove(at: i)
+        document.scenes[si].layers = oldLayers
     }
 }

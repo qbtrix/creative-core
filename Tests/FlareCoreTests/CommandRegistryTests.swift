@@ -47,7 +47,7 @@ import Testing
         let sampled = Set(Self.samples().map { type(of: $0).id })
         #expect(sampled == Set(Self.registry.ids))
         #expect(Self.registry.ids.count == Self.samples().count)
-        #expect(Self.registry.ids.count == 18)
+        #expect(Self.registry.ids.count == 19)
     }
 
     @Test func everyBuiltInRoundTripsAndBehavesTheSame() throws {
