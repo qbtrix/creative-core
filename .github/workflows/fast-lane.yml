@@ -14,6 +14,11 @@ on:
   workflow_run:
     workflows: [CI]
     types: [completed]
+  # Heartbeat: runs started by GITHUB_TOKEN (CI dispatched on refreshed PRs and
+  # on main after merges) fire no workflow_run, so nothing would re-check those
+  # PRs. A sweep every 5 minutes closes that gap. Free on a public repo.
+  schedule:
+    - cron: '*/5 * * * *'
   workflow_dispatch:
     inputs:
       pr:
