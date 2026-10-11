@@ -8,6 +8,15 @@ import FoundationEssentials
 import Foundation
 #endif
 
+/// The layer, keyframe and shape commands, registered in `CommandRegistry.builtIn`.
+public enum CoreCommands {
+    public static let all: [any Command.Type] = [
+        AddLayer.self, RemoveLayer.self, RenameLayer.self,
+        SetKeyframe.self, MoveKeyframe.self, RemoveKeyframe.self,
+        AddShape.self,
+    ]
+}
+
 public struct AddLayer: Command {
     public static let id = "layer.add"
     public var label: String { "Add Layer" }

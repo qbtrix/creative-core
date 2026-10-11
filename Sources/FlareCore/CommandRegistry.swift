@@ -19,16 +19,19 @@ public struct CommandRegistry: Sendable {
     /// An empty registry. Most callers want `CommandRegistry.builtIn`.
     public init() {}
 
+    /// Every built-in command family. Each family lists its own command types
+    /// in its own file, so a new command touches only that file and a new
+    /// family adds one line here.
+    static let builtInFamilies: [[any Command.Type]] = [
+        CoreCommands.all,
+        SceneCommands.all,
+        KeyframeCommands.all,
+    ]
+
     /// Every built-in command.
     public static let builtIn: CommandRegistry = {
         var r = CommandRegistry()
-        r.register(AddLayer.self)
-        r.register(RemoveLayer.self)
-        r.register(RenameLayer.self)
-        r.register(SetKeyframe.self)
-        r.register(MoveKeyframe.self)
-        r.register(RemoveKeyframe.self)
-        r.register(AddShape.self)
+        for type in builtInFamilies.joined() { r.register(type) }
         return r
     }()
 

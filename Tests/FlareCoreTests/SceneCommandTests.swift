@@ -97,4 +97,43 @@ import Testing
         }
         #expect(doc == Self.threeScenes())
     }
+
+    /// One valid sample of each scene command, for CommandRegistryTests.
+    static func registrySamples() -> [any Command] {
+        [
+            AddScene(scene: Scene(id: "s2", name: "Two", fps: 30, durationFrames: 60), index: 1),
+            RemoveScene(sceneID: Fixtures.sceneID),
+            SetSceneTiming(sceneID: Fixtures.sceneID, fps: 30, durationFrames: 90),
+        ]
+    }
+
+    /// A scene id from the document, or "missing".
+    static func anyScene(_ e: CommandEngine, _ rng: inout SplitMix64) -> String {
+        (e.document.scenes.map(\.id) + ["missing"]).randomElement(using: &rng) ?? "missing"
+    }
+
+    /// Random scene steps, valid and invalid, for assertUndoRestoresDocument.
+    static let undoSteps: [UndoStep] = [
+        { e, rng, nextID in
+            nextID += 1
+            let id = Bool.random(using: &rng) ? anyScene(e, &rng) : "S\(nextID)"
+            let fps = Int.random(in: -1...60, using: &rng)
+            let duration = Int.random(in: -1...30, using: &rng)
+            try e.perform(AddScene(scene: Scene(id: id, name: "Scene \(nextID)", fps: fps, durationFrames: duration),
+                                   index: Int.random(in: -2...5, using: &rng)))
+        },
+        { e, rng, _ in
+            try e.perform(RemoveScene(sceneID: anyScene(e, &rng)))
+        },
+        { e, rng, _ in
+            let scene = anyScene(e, &rng)
+            try e.perform(SetSceneTiming(sceneID: scene, fps: Int.random(in: -1...60, using: &rng),
+                                         durationFrames: Int.random(in: -1...30, using: &rng)))
+        },
+    ]
+
+    @Test(arguments: 0..<200)
+    func undoAllRestoresOriginal(seed: UInt64) throws {
+        try assertUndoRestoresDocument(seed: seed, steps: Self.undoSteps, start: Self.threeScenes())
+    }
 }

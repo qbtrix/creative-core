@@ -7,6 +7,11 @@ import FoundationEssentials
 import Foundation
 #endif
 
+/// The keyframe commands in this file, registered in `CommandRegistry.builtIn`.
+public enum KeyframeCommands {
+    public static let all: [any Command.Type] = [SetKeyframeEasing.self]
+}
+
 /// Changes the easing of the keyframe at `frame`; its frame and value stay.
 public struct SetKeyframeEasing: Command {
     public static let id = "keyframe.setEasing"
