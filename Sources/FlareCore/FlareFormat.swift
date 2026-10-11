@@ -109,6 +109,7 @@ public enum FlareFormat {
         for symbol in document.symbols {
             try validate(symbol.layers, owner: "symbol \(symbol.id)", symbols: symbolIDs)
         }
+        try checkSymbolCycles(document.symbols)
     }
 
     /// Layer invariants shared by scenes and symbols. `owner` names the
