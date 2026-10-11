@@ -4,6 +4,11 @@
 // is tested by summing signed edge crossings of a ray running in +x. Edges use
 // a half-open rule on y so a ray through a vertex counts it once. Subpaths
 // without a `close` fill nothing, so open shapes contain no point.
+//
+// `hits` adds the stroke: a point within half the stroke width of the
+// flattened outline, open subpaths included, hits it. `Layer.hits` walks a
+// layer's shapes and, through `Instance.resolve`, its instances' symbol
+// layers, mapping the point into each one's space by the inverse transform.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -32,6 +37,51 @@ extension Shape {
         case .nonZero: return winding != 0
         }
     }
+}
+
+extension Shape {
+    /// Whether `point` lies in the fill under `rule` or on the stroke.
+    public func hits(_ point: Point, rule: FillRule) -> Bool {
+        if contains(point, rule: rule) { return true }
+        guard let stroke, stroke.width > 0, stroke.width.isFinite,
+              let lines = try? outline.flattened(tolerance: max(stroke.width / 8, 1e-3)) else { return false }
+        let reach = stroke.width / 2
+        for line in lines {
+            for (a, b) in zip(line, line.dropFirst()) where distance(point, a, b) <= reach { return true }
+        }
+        return false
+    }
+}
+
+extension Layer {
+    /// Whether `point`, in the space the layer is placed in, hits a shape of
+    /// this visible layer or of a symbol one of its instances shows at
+    /// `frame`. `symbols` are the document's symbols and `path` the ids of the
+    /// symbols around this layer (empty for a scene layer). An instance that
+    /// `Instance.resolve` rejects, or a transform that cannot be inverted,
+    /// hits nothing.
+    public func hits(_ point: Point, at frame: Double, symbols: [Symbol], rule: FillRule,
+                     path: [String] = []) -> Bool {
+        guard isVisible, let local = try? placement(at: frame).transform.matrix.inverted().apply(point) else {
+            return false
+        }
+        if shapes.contains(where: { $0.hits(local, rule: rule) }) { return true }
+        return instances.contains { instance in
+            guard let (symbol, symbolFrame) = instance.resolve(in: symbols, frame: frame, path: path),
+                  let inner = try? instance.transform.matrix.inverted().apply(local) else { return false }
+            return symbol.layers.contains {
+                $0.hits(inner, at: symbolFrame, symbols: symbols, rule: rule, path: path + [symbol.id])
+            }
+        }
+    }
+}
+
+/// Distance from `p` to the segment from `a` to `b`.
+private func distance(_ p: Point, _ a: Point, _ b: Point) -> Double {
+    let dx = b.x - a.x, dy = b.y - a.y
+    let lengthSquared = dx * dx + dy * dy
+    let t = lengthSquared > 0 ? min(max(((p.x - a.x) * dx + (p.y - a.y) * dy) / lengthSquared, 0), 1) : 0
+    return norm(p.x - (a.x + t * dx), p.y - (a.y + t * dy))
 }
 
 /// Segments per curve when flattening.

@@ -107,4 +107,31 @@ import Testing
             }
         }
     }
+
+    @Test func strokeMakesOpenShapesHittable() {
+        let line = Shape(points: [Point(x: 0, y: 0), Point(x: 10, y: 0)], closed: false, stroke: Stroke(width: 2))
+        for rule in Self.rules {
+            #expect(!line.contains(Point(x: 5, y: 0.5), rule: rule))
+            #expect(line.hits(Point(x: 5, y: 0.5), rule: rule))
+            #expect(line.hits(Point(x: 10.9, y: 0), rule: rule))
+            #expect(!line.hits(Point(x: 5, y: 1.5), rule: rule))
+            #expect(!Shape(points: line.points, closed: false).hits(Point(x: 5, y: 0), rule: rule))
+        }
+    }
+
+    @Test func layersHitThroughInstances() {
+        let inner = Layer(id: "in", name: "In", shapes: [Self.square])
+        let symbol = Symbol(id: "sym", name: "Sym", layers: [inner])
+        let host = Layer(id: "h", name: "H", tracks: ["x": [Keyframe(frame: 0, value: 100)]],
+                         instances: [Instance(symbolID: "sym", transform: Transform(x: 0, y: 50, scaleX: 2, scaleY: 2))])
+        #expect(host.hits(Point(x: 119, y: 69), at: 0, symbols: [symbol], rule: .nonZero))
+        #expect(!host.hits(Point(x: 121, y: 69), at: 0, symbols: [symbol], rule: .nonZero))
+        #expect(!host.hits(Point(x: 119, y: 69), at: 0, symbols: [], rule: .nonZero))
+        var hidden = host
+        hidden.isVisible = false
+        #expect(!hidden.hits(Point(x: 119, y: 69), at: 0, symbols: [symbol], rule: .nonZero))
+        // A symbol that shows itself is cut off instead of recursing forever.
+        let loop = Symbol(id: "sym", name: "Loop", layers: [Layer(id: "l", name: "L", instances: [Instance(symbolID: "sym")])])
+        #expect(!host.hits(Point(x: 119, y: 69), at: 0, symbols: [loop], rule: .nonZero))
+    }
 }

@@ -105,4 +105,50 @@ struct SVGExporterTests {
         let svg = try SVGExporter.export(scene: scene, frame: 0)
         #expect(!svg.contains("<path"))
     }
+
+    @Test func convertToSymbolKeepsContentInExports() throws {
+        var e = CommandEngine(document: Fixtures.document())
+        let before = try SVGExporter.export(scene: e.document.scenes[0], frame: 0)
+        try e.perform(ConvertToSymbol(sceneID: "s1", layerIDs: ["ball"], symbolID: "sym", name: "Sym"))
+        let after = try SVGExporter.export(scene: e.document.scenes[0], frame: 0, symbols: e.document.symbols)
+        let paths = { (s: String) in s.components(separatedBy: "<path").count - 1 }
+        #expect(paths(before) == 1 && paths(after) == paths(before))
+    }
+
+    @Test func instanceDrawsSymbolLayersAtTheSymbolFrame() throws {
+        let inner = Layer(id: "in", name: "In", shapes: [Shape(points: [Point(x: 0, y: 0), Point(x: 1, y: 0)])],
+                          tracks: ["x": [Keyframe(frame: 0, value: 0), Keyframe(frame: 4, value: 8)]])
+        let symbol = Symbol(id: "sym", name: "Sym", durationFrames: 4, layers: [inner])
+        let host = Layer(id: "h", name: "H", instances: [
+            Instance(symbolID: "sym", transform: Transform(x: 5, y: 6), firstFrame: 1, loop: .playOnce),
+        ])
+        let svg = try SVGExporter.export(scene: Scene(id: "s", name: "S", layers: [host]), frame: 1.5, symbols: [symbol])
+        // Host frame 1.5 rounds down to 1; playOnce from 1 gives symbol frame 2, so x = 4.
+        #expect(svg.contains("""
+        <g id="h" data-name="H" transform="matrix(1 0 0 1 0 0)">
+        <g data-symbol="sym" transform="matrix(1 0 0 1 5 6)">
+        <g data-id="in" data-name="In" transform="matrix(1 0 0 1 4 0)">
+        <path d="M0 0 L1 0 Z" fill="#000000"/>
+        </g>
+        </g>
+        </g>
+        """))
+    }
+
+    @Test func strokeIsExported() throws {
+        var scene = squareScene()
+        scene.layers[0].shapes[0].stroke = Stroke(color: Color(r: 0, g: 0, b: 0, a: 0.5), width: 2,
+                                                  join: .round, cap: .square)
+        #expect(try SVGExporter.export(scene: scene, frame: 0).contains(" stroke=\"#000000\" stroke-opacity=\"0.5\""
+            + " stroke-width=\"2\" stroke-linejoin=\"round\" stroke-linecap=\"square\"/>"))
+    }
+
+    @Test func missingOrCyclicSymbolsThrow() {
+        let scene = Scene(id: "s", name: "S", layers: [Layer(id: "h", name: "H", instances: [Instance(symbolID: "a")])])
+        #expect(throws: SVGExportError.unresolvedSymbol("a")) { try SVGExporter.export(scene: scene, frame: 0) }
+        let loop = Symbol(id: "a", name: "A", layers: scene.layers)
+        #expect(throws: SVGExportError.unresolvedSymbol("a")) {
+            try SVGExporter.export(scene: scene, frame: 0, symbols: [loop])
+        }
+    }
 }

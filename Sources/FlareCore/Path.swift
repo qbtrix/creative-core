@@ -144,7 +144,8 @@ extension PathElement {
     }
 }
 
-private func norm(_ x: Double, _ y: Double) -> Double {
+/// Length of the vector (x, y).
+func norm(_ x: Double, _ y: Double) -> Double {
     (x * x + y * y).squareRoot()
 }
 

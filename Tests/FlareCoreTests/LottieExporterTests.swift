@@ -148,4 +148,38 @@ struct LottieExporterTests {
             try LottieExporter.export(scene: Scene(id: "s", name: "S", layers: [bad]))
         }
     }
+
+    @Test func strokeIsAnStItem() throws {
+        var scene = try fixtureScene()
+        scene.layers[1].shapes[0].stroke = Stroke(color: Color(r: 1, g: 0, b: 0, a: 0.5), width: 2,
+                                                  join: .bevel, cap: .round)
+        let layers = try #require(try object(LottieExporter.export(scene: scene))["layers"] as? [[String: Any]])
+        let group = try #require((layers[0]["shapes"] as? [[String: Any]])?.first)
+        let items = try #require(group["it"] as? [[String: Any]])
+        #expect(items.compactMap { $0["ty"] as? String } == ["sh", "st", "fl", "tr"])
+        #expect((items[1]["c"] as? [String: Any])?["k"] as? [Double] == [1, 0, 0, 1])
+        #expect((items[1]["o"] as? [String: Any])?["k"] as? Double == 50)
+        #expect((items[1]["w"] as? [String: Any])?["k"] as? Double == 2)
+        #expect(items[1]["lc"] as? Int == 2 && items[1]["lj"] as? Int == 3)
+    }
+
+    @Test func instancesBecomeNestedGroups() throws {
+        var e = CommandEngine(document: Fixtures.document())
+        try e.perform(ConvertToSymbol(sceneID: "s1", layerIDs: ["ball"], symbolID: "sym", name: "Sym"))
+        var scene = e.document.scenes[0]
+        scene.layers[1].instances[0].transform = Transform(x: 7, y: 8)
+        let data = try LottieExporter.export(scene: scene, symbols: e.document.symbols)
+        let layers = try #require(try object(data)["layers"] as? [[String: Any]])
+        let instance = try #require((layers[0]["shapes"] as? [[String: Any]])?.first)
+        #expect(instance["ty"] as? String == "gr")
+        let items = try #require(instance["it"] as? [[String: Any]])
+        #expect(items.compactMap { $0["ty"] as? String } == ["gr", "tr"])
+        #expect((items[1]["p"] as? [String: Any])?["k"] as? [Double] == [7, 8])
+        let ball = try #require(items[0]["it"] as? [[String: Any]])
+        #expect(ball.compactMap { $0["ty"] as? String } == ["gr", "tr"])
+        #expect((ball[0]["it"] as? [[String: Any]])?.first?["ty"] as? String == "sh")
+        #expect(throws: LottieExportError.unresolvedSymbol("sym")) {
+            try LottieExporter.export(scene: scene)
+        }
+    }
 }
