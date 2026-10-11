@@ -6,7 +6,8 @@
 // Coordinates are written as-is: scene space maps straight to SVG user space.
 // A gradient fill is written as a gradient element (in user space) just before
 // its path, which refers to it by id ("g0", "g1", ... in document order).
-// Numbers are rounded to 4 decimals; a non-finite value throws.
+// Each layer's <g> carries its id and name, XML-escaped. Numbers are rounded
+// to 4 decimals and never use exponent notation; a non-finite value throws.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -37,7 +38,8 @@ public enum SVGExporter {
             let values = try [m.a, m.b, m.c, m.d, m.tx, m.ty].map(number).joined(separator: " ")
             let opacity = s["opacity"] ?? 1
             let opacityAttr = opacity == 1 ? "" : " opacity=\"\(try number(opacity))\""
-            lines.append("<g transform=\"matrix(\(values))\"\(opacityAttr)>")
+            let ids = " id=\"\(escape(layer.id))\" data-name=\"\(escape(layer.name))\""
+            lines.append("<g\(ids) transform=\"matrix(\(values))\"\(opacityAttr)>")
             for shape in layer.shapes {
                 let d = try pathData(shape.outline)
                 if d.isEmpty { continue }
@@ -128,6 +130,53 @@ public enum SVGExporter {
         if rounded == rounded.rounded(), abs(rounded) < 1e15 {
             return String(Int(rounded))
         }
-        return "\(rounded)"
+        return plainDecimal("\(rounded)")
+    }
+
+    /// Rewrites a number like "1.5e+20" or "-2.5e-05" as a plain decimal,
+    /// without trailing fractional zeros.
+    static func plainDecimal(_ text: String) -> String {
+        var mantissa = Substring(text)
+        var exponent = 0
+        if let e = text.firstIndex(where: { $0 == "e" || $0 == "E" }) {
+            guard let value = Int(text[text.index(after: e)...]) else { return text }
+            mantissa = text[..<e]
+            exponent = value
+        }
+        let sign = mantissa.hasPrefix("-") ? "-" : ""
+        if !sign.isEmpty { mantissa = mantissa.dropFirst() }
+        let parts = mantissa.split(separator: ".", omittingEmptySubsequences: false)
+        let whole = parts.first.map(String.init) ?? ""
+        let digits = whole + (parts.count > 1 ? String(parts[1]) : "")
+        let point = whole.count + exponent
+        var result: String
+        if point <= 0 {
+            result = "0." + String(repeating: "0", count: -point) + digits
+        } else if point >= digits.count {
+            result = digits + String(repeating: "0", count: point - digits.count)
+        } else {
+            result = String(digits.prefix(point)) + "." + String(digits.dropFirst(point))
+        }
+        if result.contains(".") {
+            while result.hasSuffix("0") { result.removeLast() }
+            if result.hasSuffix(".") { result.removeLast() }
+        }
+        return sign + result
+    }
+
+    /// Text safe inside an XML attribute value.
+    static func escape(_ text: String) -> String {
+        var out = ""
+        for ch in text {
+            switch ch {
+            case "&": out += "&amp;"
+            case "<": out += "&lt;"
+            case ">": out += "&gt;"
+            case "\"": out += "&quot;"
+            case "'": out += "&apos;"
+            default: out.append(ch)
+            }
+        }
+        return out
     }
 }
