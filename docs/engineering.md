@@ -12,7 +12,7 @@ into a check or a test instead of repeating it here.
 
 ## Layers
 
-The module has four layers. Each depends only on the ones above it.
+FlareCore has four layers. Each depends only on the ones above it. CoreColor and CoreRaster are separate modules (see CLAUDE.md); the compiler enforces their boundaries.
 
 1. **Model**: `Document.swift`, `Fill.swift`, `Path.swift`, `Geometry.swift`,
    `Symbols.swift`, `Instance.swift`, `StateMachine.swift`, `MachineInputs.swift`.

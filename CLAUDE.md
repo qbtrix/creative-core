@@ -6,6 +6,16 @@ model, commands with undo, timeline, easing, file format and export. The Mac
 app lives in another repo. Many agents work here at once; these rules keep
 that safe and fast. AGENTS.md points here.
 
+## Modules
+
+- `Sources/FlareCore`: the animation engine (document, commands, timeline, format, export).
+- `Sources/CoreColor`: color spaces and conversions, shared by every app. Depends on nothing.
+- `Sources/CoreRaster`: pixel buffers, compositing and image operations. Depends only on CoreColor.
+
+Each module has one error type (`ColorError`, `RasterError`, ...) and its own
+test target. A new shared module needs an issue that approves it, because it
+edits `Package.swift`. FlareCore must not import CoreColor or CoreRaster yet.
+
 ## Start here
 
 1. If you were given an issue, do that issue.
@@ -44,7 +54,7 @@ that safe and fast. AGENTS.md points here.
   `try!`, `as!`, `fatalError(`, `preconditionFailure(`, `precondition(`,
   `unowned ` and `.first!` / `.last!` anywhere in `Sources/`. Also avoid
   unchecked array indexing and Int overflow on values from files.
-- **FlareCore stays Linux-safe.** Foundation only, imported as
+- **Every module stays Linux-safe.** Foundation only, imported as
   `#if canImport(FoundationEssentials) import FoundationEssentials #else import Foundation #endif`.
   No AppKit, SwiftUI, Metal, CoreGraphics, Combine, `NSRegularExpression`,
   `String(format:)` or other Darwin-only API. Swift 6 language mode; code must
