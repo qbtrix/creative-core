@@ -23,6 +23,45 @@ import Testing
         #expect(throws: TimelineError.self) { try Timeline.frame(atTime: 1e300, fps: 24) }
     }
 
+    @Test func playbackFrameLoopsOrClamps() throws {
+        #expect(try Timeline.playbackFrame(elapsed: 2.5, fps: 24, durationFrames: 48, loop: true) == 12)
+        #expect(try Timeline.playbackFrame(elapsed: 2.5, fps: 24, durationFrames: 48, loop: false) == 47)
+        #expect(try Timeline.playbackFrame(elapsed: -1, fps: 24, durationFrames: 48, loop: true) == 0)
+        #expect(try Timeline.playbackFrame(elapsed: -1, fps: 24, durationFrames: 48, loop: false) == 0)
+        #expect(try Timeline.playbackFrame(elapsed: 1, fps: 24, durationFrames: 48, loop: false) == 24)
+        #expect(try Timeline.playbackFrame(elapsed: 2, fps: 24, durationFrames: 48, loop: true) == 0)
+        #expect(try Timeline.playbackFrame(elapsed: 5, fps: 24, durationFrames: 0, loop: true) == 0)
+        #expect(try Timeline.playbackFrame(elapsed: 5, fps: 24, durationFrames: -3, loop: false) == 0)
+        // Huge but finite times never overflow.
+        let wrapped = try Timeline.playbackFrame(elapsed: 1e300, fps: 24, durationFrames: 48, loop: true)
+        #expect((0..<48).contains(wrapped))
+        #expect(try Timeline.playbackFrame(elapsed: 1e300, fps: 24, durationFrames: Int.max, loop: false) == Int.max - 1)
+    }
+
+    @Test func playbackFrameRejectsBadInput() {
+        #expect(throws: TimelineError.invalidFPS(0)) {
+            try Timeline.playbackFrame(elapsed: 1, fps: 0, durationFrames: 48, loop: true)
+        }
+        #expect(throws: TimelineError.self) {
+            try Timeline.playbackFrame(elapsed: .nan, fps: 24, durationFrames: 48, loop: true)
+        }
+        #expect(throws: TimelineError.self) {
+            try Timeline.playbackFrame(elapsed: .infinity, fps: 24, durationFrames: 48, loop: false)
+        }
+    }
+
+    @Test func playbackFrameStaysInRange() throws {
+        var rng = SplitMix64(seed: 12)
+        for _ in 0..<1000 {
+            let duration = Int(rng.next() % 500) + 1
+            let elapsed = Double(rng.next() % 1_000_000) / 1000 - 100
+            for loop in [true, false] {
+                let f = try Timeline.playbackFrame(elapsed: elapsed, fps: 30, durationFrames: duration, loop: loop)
+                #expect((0..<duration).contains(f))
+            }
+        }
+    }
+
     @Test func interpolatesLinearly() {
         let track = [Keyframe(frame: 0, value: 0), Keyframe(frame: 10, value: 100)]
         #expect(Timeline.value(of: track, at: 5) == 50)
