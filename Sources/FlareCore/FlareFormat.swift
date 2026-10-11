@@ -77,6 +77,9 @@ public enum FlareFormat {
             guard sceneIDs.insert(scene.id).inserted else { throw FormatError.invalid("duplicate scene id \(scene.id)") }
             guard scene.fps > 0 else { throw FormatError.invalid("scene \(scene.id): fps must be > 0") }
             guard scene.durationFrames >= 0 else { throw FormatError.invalid("scene \(scene.id): negative duration") }
+            guard scene.width.isFinite, scene.width > 0, scene.height.isFinite, scene.height > 0 else {
+                throw FormatError.invalid("scene \(scene.id): canvas size must be finite and > 0")
+            }
             var layerIDs = Set<String>()
             for layer in scene.layers {
                 guard layerIDs.insert(layer.id).inserted else {

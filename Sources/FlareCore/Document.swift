@@ -5,6 +5,7 @@
 // Invariants (checked by FlareFormat.validate on load, kept by commands):
 // - every type here is a Codable, Sendable value type; no classes, no shared state
 // - Scene.fps > 0, Scene.durationFrames >= 0
+// - Scene.width and Scene.height are finite and > 0
 // - layer ids are unique within a scene
 // - each track is sorted by frame, frames are unique and >= 0, and a track is
 //   never stored empty (an empty track is removed, so undo restores equality)
@@ -27,14 +28,45 @@ public struct Scene: Codable, Sendable, Hashable {
     public var name: String
     public var fps: Int
     public var durationFrames: Int
+    /// Canvas size in points.
+    public var width: Double
+    public var height: Double
+    public var background: Color
     public var layers: [Layer]
 
-    public init(id: String, name: String, fps: Int = 24, durationFrames: Int = 48, layers: [Layer] = []) {
+    public static let defaultWidth: Double = 550
+    public static let defaultHeight: Double = 400
+
+    public init(
+        id: String, name: String, fps: Int = 24, durationFrames: Int = 48,
+        width: Double = Scene.defaultWidth, height: Double = Scene.defaultHeight,
+        background: Color = .white, layers: [Layer] = []
+    ) {
         self.id = id
         self.name = name
         self.fps = fps
         self.durationFrames = durationFrames
+        self.width = width
+        self.height = height
+        self.background = background
         self.layers = layers
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, fps, durationFrames, width, height, background, layers
+    }
+
+    /// Files written before the canvas fields existed decode with the defaults.
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        fps = try c.decode(Int.self, forKey: .fps)
+        durationFrames = try c.decode(Int.self, forKey: .durationFrames)
+        width = try c.decodeIfPresent(Double.self, forKey: .width) ?? Scene.defaultWidth
+        height = try c.decodeIfPresent(Double.self, forKey: .height) ?? Scene.defaultHeight
+        background = try c.decodeIfPresent(Color.self, forKey: .background) ?? .white
+        layers = try c.decode([Layer].self, forKey: .layers)
     }
 }
 
@@ -122,6 +154,7 @@ public struct Color: Codable, Sendable, Hashable {
     }
 
     public static let black = Color(r: 0, g: 0, b: 0)
+    public static let white = Color(r: 1, g: 1, b: 1)
 }
 
 /// Minimal vector shape: a polyline through `points`, optionally closed, with
