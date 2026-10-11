@@ -94,6 +94,9 @@ public enum FlareFormat {
             guard scene.width.isFinite, scene.width > 0, scene.height.isFinite, scene.height > 0 else {
                 throw FormatError.invalid("scene \(scene.id): canvas size must be finite and > 0")
             }
+            for (name, frame) in scene.labels where frame < 0 || frame > scene.durationFrames {
+                throw FormatError.invalid("scene \(scene.id): label \(name) at frame \(frame) is outside the scene")
+            }
         }
         var symbolIDs = Set<String>()
         for symbol in document.symbols {
@@ -106,6 +109,7 @@ public enum FlareFormat {
         for symbol in document.symbols {
             try validate(symbol.layers, owner: "symbol \(symbol.id)", symbols: symbolIDs)
         }
+        try checkSymbolCycles(document.symbols)
     }
 
     /// Layer invariants shared by scenes and symbols. `owner` names the
@@ -117,7 +121,12 @@ public enum FlareFormat {
             guard layerIDs.insert(layer.id).inserted else {
                 throw FormatError.invalid("\(owner): duplicate layer id \(layer.id)")
             }
-            for shape in layer.shapes { try shape.fill.validate() }
+            for shape in layer.shapes {
+                try shape.fill.validate()
+                if let width = shape.stroke?.width, !(width.isFinite && width >= 0) {
+                    throw FormatError.invalid("layer \(layer.id): stroke width must be finite and >= 0")
+                }
+            }
             for (property, track) in layer.tracks {
                 guard !track.isEmpty else { throw FormatError.invalid("layer \(layer.id): empty track \(property)") }
                 var previous = -1

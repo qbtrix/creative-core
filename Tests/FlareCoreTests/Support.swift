@@ -31,7 +31,8 @@ enum Fixtures {
             tracks: ["x": [Keyframe(frame: 0, value: 0, easing: .easeInOut), Keyframe(frame: 24, value: 100)]]
         )
         let bg = Layer(id: "bg", name: "Background")
-        return Document(scenes: [Scene(id: sceneID, name: "Main", fps: 24, durationFrames: 48, layers: [bg, ball])])
+        return Document(scenes: [Scene(id: sceneID, name: "Main", fps: 24, durationFrames: 48, layers: [bg, ball],
+                                      labels: ["start": 0])])
     }
 }
 
