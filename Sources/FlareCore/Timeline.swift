@@ -55,13 +55,20 @@ public enum Timeline {
         guard frame.isFinite, let first = keyframes.first, let last = keyframes.last else { return nil }
         if frame <= Double(first.frame) { return first.value }
         if frame >= Double(last.frame) { return last.value }
-        // ponytail: linear scan; binary search when tracks get long (docs/gaps.md).
-        for (a, b) in zip(keyframes, keyframes.dropFirst()) where frame < Double(b.frame) {
-            let span = Double(b.frame) - Double(a.frame)  // no Int overflow
-            guard span > 0 else { return b.value }
-            let t = a.easing.value(at: (frame - Double(a.frame)) / span)
-            return a.value + (b.value - a.value) * t
+        // Binary search for the first keyframe after `frame`. first.frame < frame
+        // < last.frame here, so hi lands in 1..<count and hi - 1 is valid.
+        var lo = 1
+        var hi = keyframes.count - 1
+        while lo < hi {
+            let mid = lo + (hi - lo) / 2
+            if frame < Double(keyframes[mid].frame) { hi = mid } else { lo = mid + 1 }
         }
-        return last.value
+        guard hi > 0, hi < keyframes.count else { return last.value }
+        let a = keyframes[hi - 1]
+        let b = keyframes[hi]
+        let span = Double(b.frame) - Double(a.frame)  // no Int overflow
+        guard span > 0 else { return b.value }
+        let t = a.easing.value(at: (frame - Double(a.frame)) / span)
+        return a.value + (b.value - a.value) * t
     }
 }

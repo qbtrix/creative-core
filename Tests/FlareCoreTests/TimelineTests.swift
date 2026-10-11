@@ -100,4 +100,44 @@ import Testing
         let extreme = [Keyframe(frame: Int.min, value: 0), Keyframe(frame: Int.max, value: 1)]
         #expect(Timeline.value(of: extreme, at: 0) != nil)
     }
+
+    /// The pre-binary-search linear scan, kept as an oracle.
+    static func linearValue(of keyframes: [Keyframe], at frame: Double) -> Double? {
+        guard frame.isFinite, let first = keyframes.first, let last = keyframes.last else { return nil }
+        if frame <= Double(first.frame) { return first.value }
+        if frame >= Double(last.frame) { return last.value }
+        for (a, b) in zip(keyframes, keyframes.dropFirst()) where frame < Double(b.frame) {
+            let span = Double(b.frame) - Double(a.frame)
+            guard span > 0 else { return b.value }
+            let t = a.easing.value(at: (frame - Double(a.frame)) / span)
+            return a.value + (b.value - a.value) * t
+        }
+        return last.value
+    }
+
+    @Test func binarySearchMatchesLinearScan() {
+        var rng = SplitMix64(seed: 39)
+        let easings: [Easing] = [.linear, .hold, .ease, .easeInOut]
+        for _ in 0..<200 {
+            let count = Int.random(in: 1...1_000, using: &rng)
+            var frame = Int.random(in: -50...50, using: &rng)
+            var track: [Keyframe] = []
+            for _ in 0..<count {
+                // Steps of 0 make duplicate frames, which must also match.
+                frame += Int.random(in: 0...3, using: &rng)
+                let easing = easings[Int.random(in: 0..<easings.count, using: &rng)]
+                track.append(Keyframe(frame: frame, value: Double.random(in: -100...100, using: &rng), easing: easing))
+            }
+            let lo = Double(track[0].frame) - 5
+            let hi = Double(frame) + 5
+            for _ in 0..<50 {
+                let at = Double.random(in: lo...hi, using: &rng)
+                #expect(Timeline.value(of: track, at: at) == Self.linearValue(of: track, at: at))
+                let exact = Double(track[Int.random(in: 0..<count, using: &rng)].frame)
+                #expect(Timeline.value(of: track, at: exact) == Self.linearValue(of: track, at: exact))
+            }
+            #expect(Timeline.value(of: track, at: .nan) == nil)
+            #expect(Timeline.value(of: track, at: .infinity) == nil)
+        }
+    }
 }
