@@ -3,8 +3,10 @@
 // Layers render bottom to top (the first layer is drawn first). Each visible
 // layer is a <g> carrying its sampled transform as a matrix and its opacity;
 // each shape is a <path> built from `Shape.outline`, so curves stay curves.
+// The <g> also carries the layer id and name, XML-escaped.
 // Coordinates are written as-is: scene space maps straight to SVG user space.
-// Numbers are rounded to 4 decimals; a non-finite value throws.
+// Numbers are rounded to 4 decimals and never use exponent notation; a
+// non-finite value throws.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -34,7 +36,8 @@ public enum SVGExporter {
             let values = try [m.a, m.b, m.c, m.d, m.tx, m.ty].map(number).joined(separator: " ")
             let opacity = s["opacity"] ?? 1
             let opacityAttr = opacity == 1 ? "" : " opacity=\"\(try number(opacity))\""
-            lines.append("<g transform=\"matrix(\(values))\"\(opacityAttr)>")
+            let names = "id=\"\(escape(layer.id))\" data-name=\"\(escape(layer.name))\""
+            lines.append("<g \(names) transform=\"matrix(\(values))\"\(opacityAttr)>")
             for shape in layer.shapes {
                 let d = try pathData(shape.outline)
                 if d.isEmpty { continue }
@@ -77,15 +80,60 @@ public enum SVGExporter {
         return " fill=\"\(hex)\"\(opacity)"
     }
 
-    /// A finite number rounded to 4 decimals, without a trailing ".0".
+    /// Text safe inside an XML attribute value or element.
+    static func escape(_ text: String) -> String {
+        var out = ""
+        for ch in text {
+            switch ch {
+            case "&": out += "&amp;"
+            case "<": out += "&lt;"
+            case ">": out += "&gt;"
+            case "\"": out += "&quot;"
+            case "'": out += "&apos;"
+            default: out.append(ch)
+            }
+        }
+        return out
+    }
+
+    /// A finite number rounded to 4 decimals, as a plain decimal without a
+    /// trailing ".0" or exponent.
     static func number(_ value: Double) throws -> String {
         guard value.isFinite else { throw SVGExportError.nonFiniteValue }
         // Huge values have no fractional part to round, and scaling could overflow.
         let rounded = abs(value) >= 1e15 ? value : (value * 10_000).rounded() / 10_000
         if rounded == 0 { return "0" }
-        if rounded == rounded.rounded(), abs(rounded) < 1e15 {
-            return String(Int(rounded))
+        return plainDecimal("\(rounded)")
+    }
+
+    /// Expands Swift's shortest description ("1.5e+20", "1e-05", "2.5") into
+    /// plain decimal digits and drops trailing fractional zeros.
+    static func plainDecimal(_ description: String) -> String {
+        var text = Substring(description)
+        var sign = ""
+        if text.hasPrefix("-") { sign = "-"; text = text.dropFirst() }
+        var exponent = 0
+        if let e = text.firstIndex(where: { $0 == "e" || $0 == "E" }) {
+            exponent = Int(text[text.index(after: e)...]) ?? 0
+            text = text[..<e]
         }
-        return "\(rounded)"
+        let point = text.firstIndex(of: ".").map { text.distance(from: text.startIndex, to: $0) } ?? text.count
+        let digits = Array(text.filter { $0 != "." })
+        let newPoint = point + exponent
+        var whole: String
+        var fraction: String
+        if newPoint <= 0 {
+            whole = "0"
+            fraction = String(repeating: "0", count: -newPoint) + String(digits)
+        } else if newPoint >= digits.count {
+            whole = String(digits) + String(repeating: "0", count: newPoint - digits.count)
+            fraction = ""
+        } else {
+            whole = String(digits[..<newPoint])
+            fraction = String(digits[newPoint...])
+        }
+        while fraction.hasSuffix("0") { fraction.removeLast() }
+        while whole.count > 1, whole.hasPrefix("0") { whole.removeFirst() }
+        return sign + whole + (fraction.isEmpty ? "" : "." + fraction)
     }
 }

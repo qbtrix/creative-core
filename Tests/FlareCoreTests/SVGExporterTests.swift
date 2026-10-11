@@ -19,7 +19,7 @@ struct SVGExporterTests {
         #expect(try SVGExporter.export(scene: scene, frame: 0) == """
             <svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100">
             <rect width="200" height="100" fill="#0000ff"/>
-            <g transform="matrix(1 0 0 1 0 20)">
+            <g id="sq" data-name="Square" transform="matrix(1 0 0 1 0 20)">
             <path d="M0 0 L10 0 L10 10 L0 10 Z" fill="#ff0000"/>
             </g>
             </svg>
@@ -28,7 +28,7 @@ struct SVGExporterTests {
         #expect(try SVGExporter.export(scene: scene, frame: 5) == """
             <svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100">
             <rect width="200" height="100" fill="#0000ff"/>
-            <g transform="matrix(1 0 0 1 50 20)">
+            <g id="sq" data-name="Square" transform="matrix(1 0 0 1 50 20)">
             <path d="M0 0 L10 0 L10 10 L0 10 Z" fill="#ff0000"/>
             </g>
             </svg>
@@ -47,7 +47,7 @@ struct SVGExporterTests {
         let bottom = try #require(lines.firstIndex(of: "<path d=\"M0 0 L10 0 L10 10 L0 10 Z\" fill=\"#ff0000\"/>"))
         let above = try #require(lines.firstIndex(of: "<path d=\"M1 1 Z\" fill=\"#ffffff\"/>"))
         #expect(bottom < above)
-        #expect(lines.contains("<g transform=\"matrix(0 1 -1 0 0 0)\" opacity=\"0.5\">"))
+        #expect(lines.contains("<g id=\"top\" data-name=\"Top\" transform=\"matrix(0 1 -1 0 0 0)\" opacity=\"0.5\">"))
         #expect(!svg.contains("M7 7"))
     }
 
@@ -64,7 +64,7 @@ struct SVGExporterTests {
     @Test func translucentFillAndNumbers() throws {
         #expect(try SVGExporter.fill(Color(r: 0.5, g: 2, b: -1, a: 0.25)) == " fill=\"#80ff00\" fill-opacity=\"0.25\"")
         #expect(try SVGExporter.number(-0.00001) == "0")
-        #expect(try SVGExporter.number(1e20) == "1e+20")
+        #expect(try SVGExporter.number(1e20) == "100000000000000000000")
     }
 
     @Test func nonFiniteValuesThrow() {
@@ -79,5 +79,48 @@ struct SVGExporterTests {
         scene.layers[0].shapes = [Shape(points: [])]
         let svg = try SVGExporter.export(scene: scene, frame: 0)
         #expect(!svg.contains("<path"))
+    }
+
+    @Test func layerNamesAndIdsAreEscaped() throws {
+        var scene = squareScene()
+        scene.layers[0].id = "a'&b"
+        scene.layers[0].name = "<a & \"b\">"
+        let svg = try SVGExporter.export(scene: scene, frame: 0)
+        #expect(svg.contains("<g id=\"a&apos;&amp;b\" data-name=\"&lt;a &amp; &quot;b&quot;&gt;\" transform="))
+        #expect(!svg.contains("<a &"))
+    }
+
+    @Test func nanPointAndTransformThrow() {
+        var scene = squareScene()
+        scene.layers[0].shapes[0].points[2].y = .nan
+        #expect(throws: SVGExportError.nonFiniteValue) { try SVGExporter.export(scene: scene, frame: 0) }
+        scene = squareScene()
+        scene.layers[0].tracks["x"] = [Keyframe(frame: 0, value: .infinity)]
+        #expect(throws: SVGExportError.nonFiniteValue) { try SVGExporter.export(scene: scene, frame: 0) }
+    }
+
+    @Test func numbersNeverUseExponents() throws {
+        #expect(try SVGExporter.number(1e-7) == "0")
+        #expect(try SVGExporter.number(0.0001) == "0.0001")
+        #expect(try SVGExporter.number(-0.00026) == "-0.0003")
+        #expect(try SVGExporter.number(1.5e20) == "150000000000000000000")
+        #expect(try SVGExporter.number(-1e16) == "-10000000000000000")
+        #expect(try SVGExporter.number(123456789.125) == "123456789.125")
+        #expect(try SVGExporter.number(-2.5) == "-2.5")
+        #expect(try SVGExporter.number(.greatestFiniteMagnitude).count == 309)
+        var rng = SplitMix64(seed: 34)
+        for _ in 0..<2_000 {
+            let value = Double(bitPattern: rng.next())
+            guard value.isFinite else { continue }
+            let text = try SVGExporter.number(value)
+            #expect(!text.contains("e") && !text.contains("E"))
+        }
+    }
+
+    @Test func tinyAndHugeCoordinatesPrintPlain() throws {
+        var scene = squareScene()
+        scene.layers[0].shapes[0].points[1] = Point(x: 1e-7, y: 1e18)
+        let svg = try SVGExporter.export(scene: scene, frame: 0)
+        #expect(svg.contains("<path d=\"M0 0 L0 1000000000000000000 L10 10 L0 10 Z\" fill=\"#ff0000\"/>"))
     }
 }
