@@ -9,6 +9,7 @@
 //   the same check scoped to its layer, so a drag on a big scene stays cheap
 // - a group is atomic: if its body throws, the document rolls back to the
 //   state before the group and nothing is pushed
+// - perform, undo and redo throw CommandError, never ModelError (mapped here)
 // - one undo-stack entry per perform() outside a group, one per outermost group
 // - performing anything new clears the redo stack
 // - consecutive top-level performs with the same non-nil coalesce key share one
@@ -90,6 +91,24 @@ public enum CommandError: Error, Equatable, Sendable {
     case invalidDocument(String)
 }
 
+extension CommandError {
+    /// The command-layer form of a model error, so engine callers see only
+    /// CommandError.
+    init(_ error: ModelError) {
+        switch error {
+        case .sceneNotFound(let id): self = .sceneNotFound(id)
+        case .layerNotFound(let id): self = .layerNotFound(id)
+        case .layerLocked(let id): self = .layerLocked(id)
+        case .invalidFill(let message): self = .invalidDocument(message)
+        }
+    }
+}
+
+/// Runs `body`, rethrowing a ModelError as the matching CommandError.
+private func mappingModelErrors(_ body: () throws -> Void) throws {
+    do { try body() } catch let error as ModelError { throw CommandError(error) }
+}
+
 public struct CommandEngine: Sendable {
     /// One undoable step: a single command or a named group of them.
     struct Entry: Sendable {
@@ -124,7 +143,7 @@ public struct CommandEngine: Sendable {
     public mutating func perform(_ command: some Command, coalesceKey key: String? = nil) throws {
         var cmd: any Command = command
         var doc = document
-        try cmd.execute(&doc)
+        try mappingModelErrors { try cmd.execute(&doc) }
         do {
             if let scoped = cmd as? any LayerCommand {
                 try FlareFormat.validate(doc, layer: scoped.layerID, scene: scoped.sceneID, since: document)
@@ -180,7 +199,7 @@ public struct CommandEngine: Sendable {
         guard let entry = undoStack.last else { throw CommandError.nothingToUndo }
         var doc = document
         for cmd in entry.commands.reversed() {
-            try cmd.undo(&doc)
+            try mappingModelErrors { try cmd.undo(&doc) }
         }
         document = doc
         undoStack.removeLast()
@@ -193,7 +212,7 @@ public struct CommandEngine: Sendable {
         guard var entry = redoStack.last else { throw CommandError.nothingToRedo }
         var doc = document
         for i in entry.commands.indices {
-            try entry.commands[i].execute(&doc)
+            try mappingModelErrors { try entry.commands[i].execute(&doc) }
         }
         document = doc
         redoStack.removeLast()
