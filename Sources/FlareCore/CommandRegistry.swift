@@ -33,6 +33,7 @@ public struct CommandRegistry: Sendable {
         GuideCommands.all,
         SymbolCommands.all,
         TextCommands.all,
+        SwatchCommands.all,
     ]
 
     /// Every built-in command.

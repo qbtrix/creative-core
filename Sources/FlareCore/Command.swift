@@ -77,6 +77,10 @@ public enum CommandError: Error, Equatable, Sendable {
     case symbolInUse(String)
     /// A guide position that is NaN or infinite.
     case invalidGuidePosition
+    /// The document palette has no swatch with this name.
+    case swatchNotFound(String)
+    /// A color channel is not finite or not in 0...1.
+    case invalidColor(Color)
     /// An index outside the valid range, e.g. a layer position.
     case invalidIndex(Int)
     /// `undo` was called on a command that never executed.

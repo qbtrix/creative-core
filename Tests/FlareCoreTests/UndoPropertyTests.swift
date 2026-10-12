@@ -21,6 +21,7 @@ import Testing
         + GuideCommandsTests.undoSteps
         + MetadataCommandsTests.undoSteps
         + TextCommandsTests.undoSteps
+        + SwatchCommandsTests.undoSteps
 
     @Test(arguments: 0..<200)
     func undoAllRestoresOriginal(seed: UInt64) throws {
