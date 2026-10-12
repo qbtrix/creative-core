@@ -130,7 +130,8 @@ import Testing
             let layer = UndoPropertyTests.anyLayer(e, &rng)
             try e.perform(TranslateShape(sceneID: Fixtures.sceneID, layerID: layer, index: anyIndex(e, layer, &rng),
                                          dx: UndoPropertyTests.anyNumber(in: -50...50, &rng),
-                                         dy: UndoPropertyTests.anyNumber(in: -50...50, &rng)))
+                                         dy: UndoPropertyTests.anyNumber(in: -50...50, &rng)),
+                          coalesceKey: Bool.random(using: &rng) ? "drag" : nil)
         },
     ]
 

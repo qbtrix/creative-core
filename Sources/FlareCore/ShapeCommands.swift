@@ -90,7 +90,10 @@ public struct SetShapeFill: Command {
     }
 }
 
-/// Moves every point of a shape, including its path, by (dx, dy).
+/// Moves every point of a shape, including its path, by (dx, dy). Consecutive
+/// moves of the same shape merge: dx and dy add up, and the merged command keeps
+/// the first old shape and the last new one, so redo gives back the exact
+/// dragged shape rather than one translation by the rounded sum.
 public struct TranslateShape: Command {
     public static let id = "shape.translate"
     public var label: String { "Move Shape" }
@@ -100,6 +103,7 @@ public struct TranslateShape: Command {
     public var dx: Double
     public var dy: Double
     var oldShape: Shape?
+    var newShape: Shape?
 
     private enum CodingKeys: String, CodingKey { case sceneID, layerID, index, dx, dy }
 
@@ -112,13 +116,25 @@ public struct TranslateShape: Command {
     }
 
     public mutating func execute(_ document: inout Document) throws {
-        let (index, dx, dy) = (index, dx, dy)
-        oldShape = try document.withEditableLayer(scene: sceneID, layer: layerID) { layer in
+        let (index, dx, dy, recordedOld, recordedNew) = (index, dx, dy, oldShape, newShape)
+        (oldShape, newShape) = try document.withEditableLayer(scene: sceneID, layer: layerID) { layer in
             try layer.checkShapeIndex(index)
             let old = layer.shapes[index]
-            layer.shapes[index] = old.translated(dx: dx, dy: dy)
-            return old
+            // Redo from the recorded start replays the recorded result exactly.
+            let new = old == recordedOld ? recordedNew ?? old.translated(dx: dx, dy: dy)
+                : old.translated(dx: dx, dy: dy)
+            layer.shapes[index] = new
+            return (old, new)
         }
+    }
+
+    public mutating func merge(_ next: TranslateShape) -> Bool {
+        guard oldShape != nil, next.oldShape == newShape, next.newShape != nil,
+              (next.sceneID, next.layerID, next.index) == (sceneID, layerID, index) else { return false }
+        dx += next.dx
+        dy += next.dy
+        newShape = next.newShape
+        return true
     }
 
     public func undo(_ document: inout Document) throws {
