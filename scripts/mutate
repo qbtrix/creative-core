@@ -1,0 +1,310 @@
+#!/usr/bin/env python3
+# scripts/mutate: mutation testing. It plants a known bug from a plan, runs the
+# tests named for it, and requires at least one of them to fail. A suite that
+# still passes with the bug in place would ship that bug: the mutation escaped.
+#
+# Plans are Tests/mutations/<module>.json, each a JSON list of entries:
+#   {"note": "the bug it plants", "file": "Sources/...", "anchor": "exact source",
+#    "replacement": "the bug", "filter": "SuiteA|fileTests"}
+# `anchor` must occur exactly once in `file`. `filter` is a `swift test --filter`
+# regex (suite names, or the file name for free-function tests).
+#
+#   scripts/mutate --validate             every anchor resolves once; no build
+#   scripts/mutate --run [--plan CoreColor] [--only TEXT]
+#   scripts/mutate --run --changed-since origin/main --max 15
+#
+# --changed-since picks the entries whose source file changed since the ref,
+# plus entries a plan added or edited (those run first), then caps at --max.
+#
+# Run mode refuses to start while a target file differs from HEAD, so a run
+# that was killed mid-mutation is noticed rather than adopted as the original.
+# It builds once and runs the selected filters unmutated (a red baseline would
+# make every mutation look caught). Then, per entry: write the bug, build (a
+# compile error is BROKEN, not caught), run the filter, restore the file. The
+# restore sits in a finally that Ctrl-C and SIGTERM reach, and the run ends by
+# checking `git status` is clean for every target file.
+#
+# Outcomes: caught (a test failed or timed out), ESCAPED (all passed, or the
+# filter matched no tests), BROKEN (did not compile). Exit 0 when every entry
+# is caught, 1 otherwise, 2 for a setup error (bad plan, dirty file, red
+# baseline, failed restore). Python 3.9+ stdlib only (the macOS Command Line
+# Tools ship 3.9); the CLT Testing.framework flags mirror scripts/ci.
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import signal
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+PLANS = ROOT / "Tests" / "mutations"
+KEYS = ("note", "file", "anchor", "replacement", "filter")
+STEP_TIMEOUT = 900  # seconds for one build or one test run; a hung test counts as caught
+
+
+def rel(path: Path) -> str:
+    try:
+        return path.relative_to(ROOT).as_posix()
+    except ValueError:
+        return str(path)
+
+
+def plan_paths(name: str | None) -> list[Path]:
+    if name is None:
+        return sorted(PLANS.glob("*.json"))
+    path = Path(name)
+    if path.suffix != ".json":
+        path = PLANS / f"{name}.json"
+    return [path if path.is_absolute() else ROOT / path]
+
+
+def parse_plan(path: Path, text: str) -> tuple[list[dict], list[str]]:
+    """Entries of one plan, each tagged with `id` (plan#n), and schema problems."""
+    try:
+        raw = json.loads(text)
+    except ValueError as e:
+        return [], [f"{rel(path)}: not valid JSON: {e}"]
+    if not isinstance(raw, list):
+        return [], [f"{rel(path)}: must be a JSON list of entries"]
+    entries, problems = [], []
+    for i, e in enumerate(raw, 1):
+        bad = [k for k in KEYS if not isinstance(e, dict) or not isinstance(e.get(k), str)
+               or (k != "replacement" and not e[k])]
+        if bad:
+            problems.append(f"{rel(path)}#{i}: missing or empty {', '.join(bad)}")
+            continue
+        entries.append(dict(e, id=f"{path.stem}#{i}", plan=rel(path)))
+    return entries, problems
+
+
+def load(paths: list[Path]) -> tuple[list[dict], list[str]]:
+    entries, problems = [], []
+    if not paths:
+        problems.append(f"no plans under {rel(PLANS)}")
+    for path in paths:
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError as e:
+            problems.append(f"{rel(path)}: {e}")
+            continue
+        found, bad = parse_plan(path, text)
+        entries += found
+        problems += bad
+    return entries, problems
+
+
+def anchor_problem(e: dict) -> str | None:
+    try:
+        text = (ROOT / e["file"]).read_bytes().decode("utf-8")
+    except OSError:
+        return f"no such file {e['file']}"
+    count = text.count(e["anchor"])
+    if count != 1:
+        return f"anchor occurs {count} times in {e['file']}, needs exactly 1"
+    if e["anchor"] == e["replacement"]:
+        return "replacement equals anchor, so it plants nothing"
+    return None
+
+
+def validate(args) -> int:
+    entries, problems = load(plan_paths(args.plan))
+    problems += [f"{e['id']} ({e['note']}): {p}" for e in entries if (p := anchor_problem(e))]
+    if problems:
+        print("\n".join(problems))
+        print(f"\nFAIL: {len(problems)} problem(s). A stale anchor plants nothing, so its plan"
+              " reads as covered while proving nothing. Repoint it at the code as it is now,"
+              " keeping the bug its note names.")
+        return 1
+    print(f"OK: {len(entries)} anchors resolve exactly once.")
+    return 0
+
+
+def git(*args: str) -> subprocess.CompletedProcess:
+    return subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True)
+
+
+def select_changed(entries: list[dict], ref: str) -> list[dict]:
+    """Entries a plan added or edited since `ref` first, then entries whose file changed."""
+    diff = git("diff", "--name-only", f"{ref}...HEAD")
+    if diff.returncode != 0:
+        print(f"git diff against {ref} failed: {diff.stderr.strip()}")
+        sys.exit(2)
+    changed = set(diff.stdout.split())
+    old: set[tuple] = set()
+    for plan in {e["plan"] for e in entries if e["plan"] in changed}:
+        shown = git("show", f"{ref}:{plan}")
+        if shown.returncode == 0:
+            old |= {tuple(e[k] for k in KEYS) for e in parse_plan(ROOT / plan, shown.stdout)[0]}
+    new = [e for e in entries if e["plan"] in changed and tuple(e[k] for k in KEYS) not in old]
+    return new + [e for e in entries if e["file"] in changed and e not in new]
+
+
+def swift_flags() -> list[str]:
+    """scripts/ci's flags for a Mac with only the Command Line Tools."""
+    clt = "/Library/Developer/CommandLineTools/Library/Developer"
+    if sys.platform != "darwin" or not os.path.isdir(f"{clt}/Frameworks/Testing.framework"):
+        return []
+    selected = subprocess.run(["xcode-select", "-p"], capture_output=True, text=True).stdout
+    if not selected.startswith("/Library/Developer/CommandLineTools"):
+        return []
+    return ["-Xswiftc", "-F", "-Xswiftc", f"{clt}/Frameworks", "-Xlinker", "-F", "-Xlinker", f"{clt}/Frameworks",
+            "-Xlinker", "-rpath", "-Xlinker", f"{clt}/Frameworks", "-Xlinker", "-rpath", "-Xlinker", f"{clt}/usr/lib"]
+
+
+def run(cmd: list[str]) -> tuple[int | None, str]:
+    """(exit code, or None on timeout; output)."""
+    proc = subprocess.Popen(cmd, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                            text=True, errors="replace", start_new_session=True)
+    try:
+        out, _ = proc.communicate(timeout=STEP_TIMEOUT)
+        return proc.returncode, out
+    except subprocess.TimeoutExpired:
+        return None, stop(proc)
+    except BaseException:
+        stop(proc)
+        raise
+
+
+def stop(proc: subprocess.Popen) -> str:
+    """SIGINT first: SwiftPM starts compilers and the test runner in their own
+    process groups and only stops them on its interrupt. SIGKILL if it lingers."""
+    for sig in (signal.SIGINT, signal.SIGKILL):
+        try:
+            os.killpg(proc.pid, sig)
+        except ProcessLookupError:
+            pass
+        try:
+            return proc.communicate(timeout=15)[0] or ""
+        except subprocess.TimeoutExpired:
+            continue
+    return ""
+
+
+def no_tests_ran(out: str) -> bool:
+    return bool(re.search(r"No matching test cases|Test run with 0 tests", out))
+
+
+def tail(out: str, lines: int = 30) -> str:
+    return "\n".join(out.rstrip().splitlines()[-lines:])
+
+
+def mutate(args) -> int:
+    entries, problems = load(plan_paths(args.plan))
+    if problems:
+        print("\n".join(problems) + "\nRun scripts/mutate --validate.")
+        return 2
+    if args.changed_since:
+        entries = select_changed(entries, args.changed_since)
+    if args.only:
+        entries = [e for e in entries if args.only.lower() in e["note"].lower() or e["id"] == args.only]
+    skipped = entries[args.max:] if args.max else []
+    entries = entries[:args.max] if args.max else entries
+    if not entries:
+        print("No mutations selected; nothing to run.")
+        return 0
+    bad = [f"{e['id']}: {p}" for e in entries if (p := anchor_problem(e))]
+    if bad:
+        print("\n".join(bad) + "\nRun scripts/mutate --validate.")
+        return 2
+    files = sorted({e["file"] for e in entries})
+    dirty = git("status", "--porcelain", "--", *files).stdout.strip()
+    if dirty:
+        print(f"REFUSING: target files differ from HEAD:\n{dirty}\n"
+              "A killed run leaves its mutation in place, and running now would adopt it as the\n"
+              "original. Check `git diff`; restore a leftover mutation with `git checkout -- <file>`,\n"
+              "or commit your own edits first.")
+        return 2
+
+    flags = swift_flags()
+    build = ["swift", "build", "--build-tests", *flags]
+    test = ["swift", "test", "--skip-build", *flags, "--filter"]
+    print(f"{len(entries)} mutation(s) across {len(files)} file(s)"
+          + (f"; {len(skipped)} more over --max {args.max} left for the full run" if skipped else ""))
+    start = time.monotonic()
+    code, out = run(build)
+    if code != 0:
+        print(f"{tail(out)}\nBaseline build failed; fix the build first.")
+        return 2
+    union = "|".join(sorted({e["filter"] for e in entries}))
+    code, out = run(test + [union])
+    if code != 0 or no_tests_ran(out):
+        print(f"{tail(out)}\nBaseline: the selected tests fail or match nothing WITHOUT any mutation,"
+              " so no result would mean anything.")
+        return 2
+    print(f"baseline build and tests green in {time.monotonic() - start:.0f}s\n")
+
+    originals = {f: (ROOT / f).read_bytes() for f in files}
+    # A shell starts background jobs with SIGINT ignored; take it back so Ctrl-C
+    # and a CI cancel both reach the finally below.
+    signal.signal(signal.SIGINT, signal.default_int_handler)
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
+    results: dict[str, list[dict]] = {"caught": [], "ESCAPED": [], "BROKEN": []}
+    try:
+        for e in entries:
+            t0 = time.monotonic()
+            path = ROOT / e["file"]
+            try:
+                path.write_bytes(originals[e["file"]].decode("utf-8")
+                                 .replace(e["anchor"], e["replacement"], 1).encode("utf-8"))
+                code, out = run(build)
+                if code != 0:
+                    outcome, why = "BROKEN", "does not compile" if code else "build timed out"
+                else:
+                    code, out = run(test + [e["filter"]])
+                    failed = re.search(r"✘ Test (\S+)", out)
+                    if code is None:
+                        outcome, why = "caught", "tests timed out"
+                    elif code != 0:
+                        outcome, why = "caught", f"by {failed.group(1)}" if failed else "tests failed"
+                    else:
+                        outcome = "ESCAPED"
+                        why = "filter matched no tests" if no_tests_ran(out) else "all tests passed"
+            finally:
+                path.write_bytes(originals[e["file"]])
+            results[outcome].append(e)
+            print(f"  {outcome:8} {e['id']:14} {e['note']} ({why}, {time.monotonic() - t0:.0f}s)", flush=True)
+    finally:
+        for f, data in originals.items():
+            (ROOT / f).write_bytes(data)
+        leftover = git("status", "--porcelain", "--", *files).stdout.strip()
+        if leftover:
+            print(f"\nRESTORE FAILED, these files still differ from HEAD:\n{leftover}\n"
+                  "Restore them with `git checkout -- <file>` before anything else.")
+            sys.exit(2)
+
+    caught = len(results["caught"])
+    print(f"\nscore: {caught}/{len(entries)} caught ({100 * caught // len(entries)}%)"
+          f" in {(time.monotonic() - start) / 60:.1f} min")
+    for outcome in ("ESCAPED", "BROKEN"):
+        for e in results[outcome]:
+            print(f"  {outcome} {e['id']}: {e['note']}\n    {e['file']}  filter: {e['filter']}")
+    if caught < len(entries):
+        print("\nAn escape is a bug the suite would ship: add the test that catches it, or drop the\n"
+              "entry if the change cannot alter behavior. Fix a BROKEN entry's replacement.")
+        return 1
+    return 0
+
+
+def main() -> int:
+    p = argparse.ArgumentParser(description="Plant known bugs and require a test to catch each one.")
+    mode = p.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--validate", action="store_true", help="check every anchor resolves exactly once")
+    mode.add_argument("--run", action="store_true", help="apply each mutation and run its tests")
+    p.add_argument("--plan", help="one plan: a module name (CoreColor) or a path")
+    p.add_argument("--only", help="entries whose note contains TEXT, or one id like CoreColor#3")
+    p.add_argument("--changed-since", metavar="REF", help="only entries touched since REF")
+    p.add_argument("--max", type=int, default=0, help="run at most N entries (0 = no cap)")
+    args = p.parse_args()
+    return validate(args) if args.validate else mutate(args)
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except KeyboardInterrupt:  # the sources were restored on the way out
+        sys.exit(130)
