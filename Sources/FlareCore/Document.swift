@@ -12,6 +12,7 @@
 // - every layer instance names a known symbol and has firstFrame >= 0
 // - each track is sorted by frame, frames are unique and >= 0, and a track is
 //   never stored empty (an empty track is removed, so undo restores equality)
+// - keyframe values and shape points (including path points) are finite
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else

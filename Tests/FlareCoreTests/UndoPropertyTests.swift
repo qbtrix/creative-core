@@ -2,7 +2,9 @@
 // sequences drawn from every family (some invalid, some grouped), then undo
 // everything, must give back the original document; redo everything must give
 // back the final one. Every perform, undo and redo must leave a document that
-// passes FlareFormat.validate. Seeded, so failures reproduce. Each family's own test
+// passes FlareFormat.validate. Numeric params are sometimes NaN or +-infinity
+// (anyNumber): such a step must either be rejected with the document unchanged
+// or keep the document valid and undo exactly. Seeded, so failures reproduce. Each family's own test
 // file runs the same property with only its steps (see Support.swift).
 import FlareCore
 import Testing
@@ -28,7 +30,14 @@ import Testing
         try assertUndoRestoresDocument(seed: seed, steps: Self.coreSteps)
     }
 
-    static let props = ["x", "y", "opacity"]
+    static let props = ["x", "y", "scale", "rotation", "opacity"]
+
+    /// A number in `range`, or about one time in six NaN, +infinity or -infinity,
+    /// so steps also send non-finite params.
+    static func anyNumber(in range: ClosedRange<Double>, _ rng: inout SplitMix64) -> Double {
+        guard Int.random(in: 0..<6, using: &rng) == 0 else { return Double.random(in: range, using: &rng) }
+        return [Double.nan, .infinity, -.infinity].randomElement(using: &rng) ?? .nan
+    }
 
     /// A layer of the first scene, or "missing", so steps hit both valid and invalid params.
     static func anyLayer(_ e: CommandEngine, _ rng: inout SplitMix64) -> String {
@@ -60,7 +69,7 @@ import Testing
             let layer = anyLayer(e, &rng), prop = anyProp(&rng)
             let easing: Easing = Bool.random(using: &rng) ? .linear : .easeInOut
             let k = Keyframe(frame: Int.random(in: -1...30, using: &rng),
-                             value: Double.random(in: -100...100, using: &rng), easing: easing)
+                             value: anyNumber(in: -100...100, &rng), easing: easing)
             try e.perform(SetKeyframe(sceneID: Fixtures.sceneID, layerID: layer, property: prop, keyframe: k))
         },
         { e, rng, _ in
@@ -76,8 +85,7 @@ import Testing
         },
         { e, rng, _ in
             let layer = anyLayer(e, &rng)
-            let x = Double(Int.random(in: -1...30, using: &rng))
-            let shape = Shape(points: [Point(x: x, y: 0), Point(x: 1, y: 1)], closed: false)
+            let shape = Shape(points: [Point(x: anyNumber(in: -1...30, &rng), y: 0), Point(x: 1, y: 1)], closed: false)
             try e.perform(AddShape(sceneID: Fixtures.sceneID, layerID: layer, shape: shape))
         },
         { e, rng, _ in
