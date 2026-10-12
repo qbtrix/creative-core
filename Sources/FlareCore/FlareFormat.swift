@@ -149,6 +149,9 @@ public enum FlareFormat {
             for (name, frame) in scene.labels where frame < 0 || frame > scene.durationFrames {
                 throw FormatError.invalid("scene \(scene.id): label \(name) at frame \(frame) is outside the scene")
             }
+            guard scene.guides.allSatisfy({ $0.position.isFinite }) else {
+                throw FormatError.invalid("scene \(scene.id): guide position must be finite")
+            }
         }
         var symbolIDs = Set<String>()
         for symbol in document.symbols {
