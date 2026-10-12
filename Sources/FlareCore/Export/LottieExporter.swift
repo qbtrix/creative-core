@@ -18,6 +18,7 @@
 // symbol frame (`Instance.resolve`), each with its own `tr`. A radial gradient's end point is its center moved right by the
 // radius. Gradient stop alpha is not written; the fill is opaque. Bezier tangents are relative
 // to their vertex; quads are raised to cubics. A non-finite value throws.
+// Text is not written yet: a layer with text throws `unsupported("text")`.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -29,6 +30,8 @@ public enum LottieExportError: Error, Equatable, Sendable {
     /// An instance names a symbol that is missing, contains itself, or is
     /// nested deeper than `Instance.maxNestingDepth`.
     case unresolvedSymbol(String)
+    /// The scene draws something this exporter cannot write yet, e.g. "text".
+    case unsupported(String)
 }
 
 public enum LottieExporter {
@@ -59,6 +62,7 @@ public enum LottieExporter {
     /// symbol's visible layers, on top of one group per shape. `path` is the
     /// ids of the symbols being drawn around the layer.
     static func content(of layer: Layer, frame: Double, symbols: [Symbol], path: [String]) throws -> [LottieItem] {
+        guard layer.texts.isEmpty else { throw LottieExportError.unsupported("text") }
         let instances = try layer.instances.reversed().map { instance in
             guard let (symbol, local) = instance.resolve(in: symbols, frame: frame, path: path) else {
                 throw LottieExportError.unresolvedSymbol(instance.symbolID)

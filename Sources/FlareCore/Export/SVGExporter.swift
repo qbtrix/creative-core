@@ -11,6 +11,7 @@
 // its path, which refers to it by id ("g0", "g1", ... in document order).
 // Each layer's <g> carries its id and name, XML-escaped. Numbers are rounded
 // to 4 decimals and never use exponent notation; a non-finite value throws.
+// Text is not drawn yet: a visible layer with text throws `unsupported("text")`.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -22,6 +23,8 @@ public enum SVGExportError: Error, Equatable, Sendable {
     /// An instance names a symbol that is missing, contains itself, or is
     /// nested deeper than `Instance.maxNestingDepth`.
     case unresolvedSymbol(String)
+    /// The scene draws something this exporter cannot write yet, e.g. "text".
+    case unsupported(String)
 }
 
 public enum SVGExporter {
@@ -49,6 +52,7 @@ public enum SVGExporter {
         into lines: inout [String], gradients: inout Int
     ) throws {
         guard layer.isVisible else { return }
+        guard layer.texts.isEmpty else { throw SVGExportError.unsupported("text") }
         let (transform, opacity) = layer.placement(at: frame)
         let opacityAttr = opacity == 1 ? "" : " opacity=\"\(try number(opacity))\""
         // Symbol layers repeat once per instance, so only scene layers get an id.
