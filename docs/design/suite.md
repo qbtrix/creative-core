@@ -358,7 +358,7 @@ At pilot rates the shared and Flare rows land in about 1 to 2 hours and the app 
 
 - **Usage limits.** Cloud sessions share the subscription plan's 5-hour and weekly limits. Cloud adds machines, not tokens. Measure with `/usage` after Phase 1 before scaling Phase 2.
 - **macOS CI concurrency.** Standard runners are free on public repos, but an org gets only a handful of concurrent macOS jobs (about 5 on Free and Team; check the current limit). Five app repos share that pool, so shell PRs will queue. Keep journeys short and cancel superseded runs.
-- **Xcode drift.** The `macos-26` image's default Xcode moves. Pin it with `xcode-select` in CI. The Swift 6.0 floor exists for the `macos-15` Xcode; on `macos-26` it can move to 6.1, which GRDB (L1) needs.
+- **Xcode drift.** The `macos-26` image's default Xcode moves. Pin it with `xcode-select` in CI. The floor is Swift 6.1, set by GRDB (L1): 7.10.0 is the first GRDB release that links against Ubuntu's SQLite, and it needs tools 6.1. The `macos-15` Xcode already ships 6.1.
 - **Hosted XCUITest may be blocked by TCC.** The fallback is the control port plus a self-hosted Mac mini.
 - **SwiftUI polish needs a human eye.** No gate catches spacing or motion feel. Budget maintainer review time, not agent time. It's the real bottleneck in Phase 2.
 - **CPU raster speed.** The Linux reference compositor is the oracle, not the product path. Interactive rendering is Metal in `<App>Platform`, so it has the slowest feedback loop.

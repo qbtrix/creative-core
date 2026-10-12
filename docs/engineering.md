@@ -12,7 +12,7 @@ into a check or a test instead of repeating it here.
 
 ## Layers
 
-FlareCore has four layers. Each depends only on the ones above it. CoreColor and CoreRaster are separate modules (see CLAUDE.md); the compiler enforces their boundaries.
+FlareCore has four layers. Each depends only on the ones above it. CoreColor, CoreRaster, CoreAsset and CoreCatalog are separate modules (see CLAUDE.md); the compiler enforces their boundaries. CoreCatalog alone may import GRDB, and it maps GRDB's errors to `CatalogError`.
 
 1. **Model**: `Document.swift`, `Fill.swift`, `Path.swift`, `Geometry.swift`,
    `Symbols.swift`, `Instance.swift`, `StateMachine.swift`, `MachineInputs.swift`,

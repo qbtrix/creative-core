@@ -11,10 +11,13 @@ that safe and fast. AGENTS.md points here.
 - `Sources/FlareCore`: the animation engine (document, commands, timeline, format, export).
 - `Sources/CoreColor`: color spaces and conversions, shared by every app. Depends on nothing.
 - `Sources/CoreRaster`: pixel buffers, compositing and image operations. Depends only on CoreColor.
+- `Sources/CoreAsset`: the shared asset model (`Asset`, `AssetRef`) and its manifest codec. Depends on nothing.
+- `Sources/CoreCatalog`: the photo and metadata catalog over SQLite. Depends only on GRDB.
 
-Each module has one error type (`ColorError`, `RasterError`, ...) and its own
-test target. A new shared module needs an issue that approves it, because it
-edits `Package.swift`. FlareCore must not import CoreColor or CoreRaster yet.
+Each module has one error type (`ColorError`, `RasterError`, `AssetError`,
+`CatalogError`) and its own test target. A new shared module needs an issue
+that approves it, because it edits `Package.swift`. FlareCore must not import
+the other modules yet.
 
 ## Start here
 
@@ -54,11 +57,12 @@ edits `Package.swift`. FlareCore must not import CoreColor or CoreRaster yet.
   `try!`, `as!`, `fatalError(`, `preconditionFailure(`, `precondition(`,
   `unowned ` and `.first!` / `.last!` anywhere in `Sources/`. Also avoid
   unchecked array indexing and Int overflow on values from files.
-- **Every module stays Linux-safe.** Foundation only, imported as
+- **Every module stays Linux-safe.** Foundation only (CoreCatalog may also
+  import GRDB), imported as
   `#if canImport(FoundationEssentials) import FoundationEssentials #else import Foundation #endif`.
   No AppKit, SwiftUI, Metal, CoreGraphics, Combine, `NSRegularExpression`,
   `String(format:)` or other Darwin-only API. Swift 6 language mode; code must
-  compile with Swift 6.0 (the macOS runner's Xcode may be older than Linux's).
+  compile with Swift 6.1 (the macOS runner's Xcode may be older than Linux's).
 - **Value types and Sendable.** Model types are `struct`/`enum`, `Codable`,
   `Sendable`, `Hashable`. No classes in the model, no shared mutable state.
 - **Old files keep loading.** A new model field must decode from v1 files that
@@ -68,7 +72,13 @@ edits `Package.swift`. FlareCore must not import CoreColor or CoreRaster yet.
   `#expect`). Seeded randomness only (`SplitMix64` in `Tests/FlareCoreTests/Support.swift`).
 - **Parsers get property and fuzz tests.** Anything that reads untrusted bytes
   gets a seeded fuzz test that asserts it throws instead of crashing.
-- **No new dependencies** without an issue that approves them.
+- **No new dependencies** without an issue that approves them. GRDB is
+  approved for CoreCatalog only, pinned `exact:` in `Package.swift`; no other
+  target may depend on it. On Linux it needs `libsqlite3-dev`, which
+  `scripts/cloud-setup.sh` and the Linux CI job install. Ubuntu's SQLite has no
+  WAL snapshots, so GRDB compiles its snapshot API out on Linux: use
+  `DatabaseQueue`, `DatabaseMigrator`, records and SQL, never `DatabasePool`,
+  `DatabaseSnapshotPool` or snapshot-backed observation.
 - **PR title** in Conventional Commits (`feat(timeline): hold easing`). The body
   says what changed, why, and which test proves it.
 - **No AI attribution anywhere.** Commits, PR titles and bodies, and issue
