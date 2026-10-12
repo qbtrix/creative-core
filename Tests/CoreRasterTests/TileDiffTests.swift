@@ -1,7 +1,8 @@
 // TileDiffTests.swift: tile-by-tile undo. Exact tile counts for one pixel, a
 // square across four tiles and no change; a seeded property test that undo and
 // redo restore bit-identical buffers and keep exactly the overlapped tiles; a
-// 0.0 to -0.0 edit; and size mismatches that throw and change nothing.
+// 0.0 to -0.0 edit; size mismatches that throw and change nothing; and `==`,
+// which tells apart diffs that undo to different bytes.
 import CoreRaster
 import Testing
 
@@ -99,4 +100,38 @@ private func bitIdentical(_ a: PixelBuffer, _ b: PixelBuffer) throws -> Bool {
     #expect(throws: RasterError.self) { try diff.undo(&other) }
     #expect(throws: RasterError.self) { try diff.redo(&other) }
     #expect(try bitIdentical(other, original))
+}
+
+@Test func inverseNegativeZeroDiffsAreNotEqual() throws {
+    let zero = try PixelBuffer(width: 4, height: 4)
+    var negative = zero
+    try negative.setPixel(x: 0, y: 0, RGBA(r: -0.0, g: 0, b: 0, a: 0))
+    let forward = try TileDiff(before: zero, after: negative)
+    let backward = try TileDiff(before: negative, after: zero)
+
+    var a = negative
+    try forward.undo(&a)
+    var b = negative
+    try backward.undo(&b)
+    #expect(try a.pixel(x: 0, y: 0).r.bitPattern == 0)
+    #expect(try b.pixel(x: 0, y: 0).r.bitPattern == 0x8000_0000)
+    #expect(forward != backward)
+    #expect(forward == forward)
+}
+
+@Test func diffsOfTheSameBuffersAreEqual() throws {
+    var rng = SplitMix64(seed: 165)
+    for _ in 0..<12 {
+        let w = Int.random(in: 1...600, using: &rng)
+        let h = Int.random(in: 1...600, using: &rng)
+        let before = try PixelBuffer(width: w, height: h, fill: randomPixel(&rng))
+        var after = before
+        for _ in 0..<Int.random(in: 1...20, using: &rng) {
+            let x = Int.random(in: 0..<w, using: &rng), y = Int.random(in: 0..<h, using: &rng)
+            try after.setPixel(x: x, y: y, randomPixel(&rng))
+        }
+        let diff = try TileDiff(before: before, after: after)
+        #expect(diff == (try TileDiff(before: before, after: after)))
+        if diff.tileCount > 0 { #expect(diff != (try TileDiff(before: after, after: before))) }
+    }
 }
