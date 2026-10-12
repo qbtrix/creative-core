@@ -18,6 +18,7 @@ import Testing
         + ShapeCommandsTests.undoSteps
         + SymbolCommandsTests.undoSteps
         + LabelCommandsTests.undoSteps
+        + GuideCommandsTests.undoSteps
         + MetadataCommandsTests.undoSteps
         + TextCommandsTests.undoSteps
 

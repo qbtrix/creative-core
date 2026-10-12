@@ -75,6 +75,8 @@ public enum CommandError: Error, Equatable, Sendable {
     case symbolNotFound(String)
     /// The symbol cannot be removed because an instance still uses it.
     case symbolInUse(String)
+    /// A guide position that is NaN or infinite.
+    case invalidGuidePosition
     /// An index outside the valid range, e.g. a layer position.
     case invalidIndex(Int)
     /// `undo` was called on a command that never executed.

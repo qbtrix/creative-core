@@ -30,6 +30,7 @@ public struct CommandRegistry: Sendable {
         KeyframeCommands.all,
         MetadataCommands.all,
         LabelCommands.all,
+        GuideCommands.all,
         SymbolCommands.all,
         TextCommands.all,
     ]

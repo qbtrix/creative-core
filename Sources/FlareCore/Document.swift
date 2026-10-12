@@ -7,6 +7,7 @@
 // - Scene.fps > 0, Scene.durationFrames >= 0
 // - Scene.width and Scene.height are finite and > 0
 // - Scene label frames are in 0...durationFrames
+// - Scene guide positions are finite
 // - layer ids are unique within a scene or symbol
 // - symbol ids are unique, Symbol.durationFrames >= 0
 // - every layer instance names a known symbol and has firstFrame >= 0
@@ -106,6 +107,8 @@ public struct Scene: Codable, Sendable, Hashable {
     public var layers: [Layer]
     /// Named frames, label name to frame in `0...durationFrames`.
     public var labels: [String: Int]
+    /// Ruler guides in scene coordinates, in the order they were added.
+    public var guides: [Guide]
 
     public static let defaultWidth: Double = 550
     public static let defaultHeight: Double = 400
@@ -113,7 +116,8 @@ public struct Scene: Codable, Sendable, Hashable {
     public init(
         id: String, name: String, fps: Int = 24, durationFrames: Int = 48,
         width: Double = Scene.defaultWidth, height: Double = Scene.defaultHeight,
-        background: Color = .white, layers: [Layer] = [], labels: [String: Int] = [:]
+        background: Color = .white, layers: [Layer] = [], labels: [String: Int] = [:],
+        guides: [Guide] = []
     ) {
         self.id = id
         self.name = name
@@ -124,13 +128,14 @@ public struct Scene: Codable, Sendable, Hashable {
         self.background = background
         self.layers = layers
         self.labels = labels
+        self.guides = guides
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, name, fps, durationFrames, width, height, background, layers, labels
+        case id, name, fps, durationFrames, width, height, background, layers, labels, guides
     }
 
-    /// Files written before the canvas fields or labels existed decode with the defaults.
+    /// Files written before the canvas fields, labels or guides existed decode with the defaults.
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(String.self, forKey: .id)
@@ -142,6 +147,22 @@ public struct Scene: Codable, Sendable, Hashable {
         background = try c.decodeIfPresent(Color.self, forKey: .background) ?? .white
         layers = try c.decode([Layer].self, forKey: .layers)
         labels = try c.decodeIfPresent([String: Int].self, forKey: .labels) ?? [:]
+        guides = try c.decodeIfPresent([Guide].self, forKey: .guides) ?? []
+    }
+}
+
+/// A ruler guide: a horizontal line at y = `position` or a vertical line at
+/// x = `position`, in scene coordinates. Guides are editing aids and never render.
+public struct Guide: Codable, Sendable, Hashable {
+    public enum Axis: String, Codable, Sendable, Hashable { case horizontal, vertical }
+
+    public var axis: Axis
+    /// Finite.
+    public var position: Double
+
+    public init(axis: Axis, position: Double) {
+        self.axis = axis
+        self.position = position
     }
 }
 
