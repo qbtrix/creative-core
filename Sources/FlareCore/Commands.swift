@@ -176,6 +176,16 @@ public struct MoveKeyframe: Command {
         try Self.move(&document, sceneID, layerID, property, to, from, checkLock: false)
     }
 
+    /// A drag step that picks the keyframe up where this one put it down: the
+    /// merged command moves it straight from `from` to `next.to`. Exact, because
+    /// the steps between only moved this keyframe.
+    public mutating func merge(_ next: MoveKeyframe) -> Bool {
+        guard (next.sceneID, next.layerID, next.property, next.from) == (sceneID, layerID, property, to)
+        else { return false }
+        to = next.to
+        return true
+    }
+
     private static func move(
         _ document: inout Document, _ scene: String, _ layer: String, _ p: String, _ from: Int, _ to: Int,
         checkLock: Bool

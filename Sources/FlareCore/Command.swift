@@ -12,7 +12,9 @@
 // - one undo-stack entry per perform() outside a group, one per outermost group
 // - performing anything new clears the redo stack
 // - consecutive top-level performs with the same non-nil coalesce key share one
-//   entry; a different or nil key, an undo, a redo or a group ends coalescing
+//   entry; a different or nil key, an undo, a redo or a group ends coalescing.
+//   Inside that entry a command first tries to merge into the last one, so a
+//   drag holds one command, not one per step
 // - the undo stack holds at most maxUndoDepth entries; the oldest is dropped
 #if canImport(FoundationEssentials)
 import FoundationEssentials
@@ -33,6 +35,15 @@ public protocol Command: Codable, Sendable {
     var label: String { get }
     mutating func execute(_ document: inout Document) throws
     func undo(_ document: inout Document) throws
+    /// Folds `next`, which has just executed on the document this command left,
+    /// into this executed command, so that undo and redo of the result equal
+    /// undo and redo of both. Returns false, changing nothing, when they don't
+    /// merge. Used for coalesced steps; the default never merges.
+    mutating func merge(_ next: Self) -> Bool
+}
+
+extension Command {
+    public mutating func merge(_ next: Self) -> Bool { false }
 }
 
 /// A command whose `execute` changes one layer of one scene and nothing else:
@@ -89,7 +100,7 @@ public struct CommandEngine: Sendable {
     public private(set) var document: Document
     /// Most undo steps kept. When full, the oldest entry is dropped.
     public let maxUndoDepth: Int
-    private var undoStack: [Entry] = []
+    private(set) var undoStack: [Entry] = []
     private var redoStack: [Entry] = []
     private var pending: Entry?
     /// Key of the last top-level perform, while it may still absorb more.
@@ -127,7 +138,12 @@ public struct CommandEngine: Sendable {
         if pending != nil {
             pending?.commands.append(cmd)
         } else if let key, key == coalesceKey, let last = undoStack.indices.last {
-            undoStack[last].commands.append(cmd)
+            if let i = undoStack[last].commands.indices.last,
+               let merged = Self.merged(undoStack[last].commands[i], cmd) {
+                undoStack[last].commands[i] = merged
+            } else {
+                undoStack[last].commands.append(cmd)
+            }
             redoStack.removeAll()
         } else {
             push(Entry(label: cmd.label, commands: [cmd]))
@@ -183,6 +199,14 @@ public struct CommandEngine: Sendable {
         redoStack.removeLast()
         undoStack.append(entry)
         coalesceKey = nil
+    }
+
+    /// `last` with `next` merged into it, or nil when `next` is another type or
+    /// `last.merge` declines.
+    private static func merged<C: Command>(_ last: C, _ next: any Command) -> (any Command)? {
+        guard let next = next as? C else { return nil }
+        var last = last
+        return last.merge(next) ? last : nil
     }
 
     private mutating func push(_ entry: Entry) {
