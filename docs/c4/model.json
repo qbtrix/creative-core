@@ -9,8 +9,8 @@
     "systems": [
       {
         "id": "creative-core",
-        "name": "FlareCore",
-        "description": "The pure-Swift engine of a Mac-native 2D vector animation studio: document model, commands with undo, timeline, easing, file format and export. Linux-safe, Foundation only. The Mac app lives in another repo.",
+        "name": "creative-core",
+        "description": "The pure-Swift engines of a Mac-native creative suite: the FlareCore animation engine plus the shared CoreColor and CoreRaster modules. Linux-safe, Foundation only. The Mac apps live in other repos.",
         "tags": [
           "internal"
         ],
@@ -107,7 +107,17 @@
             "tags": [
               "internal"
             ],
-            "components": []
+            "components": [
+              {
+                "id": "color-spaces",
+                "name": "Color Spaces",
+                "description": "Color3 and conversions between sRGB, linear sRGB, Display P3, XYZ D65 and OKLab through one shared transfer curve; ColorError.",
+                "technology": "Swift 6, Foundation",
+                "paths": [
+                  "Sources/CoreColor/"
+                ]
+              }
+            ]
           },
           {
             "id": "coreraster",
@@ -117,7 +127,42 @@
             "tags": [
               "internal"
             ],
-            "components": []
+            "components": [
+              {
+                "id": "pixel-buffer",
+                "name": "Pixel Buffer",
+                "description": "PixelBuffer and RGBA: validated sizes, bounds-checked access, premultiply helpers; RasterError.",
+                "technology": "Swift 6, Foundation",
+                "paths": [
+                  "Sources/CoreRaster/PixelBuffer.swift",
+                  "Sources/CoreRaster/RasterError.swift"
+                ]
+              },
+              {
+                "id": "compositing",
+                "name": "Compositing",
+                "description": "W3C blend modes and source-over compositing with opacity on premultiplied pixels.",
+                "technology": "Swift 6, Foundation",
+                "paths": [
+                  "Sources/CoreRaster/BlendMode.swift",
+                  "Sources/CoreRaster/Composite.swift"
+                ]
+              },
+              {
+                "id": "image-ops",
+                "name": "Image Operations",
+                "description": "Masks, resampling, crop and rotate, blur, tone adjustments and histograms over PixelBuffer.",
+                "technology": "Swift 6, Foundation",
+                "paths": [
+                  "Sources/CoreRaster/Mask.swift",
+                  "Sources/CoreRaster/Resample.swift",
+                  "Sources/CoreRaster/Transform.swift",
+                  "Sources/CoreRaster/Adjustments.swift",
+                  "Sources/CoreRaster/Blur.swift",
+                  "Sources/CoreRaster/Histogram.swift"
+                ]
+              }
+            ]
           }
         ]
       }
