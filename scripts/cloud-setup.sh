@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 # scripts/cloud-setup.sh: setup script for Claude Code cloud environments
-# (Ubuntu 24.04, runs as root, must finish in under 5 minutes). Installs a
-# pinned Swift toolchain if `swift` is missing, then prints `swift --version`.
-# Idempotent: a second run with swift on PATH exits right away.
+# (Ubuntu 24.04, runs as root, must finish in under 5 minutes). Installs the
+# SQLite headers CoreCatalog's GRDB needs (libsqlite3-dev) and a pinned Swift
+# toolchain if either is missing, then prints `swift --version`.
+# Idempotent: a second run with both present exits right away.
 #
 # Network hosts it needs (allowlist them in the environment):
 #   download.swift.org                              the toolchain tarball (~1.1 GB)
 #   archive.ubuntu.com, security.ubuntu.com         apt packages Swift needs
 #   (ports.ubuntu.com instead on aarch64)
+#   github.com                                      SwiftPM fetches GRDB (CoreCatalog)
 #
 # The tarball's GPG signature is not checked; it comes over HTTPS from
 # swift.org. Bump SWIFT_VERSION together with the container tag in
@@ -29,6 +31,12 @@ link_toolchain() {
 if [[ "$(id -u)" != 0 ]]; then
   echo "cloud-setup: run as root (cloud environments do)" >&2
   exit 1
+fi
+
+# Checked before the swift early exit, so a box that already has swift gets it too.
+if ! dpkg -s libsqlite3-dev >/dev/null 2>&1; then
+  apt-get update -q
+  DEBIAN_FRONTEND=noninteractive apt-get install -y -q --no-install-recommends libsqlite3-dev
 fi
 
 if command -v swift >/dev/null 2>&1; then

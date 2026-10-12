@@ -25,7 +25,8 @@ review. Agent rules are in [CLAUDE.md](CLAUDE.md).
 
 ## Running the checks
 
-You need Swift 6.0 or newer.
+You need Swift 6.1 or newer. On Linux you also need the SQLite headers
+(`apt-get install libsqlite3-dev`), for CoreCatalog.
 
 ```bash
 scripts/ci

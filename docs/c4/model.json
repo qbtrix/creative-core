@@ -10,7 +10,7 @@
       {
         "id": "creative-core",
         "name": "creative-core",
-        "description": "The pure-Swift engines of a Mac-native creative suite: the FlareCore animation engine plus the shared CoreColor and CoreRaster modules. Linux-safe, Foundation only. The Mac apps live in other repos.",
+        "description": "The pure-Swift engines of a Mac-native creative suite: the FlareCore animation engine plus the shared CoreColor, CoreRaster, CoreAsset and CoreCatalog modules. Linux-safe, Foundation only, except CoreCatalog, which uses GRDB over the system SQLite. The Mac apps live in other repos.",
         "tags": [
           "internal"
         ],
@@ -163,8 +163,57 @@
                 ]
               }
             ]
+          },
+          {
+            "id": "coreasset",
+            "name": "CoreAsset library",
+            "description": "Shared asset module (Sources/CoreAsset): the Asset and AssetRef model every app imports and exports, and its manifest.json codec. Linux-safe, Foundation only, no dependencies.",
+            "technology": "Swift 6, SwiftPM",
+            "tags": [
+              "internal"
+            ],
+            "components": [
+              {
+                "id": "asset-model",
+                "name": "Asset Model",
+                "description": "Asset (id, kind, name, tags, version, source app, payload ref), AssetRef (id, version) and the manifest codec with size limits; AssetError.",
+                "technology": "Swift 6, Foundation",
+                "paths": [
+                  "Sources/CoreAsset/"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "corecatalog",
+            "name": "CoreCatalog library",
+            "description": "Shared catalog module (Sources/CoreCatalog): photo and metadata catalog over SQLite, used by Library and the shared asset library. Linux-safe; depends only on GRDB.",
+            "technology": "Swift 6, SwiftPM, GRDB",
+            "tags": [
+              "internal"
+            ],
+            "components": [
+              {
+                "id": "catalog-store",
+                "name": "Catalog Store",
+                "description": "The catalog schema and its migrations, record types and queries (smart collection rules compiled to SQL) over a GRDB database; CatalogError, which GRDB's errors map to.",
+                "technology": "Swift 6, GRDB, SQLite",
+                "paths": [
+                  "Sources/CoreCatalog/"
+                ]
+              }
+            ]
           }
         ]
+      },
+      {
+        "id": "grdb",
+        "name": "GRDB.swift",
+        "description": "External: SQLite toolkit for Swift (groue/GRDB.swift), pinned exact in Package.swift. Links the system SQLite; on Linux that needs libsqlite3-dev. Approved for CoreCatalog only.",
+        "tags": [
+          "external"
+        ],
+        "containers": []
       }
     ],
     "relationships": [
@@ -214,6 +263,13 @@
         "source": "coreraster",
         "target": "corecolor",
         "description": "pixels carry colors in CoreColor's spaces",
+        "style": "sync"
+      },
+      {
+        "source": "catalog-store",
+        "target": "grdb",
+        "description": "opens databases, runs migrations and queries through GRDB",
+        "technology": "SwiftPM dependency",
         "style": "sync"
       }
     ]
