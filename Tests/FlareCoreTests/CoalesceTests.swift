@@ -11,7 +11,7 @@ import Testing
     func drag(_ engine: inout CommandEngine, from: Int, steps: Int, key: String?) throws {
         for i in 0..<steps {
             try engine.perform(
-                MoveKeyframe(sceneID: s, layerID: "ball", property: "x", from: from + i, to: from + i + 1),
+                MoveKeyframe(owner: .scene(s), layerID: "ball", property: "x", from: from + i, to: from + i + 1),
                 coalesceKey: key)
         }
     }

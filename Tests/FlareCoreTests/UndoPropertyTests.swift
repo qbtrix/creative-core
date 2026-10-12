@@ -50,6 +50,21 @@ import Testing
         return layers.indices.contains(i) ? layers[i].id : "missing"
     }
 
+    /// A layer of the first scene or of the first symbol, a missing layer, or a
+    /// missing symbol, so owner-taking steps hit scene and symbol layers and
+    /// invalid params.
+    static func anyTarget(_ e: CommandEngine, _ rng: inout SplitMix64) -> (LayerOwner, String) {
+        switch Int.random(in: 0..<8, using: &rng) {
+        case 0: return (.symbol("ghost"), "wing")
+        case 1...3:
+            guard let symbol = e.document.symbols.first else { break }
+            let i = Int.random(in: 0...symbol.layers.count, using: &rng)
+            return (.symbol(symbol.id), symbol.layers.indices.contains(i) ? symbol.layers[i].id : "missing")
+        default: break
+        }
+        return (.scene(Fixtures.sceneID), anyLayer(e, &rng))
+    }
+
     static func anyProp(_ rng: inout SplitMix64) -> String { props.randomElement(using: &rng) ?? "x" }
 
     /// Layer, keyframe and shape commands (Commands.swift).
@@ -69,22 +84,22 @@ import Testing
                                       name: "n\(Int.random(in: -1...30, using: &rng))"))
         },
         { e, rng, _ in
-            let layer = anyLayer(e, &rng), prop = anyProp(&rng)
+            let (owner, layer) = anyTarget(e, &rng), prop = anyProp(&rng)
             let easing: Easing = Bool.random(using: &rng) ? .linear : .easeInOut
             let k = Keyframe(frame: Int.random(in: -1...30, using: &rng),
                              value: anyNumber(in: -100...100, &rng), easing: easing)
-            try e.perform(SetKeyframe(sceneID: Fixtures.sceneID, layerID: layer, property: prop, keyframe: k))
+            try e.perform(SetKeyframe(owner: owner, layerID: layer, property: prop, keyframe: k))
         },
         { e, rng, _ in
-            let layer = anyLayer(e, &rng), prop = anyProp(&rng)
-            try e.perform(MoveKeyframe(sceneID: Fixtures.sceneID, layerID: layer, property: prop,
+            let (owner, layer) = anyTarget(e, &rng), prop = anyProp(&rng)
+            try e.perform(MoveKeyframe(owner: owner, layerID: layer, property: prop,
                                        from: Int.random(in: -1...30, using: &rng),
                                        to: Int.random(in: -1...30, using: &rng)),
                           coalesceKey: Bool.random(using: &rng) ? "drag" : nil)
         },
         { e, rng, _ in
-            let layer = anyLayer(e, &rng), prop = anyProp(&rng)
-            try e.perform(RemoveKeyframe(sceneID: Fixtures.sceneID, layerID: layer, property: prop,
+            let (owner, layer) = anyTarget(e, &rng), prop = anyProp(&rng)
+            try e.perform(RemoveKeyframe(owner: owner, layerID: layer, property: prop,
                                          frame: Int.random(in: -1...30, using: &rng)))
         },
         { e, rng, _ in

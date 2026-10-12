@@ -21,7 +21,7 @@ import Testing
     @Test func namedActions() throws {
         var engine = CommandEngine(document: Fixtures.document())
         #expect(engine.undoActionName == nil)
-        try engine.perform(MoveKeyframe(sceneID: s, layerID: "ball", property: "x", from: 24, to: 30))
+        try engine.perform(MoveKeyframe(owner: .scene(s), layerID: "ball", property: "x", from: 24, to: 30))
         #expect(engine.undoActionName == "Undo Move Keyframe")
         try engine.undo()
         #expect(engine.redoActionName == "Redo Move Keyframe")
@@ -31,8 +31,8 @@ import Testing
         var engine = CommandEngine(document: Fixtures.document())
         let original = engine.document
         try engine.group("Nudge") { e in
-            try e.perform(MoveKeyframe(sceneID: s, layerID: "ball", property: "x", from: 24, to: 25))
-            try e.perform(SetKeyframe(sceneID: s, layerID: "ball", property: "y", keyframe: Keyframe(frame: 3, value: 9)))
+            try e.perform(MoveKeyframe(owner: .scene(s), layerID: "ball", property: "x", from: 24, to: 25))
+            try e.perform(SetKeyframe(owner: .scene(s), layerID: "ball", property: "y", keyframe: Keyframe(frame: 3, value: 9)))
             try e.group("Inner") { inner in
                 try inner.perform(RenameLayer(sceneID: s, layerID: "bg", name: "Sky"))
             }
@@ -60,13 +60,13 @@ import Testing
         var engine = CommandEngine(document: Fixtures.document())
         let original = engine.document
         #expect(throws: CommandError.frameOccupied(property: "x", frame: 0)) {
-            try engine.perform(MoveKeyframe(sceneID: s, layerID: "ball", property: "x", from: 24, to: 0))
+            try engine.perform(MoveKeyframe(owner: .scene(s), layerID: "ball", property: "x", from: 24, to: 0))
         }
         #expect(throws: CommandError.duplicateID("bg")) {
             try engine.perform(AddLayer(sceneID: s, layer: Layer(id: "bg", name: "dup")))
         }
         #expect(throws: CommandError.invalidFrame(-1)) {
-            try engine.perform(SetKeyframe(sceneID: s, layerID: "ball", property: "x", keyframe: Keyframe(frame: -1, value: 0)))
+            try engine.perform(SetKeyframe(owner: .scene(s), layerID: "ball", property: "x", keyframe: Keyframe(frame: -1, value: 0)))
         }
         #expect(throws: CommandError.sceneNotFound("zz")) {
             try engine.perform(RemoveLayer(sceneID: "zz", layerID: "bg"))
@@ -102,13 +102,13 @@ import Testing
         var doc = Fixtures.document()
         #expect(throws: CommandError.notExecuted) { try RemoveLayer(sceneID: s, layerID: "bg").undo(&doc) }
         #expect(throws: CommandError.notExecuted) {
-            try SetKeyframe(sceneID: s, layerID: "ball", property: "x", keyframe: Keyframe(frame: 0, value: 1)).undo(&doc)
+            try SetKeyframe(owner: .scene(s), layerID: "ball", property: "x", keyframe: Keyframe(frame: 0, value: 1)).undo(&doc)
         }
         #expect(doc == Fixtures.document())
     }
 
     @Test func commandParamsAreCodable() throws {
-        let cmd = MoveKeyframe(sceneID: s, layerID: "ball", property: "x", from: 24, to: 30)
+        let cmd = MoveKeyframe(owner: .scene(s), layerID: "ball", property: "x", from: 24, to: 30)
         let data = try JSONEncoder().encode(cmd)
         var back = try JSONDecoder().decode(MoveKeyframe.self, from: data)
         #expect(MoveKeyframe.id == "keyframe.move")
@@ -133,7 +133,7 @@ import Testing
         #expect(throws: CommandError.self) { try e.perform(SetSceneTiming(sceneID: s, fps: 24, durationFrames: 10)) }
         #expect(throws: CommandError.self) { try e.perform(RemoveScene(sceneID: s)) }
         #expect(throws: CommandError.self) {
-            try e.perform(SetKeyframe(sceneID: s, layerID: "ball", property: "x", keyframe: Keyframe(frame: 5, value: .nan)))
+            try e.perform(SetKeyframe(owner: .scene(s), layerID: "ball", property: "x", keyframe: Keyframe(frame: 5, value: .nan)))
         }
         #expect(throws: CommandError.self) {
             try e.perform(AddLayer(sceneID: s, layer: Layer(id: "bad", name: "b", tracks: ["x": []])))
