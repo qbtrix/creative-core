@@ -1,6 +1,6 @@
 // CoalesceTests.swift: perform(_:coalesceKey:) merges consecutive same-key
 // commands into one undo entry; a different or nil key, undo, redo or a group
-// ends coalescing.
+// ends coalescing. Drags of a shape or a keyframe merge into one command.
 @testable import FlareCore
 import Testing
 
@@ -116,6 +116,53 @@ import Testing
         #expect(engine.undoActionName == "Undo Move Keyframe")
         try engine.undo()
         #expect(engine.undoActionName == "Undo Drag")
+        try engine.undo()
+        #expect(engine.document == original)
+    }
+
+    @Test func shapeDragMergesIntoOneExactCommand() throws {
+        var engine = CommandEngine(document: Fixtures.document())
+        let original = engine.document
+        for _ in 0..<300 {
+            try engine.perform(TranslateShape(sceneID: s, layerID: "ball", index: 0, dx: 0.1, dy: -0.3),
+                               coalesceKey: "drag")
+        }
+        let dragged = engine.document
+        let point = dragged.scenes.first?.layers.last?.shapes.first?.points.first
+        #expect(point != original.scenes.first?.layers.last?.shapes.first?.points.first)
+        #expect(engine.undoStack.count == 1)
+        #expect(engine.undoStack.first?.commands.count == 1)
+        let merged = engine.undoStack.first?.commands.first as? TranslateShape
+        #expect(abs((merged?.dx ?? 0) - 30) < 1e-9)
+        #expect(abs((merged?.dy ?? 0) + 90) < 1e-9)
+        try engine.undo()
+        #expect(engine.document == original)
+        try engine.redo()
+        #expect(engine.document == dragged)
+        try FlareFormat.validate(engine.document)
+    }
+
+    @Test func keyframeDragMergesIntoOneCommand() throws {
+        var engine = CommandEngine(document: Fixtures.document())
+        let original = engine.document
+        try drag(&engine, from: 24, steps: 10, key: "drag")
+        let dragged = engine.document
+        let merged = engine.undoStack.first?.commands
+        #expect(merged?.count == 1)
+        #expect((merged?.first as? MoveKeyframe).map { [$0.from, $0.to] } == [24, 34])
+        try engine.undo()
+        #expect(engine.document == original)
+        try engine.redo()
+        #expect(engine.document == dragged)
+    }
+
+    @Test func unrelatedCommandsInARunStaySeparate() throws {
+        var engine = CommandEngine(document: Fixtures.document())
+        let original = engine.document
+        try engine.perform(TranslateShape(sceneID: s, layerID: "ball", index: 0, dx: 1, dy: 0), coalesceKey: "k")
+        try drag(&engine, from: 24, steps: 2, key: "k")
+        try engine.perform(TranslateShape(sceneID: s, layerID: "ball", index: 0, dx: 1, dy: 0), coalesceKey: "k")
+        #expect(engine.undoStack.first?.commands.count == 3)
         try engine.undo()
         #expect(engine.document == original)
     }

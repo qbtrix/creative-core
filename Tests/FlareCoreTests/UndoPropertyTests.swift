@@ -76,7 +76,8 @@ import Testing
             let layer = anyLayer(e, &rng), prop = anyProp(&rng)
             try e.perform(MoveKeyframe(sceneID: Fixtures.sceneID, layerID: layer, property: prop,
                                        from: Int.random(in: -1...30, using: &rng),
-                                       to: Int.random(in: -1...30, using: &rng)))
+                                       to: Int.random(in: -1...30, using: &rng)),
+                          coalesceKey: Bool.random(using: &rng) ? "drag" : nil)
         },
         { e, rng, _ in
             let layer = anyLayer(e, &rng), prop = anyProp(&rng)
