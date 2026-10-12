@@ -1,22 +1,26 @@
 # CI: runs scripts/ci (no-crash lint, swift build, swift test) on Linux and
-# macOS, plus the fast-lane decision tests. The fast lane only merges a PR once
-# a check from this workflow ("CI") has passed, so keep the name stable.
-# workflow_dispatch lets the fast lane run CI on main after its merges and on
-# refreshed PR heads: GITHUB_TOKEN pushes and merges fire no other triggers.
+# macOS, plus the fast-lane decision tests. The main ruleset requires the job
+# names "Linux" and "macOS" and the fast lane reads this workflow ("CI"), so
+# keep the names stable. merge_group runs CI on merge-queue groups. The fast
+# lane enqueues with GITHUB_TOKEN, which fires no merge_group event, so it
+# starts CI on its groups with workflow_dispatch instead.
 name: CI
 
 on:
   pull_request:
   push:
     branches: [main]
+  merge_group:
   workflow_dispatch:
 
 permissions:
   contents: read
 
+# A new push to a PR cancels its superseded run. Runs on main and on
+# merge-queue groups (one commit each) always finish: the queue waits on them.
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.sha }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   linux:

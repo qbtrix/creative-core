@@ -84,8 +84,9 @@ the other modules yet.
 - **No AI attribution anywhere.** Commits, PR titles and bodies, and issue
   comments carry no `Co-Authored-By: Claude`, no `Claude-Session:` link and no
   "Generated with Claude Code" line. `.claude/settings.json` turns these off;
-  if your tooling adds one anyway, delete it before you push. The fast lane
-  also strips them from the squash commit.
+  if your tooling adds one anyway, delete it before you push. The merge queue
+  squashes your commit messages into `main`, so the fast lane refuses a PR
+  whose commits carry one, and strips them from the PR body.
 - **Clean-room.** Never copy code, files or text from Adobe products or from
   GPL-incompatible sources. Behavior may come only from public documentation
   and specs. This repo is GPL-3.0.
@@ -113,13 +114,24 @@ the other modules yet.
 
 ## Fast lane
 
-A PR labelled `fast-lane` is merged automatically by
+A PR labelled `fast-lane` is added to the merge queue on `main` by
 `.github/workflows/fast-lane.yml` when all of these hold: base `main`, author
 on the allowlist in `scripts/fast-lane.sh`, at most 400 changed lines and 15
-files, no protected path touched (the list above), mergeable, and every check
-green including CI. Otherwise the label is removed with a comment saying why,
-and the PR waits for human review. A human reviews fast-lane merges after the
-fact and reverts anything wrong.
+files, no protected path touched (the list above), no AI attribution in its
+commit messages, mergeable, and every check green including CI. Otherwise the
+label is removed with a comment saying why, and the PR waits for human review.
+A human reviews fast-lane merges after the fact and reverts anything wrong.
+
+The queue runs `Linux` and `macOS` on each queued PR on top of `main` (up to 5
+groups at once) and squash-merges the ones that pass, so you never need to
+rebase a green PR again. If the queue removes your PR because its group failed,
+the lane comments and keeps it out until you push a fix. The lane closes the
+linked issues after the merge.
+
+Merging a PR outside the lane (protected paths, after review): `main` requires
+the merge queue and repo auto-merge is off, so plain `gh pr merge` cannot queue
+it. A repo admin runs `gh pr merge <n> --squash --admin`, which bypasses the
+queue and merges directly.
 
 ## Commands
 

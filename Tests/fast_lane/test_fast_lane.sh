@@ -2,12 +2,12 @@
 # Tests/fast_lane/test_fast_lane.sh: fixture tests for the pure `decide`
 # function in scripts/fast-lane.sh. No network, needs bash and jq.
 #
-# checks-green.json is a check rollup shaped like a green flare-core PR: the CI
+# checks-green.json is a check rollup shaped like a green creative-core PR: the CI
 # workflow's Linux and macOS jobs plus one SKIPPED CI job, a non-CI workflow
 # check, a commit status, the fast-lane workflow's own in-progress check and a
 # Copilot review check (decide must ignore the last two). Each case mutates a
-# base PR / file list / rollup with jq and may pass main CI health
-# (green/red/running, default green) and freshness (default true).
+# base PR / file list / rollup with jq and may pass main CI health (green|red,
+# default green) and a merge-queue removal reason (default none).
 #
 # Run: bash Tests/fast_lane/test_fast_lane.sh   (exit 0 = all pass)
 set -euo pipefail
@@ -23,16 +23,18 @@ fail=0
 BASE_PR='{"number":1,"state":"OPEN","isDraft":false,"baseRefName":"main",
   "labels":[{"name":"fast-lane"}],"author":{"login":"prakashUXtech"},
   "additions":120,"deletions":30,"changedFiles":2,
-  "mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","headRefOid":"abc123"}'
+  "mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","headRefOid":"abc123",
+  "commits":[{"messageHeadline":"fix(flare): keep the playhead","messageBody":"Closes #1\n\nBelt-Run: act-1"}],
+  "mq":{"enabled":true,"inQueue":false}}'
 BASE_FILES=$'Sources/FlareCore/Timeline.swift\nTests/FlareCoreTests/TimelineTests.swift'
 
-# check <name> <expected stdout prefix> <pr jq> <files> <checks jq> [main health] [fresh]
+# check <name> <expected stdout prefix> <pr jq> <files> <checks jq> [main health] [dequeued]
 check() {
-  local name="$1" want="$2" prq="$3" files="$4" chq="$5" health="${6:-green}" fresh="${7:-true}" got
+  local name="$1" want="$2" prq="$3" files="$4" chq="$5" health="${6:-green}" dequeued="${7:-}" got
   jq "$prq" <<<"$BASE_PR" >"$tmp/pr.json"
   printf '%s\n' "$files" >"$tmp/files.txt"
   jq "$chq" "$here/checks-green.json" >"$tmp/checks.json"
-  got=$(decide "$tmp/pr.json" "$tmp/files.txt" "$tmp/checks.json" "$health" "$fresh" 2>/dev/null)
+  got=$(decide "$tmp/pr.json" "$tmp/files.txt" "$tmp/checks.json" "$health" "$dequeued" 2>/dev/null)
   if [[ "$got" == "$want"* ]]; then
     echo "ok   $name -> $got"
   else
@@ -75,11 +77,35 @@ check "mergeable unknown" "pending|not mergeable yet (UNKNOWN/UNKNOWN)" \
   '.mergeable = "UNKNOWN" | .mergeStateStatus = "UNKNOWN"' "$BASE_FILES" .
 check "conflicting" "pending|not mergeable yet (CONFLICTING/DIRTY)" \
   '.mergeable = "CONFLICTING" | .mergeStateStatus = "DIRTY"' "$BASE_FILES" .
-check "main red" "pending|main is red" . "$BASE_FILES" . red true
-check "main CI running" "pending|main CI running" . "$BASE_FILES" . running true
-check "stale result refreshes" "pending|refreshing against main" . "$BASE_FILES" . green false
-check "fresh and main green" "eligible|150|2|5" . "$BASE_FILES" . green true
-check "red main does not mask hard rules" "not-eligible|too big" '.additions = 999' "$BASE_FILES" . red false
+check "main red" "pending|main is red" . "$BASE_FILES" . red
+check "red main does not mask hard rules" "not-eligible|too big" '.additions = 999' "$BASE_FILES" . red
+check "blocked by the queue ruleset but green is eligible" "eligible|150|2|5" \
+  '.mergeStateStatus = "BLOCKED"' "$BASE_FILES" .
+check "already queued" "skip|already in the merge queue" '.mq.inQueue = true' "$BASE_FILES" .
+check "no merge queue on main yet" "pending|no merge queue on main" '.mq.enabled = false' "$BASE_FILES" .
+check "missing queue state fails closed" "pending|no merge queue on main" 'del(.mq)' "$BASE_FILES" .
+check "removed from the queue at this head" "dequeued|failed_checks" . "$BASE_FILES" . green failed_checks
+check "a red check outranks a queue removal" "red|Linux" . "$BASE_FILES" \
+  'map(if .name == "Linux" then .conclusion = "FAILURE" else . end)' green failed_checks
+check "co-author trailer in a commit" "not-eligible|a commit message carries AI attribution" \
+  '.commits[0].messageBody += "\n\nCo-Authored-By: Claude <noreply@anthropic.com>"' "$BASE_FILES" .
+check "session link in a commit" "not-eligible|a commit message carries AI attribution" \
+  '.commits += [{"messageHeadline":"wip","messageBody":"Claude-Session: https://claude.ai/code/x"}]' "$BASE_FILES" .
+check "a human co-author is fine" "eligible|150|2|5" \
+  '.commits[0].messageBody += "\n\nCo-authored-by: Pat <pat@example.com>"' "$BASE_FILES" .
+
+# dequeue_reason <removed at> <reason> <newest head CI run created at>
+dq() {
+  local name="$1" want="$2" got
+  got=$(dequeue_reason "$3" "$4" "$5")
+  if [[ "$got" == "$want" ]]; then echo "ok   $name -> '$got'"; else echo "FAIL $name: want '$want', got '$got'"; fail=1; fi
+}
+dq "never removed" "" "" "" "2026-10-12T10:00:00Z"
+dq "removed after the head's CI ran" "failed_checks" "2026-10-12T11:00:00Z" failed_checks "2026-10-12T10:00:00Z"
+dq "a push after the removal clears it" "" "2026-10-12T11:00:00Z" failed_checks "2026-10-12T12:00:00Z"
+dq "the merged removal never holds" "" "2026-10-12T11:00:00Z" merged "2026-10-12T10:00:00Z"
+dq "manual removal holds" "manual" "2026-10-12T11:00:00Z" manual "2026-10-12T10:00:00Z"
+dq "no CI run at all fails closed" "removed" "2026-10-12T11:00:00Z" "" ""
 
 # strip_attribution drops the footer cloud sessions add to PR bodies and keeps the rest.
 body=$'Fixes the thing.\n\nCloses #1\n\n---\n_Generated by [Claude Code](https://claude.ai/code/session_x)_'

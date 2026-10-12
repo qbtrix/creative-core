@@ -1,33 +1,32 @@
 #!/usr/bin/env bash
-# scripts/fast-lane.sh: merge small, green crew PRs into BASE_BRANCH without
-# waiting for captain review. The captain batch-reviews merged fast-lane PRs
-# later and reverts anything wrong. Rules for agents: CLAUDE.md, "Fast lane".
+# scripts/fast-lane.sh: put small, green crew PRs into GitHub's merge queue on
+# BASE_BRANCH without captain review. The queue tests them on top of main in
+# groups and merges them; the captain batch-reviews merged fast-lane PRs later.
+# Agent rules: CLAUDE.md, "Fast lane". Run by .github/workflows/fast-lane.yml
+# from trusted main: it only reads PR metadata through the GitHub API and never
+# checks out or runs PR code.
 #
-# Run by .github/workflows/fast-lane.yml from the trusted main branch. It only
-# reads PR metadata through the GitHub API. It never checks out or runs PR code.
+# Eligible (all must hold): open, not draft, base BASE_BRANCH, label `fast-lane`,
+# not queued, author in FAST_LANE_AUTHORS, within MAX_LINES/MAX_FILES, no path
+# matching DENY_RE, no AI attribution in commit messages (the queue squashes
+# them into main), mergeable, every check green with a passing CI_WORKFLOWS
+# check (none fails closed), not removed from the queue since its head's CI ran,
+# base head CI not red, and a merge queue on the base. The lane strips
+# attribution from the PR body and enqueues the PR at the judged head.
 #
-# Eligibility (all must hold): open, not draft, base BASE_BRANCH, label
-# `fast-lane`, author in FAST_LANE_AUTHORS, size within MAX_LINES/MAX_FILES, no
-# changed path matching DENY_RE, MERGEABLE, every check green with at least one
-# passing check from CI_WORKFLOWS (no checks at all fails closed), CI on the
-# base branch's head is green (not red, running, or missing), and the PR's CI
-# ran after the base branch's latest commit. A stale PR is refreshed: its branch
-# is updated and CI is dispatched on it. Merges made with GITHUB_TOKEN fire no
-# workflows, so after any merge (or when the base head has no CI run) the lane
-# dispatches CI on the base branch; that run's completion re-triggers the lane.
+# GITHUB_TOKEN enqueues fire no merge_group workflow, so each run also
+# dispatches CI on lane-queued groups with no run (kick_queue) and closes the
+# linked issues of merged fast-lane PRs (sweep_merged).
 #
-# `decide` is the pure decision function (no network). It reads a PR JSON file,
-# a file-list file (one path per line), a check-rollup JSON file, the base
-# branch's CI health (green|red|running) and a freshness flag (true|false), logs
-# each rule to stderr, and prints one line to stdout:
-#   skip|<why>  not-eligible|<reasons>  pending|<why>  red|<checks>
-#   eligible|<lines>|<files>|<green checks>
-# Tests/fast_lane/test_fast_lane.sh sources this file and feeds `decide` fixtures.
+# `decide` is the pure decision function (no network): PR JSON (gh pr view
+# fields plus .mq = {enabled, inQueue}), file list, check rollup, base CI health
+# (green|red), queue removal reason ("" = none). It logs each rule to stderr and
+# prints one of: skip|why  not-eligible|reasons  pending|why  red|checks
+# dequeued|reason  eligible|lines|files|green. Tests/fast_lane/ feeds it fixtures.
 #
 # Usage: scripts/fast-lane.sh [--dry-run] [PR ...]   (no PR: every open fast-lane PR)
-#        scripts/fast-lane.sh [--dry-run] --sha SHA  (open fast-lane PRs at head
-#        SHA; if none matches, e.g. a CI run on main, every open fast-lane PR)
-# --dry-run prints the decision and makes no API writes. Needs gh and jq.
+#        scripts/fast-lane.sh [--dry-run] --sha SHA  (open fast-lane PRs at head SHA,
+#        else every one). --dry-run makes no API writes. Needs gh and jq.
 set -euo pipefail
 
 # Logins as `gh pr view --json author` reports them. Cloud Claude Code sessions
@@ -44,29 +43,27 @@ CI_CHECKS=("Linux" "macOS")
 CI_FILE="ci.yml"  # the CI workflow file, for run lookups and dispatch
 SELF_WORKFLOW="Fast Lane"
 DENY_RE='^\.github/|^\.claude/|(^|/)(CLAUDE|AGENTS)\.md$|^scripts/(ci|cloud-setup\.sh|fast-lane\.sh)$|(^|/)Package\.(swift|resolved)$|^LICENSE'
+# AI attribution lines: co-author trailers, session links, "Generated with" footers.
+ATTRIBUTION_RE='^[[:space:]]*(co-authored-by:.*(claude|anthropic)|claude-session:|_?generated (with|by) \[?claude)'
 
-REPO="${GH_REPO:-qbtrix/flare-core}"
+REPO="${GH_REPO:-qbtrix/creative-core}"
 DRY_RUN=0
-MERGED_ANY=0
-DISPATCH_BASE_CI=0  # set when the base branch needs a CI run at the end
-REFRESH_SLOT_TAKEN=0  # set once a stale PR is being refreshed this sweep
+ENQUEUED_ANY=0
+MAIN_HEALTH=green
 MAIN_RED_URL=""
 # GitHub recomputes `mergeable` lazily after any push to the base branch and
 # reports UNKNOWN meanwhile. Re-read the PR this many times, 5s apart, before
-# calling it not ready; otherwise a PR checked right after another merge stalls.
+# calling it not ready; otherwise a PR checked right after a merge stalls.
 UNKNOWN_RETRIES="${FAST_LANE_UNKNOWN_RETRIES:-8}"
 
-# Drops AI attribution lines (co-author trailers, session links, "Generated with" footers).
-strip_attribution() {
-  grep -v -i -E '^[[:space:]]*(co-authored-by:.*(claude|anthropic)|claude-session:|_?generated (with|by) \[?claude)' || true
-}
+strip_attribution() { grep -v -i -E "$ATTRIBUTION_RE" || true; }
 
 log() { printf '  %s\n' "$*" >&2; }
 
-# decide <pr.json> <files.txt> <checks.json> <main health> <fresh>
+# decide <pr.json> <files.txt> <checks.json> <main health> <dequeued reason>
 decide() {
-  local pr="$1" files="$2" checks="$3" main_health="$4" fresh="$5"
-  local state draft base has_label author adds dels nfiles lines mergeable mstate
+  local pr="$1" files="$2" checks="$3" main_health="$4" dequeued="$5"
+  local state draft base has_label author adds dels nfiles lines mergeable mstate in_queue mq_enabled
   state=$(jq -r '.state' "$pr")
   draft=$(jq -r '.isDraft' "$pr")
   base=$(jq -r '.baseRefName' "$pr")
@@ -77,15 +74,18 @@ decide() {
   nfiles=$(jq -r '.changedFiles' "$pr")
   mergeable=$(jq -r '.mergeable' "$pr")
   mstate=$(jq -r '.mergeStateStatus' "$pr")
+  in_queue=$(jq -r '.mq.inQueue // false' "$pr")
+  mq_enabled=$(jq -r '.mq.enabled // false' "$pr")
   lines=$((adds + dels))
 
   local skip="" reasons=() pending="" red="" ngreen=0
 
-  log "state=$state draft=$draft base=$base label=$has_label"
+  log "state=$state draft=$draft base=$base label=$has_label queued=$in_queue"
   [[ "$state" == "OPEN" ]] || skip="PR is $state"
   [[ -n "$skip" || "$draft" != "true" ]] || skip="PR is a draft"
   [[ -n "$skip" || "$base" == "$BASE_BRANCH" ]] || skip="base is $base, not $BASE_BRANCH"
   [[ -n "$skip" || "$has_label" == "true" ]] || skip="no $LABEL label"
+  [[ -n "$skip" || "$in_queue" != "true" ]] || skip="already in the merge queue"
 
   if [[ " $FAST_LANE_AUTHORS " == *" $author "* ]]; then
     log "author: ok ($author)"
@@ -105,8 +105,17 @@ decide() {
   else
     log "paths: FAIL ($denied)"; reasons+=("touches protected paths: ${denied//,/, }")
   fi
+  # The queue squashes commit messages into main, so attribution there would land.
+  if jq -r '.commits[]? | .messageHeadline, .messageBody' "$pr" | grep -qi -E -- "$ATTRIBUTION_RE"; then
+    log "commits: FAIL (AI attribution)"
+    reasons+=("a commit message carries AI attribution, which the merge queue would squash into main")
+  else
+    log "commits: ok"
+  fi
 
-  if [[ "$mergeable" == "MERGEABLE" && ! "$mstate" =~ ^(DIRTY|UNKNOWN|BLOCKED|DRAFT)$ ]]; then
+  # BLOCKED is not a stop: under a merge-queue ruleset a green PR can report it
+  # until queued. Red, running and missing checks are judged from the rollup below.
+  if [[ "$mergeable" == "MERGEABLE" && ! "$mstate" =~ ^(DIRTY|UNKNOWN|DRAFT)$ ]]; then
     log "mergeable: ok ($mstate)"
   else
     log "mergeable: not ready ($mergeable/$mstate)"; pending="not mergeable yet ($mergeable/$mstate)"
@@ -149,10 +158,13 @@ decide() {
   if [[ -n "$pending" ]]; then echo "pending|$pending"; return; fi
   if (( npending )); then echo "pending|$npending checks still running"; return; fi
   if (( nci == 0 )); then local IFS=,; echo "pending|no passing check from ${CI_WORKFLOWS[*]} yet"; return; fi
-  log "main: $main_health, fresh: $fresh"
+  # A PR the queue removed (failed group CI, manual removal) stays out until its
+  # head changes; re-adding it every sweep would loop or undo a human's call.
+  if [[ -n "$dequeued" ]]; then echo "dequeued|$dequeued"; return; fi
+  log "main: $main_health, merge queue: $mq_enabled"
+  # A red main fails every group the queue builds, so hold until it is green.
   if [[ "$main_health" == "red" ]]; then echo "pending|main is red"; return; fi
-  if [[ "$main_health" != "green" ]]; then echo "pending|main CI running"; return; fi
-  if [[ "$fresh" != "true" ]]; then echo "pending|refreshing against main"; return; fi
+  if [[ "$mq_enabled" != "true" ]]; then echo "pending|no merge queue on $BASE_BRANCH"; return; fi
   echo "eligible|$lines|$nfiles|$ngreen"
 }
 
@@ -171,36 +183,33 @@ comment_once() {  # comment unless an identical comment already exists
   write gh pr comment "$n" -R "$REPO" --body "$body"
 }
 
-# Prints green|red|running for CI on the base branch's head. Sets MAIN_RED_URL.
-# No run at all for the head (a GITHUB_TOKEN merge fires none) counts as
-# running and asks for a dispatch at the end of this run.
-main_health() {
-  local head="$1" runs
-  runs=$(gh run list -R "$REPO" --workflow "$CI_FILE" --branch "$BASE_BRANCH" --limit 5 \
-    --json headSha,conclusion,status,url)
-  if jq -e --arg h "$head" 'any(.[]; .headSha == $h and .status != "completed")' <<<"$runs" >/dev/null; then
-    echo running; return
-  fi
-  if ! jq -e --arg h "$head" 'any(.[]; .headSha == $h)' <<<"$runs" >/dev/null; then
-    DISPATCH_BASE_CI=1; echo running; return
-  fi
-  # Newest completed run, ignoring cancelled/skipped ones.
-  local last
-  last=$(jq -c '[.[] | select(.status == "completed" and .conclusion != "cancelled" and .conclusion != "skipped")][0] // empty' <<<"$runs")
-  if [[ -n "$last" && "$(jq -r .conclusion <<<"$last")" != "success" ]]; then
-    MAIN_RED_URL=$(jq -r .url <<<"$last"); echo red; return
-  fi
-  echo green
+gql() {  # gql <query> [gh api -F/-f args...]: GraphQL against REPO's owner/name
+  local q="$1"; shift
+  gh api graphql -f owner="${REPO%/*}" -f name="${REPO#*/}" -f query="$q" "$@"
 }
 
-# fresh <head sha> <base head commit date>: true unless the newest successful CI
-# run for the head was created before the base branch's latest commit.
-fresh() {
-  local created
-  created=$(gh run list -R "$REPO" --workflow "$CI_FILE" --commit "$1" --limit 20 \
-    --json createdAt,conclusion --jq '[.[] | select(.conclusion == "success") | .createdAt] | max // ""')
-  # No successful run: the "no passing check" rule already holds the PR.
-  if [[ -z "$created" || ! "$created" < "$2" ]]; then echo true; else echo false; fi
+# Sets MAIN_HEALTH to red when the newest finished CI run on the base head
+# failed, else green. No run yet, or one still going, is green: the queue tests
+# every group on top of the base anyway.
+main_health() {
+  local last
+  last=$(gh run list -R "$REPO" --workflow "$CI_FILE" --commit "$1" --limit 10 \
+    --json conclusion,status,url \
+    --jq '[.[] | select(.status == "completed" and .conclusion != "cancelled" and .conclusion != "skipped")][0] // empty')
+  MAIN_HEALTH=green
+  if [[ -n "$last" && "$(jq -r .conclusion <<<"$last")" != "success" ]]; then
+    MAIN_HEALTH=red; MAIN_RED_URL=$(jq -r .url <<<"$last")
+  fi
+}
+
+# dequeue_reason <removed at> <reason> <newest head CI run created at>: prints
+# the reason when the queue removed the PR after its head's newest CI run was
+# created, i.e. this same head was already tried. A push starts a new CI run
+# and clears it. No CI run at all fails closed.
+dequeue_reason() {
+  local removed_at="$1" reason="$2" ci_at="$3"
+  [[ -n "$removed_at" && "$reason" != "merged" ]] || return 0
+  if [[ -z "$ci_at" || "$removed_at" > "$ci_at" ]]; then echo "${reason:-removed}"; fi
 }
 
 evaluate() {
@@ -209,14 +218,20 @@ evaluate() {
   tmp=$(mktemp -d)
   local tries=0
   while :; do
-    gh pr view "$n" -R "$REPO" --json number,state,isDraft,baseRefName,labels,author,additions,deletions,changedFiles,mergeable,mergeStateStatus,headRefOid,headRefName,statusCheckRollup >"$tmp/pr.json"
-    [[ "$(jq -r '.mergeable' "$tmp/pr.json")" == "UNKNOWN" ]] || break
+    gh pr view "$n" -R "$REPO" --json number,state,isDraft,baseRefName,labels,author,additions,deletions,changedFiles,mergeable,mergeStateStatus,headRefOid,statusCheckRollup,commits >"$tmp/pr.json"
+    [[ "$(jq -r '.state + .mergeable' "$tmp/pr.json")" == "OPENUNKNOWN" ]] || break
     (( tries++ < UNKNOWN_RETRIES )) || break
     sleep 5
   done
-  # Read check runs off the head commit itself, newest per name. The PR's rollup
-  # misses CI that the lane dispatched after refreshing a branch, and keeps the
-  # PR-event run that GitHub parks as action_required for bot pushes.
+  # Merge-queue state is GraphQL-only: queue on/off, queued now, last removal.
+  gql 'query($owner:String!,$name:String!,$n:Int!){repository(owner:$owner,name:$name){pullRequest(number:$n){
+      id isInMergeQueue isMergeQueueEnabled
+      timelineItems(last:1,itemTypes:[REMOVED_FROM_MERGE_QUEUE_EVENT]){nodes{... on RemovedFromMergeQueueEvent{createdAt reason}}}}}}' \
+    -F n="$n" --jq '.data.repository.pullRequest
+      | {id, enabled: .isMergeQueueEnabled, inQueue: .isInMergeQueue, removed: (.timelineItems.nodes[0] // null)}' >"$tmp/mq.json"
+  jq --slurpfile mq "$tmp/mq.json" '.mq = $mq[0]' "$tmp/pr.json" >"$tmp/pr2.json" && mv "$tmp/pr2.json" "$tmp/pr.json"
+  # Read check runs off the head commit itself, newest per name, skipping runs
+  # GitHub parks as action_required for bot pushes.
   local head
   head=$(jq -r '.headRefOid' "$tmp/pr.json")
   if gh api "repos/$REPO/commits/$head/check-runs?per_page=100" --jq '.check_runs' >"$tmp/runs.json" 2>/dev/null; then
@@ -230,50 +245,25 @@ evaluate() {
   fi
   gh api "repos/$REPO/pulls/$n/files" --paginate --jq '.[].filename' >"$tmp/files.txt"
 
-  local base_head base_date health is_fresh
-  read -r base_head base_date < <(gh api "repos/$REPO/commits/$BASE_BRANCH" --jq '"\(.sha) \(.commit.committer.date)"')
-  # Not in a $(...) subshell: main_health sets globals.
-  main_health "$base_head" >"$tmp/health"
-  health=$(<"$tmp/health")
-  is_fresh=$(fresh "$(jq -r .headRefOid "$tmp/pr.json")" "$base_date")
+  local removed_at reason ci_at="" dequeued
+  removed_at=$(jq -r '.mq.removed.createdAt // ""' "$tmp/pr.json")
+  reason=$(jq -r '.mq.removed.reason // ""' "$tmp/pr.json")
+  if [[ -n "$removed_at" && "$reason" != "merged" ]]; then
+    ci_at=$(gh run list -R "$REPO" --workflow "$CI_FILE" --commit "$head" --limit 20 \
+      --json createdAt --jq '[.[].createdAt] | max // ""')
+  fi
+  dequeued=$(dequeue_reason "$removed_at" "$reason" "$ci_at")
 
   echo "PR #$n:" >&2
   local decision kind rest
-  decision=$(decide "$tmp/pr.json" "$tmp/files.txt" "$tmp/checks.json" "$health" "$is_fresh")
+  decision=$(decide "$tmp/pr.json" "$tmp/files.txt" "$tmp/checks.json" "$MAIN_HEALTH" "$dequeued")
   echo "decision: $decision"
   kind="${decision%%|*}"; rest="${decision#*|}"
 
   case "$kind" in
     skip) ;;
     pending)
-      case "$rest" in
-        "main is red")
-          comment_once "$n" "Fast lane: waiting, main is red ($MAIN_RED_URL)" ;;
-        "refreshing against main")
-          local old_sha ref i
-          old_sha=$(jq -r .headRefOid "$tmp/pr.json")
-          ref=$(jq -r .headRefName "$tmp/pr.json")
-          # One refresh at a time, oldest PR first. Refreshing every stale PR on
-          # every sweep made each new CI dispatch cancel the run already going on
-          # the same branch, so nothing finished and nothing merged.
-          if (( REFRESH_SLOT_TAKEN )); then
-            log "queued behind the PR being refreshed"; rm -rf "$tmp"; return
-          fi
-          if [[ "$(gh run list -R "$REPO" --workflow "$CI_FILE" --branch "$ref" --limit 10 \
-                --json status --jq '[.[] | select(.status != "completed")] | length')" != "0" ]]; then
-            log "CI already running on $ref; waiting for it"; REFRESH_SLOT_TAKEN=1; rm -rf "$tmp"; return
-          fi
-          REFRESH_SLOT_TAKEN=1
-          write gh pr update-branch "$n" -R "$REPO" || { log "could not update branch"; rm -rf "$tmp"; return; }
-          # update-branch is async; dispatch only once the new head exists, or CI
-          # would run on the old one. A GITHUB_TOKEN push fires no pull_request CI.
-          for (( i = 0; !DRY_RUN && i < 12; i++ )); do
-            [[ "$(gh api "repos/$REPO/pulls/$n" --jq .head.sha)" != "$old_sha" ]] && break
-            sleep 5
-          done
-          write gh workflow run "$CI_FILE" -R "$REPO" --ref "$ref" || log "could not dispatch CI on $ref"
-          ;;
-      esac
+      [[ "$rest" != "main is red" ]] || comment_once "$n" "Fast lane: waiting, main is red ($MAIN_RED_URL)"
       ;;
     not-eligible)
       write gh pr edit "$n" -R "$REPO" --remove-label "$LABEL" || log "could not remove label"
@@ -282,31 +272,65 @@ evaluate() {
     red)
       comment_once "$n" "Fast lane: waiting, CI is red ($rest)"
       ;;
+    dequeued)
+      comment_once "$n" "Fast lane: the merge queue removed this PR ($rest). Push a fix to try again."
+      ;;
     eligible)
-      local lines files green sha
-      DISPATCH_BASE_CI=1  # this merge fires no CI on main by itself
+      local lines files green body id
       IFS='|' read -r lines files green <<<"$rest"
-      sha=$(jq -r '.headRefOid' "$tmp/pr.json")
-      # Squash message = PR title + body, minus any AI attribution lines.
-      local title body
-      title=$(gh pr view "$n" -R "$REPO" --json title --jq .title)
+      id=$(jq -r '.mq.id' "$tmp/pr.json")
+      # Cloud sessions append a "Generated by Claude Code" footer to the PR body; drop it.
       body=$(gh pr view "$n" -R "$REPO" --json body --jq .body | strip_attribution)
-      # Cloud sessions append a "Generated by Claude Code" footer to the PR body; drop it there too.
       write gh pr edit "$n" -R "$REPO" --body "$body" || log "could not strip attribution from the PR body"
-      write gh pr merge "$n" -R "$REPO" --squash --delete-branch=false --match-head-commit "$sha" \
-        --subject "$title (#$n)" --body "$body"
-      MERGED_ANY=1
-      # GitHub does not auto-close linked issues when GITHUB_TOKEN merges, so close them here.
-      local issue
-      for issue in $(gh pr view "$n" -R "$REPO" --json closingIssuesReferences --jq '.closingIssuesReferences[].number'); do
-        write gh issue close "$issue" -R "$REPO" --reason completed --comment "Done in #$n (fast lane)." || log "could not close #$issue"
-        write gh issue edit "$issue" -R "$REPO" --remove-label in-progress || true
-      done
-      write gh pr edit "$n" -R "$REPO" --add-label "$MERGED_LABEL" || log "could not add $MERGED_LABEL label"
-      comment_once "$n" "Fast lane: merged ($lines lines, $files files, $green checks green)."
+      # enqueuePullRequest, not `gh pr merge --auto`: gh routes a queued merge through
+      # enablePullRequestAutoMerge, which fails while repo auto-merge is off.
+      # expectedHeadOid refuses the enqueue if the head moved since it was judged.
+      if write gql 'mutation($id:ID!,$sha:GitObjectID!){enqueuePullRequest(input:{pullRequestId:$id,expectedHeadOid:$sha}){mergeQueueEntry{position}}}' \
+          -f id="$id" -f sha="$head" --jq '.data.enqueuePullRequest.mergeQueueEntry.position' >&2; then
+        ENQUEUED_ANY=1
+        comment_once "$n" "Fast lane: queued ($lines lines, $files files, $green checks green). The merge queue tests it on top of $BASE_BRANCH and merges it."
+      else
+        log "could not enqueue #$n"
+      fi
       ;;
   esac
   rm -rf "$tmp"
+}
+
+# Dispatch CI on queue groups the lane enqueued that have no CI run. A
+# GITHUB_TOKEN enqueue fires no merge_group workflow, and the queue waits for
+# the required checks on each group's head commit; workflow_dispatch is the one
+# trigger GITHUB_TOKEN may fire. Groups queued by a person get merge_group runs.
+kick_queue() {
+  local shas refs sha ref
+  shas=$(gql 'query($owner:String!,$name:String!,$b:String!){repository(owner:$owner,name:$name){mergeQueue(branch:$b){entries(first:100){nodes{enqueuer{login} headCommit{oid}}}}}}' \
+    -f b="$BASE_BRANCH" --jq '.data.repository.mergeQueue.entries.nodes[]?
+      | select(.enqueuer.login | test("^github-actions")) | .headCommit.oid // empty')
+  [[ -n "$shas" ]] || return 0
+  refs=$(gh api "repos/$REPO/git/matching-refs/heads/gh-readonly-queue/$BASE_BRANCH/" --jq '.[] | "\(.object.sha) \(.ref)"')
+  for sha in $shas; do
+    ref=$(awk -v s="$sha" '$1 == s { sub("^refs/heads/", "", $2); print $2; exit }' <<<"$refs")
+    [[ -n "$ref" ]] || continue
+    if [[ "$(gh run list -R "$REPO" --workflow "$CI_FILE" --commit "$sha" --limit 1 --json databaseId --jq length)" == "0" ]]; then
+      log "queue group $ref has no CI run; dispatching"
+      write gh workflow run "$CI_FILE" -R "$REPO" --ref "$ref" || log "could not dispatch CI on $ref"
+    fi
+  done
+}
+
+# Close the linked issues of merged fast-lane PRs and mark them done. Idempotent:
+# the fast-lane-merged label is the marker, whoever did the merge.
+sweep_merged() {
+  local n issue
+  for n in $(gh pr list -R "$REPO" --state merged --base "$BASE_BRANCH" --label "$LABEL" --limit 20 \
+      --json number,labels --jq ".[] | select([.labels[].name] | index(\"$MERGED_LABEL\") | not) | .number"); do
+    log "PR #$n merged; closing its linked issues"
+    for issue in $(gh pr view "$n" -R "$REPO" --json closingIssuesReferences --jq '.closingIssuesReferences[].number'); do
+      write gh issue close "$issue" -R "$REPO" --reason completed --comment "Done in #$n (fast lane)." || log "could not close #$issue"
+      write gh issue edit "$issue" -R "$REPO" --remove-label in-progress || true
+    done
+    write gh pr edit "$n" -R "$REPO" --add-label "$MERGED_LABEL" || log "could not add $MERGED_LABEL label"
+  done
 }
 
 main() {
@@ -315,7 +339,7 @@ main() {
     case "$1" in
       --dry-run) DRY_RUN=1 ;;
       --sha) sha="${2:?--sha needs a value}"; shift ;;
-      -h|--help) sed -n '2,30p' "$0"; return 0 ;;
+      -h|--help) sed -n '2,29p' "$0"; return 0 ;;
       *) prs+=("$1") ;;
     esac
     shift
@@ -334,22 +358,17 @@ main() {
           --limit 100 --json number --jq '.[].number')
     fi
   fi
-  (( ${#prs[@]} )) || { echo "fast-lane: no matching open $LABEL PRs" >&2; return 0; }
-  local n pass
-  for n in "${prs[@]}"; do evaluate "$n"; done
-  # A merge made with GITHUB_TOKEN triggers no workflows, so PRs that went
-  # green while it was settling would never be looked at again. After any
-  # merge, sweep every open fast-lane PR, until a pass merges nothing.
-  for (( pass = 0; MERGED_ANY && pass < 5; pass++ )); do
-    MERGED_ANY=0
-    while read -r n; do [[ -n "$n" ]] && evaluate "$n"; done < <(
-      gh pr list -R "$REPO" --state open --base "$BASE_BRANCH" --label "$LABEL" \
-        --limit 100 --json number --jq '.[].number' | sort -n)
-  done
-  # GITHUB_TOKEN merges fire no workflows; workflow_dispatch is the exception.
-  if (( DISPATCH_BASE_CI )); then
-    write gh workflow run "$CI_FILE" -R "$REPO" --ref "$BASE_BRANCH" || log "could not dispatch CI on $BASE_BRANCH"
+  if (( ${#prs[@]} )); then
+    main_health "$(gh api "repos/$REPO/commits/$BASE_BRANCH" --jq .sha)"
+    local n
+    for n in "${prs[@]}"; do evaluate "$n"; done
+  else
+    echo "fast-lane: no matching open $LABEL PRs" >&2
   fi
+  sweep_merged
+  # The queue builds a group a few seconds after an enqueue; look twice.
+  if (( ENQUEUED_ANY )); then sleep 15; kick_queue; sleep 15; fi
+  kick_queue
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then main "$@"; fi

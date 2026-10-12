@@ -1,5 +1,6 @@
-# Fast lane: squash-merge small, green, allowlisted PRs labelled `fast-lane`
-# into main. All logic lives in scripts/fast-lane.sh; agent rules in CLAUDE.md.
+# Fast lane: put small, green, allowlisted PRs labelled `fast-lane` into the
+# merge queue on main, which tests and squash-merges them. All logic lives in
+# scripts/fast-lane.sh; agent rules in CLAUDE.md.
 #
 # Safety: this workflow never checks out or runs PR code. It checks out only
 # scripts/fast-lane.sh from the trusted main branch and talks to the GitHub API.
@@ -14,9 +15,10 @@ on:
   workflow_run:
     workflows: [CI]
     types: [completed]
-  # Heartbeat: runs started by GITHUB_TOKEN (CI dispatched on refreshed PRs and
-  # on main after merges) fire no workflow_run, so nothing would re-check those
-  # PRs. A sweep every 5 minutes closes that gap. Free on a public repo.
+  # Heartbeat: GITHUB_TOKEN events start no workflows, so nothing else notices
+  # a queue group the lane enqueued that needs its CI dispatched (after a group
+  # fails, the queue rebuilds the ones behind it), or a fast-lane PR the queue
+  # merged whose issues need closing. A sweep every 5 minutes. Free on a public repo.
   schedule:
     - cron: '*/5 * * * *'
   workflow_dispatch:
@@ -31,7 +33,7 @@ permissions:
   pull-requests: write
   checks: read
   statuses: read
-  actions: write  # dispatch CI on main and refreshed PR heads
+  actions: write  # dispatch CI on merge-queue groups
 
 concurrency:
   group: fast-lane-${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha || inputs.pr || github.run_id }}
