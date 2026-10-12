@@ -3,7 +3,9 @@
 // Invariants a reader must keep: width and height are at least 1, the pixel
 // count is at most `maxPixels`, `storage.count == width * height * 4`, and every
 // stored component is finite. Every size goes through `validatedSize`, and every
-// write through `setPixel`, so the invariants hold for any value of this type.
+// write through `setPixel` or `init(checkedWidth:height:storage:)` (whose
+// callers in this module check the same rules), so the invariants hold for any
+// value of this type.
 
 /// One pixel: four Float32 components. Inside a `PixelBuffer` the color is
 /// premultiplied by alpha; the helpers convert to and from straight alpha.
@@ -89,6 +91,18 @@ public struct PixelBuffer: Equatable, Sendable {
         }
         self.storage = storage
     }
+
+    /// Wraps storage the caller has already sized and checked: `width x height`
+    /// passed `validatedSize`, `storage.count == width * height * channels`, and
+    /// every component is finite. For this module's image operations only.
+    init(checkedWidth width: Int, height: Int, storage: [Float]) {
+        self.width = width
+        self.height = height
+        self.storage = storage
+    }
+
+    /// Row-major premultiplied components, for this module's image operations.
+    var components: [Float] { storage }
 
     /// The premultiplied pixel at column `x`, row `y` (0, 0 is top left).
     /// Throws `RasterError.invalid` when the coordinate is outside the buffer.

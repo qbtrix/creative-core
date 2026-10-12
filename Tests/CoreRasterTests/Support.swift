@@ -1,6 +1,7 @@
 // Support.swift: shared CoreRaster test helpers. A seedable RNG (SplitMix64,
 // the same algorithm as FlareCoreTests' copy; test targets cannot share files)
-// so property and fuzz tests are reproducible.
+// so property and fuzz tests are reproducible, and a random pixel built from it.
+import CoreRaster
 
 /// SplitMix64: tiny, fast, seedable. Same seed, same sequence, on every platform.
 struct SplitMix64: RandomNumberGenerator {
@@ -15,4 +16,10 @@ struct SplitMix64: RandomNumberGenerator {
         z = (z ^ (z >> 27)) &* 0x94D0_49BB_1331_11EB
         return z ^ (z >> 31)
     }
+}
+
+/// A finite pixel with components in -2...2 and alpha in 0...1.
+func randomPixel(_ rng: inout SplitMix64) -> RGBA {
+    RGBA(r: .random(in: -2...2, using: &rng), g: .random(in: -2...2, using: &rng),
+         b: .random(in: -2...2, using: &rng), a: .random(in: 0...1, using: &rng))
 }

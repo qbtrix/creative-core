@@ -3,11 +3,6 @@
 import CoreRaster
 import Testing
 
-private func randomPixel(_ rng: inout SplitMix64) -> RGBA {
-    RGBA(r: .random(in: -2...2, using: &rng), g: .random(in: -2...2, using: &rng),
-         b: .random(in: -2...2, using: &rng), a: .random(in: 0...1, using: &rng))
-}
-
 @Test func sizeFuzzThrowsForEveryInvalidSizeAndNeverCrashes() throws {
     var rng = SplitMix64(seed: 112)
     let edges = [Int.min, -1_000_000, -1, 0, 1, 2, 63, 16_384, 16_385, 1 << 31, 1 << 62, Int.max]
