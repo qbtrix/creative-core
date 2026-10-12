@@ -53,6 +53,7 @@ c4_unowned() {
     elif (( n > 1 )); then echo "$f: owned by $n C4 components ($owners)"; fi
   done
 }
+command -v jq >/dev/null 2>&1 || fail "C4 ownership: jq not found; install jq"
 # Self-test: a scratch tree whose model has every path form, and files it must flag.
 c4_got=$(
   t="$(mktemp -d)"
@@ -71,7 +72,6 @@ if [[ "$c4_got" != "$c4_want" ]]; then
   printf 'want:\n%s\ngot:\n%s\n' "$c4_want" "$c4_got"
   fail "C4 ownership self-test: fix c4_unowned in scripts/ci"
 fi
-command -v jq >/dev/null 2>&1 || fail "C4 ownership: jq not found; install jq"
 found=$(c4_unowned .)
 if [[ -n "$found" ]]; then
   echo "$found"
