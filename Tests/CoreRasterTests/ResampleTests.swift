@@ -5,14 +5,6 @@ import Testing
 
 private let filters: [ResampleFilter] = [.bilinear, .lanczos3]
 
-private func randomBuffer(width: Int, height: Int, _ rng: inout SplitMix64) throws -> PixelBuffer {
-    var buffer = try PixelBuffer(width: width, height: height)
-    for y in 0..<height {
-        for x in 0..<width { try buffer.setPixel(x: x, y: y, randomPixel(&rng)) }
-    }
-    return buffer
-}
-
 private func row(_ buffer: PixelBuffer, _ y: Int = 0) throws -> [RGBA] {
     try (0..<buffer.width).map { try buffer.pixel(x: $0, y: y) }
 }

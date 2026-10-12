@@ -4,14 +4,6 @@
 import CoreRaster
 import Testing
 
-private func randomBuffer(width: Int, height: Int, _ rng: inout SplitMix64) throws -> PixelBuffer {
-    var buffer = try PixelBuffer(width: width, height: height)
-    for y in 0..<height {
-        for x in 0..<width { try buffer.setPixel(x: x, y: y, randomPixel(&rng)) }
-    }
-    return buffer
-}
-
 @Test func blurLeavesAConstantImageConstant() throws {
     var rng = SplitMix64(seed: 117)
     for _ in 0..<30 {
