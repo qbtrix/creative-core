@@ -43,7 +43,7 @@ CI_WORKFLOWS=("CI")
 CI_CHECKS=("Linux" "macOS" "Mutation anchors" "Mutation")
 CI_FILE="ci.yml"  # the CI workflow file, for run lookups and dispatch
 SELF_WORKFLOW="Fast Lane"
-DENY_RE='^\.github/|^\.claude/|(^|/)(CLAUDE|AGENTS)\.md$|^scripts/(ci|cloud-setup\.sh|fast-lane\.sh)$|(^|/)Package\.(swift|resolved)$|^LICENSE'
+DENY_RE='^\.github/|^\.claude/|(^|/)(CLAUDE|AGENTS)\.md$|^scripts/(ci|cloud-setup\.sh|fast-lane\.sh|mutate)$|(^|/)Package\.(swift|resolved)$|^LICENSE'
 
 REPO="${GH_REPO:-qbtrix/flare-core}"
 DRY_RUN=0
