@@ -400,24 +400,61 @@ extension Document {
         return i
     }
 
+    func symbolIndex(_ id: String) throws -> Int {
+        guard let i = symbols.firstIndex(where: { $0.id == id }) else {
+            throw ModelError.symbolNotFound(id)
+        }
+        return i
+    }
+
+    /// The layer list of `owner`, or nil if it is missing.
+    public func layers(of owner: LayerOwner) -> [Layer]? {
+        switch owner {
+        case .scene(let id): scenes.first { $0.id == id }?.layers
+        case .symbol(let id): symbols.first { $0.id == id }?.layers
+        }
+    }
+
+    /// Runs `body` on the layer list of `owner` in place. The one resolver:
+    /// throws `sceneNotFound` or `symbolNotFound` if the owner is missing.
+    @discardableResult
+    mutating func withLayers<T>(_ owner: LayerOwner, _ body: (inout [Layer]) throws -> T) throws -> T {
+        switch owner {
+        case .scene(let id): return try body(&scenes[sceneIndex(id)].layers)
+        case .symbol(let id): return try body(&symbols[symbolIndex(id)].layers)
+        }
+    }
+
     /// Runs `body` on the addressed layer in place, or throws if it is missing.
     @discardableResult
-    mutating func withLayer<T>(scene: String, layer: String, _ body: (inout Layer) throws -> T) throws -> T {
-        let s = try sceneIndex(scene)
-        guard let l = scenes[s].layers.firstIndex(where: { $0.id == layer }) else {
-            throw ModelError.layerNotFound(layer)
+    mutating func withLayer<T>(_ owner: LayerOwner, layer: String, _ body: (inout Layer) throws -> T) throws -> T {
+        try withLayers(owner) { layers in
+            guard let l = layers.firstIndex(where: { $0.id == layer }) else {
+                throw ModelError.layerNotFound(layer)
+            }
+            return try body(&layers[l])
         }
-        return try body(&scenes[s].layers[l])
     }
 
     /// Like `withLayer`, but throws `layerLocked` if the layer is locked. Content
     /// edits (shapes, keyframes) use this in `execute`; `undo` uses `withLayer`
     /// so it always restores exactly.
     @discardableResult
-    mutating func withEditableLayer<T>(scene: String, layer: String, _ body: (inout Layer) throws -> T) throws -> T {
-        try withLayer(scene: scene, layer: layer) { l in
+    mutating func withEditableLayer<T>(_ owner: LayerOwner, layer: String, _ body: (inout Layer) throws -> T) throws -> T {
+        try withLayer(owner, layer: layer) { l in
             guard !l.isLocked else { throw ModelError.layerLocked(l.id) }
             return try body(&l)
         }
+    }
+
+    // Scene-only forms, kept until every command family takes an owner (Q5d).
+    @discardableResult
+    mutating func withLayer<T>(scene: String, layer: String, _ body: (inout Layer) throws -> T) throws -> T {
+        try withLayer(.scene(scene), layer: layer, body)
+    }
+
+    @discardableResult
+    mutating func withEditableLayer<T>(scene: String, layer: String, _ body: (inout Layer) throws -> T) throws -> T {
+        try withEditableLayer(.scene(scene), layer: layer, body)
     }
 }

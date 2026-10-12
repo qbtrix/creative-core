@@ -34,6 +34,16 @@ enum Fixtures {
         return Document(scenes: [Scene(id: sceneID, name: "Main", fps: 24, durationFrames: 48, layers: [bg, ball],
                                       labels: ["start": 0])])
     }
+
+    /// `document()` plus symbol "sym" with layers "wing" and "tail".
+    static func withSymbol() -> Document {
+        var doc = document()
+        doc.symbols = [Symbol(id: "sym", name: "Sym", layers: [
+            Layer(id: "wing", name: "Wing", tracks: ["x": [Keyframe(frame: 0, value: 5)]]),
+            Layer(id: "tail", name: "Tail"),
+        ])]
+        return doc
+    }
 }
 
 /// One random command step for `assertUndoRestoresDocument`: performs one

@@ -173,15 +173,38 @@ import Testing
         var dup = before
         dup.scenes[0].layers.insert(Layer(id: "ball", name: "Copy"), at: 0)
         #expect(throws: FormatError.invalid("scene s1: duplicate layer id ball")) {
-            try FlareFormat.validate(dup, layer: "ball", scene: "s1", since: before)
+            try FlareFormat.validate(dup, layer: "ball", owner: .scene("s1"), since: before)
         }
         var emptyTrack = before
         emptyTrack.scenes[0].layers[1].tracks["y"] = []
         #expect(throws: FormatError.invalid("layer ball: empty track y")) {
-            try FlareFormat.validate(emptyTrack, layer: "ball", scene: "s1", since: before)
+            try FlareFormat.validate(emptyTrack, layer: "ball", owner: .scene("s1"), since: before)
         }
         var renamed = before
         renamed.scenes[0].layers[1].name = "Planet"
-        #expect(throws: Never.self) { try FlareFormat.validate(renamed, layer: "ball", scene: "s1", since: before) }
+        #expect(throws: Never.self) { try FlareFormat.validate(renamed, layer: "ball", owner: .scene("s1"), since: before) }
+    }
+
+    @Test func layerScopedValidateCatchesTheTouchedSymbolLayer() {
+        let before = Fixtures.withSymbol()
+        let sym = LayerOwner.symbol("sym")
+        var dup = before
+        dup.symbols[0].layers.insert(Layer(id: "wing", name: "Copy"), at: 0)
+        #expect(throws: FormatError.invalid("symbol sym: duplicate layer id wing")) {
+            try FlareFormat.validate(dup, layer: "wing", owner: sym, since: before)
+        }
+        var emptyTrack = before
+        emptyTrack.symbols[0].layers[0].tracks["y"] = []
+        #expect(throws: FormatError.invalid("layer wing: empty track y")) {
+            try FlareFormat.validate(emptyTrack, layer: "wing", owner: sym, since: before)
+        }
+        var cycle = before
+        cycle.symbols[0].layers[0].instances = [Instance(symbolID: "sym")]
+        #expect(throws: FormatError.invalid("symbol cycle sym -> sym")) {
+            try FlareFormat.validate(cycle, layer: "wing", owner: sym, since: before)
+        }
+        var renamed = before
+        renamed.symbols[0].layers[0].name = "Left Wing"
+        #expect(throws: Never.self) { try FlareFormat.validate(renamed, layer: "wing", owner: sym, since: before) }
     }
 }

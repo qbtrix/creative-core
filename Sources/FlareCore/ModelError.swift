@@ -10,6 +10,7 @@ import Foundation
 
 public enum ModelError: Error, Equatable, Sendable {
     case sceneNotFound(String)
+    case symbolNotFound(String)
     case layerNotFound(String)
     /// The layer is locked, so its content cannot be edited.
     case layerLocked(String)

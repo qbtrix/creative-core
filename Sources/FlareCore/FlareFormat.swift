@@ -30,7 +30,7 @@ extension FormatError {
     init(_ error: ModelError) {
         switch error {
         case .invalidFill(let message), .invalidText(let message): self = .invalid(message)
-        case .sceneNotFound, .layerNotFound, .layerLocked: self = .invalid("\(error)")
+        case .sceneNotFound, .symbolNotFound, .layerNotFound, .layerLocked: self = .invalid("\(error)")
         }
     }
 }
@@ -107,23 +107,22 @@ public enum FlareFormat {
         try validateStateMachines(document)
     }
 
-    /// Like `validate(_:)`, after a change to layer `layerID` of scene `sceneID`
-    /// only (an edit, insert, removal or move) of `previous`, which was valid.
+    /// Like `validate(_:)`, after a change to layer `layerID` of `owner` only
+    /// (an edit, insert, removal or move) of `previous`, which was valid.
     /// Other layers are trusted, so the cost does not grow with the scene.
-    static func validate(_ document: Document, layer layerID: String, scene sceneID: String,
+    static func validate(_ document: Document, layer layerID: String, owner: LayerOwner,
                          since previous: Document) throws {
         let symbolIDs = try validateHeaders(document)
-        guard let new = document.scenes.first(where: { $0.id == sceneID })?.layers,
-              let old = previous.scenes.first(where: { $0.id == sceneID })?.layers else {
+        guard let new = document.layers(of: owner), let old = previous.layers(of: owner) else {
             return try validate(document)
         }
         if let i = new.firstIndex(where: { $0.id == layerID }) {
             let layer = new[i]
-            try validate([layer], owner: "scene \(sceneID)", symbols: symbolIDs)
+            try validate([layer], owner: owner.description, symbols: symbolIDs)
             let inserted = new.count > old.count
             // The other ids were unique before, so only a later copy of this one can clash.
             if inserted, new[(i + 1)...].contains(where: { $0.id == layerID }) {
-                throw FormatError.invalid("scene \(sceneID): duplicate layer id \(layerID)")
+                throw FormatError.invalid("\(owner): duplicate layer id \(layerID)")
             }
             let before = inserted ? nil
                 : old.indices.contains(i) && old[i].id == layerID ? old[i] : old.first { $0.id == layerID }
