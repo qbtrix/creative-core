@@ -49,6 +49,7 @@ REPO="${GH_REPO:-qbtrix/flare-core}"
 DRY_RUN=0
 MERGED_ANY=0
 DISPATCH_BASE_CI=0  # set when the base branch needs a CI run at the end
+REFRESH_SLOT_TAKEN=0  # set once a stale PR is being refreshed this sweep
 MAIN_RED_URL=""
 # GitHub recomputes `mergeable` lazily after any push to the base branch and
 # reports UNKNOWN meanwhile. Re-read the PR this many times, 5s apart, before
@@ -252,6 +253,17 @@ evaluate() {
           local old_sha ref i
           old_sha=$(jq -r .headRefOid "$tmp/pr.json")
           ref=$(jq -r .headRefName "$tmp/pr.json")
+          # One refresh at a time, oldest PR first. Refreshing every stale PR on
+          # every sweep made each new CI dispatch cancel the run already going on
+          # the same branch, so nothing finished and nothing merged.
+          if (( REFRESH_SLOT_TAKEN )); then
+            log "queued behind the PR being refreshed"; rm -rf "$tmp"; return
+          fi
+          if [[ "$(gh run list -R "$REPO" --workflow "$CI_FILE" --branch "$ref" --limit 10 \
+                --json status --jq '[.[] | select(.status != "completed")] | length')" != "0" ]]; then
+            log "CI already running on $ref; waiting for it"; REFRESH_SLOT_TAKEN=1; rm -rf "$tmp"; return
+          fi
+          REFRESH_SLOT_TAKEN=1
           write gh pr update-branch "$n" -R "$REPO" || { log "could not update branch"; rm -rf "$tmp"; return; }
           # update-branch is async; dispatch only once the new head exists, or CI
           # would run on the old one. A GITHUB_TOKEN push fires no pull_request CI.
@@ -314,7 +326,7 @@ main() {
     [[ -z "$sha" || "$sha" =~ ^[0-9a-f]{7,40}$ ]] || { echo "fast-lane: bad sha" >&2; return 1; }
     while read -r n; do [[ -n "$n" ]] && prs+=("$n"); done < <(
       gh pr list -R "$REPO" --state open --base "$BASE_BRANCH" --label "$LABEL" \
-        --limit 100 --json number,headRefOid --jq "$q")
+        --limit 100 --json number,headRefOid --jq "$q" | sort -n)
     # A SHA no PR has (CI finished on main, or on a superseded head): sweep all.
     if [[ -n "$sha" && ${#prs[@]} -eq 0 ]]; then
       while read -r n; do [[ -n "$n" ]] && prs+=("$n"); done < <(
@@ -332,7 +344,7 @@ main() {
     MERGED_ANY=0
     while read -r n; do [[ -n "$n" ]] && evaluate "$n"; done < <(
       gh pr list -R "$REPO" --state open --base "$BASE_BRANCH" --label "$LABEL" \
-        --limit 100 --json number --jq '.[].number')
+        --limit 100 --json number --jq '.[].number' | sort -n)
   done
   # GITHUB_TOKEN merges fire no workflows; workflow_dispatch is the exception.
   if (( DISPATCH_BASE_CI )); then
