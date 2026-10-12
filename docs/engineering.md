@@ -151,7 +151,7 @@ Plans live in `Tests/mutations/<module>.json`, one entry per bug:
   the note names. `scripts/mutate --validate` lists every stale anchor.
 
 **New logic with an invariant gets one mutation entry in the same PR**: a
-guard, a limit, a formula, an undo path. Gate: the `Mutation anchors` CI job
+guard, a limit, a formula, an undo path. CI, not `scripts/ci`: the `Mutation anchors` job
 fails on a stale anchor, and the `Mutation` job plants the entries a PR adds
 or whose files it changes (15 at most) and fails on any escape. The full sweep
 runs on every push to main and nightly (`.github/workflows/mutation.yml`).
