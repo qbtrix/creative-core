@@ -5,6 +5,8 @@
 //   Cs' = (1 - αb) Cs + αb B(Cb, Cs)
 //   co  = αs Cs' + cb (1 - αs),   αo = αs + αb (1 - αs)   (co, cb premultiplied)
 // Opacity 0 and a fully transparent source give back the backdrop exactly.
+// The source sits at an integer offset and is clipped to the backdrop; the
+// same-size call is the (0, 0) case.
 
 /// Composites `source` over `backdrop` and returns the result. Throws
 /// `RasterError.invalid` when the sizes differ, when `opacity` is outside
@@ -12,20 +14,35 @@
 /// (only possible for extreme out-of-range pixel values).
 public func composite(_ source: PixelBuffer, onto backdrop: PixelBuffer,
                       mode: BlendMode, opacity: Float) throws -> PixelBuffer {
-    // NaN and the infinities are outside the range, so this also checks finiteness.
-    guard (0...1).contains(opacity) else {
-        throw RasterError.invalid("opacity \(opacity): must be a finite value in 0...1")
-    }
     guard source.width == backdrop.width, source.height == backdrop.height else {
         throw RasterError.invalid(
             "source \(source.width)x\(source.height) does not match backdrop \(backdrop.width)x\(backdrop.height)")
     }
+    return try composite(source, onto: backdrop, x: 0, y: 0, mode: mode, opacity: opacity)
+}
+
+/// Composites `source` over `backdrop` with source pixel (sx, sy) on backdrop
+/// pixel (x + sx, y + sy), and returns the result. The source may be any size
+/// and hang off any edge: only the overlap is visited, and a source entirely
+/// outside gives back the backdrop. Throws `RasterError.invalid` when
+/// `opacity` is outside 0...1 or not finite, or when a result component
+/// overflows to infinity.
+public func composite(_ source: PixelBuffer, onto backdrop: PixelBuffer, x: Int, y: Int,
+                      mode: BlendMode, opacity: Float) throws -> PixelBuffer {
+    // NaN and the infinities are outside the range, so this also checks finiteness.
+    guard (0...1).contains(opacity) else {
+        throw RasterError.invalid("opacity \(opacity): must be a finite value in 0...1")
+    }
+    // Both bounds are checked before adding, so x + width cannot overflow.
+    guard x < backdrop.width, y < backdrop.height, x > -source.width, y > -source.height else {
+        return backdrop
+    }
     var result = backdrop
-    for y in 0..<backdrop.height {
-        for x in 0..<backdrop.width {
-            let s = try source.pixel(x: x, y: y)
-            let b = try backdrop.pixel(x: x, y: y)
-            try result.setPixel(x: x, y: y, sourceOver(s, b, mode: mode, opacity: opacity))
+    for by in max(y, 0)..<min(y + source.height, backdrop.height) {
+        for bx in max(x, 0)..<min(x + source.width, backdrop.width) {
+            let s = try source.pixel(x: bx - x, y: by - y)
+            let b = try backdrop.pixel(x: bx, y: by)
+            try result.setPixel(x: bx, y: by, sourceOver(s, b, mode: mode, opacity: opacity))
         }
     }
     return result
