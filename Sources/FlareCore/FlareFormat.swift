@@ -136,7 +136,7 @@ public enum FlareFormat {
         try validateStateMachines(document)
     }
 
-    /// Scene and symbol fields, without their layers. Returns the symbol ids.
+    /// Scene, symbol and swatch fields, without layers. Returns the symbol ids.
     static func validateHeaders(_ document: Document) throws -> Set<String> {
         var sceneIDs = Set<String>()
         for scene in document.scenes {
@@ -157,6 +157,15 @@ public enum FlareFormat {
         for symbol in document.symbols {
             guard symbolIDs.insert(symbol.id).inserted else { throw FormatError.invalid("duplicate symbol id \(symbol.id)") }
             guard symbol.durationFrames >= 0 else { throw FormatError.invalid("symbol \(symbol.id): negative duration") }
+        }
+        var swatchNames = Set<String>()
+        for swatch in document.swatches {
+            guard swatchNames.insert(swatch.name).inserted else {
+                throw FormatError.invalid("duplicate swatch name \(swatch.name)")
+            }
+            guard swatch.color.isInRange else {
+                throw FormatError.invalid("swatch \(swatch.name): color channels must be finite and in 0...1")
+            }
         }
         return symbolIDs
     }
