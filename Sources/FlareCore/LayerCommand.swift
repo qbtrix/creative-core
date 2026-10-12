@@ -19,3 +19,7 @@ extension AddShape: LayerCommand {}
 extension RemoveShape: LayerCommand {}
 extension SetShapeFill: LayerCommand {}
 extension TranslateShape: LayerCommand {}
+extension AddTextShape: LayerCommand {}
+extension RemoveTextShape: LayerCommand {}
+extension SetTextString: LayerCommand {}
+extension SetTextFont: LayerCommand {}

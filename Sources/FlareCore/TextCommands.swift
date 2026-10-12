@@ -1,0 +1,175 @@
+// TextCommands.swift: add, edit and remove a layer's text shapes, addressed by
+// scene, layer and text index. A bad index throws shapeNotFound, a locked layer
+// layerLocked, and a text breaking a `TextShape` invariant is rejected before
+// the document changes. Undo puts back the stored old text, so it is exact.
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import Foundation
+#endif
+
+/// The text shape commands.
+public enum TextCommands {
+    public static let all: [any Command.Type] = [
+        AddTextShape.self, RemoveTextShape.self, SetTextString.self, SetTextFont.self,
+    ]
+}
+
+extension Layer {
+    func checkTextIndex(_ index: Int) throws {
+        guard texts.indices.contains(index) else { throw CommandError.shapeNotFound(index) }
+    }
+}
+
+extension Document {
+    /// Applies `edit` to text `index` of an editable layer, checks the result
+    /// and stores it. Returns the old text, for undo.
+    mutating func editText(scene: String, layer: String, index: Int,
+                           _ edit: (inout TextShape) -> Void) throws -> TextShape {
+        try withEditableLayer(scene: scene, layer: layer) { l in
+            try l.checkTextIndex(index)
+            var text = l.texts[index]
+            edit(&text)
+            try text.validate()
+            defer { l.texts[index] = text }
+            return l.texts[index]
+        }
+    }
+
+    /// Puts `old` back at text `index`, undoing `editText`.
+    mutating func restoreText(_ old: TextShape?, scene: String, layer: String, index: Int) throws {
+        guard let old else { throw CommandError.notExecuted }
+        try withLayer(scene: scene, layer: layer) { l in
+            try l.checkTextIndex(index)
+            l.texts[index] = old
+        }
+    }
+}
+
+/// Appends a text shape to a layer.
+public struct AddTextShape: Command {
+    public static let id = "text.add"
+    public var label: String { "Add Text" }
+    public var sceneID: String
+    public var layerID: String
+    public var text: TextShape
+    var insertedAt: Int?
+
+    private enum CodingKeys: String, CodingKey { case sceneID, layerID, text }
+
+    public init(sceneID: String, layerID: String, text: TextShape) {
+        self.sceneID = sceneID
+        self.layerID = layerID
+        self.text = text
+    }
+
+    public mutating func execute(_ document: inout Document) throws {
+        try text.validate()
+        insertedAt = try document.withEditableLayer(scene: sceneID, layer: layerID) { [text] layer in
+            layer.texts.append(text)
+            return layer.texts.count - 1
+        }
+    }
+
+    public func undo(_ document: inout Document) throws {
+        guard let insertedAt else { throw CommandError.notExecuted }
+        try document.withLayer(scene: sceneID, layer: layerID) { layer in
+            try layer.checkTextIndex(insertedAt)
+            layer.texts.remove(at: insertedAt)
+        }
+    }
+}
+
+public struct RemoveTextShape: Command {
+    public static let id = "text.remove"
+    public var label: String { "Delete Text" }
+    public var sceneID: String
+    public var layerID: String
+    public var index: Int
+    var removed: TextShape?
+
+    private enum CodingKeys: String, CodingKey { case sceneID, layerID, index }
+
+    public init(sceneID: String, layerID: String, index: Int) {
+        self.sceneID = sceneID
+        self.layerID = layerID
+        self.index = index
+    }
+
+    public mutating func execute(_ document: inout Document) throws {
+        removed = try document.withEditableLayer(scene: sceneID, layer: layerID) { [index] layer in
+            try layer.checkTextIndex(index)
+            return layer.texts.remove(at: index)
+        }
+    }
+
+    public func undo(_ document: inout Document) throws {
+        guard let removed else { throw CommandError.notExecuted }
+        try document.withLayer(scene: sceneID, layer: layerID) { [index] layer in
+            guard index >= 0, index <= layer.texts.count else { throw CommandError.shapeNotFound(index) }
+            layer.texts.insert(removed, at: index)
+        }
+    }
+}
+
+public struct SetTextString: Command {
+    public static let id = "text.setString"
+    public var label: String { "Edit Text" }
+    public var sceneID: String
+    public var layerID: String
+    public var index: Int
+    public var string: String
+    var oldText: TextShape?
+
+    private enum CodingKeys: String, CodingKey { case sceneID, layerID, index, string }
+
+    public init(sceneID: String, layerID: String, index: Int, string: String) {
+        self.sceneID = sceneID
+        self.layerID = layerID
+        self.index = index
+        self.string = string
+    }
+
+    public mutating func execute(_ document: inout Document) throws {
+        let string = string
+        oldText = try document.editText(scene: sceneID, layer: layerID, index: index) { $0.string = string }
+    }
+
+    public func undo(_ document: inout Document) throws {
+        try document.restoreText(oldText, scene: sceneID, layer: layerID, index: index)
+    }
+}
+
+/// Sets the font family and size of a text shape. The size must be finite and > 0.
+public struct SetTextFont: Command {
+    public static let id = "text.setFont"
+    public var label: String { "Set Font" }
+    public var sceneID: String
+    public var layerID: String
+    public var index: Int
+    public var family: String
+    public var size: Double
+    var oldText: TextShape?
+
+    private enum CodingKeys: String, CodingKey { case sceneID, layerID, index, family, size }
+
+    public init(sceneID: String, layerID: String, index: Int, family: String, size: Double) {
+        self.sceneID = sceneID
+        self.layerID = layerID
+        self.index = index
+        self.family = family
+        self.size = size
+    }
+
+    public mutating func execute(_ document: inout Document) throws {
+        let (family, size) = (family, size)
+        oldText = try document.editText(scene: sceneID, layer: layerID, index: index) { text in
+            text.fontFamily = family
+            text.fontSize = size
+        }
+    }
+
+    public func undo(_ document: inout Document) throws {
+        try document.restoreText(oldText, scene: sceneID, layer: layerID, index: index)
+    }
+}

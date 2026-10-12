@@ -13,6 +13,7 @@
 // - each track is sorted by frame, frames are unique and >= 0, and a track is
 //   never stored empty (an empty track is removed, so undo restores equality)
 // - keyframe values and shape points (including path points) are finite
+// - text shapes have a finite font size > 0 and a finite position
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -155,10 +156,12 @@ public struct Layer: Codable, Sendable, Hashable {
     public var isLocked: Bool
     /// Symbol placements on this layer. Missing in older v1 files means empty.
     public var instances: [Instance]
+    /// Text drawn above the shapes. Missing in older v1 files means empty.
+    public var texts: [TextShape]
 
     public init(
         id: String, name: String, shapes: [Shape] = [], tracks: [String: [Keyframe]] = [:],
-        isVisible: Bool = true, isLocked: Bool = false, instances: [Instance] = []
+        isVisible: Bool = true, isLocked: Bool = false, instances: [Instance] = [], texts: [TextShape] = []
     ) {
         self.id = id
         self.name = name
@@ -167,14 +170,15 @@ public struct Layer: Codable, Sendable, Hashable {
         self.isVisible = isVisible
         self.isLocked = isLocked
         self.instances = instances
+        self.texts = texts
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, name, shapes, tracks, isVisible, isLocked, instances
+        case id, name, shapes, tracks, isVisible, isLocked, instances, texts
     }
 
     /// Files written before the flags existed decode as visible and unlocked,
-    /// and files without instances decode with none.
+    /// and files without instances or texts decode with none.
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(String.self, forKey: .id)
@@ -184,6 +188,20 @@ public struct Layer: Codable, Sendable, Hashable {
         isVisible = try c.decodeIfPresent(Bool.self, forKey: .isVisible) ?? true
         isLocked = try c.decodeIfPresent(Bool.self, forKey: .isLocked) ?? false
         instances = try c.decodeIfPresent([Instance].self, forKey: .instances) ?? []
+        texts = try c.decodeIfPresent([TextShape].self, forKey: .texts) ?? []
+    }
+
+    /// Empty texts are left out, so layers without text encode as before.
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(name, forKey: .name)
+        try c.encode(shapes, forKey: .shapes)
+        try c.encode(tracks, forKey: .tracks)
+        try c.encode(isVisible, forKey: .isVisible)
+        try c.encode(isLocked, forKey: .isLocked)
+        try c.encode(instances, forKey: .instances)
+        if !texts.isEmpty { try c.encode(texts, forKey: .texts) }
     }
 
     /// Inserts or replaces the keyframe at `keyframe.frame`, keeping the track
@@ -280,6 +298,31 @@ public struct Shape: Codable, Sendable, Hashable {
         self.fill = fill
         self.path = path
         self.stroke = stroke
+    }
+}
+
+/// `string` set in `fontFamily` at `fontSize` points (finite, > 0), its baseline
+/// origin at the finite `position`, painted with `fill`.
+public struct TextShape: Codable, Sendable, Hashable {
+    public var string: String
+    public var fontFamily: String
+    public var fontSize: Double
+    public var position: Point
+    public var fill: Fill
+
+    public init(string: String, fontFamily: String, fontSize: Double, position: Point, fill: Fill = .solid(.black)) {
+        self.string = string
+        self.fontFamily = fontFamily
+        self.fontSize = fontSize
+        self.position = position
+        self.fill = fill
+    }
+
+    /// Throws `ModelError.invalidText` or `invalidFill` if an invariant above breaks.
+    func validate() throws {
+        guard fontSize.isFinite, fontSize > 0 else { throw ModelError.invalidText("font size must be finite and > 0") }
+        guard position.x.isFinite, position.y.isFinite else { throw ModelError.invalidText("position not finite") }
+        try fill.validate()
     }
 }
 
