@@ -11,10 +11,13 @@
 # changed path matching DENY_RE, MERGEABLE, every check green with at least one
 # passing check from CI_WORKFLOWS (no checks at all fails closed), CI on the
 # base branch's head is green (not red, running, or missing), and the PR's CI
-# ran after the base branch's latest commit. A stale PR is refreshed: its branch
-# is updated and CI is dispatched on it. Merges made with GITHUB_TOKEN fire no
-# workflows, so after any merge (or when the base head has no CI run) the lane
-# dispatches CI on the base branch; that run's completion re-triggers the lane.
+# ran after the base branch's latest commit. A Belt PR (a body line starting
+# `Belt-Run:` or `Belt-Test:`) also needs Belt's `belt/review` commit status at
+# success on its head while REQUIRE_BELT_REVIEW=1. A stale PR is refreshed:
+# its branch is updated and CI is dispatched on it. Merges made with
+# GITHUB_TOKEN fire no workflows, so after any merge (or when the base head has
+# no CI run) the lane dispatches CI on the base branch; that run's completion
+# re-triggers the lane.
 #
 # `decide` is the pure decision function (no network). It reads a PR JSON file,
 # a file-list file (one path per line), a check-rollup JSON file, the base
@@ -35,6 +38,12 @@ set -euo pipefail
 FAST_LANE_AUTHORS="prakashUXtech"
 MAX_LINES=400
 MAX_FILES=15
+# Belt PRs wait for Belt's pre-merge review: the `belt/review` commit status on
+# the head must be success (missing or pending waits, failure is red). Not a
+# ruleset-required check, since merge-queue group commits would never get it.
+# Set to 0 to turn the gate off if Belt's reviewer misbehaves.
+REQUIRE_BELT_REVIEW=1
+BELT_REVIEW_CONTEXT="belt/review"
 BASE_BRANCH="${FAST_LANE_BASE:-main}"
 LABEL="fast-lane"
 MERGED_LABEL="fast-lane-merged"
@@ -79,7 +88,7 @@ decide() {
   mstate=$(jq -r '.mergeStateStatus' "$pr")
   lines=$((adds + dels))
 
-  local skip="" reasons=() pending="" red="" ngreen=0
+  local skip="" reasons=() pending="" red="" ngreen=0 review=""
 
   log "state=$state draft=$draft base=$base label=$has_label"
   [[ "$state" == "OPEN" ]] || skip="PR is $state"
@@ -112,12 +121,22 @@ decide() {
     log "mergeable: not ready ($mergeable/$mstate)"; pending="not mergeable yet ($mergeable/$mstate)"
   fi
 
-  # Drop our own check and Copilot review checks, then classify the rest.
+  # Belt's review status is judged on its own below, and only for Belt PRs.
+  local belt=0
+  if (( REQUIRE_BELT_REVIEW )) && jq -r '.body // ""' "$pr" | grep -qE '^[[:space:]]*Belt-(Run|Test):'; then
+    belt=1
+    review=$(jq -r --arg c "$BELT_REVIEW_CONTEXT" \
+      '[.[] | select((.context // .name // "") == $c) | (.state // .conclusion // "")][0] // "MISSING"' "$checks")
+    log "belt review: $review"
+  fi
+
+  # Drop our own check, Belt's review and Copilot review checks, then classify the rest.
   local ci_json summary
   ci_json=$(printf '%s\n' "${CI_WORKFLOWS[@]}" "${CI_CHECKS[@]}" | jq -R . | jq -s .)
-  summary=$(jq -c --arg self "$SELF_WORKFLOW" --argjson ci "$ci_json" '
+  summary=$(jq -c --arg self "$SELF_WORKFLOW" --arg review "$BELT_REVIEW_CONTEXT" --argjson ci "$ci_json" '
     [ .[]
       | select((.workflowName // "") != $self)
+      | select((.context // .name // "") != $review)
       | select(((.name // .context // "") + " " + (.workflowName // "")) | test("copilot"; "i") | not)
       | { name: (.name // .context),
           wf: (.workflowName // ""),
@@ -146,9 +165,11 @@ decide() {
     local IFS=';'; echo "not-eligible|${reasons[*]}"; return
   fi
   if [[ -n "$red" ]]; then echo "red|$red"; return; fi
+  if (( belt )) && [[ "$review" =~ ^(FAILURE|ERROR)$ ]]; then echo "red|review failed"; return; fi
   if [[ -n "$pending" ]]; then echo "pending|$pending"; return; fi
   if (( npending )); then echo "pending|$npending checks still running"; return; fi
   if (( nci == 0 )); then local IFS=,; echo "pending|no passing check from ${CI_WORKFLOWS[*]} yet"; return; fi
+  if (( belt )) && [[ "$review" != "SUCCESS" ]]; then echo "pending|waiting for review"; return; fi
   log "main: $main_health, fresh: $fresh"
   if [[ "$main_health" == "red" ]]; then echo "pending|main is red"; return; fi
   if [[ "$main_health" != "green" ]]; then echo "pending|main CI running"; return; fi
@@ -209,7 +230,7 @@ evaluate() {
   tmp=$(mktemp -d)
   local tries=0
   while :; do
-    gh pr view "$n" -R "$REPO" --json number,state,isDraft,baseRefName,labels,author,additions,deletions,changedFiles,mergeable,mergeStateStatus,headRefOid,headRefName,statusCheckRollup >"$tmp/pr.json"
+    gh pr view "$n" -R "$REPO" --json number,state,isDraft,baseRefName,labels,author,body,additions,deletions,changedFiles,mergeable,mergeStateStatus,headRefOid,headRefName,statusCheckRollup >"$tmp/pr.json"
     [[ "$(jq -r '.mergeable' "$tmp/pr.json")" == "UNKNOWN" ]] || break
     (( tries++ < UNKNOWN_RETRIES )) || break
     sleep 5
@@ -225,6 +246,11 @@ evaluate() {
           | { __typename: "CheckRun", name, status: (.status | ascii_upcase),
               conclusion: ((.conclusion // "") | ascii_upcase), workflowName: "" } ]' \
       "$tmp/runs.json" >"$tmp/checks.json"
+    # Check runs carry no commit statuses; add Belt's review status from the head.
+    gh api "repos/$REPO/commits/$head/status" --jq "[.statuses[] | select(.context == \"$BELT_REVIEW_CONTEXT\")
+      | {__typename: \"StatusContext\", context, state: (.state | ascii_upcase)}]" \
+      >"$tmp/status.json" 2>/dev/null || echo '[]' >"$tmp/status.json"
+    jq -s 'add' "$tmp/checks.json" "$tmp/status.json" >"$tmp/all.json" && mv "$tmp/all.json" "$tmp/checks.json"
   else
     jq '.statusCheckRollup // []' "$tmp/pr.json" >"$tmp/checks.json"
   fi
@@ -280,7 +306,11 @@ evaluate() {
       comment_once "$n" "Fast lane: not eligible. ${rest//;/; }. This PR now needs normal captain review."
       ;;
     red)
-      comment_once "$n" "Fast lane: waiting, CI is red ($rest)"
+      if [[ "$rest" == "review failed" ]]; then
+        comment_once "$n" "Fast lane: waiting, Belt's review failed ($BELT_REVIEW_CONTEXT is failure on the head)."
+      else
+        comment_once "$n" "Fast lane: waiting, CI is red ($rest)"
+      fi
       ;;
     eligible)
       local lines files green sha

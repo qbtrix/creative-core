@@ -27,7 +27,7 @@
               {
                 "id": "document-commands",
                 "name": "Document and Command Engine",
-                "description": "The document model (Document > Scene > Layer > Shape, keyframe tracks, fills, metadata, frame labels), the Command protocol and CommandEngine with exact undo/redo, groups, coalescing and an undo depth limit, the CommandRegistry that decodes any command from a JSON envelope, the built-in command families, and the .flare v1 file format with validation. Every document change goes through a Command.",
+                "description": "The document model (Document > Scene > Layer > Shape, keyframe tracks, fills, text shapes, ruler guides, the swatch palette, metadata, frame labels) and its ModelError; LayerOwner, which addresses a scene's or a symbol's layer list; the Command protocol and CommandEngine with exact undo/redo, groups, coalescing, an undo depth limit and layer-scoped validation for single-layer commands; the CommandRegistry that decodes any command from a JSON envelope; the built-in command families (scene, layer, shape, text, keyframe, label, guide, swatch, metadata); and the .flare v1 file format with validation. Every document change goes through a Command.",
                 "technology": "Swift 6, Foundation",
                 "paths": [
                   "Sources/FlareCore/Document.swift",
@@ -41,18 +41,25 @@
                   "Sources/FlareCore/MetadataCommands.swift",
                   "Sources/FlareCore/SceneCommands.swift",
                   "Sources/FlareCore/ShapeCommands.swift",
-                  "Sources/FlareCore/FlareFormat.swift"
+                  "Sources/FlareCore/FlareFormat.swift",
+                  "Sources/FlareCore/ModelError.swift",
+                  "Sources/FlareCore/LayerOwner.swift",
+                  "Sources/FlareCore/LayerCommand.swift",
+                  "Sources/FlareCore/GuideCommands.swift",
+                  "Sources/FlareCore/SwatchCommands.swift",
+                  "Sources/FlareCore/TextCommands.swift"
                 ]
               },
               {
                 "id": "geometry",
                 "name": "Geometry",
-                "description": "2D affine Matrix, the Transform (position, scale, rotation) layers and instances use, axis-aligned Rect, vector Paths with line, quadratic and cubic segments, and tight shape bounds. Never returns non-finite values.",
+                "description": "2D affine Matrix, the Transform (position, scale, rotation) layers and instances use, axis-aligned Rect, vector Paths with line, quadratic and cubic segments, tight shape bounds, and point hit testing (even-odd and nonzero fill, strokes, through instances). Never returns non-finite values.",
                 "technology": "Swift 6, Foundation",
                 "paths": [
                   "Sources/FlareCore/Geometry.swift",
                   "Sources/FlareCore/Path.swift",
-                  "Sources/FlareCore/ShapeBounds.swift"
+                  "Sources/FlareCore/ShapeBounds.swift",
+                  "Sources/FlareCore/HitTest.swift"
                 ]
               },
               {
@@ -69,7 +76,7 @@
               {
                 "id": "export",
                 "name": "Export",
-                "description": "Exporters that turn a scene into other formats: one frame as an SVG document, and a scene as a Lottie JSON document with animated position and easing. Output is byte-stable and throws on non-finite values.",
+                "description": "Exporters that turn a scene into other formats: one frame as an SVG document, a scene as a Lottie JSON document with animated position and easing, and the frame plan (numbers, times, pixel sizes, file names) for a numbered PNG sequence. Output is byte-stable and throws on non-finite values.",
                 "technology": "Swift 6, Foundation",
                 "paths": [
                   "Sources/FlareCore/Export/*.swift"
@@ -84,17 +91,19 @@
                   "Sources/FlareCore/Symbols.swift",
                   "Sources/FlareCore/Instance.swift",
                   "Sources/FlareCore/SymbolCommands.swift",
-                  "Sources/FlareCore/SymbolCycles.swift"
+                  "Sources/FlareCore/SymbolCycles.swift",
+                  "Sources/FlareCore/InstanceCommands.swift"
                 ]
               },
               {
                 "id": "statemachine",
                 "name": "State Machine",
-                "description": "Interactive state machines: states that play a frame range of a scene, transitions fired by named triggers, and typed bool/number inputs with transition conditions.",
+                "description": "Interactive state machines: states that play a frame range of a scene, transitions fired by named triggers, typed bool/number inputs with transition conditions, and the format-layer check of their invariants that FlareFormat.validate runs.",
                 "technology": "Swift 6, Foundation",
                 "paths": [
                   "Sources/FlareCore/StateMachine.swift",
-                  "Sources/FlareCore/MachineInputs.swift"
+                  "Sources/FlareCore/MachineInputs.swift",
+                  "Sources/FlareCore/StateMachineValidation.swift"
                 ]
               }
             ]
@@ -131,11 +140,14 @@
               {
                 "id": "pixel-buffer",
                 "name": "Pixel Buffer",
-                "description": "PixelBuffer and RGBA: validated sizes, bounds-checked access, premultiply helpers; RasterError.",
+                "description": "PixelBuffer and RGBA: validated sizes, bounds-checked access, premultiply helpers; conversion to and from 8-bit sRGB or Display P3 display bytes; the tile grid for per-tile storage and paint, and TileDiff for tile-by-tile undo; RasterError.",
                 "technology": "Swift 6, Foundation",
                 "paths": [
                   "Sources/CoreRaster/PixelBuffer.swift",
-                  "Sources/CoreRaster/RasterError.swift"
+                  "Sources/CoreRaster/RasterError.swift",
+                  "Sources/CoreRaster/DisplayBytes.swift",
+                  "Sources/CoreRaster/Tiles.swift",
+                  "Sources/CoreRaster/TileDiff.swift"
                 ]
               },
               {

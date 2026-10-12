@@ -1,5 +1,6 @@
-# CI: runs scripts/ci (no-crash lint, swift build, swift test) on Linux and
-# macOS, plus the fast-lane decision tests and mutation testing (scripts/mutate):
+# CI: runs scripts/ci (no-crash lint, C4 ownership, swift build, swift test) on
+# Linux and macOS, plus the fast-lane decision tests and mutation testing
+# (scripts/mutate):
 # "Mutation anchors" checks every plan anchor still resolves (seconds, no build),
 # and "Mutation" plants the bugs from the plan entries a PR touches (at most 15)
 # and fails if any test suite lets one through. The full sweep lives in
@@ -34,7 +35,8 @@ jobs:
       - uses: actions/checkout@v4
       - { uses: actions/setup-node@v4, with: { node-version: 22 } } # jscpd duplicate check; the swift image has no node
       # CoreCatalog's GRDB links the system SQLite; the image has the runtime, not the headers.
-      - run: apt-get update -q && apt-get install -y -q --no-install-recommends libsqlite3-dev
+      # scripts/ci's C4 ownership check needs jq, which the image also lacks.
+      - run: apt-get update -q && apt-get install -y -q --no-install-recommends libsqlite3-dev jq
       - run: swift --version
       - run: scripts/ci
 
