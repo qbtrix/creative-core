@@ -2,7 +2,7 @@
 // holds Layers; a Layer holds vector Shapes and keyframe tracks keyed by
 // property name ("x", "opacity", ...).
 //
-// Invariants (checked by FlareFormat.validate on load, kept by commands):
+// Invariants (checked by the format layer on load, kept by commands):
 // - every type here is a Codable, Sendable value type; no classes, no shared state
 // - Scene.fps > 0, Scene.durationFrames >= 0
 // - Scene.width and Scene.height are finite and > 0
@@ -284,7 +284,7 @@ public struct Shape: Codable, Sendable, Hashable {
 }
 
 /// How a shape's outline is drawn. `width` is in points, finite and >= 0
-/// (checked by `FlareFormat.validate`).
+/// (checked by the format layer on load).
 public struct Stroke: Codable, Sendable, Hashable {
     public enum Join: String, Codable, Sendable, Hashable, CaseIterable {
         case miter, round, bevel
@@ -310,7 +310,7 @@ public struct Stroke: Codable, Sendable, Hashable {
 extension Document {
     func sceneIndex(_ id: String) throws -> Int {
         guard let i = scenes.firstIndex(where: { $0.id == id }) else {
-            throw CommandError.sceneNotFound(id)
+            throw ModelError.sceneNotFound(id)
         }
         return i
     }
@@ -320,7 +320,7 @@ extension Document {
     mutating func withLayer<T>(scene: String, layer: String, _ body: (inout Layer) throws -> T) throws -> T {
         let s = try sceneIndex(scene)
         guard let l = scenes[s].layers.firstIndex(where: { $0.id == layer }) else {
-            throw CommandError.layerNotFound(layer)
+            throw ModelError.layerNotFound(layer)
         }
         return try body(&scenes[s].layers[l])
     }
@@ -331,7 +331,7 @@ extension Document {
     @discardableResult
     mutating func withEditableLayer<T>(scene: String, layer: String, _ body: (inout Layer) throws -> T) throws -> T {
         try withLayer(scene: scene, layer: layer) { l in
-            guard !l.isLocked else { throw CommandError.layerLocked(l.id) }
+            guard !l.isLocked else { throw ModelError.layerLocked(l.id) }
             return try body(&l)
         }
     }

@@ -2,7 +2,7 @@
 // symbol by id, places it with a Transform, and says how the symbol's own
 // timeline maps onto the host timeline.
 //
-// Invariants (checked by FlareFormat.validate):
+// Invariants (checked by the format layer on load):
 // - symbolID names a symbol in Document.symbols
 // - firstFrame >= 0
 #if canImport(FoundationEssentials)
