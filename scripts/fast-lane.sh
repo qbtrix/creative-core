@@ -330,8 +330,6 @@ main() {
   # merge, sweep every open fast-lane PR, until a pass merges nothing.
   for (( pass = 0; MERGED_ANY && pass < 5; pass++ )); do
     MERGED_ANY=0
-DISPATCH_BASE_CI=0  # set when the base branch needs a CI run at the end
-MAIN_RED_URL=""
     while read -r n; do [[ -n "$n" ]] && evaluate "$n"; done < <(
       gh pr list -R "$REPO" --state open --base "$BASE_BRANCH" --label "$LABEL" \
         --limit 100 --json number --jq '.[].number')
