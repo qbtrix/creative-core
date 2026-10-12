@@ -119,6 +119,43 @@ FlareCore has four layers. Each depends only on the ones above it. CoreColor, Co
 - **Proof is the gate.** "It compiles" is not done. Gate: `scripts/ci` prints
   `CI: PASS` on your rebased branch; the PR body names the proving test.
 
+## Mutation testing
+
+A passing test proves only that the code and the test agree. Mutation testing
+checks that the test can fail: `scripts/mutate` plants a known bug, runs the
+tests named for it, and requires at least one of them to fail. If they all
+pass, the mutation escaped, and the suite would ship that bug.
+
+Plans live in `Tests/mutations/<module>.json`, one entry per bug:
+
+```json
+{
+  "note": "undo runs an entry's commands first to last",
+  "file": "Sources/FlareCore/Command.swift",
+  "anchor": "for cmd in entry.commands.reversed() {",
+  "replacement": "for cmd in entry.commands {",
+  "filter": "CommandEngineTests|CoalesceTests|UndoPropertyTests"
+}
+```
+
+- `anchor` is exact source that occurs once in `file`, and `replacement` is
+  the bug. Plant one a plausible edit would make: an off-by-one, a dropped
+  guard, a swapped argument, a wrong constant. It must still compile.
+- `filter` is a `swift test --filter` regex: suite names in FlareCore, file
+  names (`BlurTests`) for the free-function tests in CoreColor and CoreRaster.
+- Run the entry: `scripts/mutate --run --plan FlareCore --only "<words from
+  the note>"`. It must say `caught`. On `ESCAPED`, add the test that catches
+  it. If the bug cannot change any behavior (an equivalent mutation), drop
+  the entry instead.
+- A refactor that moves an anchor repoints it in the same PR and keeps the bug
+  the note names. `scripts/mutate --validate` lists every stale anchor.
+
+**New logic with an invariant gets one mutation entry in the same PR**: a
+guard, a limit, a formula, an undo path. CI, not `scripts/ci`: the `Mutation anchors` job
+fails on a stale anchor, and the `Mutation` job plants the entries a PR adds
+or whose files it changes (15 at most) and fails on any escape. The full sweep
+runs on every push to main and nightly (`.github/workflows/mutation.yml`).
+
 ## Reading cost
 
 - One idea per file; a new command family gets its own file. No wrapper with

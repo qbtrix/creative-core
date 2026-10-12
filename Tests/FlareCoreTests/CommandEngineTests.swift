@@ -185,6 +185,15 @@ import Testing
         #expect(throws: Never.self) { try FlareFormat.validate(renamed, layer: "ball", owner: .scene("s1"), since: before) }
     }
 
+    @Test func layerScopedValidateCatchesALayerThatGrowsPastThePointLimit() {
+        let before = FormatLimitsTests.document(points: FlareFormat.maxTotalPoints)
+        var grown = before
+        grown.scenes[0].layers[0].shapes[0].points.append(Point(x: 0, y: 0))
+        #expect(throws: FormatError.tooLarge("more than \(FlareFormat.maxTotalPoints) points")) {
+            try FlareFormat.validate(grown, layer: "l", owner: .scene("s"), since: before)
+        }
+    }
+
     @Test func layerScopedValidateCatchesTheTouchedSymbolLayer() {
         let before = Fixtures.withSymbol()
         let sym = LayerOwner.symbol("sym")

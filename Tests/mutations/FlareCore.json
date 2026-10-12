@@ -1,0 +1,212 @@
+[
+  {
+    "note": "a coalesced step is appended instead of merged into the last command",
+    "file": "Sources/FlareCore/Command.swift",
+    "anchor": "undoStack[last].commands[i] = merged",
+    "replacement": "undoStack[last].commands.append(cmd)",
+    "filter": "CoalesceTests"
+  },
+  {
+    "note": "coalescing ignores the key, so a different key folds into the last entry",
+    "file": "Sources/FlareCore/Command.swift",
+    "anchor": "} else if let key, key == coalesceKey, let last = undoStack.indices.last {",
+    "replacement": "} else if key != nil, let last = undoStack.indices.last {",
+    "filter": "CoalesceTests"
+  },
+  {
+    "note": "undo runs an entry's commands first to last instead of last to first",
+    "file": "Sources/FlareCore/Command.swift",
+    "anchor": "for cmd in entry.commands.reversed() {",
+    "replacement": "for cmd in entry.commands {",
+    "filter": "CommandEngineTests|CoalesceTests|UndoPropertyTests"
+  },
+  {
+    "note": "redo runs an entry's commands last to first",
+    "file": "Sources/FlareCore/Command.swift",
+    "anchor": "for i in entry.commands.indices {",
+    "replacement": "for i in entry.commands.indices.reversed() {",
+    "filter": "CommandEngineTests|CoalesceTests|UndoPropertyTests"
+  },
+  {
+    "note": "undo leaves coalescing open, so the next same-key step joins the entry below",
+    "file": "Sources/FlareCore/Command.swift",
+    "anchor": "redoStack.append(entry)\n        coalesceKey = nil",
+    "replacement": "redoStack.append(entry)",
+    "filter": "CoalesceTests"
+  },
+  {
+    "note": "a group leaves coalescing open",
+    "file": "Sources/FlareCore/Command.swift",
+    "anchor": "coalesceKey = nil\n        pending = Entry(label: label, commands: [])",
+    "replacement": "pending = Entry(label: label, commands: [])",
+    "filter": "CoalesceTests"
+  },
+  {
+    "note": "a group whose body throws keeps the changes made before the throw",
+    "file": "Sources/FlareCore/Command.swift",
+    "anchor": "document = before\n            pending = outer",
+    "replacement": "_ = before\n            pending = outer",
+    "filter": "CommandEngineTests"
+  },
+  {
+    "note": "a full undo stack drops the newest entry instead of the oldest",
+    "file": "Sources/FlareCore/Command.swift",
+    "anchor": "undoStack.removeFirst(undoStack.count - maxUndoDepth)",
+    "replacement": "undoStack.removeLast(undoStack.count - maxUndoDepth)",
+    "filter": "UndoDepthTests"
+  },
+  {
+    "note": "perform commits a non-layer command without validating the result",
+    "file": "Sources/FlareCore/Command.swift",
+    "anchor": "try FlareFormat.validate(doc)\n",
+    "replacement": "_ = doc\n",
+    "filter": "CommandEngineTests"
+  },
+  {
+    "note": "a merge that succeeds keeps the unmerged command",
+    "file": "Sources/FlareCore/Command.swift",
+    "anchor": "return last.merge(next) ? last : nil",
+    "replacement": "return last.merge(next) ? self : nil",
+    "filter": "CoalesceTests"
+  },
+  {
+    "note": "keyframe merge accepts a step that does not start where the last one ended",
+    "file": "Sources/FlareCore/Commands.swift",
+    "anchor": "guard (next.sceneID, next.layerID, next.property, next.from) == (sceneID, layerID, property, to)",
+    "replacement": "guard (next.sceneID, next.layerID, next.property) == (sceneID, layerID, property)",
+    "filter": "CoalesceTests|UndoPropertyTests"
+  },
+  {
+    "note": "keyframe merge keeps the old end frame",
+    "file": "Sources/FlareCore/Commands.swift",
+    "anchor": "        to = next.to\n        return true",
+    "replacement": "        return true",
+    "filter": "CoalesceTests"
+  },
+  {
+    "note": "shape merge replaces the offset instead of adding to it",
+    "file": "Sources/FlareCore/ShapeCommands.swift",
+    "anchor": "dx += next.dx",
+    "replacement": "dx = next.dx",
+    "filter": "CoalesceTests"
+  },
+  {
+    "note": "shape merge keeps the first step's result, so redo replays it",
+    "file": "Sources/FlareCore/ShapeCommands.swift",
+    "anchor": "        newShape = next.newShape\n        return true",
+    "replacement": "        return true",
+    "filter": "CoalesceTests"
+  },
+  {
+    "note": "SetKeyframe encodes its undo state (Q3: commands encode params only)",
+    "file": "Sources/FlareCore/Commands.swift",
+    "anchor": "private enum CodingKeys: String, CodingKey { case sceneID, layerID, property, keyframe }",
+    "replacement": "private enum CodingKeys: String, CodingKey { case sceneID, layerID, property, keyframe, previous, executed }",
+    "filter": "CommandRegistryTests"
+  },
+  {
+    "note": "an unknown command id is reported as malformed instead of unknown",
+    "file": "Sources/FlareCore/CommandRegistry.swift",
+    "anchor": "guard let decode = registry.decoders[id] else { throw CommandError.unknownCommand(id) }",
+    "replacement": "guard let decode = registry.decoders[id] else { throw CommandError.malformedCommand(id) }",
+    "filter": "CommandRegistryTests"
+  },
+  {
+    "note": "the registry drops the swatch command family",
+    "file": "Sources/FlareCore/CommandRegistry.swift",
+    "anchor": "        SwatchCommands.all,\n",
+    "replacement": "",
+    "filter": "CommandRegistryTests"
+  },
+  {
+    "note": "the layer limit lets one extra layer through",
+    "file": "Sources/FlareCore/FlareFormat.swift",
+    "anchor": "guard layers.count <= maxLayersPerScene else {",
+    "replacement": "guard layers.count <= maxLayersPerScene + 1 else {",
+    "filter": "FormatLimitsTests"
+  },
+  {
+    "note": "the point limit rejects a document with exactly the limit",
+    "file": "Sources/FlareCore/FlareFormat.swift",
+    "anchor": "guard points <= maxTotalPoints else {",
+    "replacement": "guard points < maxTotalPoints else {",
+    "filter": "FormatLimitsTests"
+  },
+  {
+    "note": "path element points do not count toward the point limit",
+    "file": "Sources/FlareCore/FlareFormat.swift",
+    "anchor": "points += element.pointCount",
+    "replacement": "_ = element",
+    "filter": "FormatLimitsTests"
+  },
+  {
+    "note": "decode accepts a file from a newer format version",
+    "file": "Sources/FlareCore/FlareFormat.swift",
+    "anchor": "guard version == currentVersion else {",
+    "replacement": "guard version >= currentVersion else {",
+    "filter": "FlareFormatTests"
+  },
+  {
+    "note": "decode returns the document without validating it",
+    "file": "Sources/FlareCore/FlareFormat.swift",
+    "anchor": "try validate(envelope.document)\n",
+    "replacement": "",
+    "filter": "FlareFormatTests|SymbolCycleTests|FormatLimitsTests"
+  },
+  {
+    "note": "validate accepts duplicate layer ids",
+    "file": "Sources/FlareCore/FlareFormat.swift",
+    "anchor": "for layer in layers where !layerIDs.insert(layer.id).inserted {",
+    "replacement": "for layer in layers where layerIDs.insert(layer.id).inserted && layer.id.isEmpty {",
+    "filter": "FlareFormatTests|CommandEngineTests|LayerOwnerAdversarialTests"
+  },
+  {
+    "note": "validate accepts two keyframes on the same frame of a track",
+    "file": "Sources/FlareCore/FlareFormat.swift",
+    "anchor": "guard k.frame > previous else {",
+    "replacement": "guard k.frame >= previous else {",
+    "filter": "FlareFormatTests"
+  },
+  {
+    "note": "the layer-scoped validate (#109) skips the touched layer",
+    "file": "Sources/FlareCore/FlareFormat.swift",
+    "anchor": "try validate([layer], owner: owner.description, symbols: symbolIDs)",
+    "replacement": "_ = symbolIDs",
+    "filter": "CommandEngineTests|LayerOwnerAdversarialTests"
+  },
+  {
+    "note": "the layer-scoped validate misses a layer that gained points",
+    "file": "Sources/FlareCore/FlareFormat.swift",
+    "anchor": "if new.count > maxLayersPerScene || pointCount(layer.shapes) > pointCount(before?.shapes ?? []) {",
+    "replacement": "if new.count > maxLayersPerScene || before == nil {",
+    "filter": "CommandEngineTests|LayerOwnerAdversarialTests|FormatLimitsTests"
+  },
+  {
+    "note": "the layer-scoped validate misses a duplicate id after an insert",
+    "file": "Sources/FlareCore/FlareFormat.swift",
+    "anchor": "if inserted, new[(i + 1)...].contains(where: { $0.id == layerID }) {",
+    "replacement": "if inserted, new[..<i].contains(where: { $0.id == layerID }) {",
+    "filter": "CommandEngineTests|LayerOwnerAdversarialTests|LayerCommandsTests"
+  },
+  {
+    "note": "the layer-scoped validate passes when the owner is missing instead of validating everything",
+    "file": "Sources/FlareCore/FlareFormat.swift",
+    "anchor": "return try validate(document)",
+    "replacement": "return",
+    "filter": "LayerOwnerAdversarialTests"
+  },
+  {
+    "note": "a symbol cycle is never detected",
+    "file": "Sources/FlareCore/SymbolCycles.swift",
+    "anchor": "                case 1:\n",
+    "replacement": "                case 3:\n",
+    "filter": "SymbolCycleTests"
+  },
+  {
+    "note": "the cycle search starts only from the first symbol",
+    "file": "Sources/FlareCore/SymbolCycles.swift",
+    "anchor": "for root in symbols.indices where state[root] == 0 {",
+    "replacement": "for root in symbols.indices.prefix(1) where state[root] == 0 {",
+    "filter": "SymbolCycleTests"
+  }
+]

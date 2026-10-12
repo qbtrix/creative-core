@@ -156,6 +156,16 @@ import Testing
         #expect(engine.document == dragged)
     }
 
+    @Test func movesOfDifferentKeyframesInARunStaySeparate() throws {
+        var engine = CommandEngine(document: Fixtures.document())
+        let original = engine.document
+        try engine.perform(MoveKeyframe(sceneID: s, layerID: "ball", property: "x", from: 24, to: 25), coalesceKey: "k")
+        try engine.perform(MoveKeyframe(sceneID: s, layerID: "ball", property: "x", from: 0, to: 5), coalesceKey: "k")
+        #expect(engine.undoStack.first?.commands.count == 2)
+        try engine.undo()
+        #expect(engine.document == original)
+    }
+
     @Test func unrelatedCommandsInARunStaySeparate() throws {
         var engine = CommandEngine(document: Fixtures.document())
         let original = engine.document

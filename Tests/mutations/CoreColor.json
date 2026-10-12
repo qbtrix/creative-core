@@ -1,0 +1,72 @@
+[
+  {
+    "note": "the sRGB decode's linear segment uses the wrong slope",
+    "file": "Sources/CoreColor/ColorSpace.swift",
+    "anchor": "a <= 0.04045 ? a / 12.92",
+    "replacement": "a <= 0.04045 ? a / 12.0",
+    "filter": "ColorSpaceTests"
+  },
+  {
+    "note": "the sRGB decode uses gamma 2.2 instead of 2.4",
+    "file": "Sources/CoreColor/ColorSpace.swift",
+    "anchor": "pow((a + 0.055) / 1.055, 2.4)",
+    "replacement": "pow((a + 0.055) / 1.055, 2.2)",
+    "filter": "ColorSpaceTests"
+  },
+  {
+    "note": "the sRGB encode's linear segment uses the wrong slope",
+    "file": "Sources/CoreColor/ColorSpace.swift",
+    "anchor": "a <= 0.0031308 ? a * 12.92",
+    "replacement": "a <= 0.0031308 ? a * 12.0",
+    "filter": "ColorSpaceTests"
+  },
+  {
+    "note": "a negative component loses its sign through the transfer curve",
+    "file": "Sources/CoreColor/ColorSpace.swift",
+    "anchor": "return v < 0 ? -linear : linear",
+    "replacement": "return linear",
+    "filter": "ColorSpaceTests"
+  },
+  {
+    "note": "the D65 white point has the wrong Z",
+    "file": "Sources/CoreColor/ColorSpace.swift",
+    "anchor": "Color3(0.95047, 1.0, 1.08883)",
+    "replacement": "Color3(0.95047, 1.0, 1.0)",
+    "filter": "ColorSpaceTests"
+  },
+  {
+    "note": "the sRGB blue primary is off",
+    "file": "Sources/CoreColor/ColorSpace.swift",
+    "anchor": "rgbToXYZ((0.64, 0.33), (0.30, 0.60), (0.15, 0.06))",
+    "replacement": "rgbToXYZ((0.64, 0.33), (0.30, 0.60), (0.15, 0.07))",
+    "filter": "ColorSpaceTests"
+  },
+  {
+    "note": "the Display P3 green primary is off",
+    "file": "Sources/CoreColor/ColorSpace.swift",
+    "anchor": "rgbToXYZ((0.680, 0.320), (0.265, 0.690), (0.150, 0.060))",
+    "replacement": "rgbToXYZ((0.680, 0.320), (0.265, 0.700), (0.150, 0.060))",
+    "filter": "ColorSpaceTests"
+  },
+  {
+    "note": "two OKLab LMS matrix entries are swapped",
+    "file": "Sources/CoreColor/ColorSpace.swift",
+    "anchor": "0.4122214708, 0.5363325363, 0.0514459929",
+    "replacement": "0.5363325363, 0.4122214708, 0.0514459929",
+    "filter": "ColorSpaceTests"
+  },
+  {
+    "note": "the OKLab cube root drops the sign of a negative LMS value",
+    "file": "Sources/CoreColor/ColorSpace.swift",
+    "anchor": "x < 0 ? -pow(-x, 1.0 / 3.0) : pow(x, 1.0 / 3.0)",
+    "replacement": "pow(abs(x), 1.0 / 3.0)",
+    "filter": "ColorSpaceTests"
+  },
+  {
+    "note": "a conversion that overflows returns infinity instead of throwing",
+    "file": "Sources/CoreColor/ColorSpace.swift",
+    "anchor": "try result.validated(\"result\")",
+    "replacement": "",
+    "filter": "ColorSpaceTests|ColorErrorTests"
+  }
+]

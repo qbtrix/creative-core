@@ -1,0 +1,163 @@
+[
+  {
+    "note": "a zero width or height passes the size check",
+    "file": "Sources/CoreRaster/PixelBuffer.swift",
+    "anchor": "guard width >= 1, height >= 1 else {",
+    "replacement": "guard width >= 0, height >= 0 else {",
+    "filter": "PixelBufferTests"
+  },
+  {
+    "note": "the size check ignores width x height overflowing Int",
+    "file": "Sources/CoreRaster/PixelBuffer.swift",
+    "anchor": "guard !pixelOverflow, !elementOverflow, pixels <= maxPixels else {",
+    "replacement": "guard !elementOverflow, pixels <= maxPixels else {",
+    "filter": "PixelBufferTests"
+  },
+  {
+    "note": "the pixel bounds check lets x == width through",
+    "file": "Sources/CoreRaster/PixelBuffer.swift",
+    "anchor": "guard (0..<width).contains(x), (0..<height).contains(y) else {",
+    "replacement": "guard (0...width).contains(x), (0..<height).contains(y) else {",
+    "filter": "PixelBufferTests"
+  },
+  {
+    "note": "setPixel stores a non-finite component",
+    "file": "Sources/CoreRaster/PixelBuffer.swift",
+    "anchor": "guard value.isFinite else {",
+    "replacement": "guard value.isFinite || value.a.isNaN else {",
+    "filter": "PixelBufferTests"
+  },
+  {
+    "note": "unpremultiplying alpha 0 divides by zero",
+    "file": "Sources/CoreRaster/PixelBuffer.swift",
+    "anchor": "guard a != 0 else { return .clear }",
+    "replacement": "",
+    "filter": "PixelBufferTests|DisplayBytesTests"
+  },
+  {
+    "note": "source-over keeps the backdrop by the backdrop's alpha instead of the source's",
+    "file": "Sources/CoreRaster/Composite.swift",
+    "anchor": "let keep = 1 - s.a",
+    "replacement": "let keep = 1 - b.a",
+    "filter": "CompositeTests"
+  },
+  {
+    "note": "composite accepts an opacity above 1",
+    "file": "Sources/CoreRaster/Composite.swift",
+    "anchor": "guard (0...1).contains(opacity) else {",
+    "replacement": "guard opacity.isFinite, opacity >= 0 else {",
+    "filter": "CompositeTests"
+  },
+  {
+    "note": "the blend ignores backdrop alpha for red (Cs' = B instead of (1 - ab) Cs + ab B)",
+    "file": "Sources/CoreRaster/Composite.swift",
+    "anchor": "r: cs.r + b.a * (blended.r - cs.r)",
+    "replacement": "r: blended.r",
+    "filter": "CompositeTests"
+  },
+  {
+    "note": "multiply adds instead of multiplying",
+    "file": "Sources/CoreRaster/BlendMode.swift",
+    "anchor": "{ cb, cs in cb * cs }",
+    "replacement": "{ cb, cs in cb + cs }",
+    "filter": "CompositeTests"
+  },
+  {
+    "note": "overlay is hard light (backdrop and source swapped)",
+    "file": "Sources/CoreRaster/BlendMode.swift",
+    "anchor": "Self.hardLight(cs, cb)",
+    "replacement": "Self.hardLight(cb, cs)",
+    "filter": "CompositeTests"
+  },
+  {
+    "note": "soft light uses the wrong polynomial below 0.25",
+    "file": "Sources/CoreRaster/BlendMode.swift",
+    "anchor": "((16 * cb - 12) * cb + 4) * cb",
+    "replacement": "((16 * cb - 12) * cb + 3) * cb",
+    "filter": "CompositeTests"
+  },
+  {
+    "note": "the non-separable modes weight blue with red's luminance",
+    "file": "Sources/CoreRaster/BlendMode.swift",
+    "anchor": "0.3 * c.r + 0.59 * c.g + 0.11 * c.b",
+    "replacement": "0.3 * c.r + 0.59 * c.g + 0.11 * c.r",
+    "filter": "CompositeTests"
+  },
+  {
+    "note": "the Gaussian kernel is not normalized to sum 1",
+    "file": "Sources/CoreRaster/Blur.swift",
+    "anchor": "return weights.map { $0 / total }",
+    "replacement": "return weights.map { $0 / total * 1.01 }",
+    "filter": "BlurTests"
+  },
+  {
+    "note": "the blur radius limit is loosened to three times the larger side",
+    "file": "Sources/CoreRaster/Blur.swift",
+    "anchor": "let limit = 2 * max(width, height)",
+    "replacement": "let limit = 3 * max(width, height)",
+    "filter": "BlurTests"
+  },
+  {
+    "note": "resample weights are not normalized to sum 1",
+    "file": "Sources/CoreRaster/Resample.swift",
+    "anchor": "tap.weights = tap.weights.map { $0 / total }",
+    "replacement": "tap.weights = tap.weights.map { $0 / total * 1.01 }",
+    "filter": "ResampleTests"
+  },
+  {
+    "note": "edge taps mirror instead of clamping to the edge pixel",
+    "file": "Sources/CoreRaster/Resample.swift",
+    "anchor": "indices.append(min(max(j, 0), length - 1))",
+    "replacement": "indices.append(min(abs(j), length - 1))",
+    "filter": "ResampleTests|BlurTests"
+  },
+  {
+    "note": "downscaling does not widen the filter, so input pixels are skipped",
+    "file": "Sources/CoreRaster/Resample.swift",
+    "anchor": "let stretch = max(scale, 1)",
+    "replacement": "let stretch = 1.0",
+    "filter": "ResampleTests"
+  },
+  {
+    "note": "histogram bins are scaled by bins - 1",
+    "file": "Sources/CoreRaster/Histogram.swift",
+    "anchor": "min(max(Int(value * Float(bins)), 0), bins - 1)",
+    "replacement": "min(max(Int(value * Float(bins - 1)), 0), bins - 1)",
+    "filter": "HistogramTests"
+  },
+  {
+    "note": "fully transparent pixels are not counted",
+    "file": "Sources/CoreRaster/Histogram.swift",
+    "anchor": "transparent += 1\n",
+    "replacement": "",
+    "filter": "HistogramTests"
+  },
+  {
+    "note": "display bytes truncate instead of rounding to nearest",
+    "file": "Sources/CoreRaster/DisplayBytes.swift",
+    "anchor": "UInt8((v * 255).rounded())",
+    "replacement": "UInt8(v * 255)",
+    "filter": "DisplayBytesTests"
+  },
+  {
+    "note": "decoding display bytes does not premultiply",
+    "file": "Sources/CoreRaster/DisplayBytes.swift",
+    "anchor": "a: Float(bytes[i + 3]) / 255).premultiplied()",
+    "replacement": "a: Float(bytes[i + 3]) / 255)",
+    "filter": "DisplayBytesTests"
+  },
+  {
+    "note": "encoding display bytes ignores the color space",
+    "file": "Sources/CoreRaster/DisplayBytes.swift",
+    "anchor": "try Self.convert(linear, from: .linearSRGB, to: colorSpace)",
+    "replacement": "try Self.convert(linear, from: .linearSRGB, to: .sRGB)",
+    "filter": "DisplayBytesTests"
+  },
+  {
+    "note": "combining masks does not clamp below 0",
+    "file": "Sources/CoreRaster/Mask.swift",
+    "anchor": "storage[i] = min(max(op(storage[i], other.storage[i]), 0), 1)",
+    "replacement": "storage[i] = min(op(storage[i], other.storage[i]), 1)",
+    "filter": "MaskTests"
+  }
+]

@@ -1,6 +1,11 @@
 # CI: runs scripts/ci (no-crash lint, swift build, swift test) on Linux and
-# macOS, plus the fast-lane decision tests. The fast lane only merges a PR once
-# a check from this workflow ("CI") has passed, so keep the name stable.
+# macOS, plus the fast-lane decision tests and mutation testing (scripts/mutate):
+# "Mutation anchors" checks every plan anchor still resolves (seconds, no build),
+# and "Mutation" plants the bugs from the plan entries a PR touches (at most 15)
+# and fails if any test suite lets one through. The full sweep lives in
+# mutation.yml, because the fast lane waits on this workflow's run on main.
+# The fast lane only merges a PR once a check from this workflow ("CI") has
+# passed, so keep the name stable.
 # workflow_dispatch lets the fast lane run CI on main after its merges and on
 # refreshed PR heads: GITHUB_TOKEN pushes and merges fire no other triggers.
 name: CI
@@ -49,3 +54,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: bash Tests/fast_lane/test_fast_lane.sh
+
+  mutation-anchors:
+    name: Mutation anchors
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/mutate --validate
+
+  mutation:
+    name: Mutation
+    runs-on: ubuntu-latest
+    container: swift:6.3.3-noble
+    timeout-minutes: 45
+    steps:
+      - run: apt-get update -q && apt-get install -y -q --no-install-recommends libsqlite3-dev python3 git
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 } # --changed-since diffs against the merge base
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      # Restores the .build the full sweep (mutation.yml) saved on main, which
+      # spares the GRDB build. A fresh checkout's mtimes rebuild this package's own
+      # targets once; after that each mutation recompiles only what it touched.
+      # Restore only: this job builds nothing on main, so saving here would
+      # shadow the sweep's full cache with an empty one.
+      - uses: actions/cache/restore@v4
+        with:
+          path: .build
+          key: mutation-swift-6.3.3-${{ hashFiles('Package.resolved') }}-${{ github.sha }}
+          restore-keys: mutation-swift-6.3.3-${{ hashFiles('Package.resolved') }}-
+      # On main (push or the fast lane's dispatch) nothing is new since origin/main,
+      # so this selects nothing and exits in seconds.
+      - run: python3 scripts/mutate --run --changed-since origin/main --max 15
