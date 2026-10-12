@@ -99,7 +99,7 @@ extension CommandError {
         case .sceneNotFound(let id): self = .sceneNotFound(id)
         case .layerNotFound(let id): self = .layerNotFound(id)
         case .layerLocked(let id): self = .layerLocked(id)
-        case .invalidFill(let message): self = .invalidDocument(message)
+        case .invalidFill(let message), .invalidText(let message): self = .invalidDocument(message)
         }
     }
 }

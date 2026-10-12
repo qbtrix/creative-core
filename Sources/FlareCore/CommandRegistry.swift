@@ -31,6 +31,7 @@ public struct CommandRegistry: Sendable {
         MetadataCommands.all,
         LabelCommands.all,
         SymbolCommands.all,
+        TextCommands.all,
     ]
 
     /// Every built-in command.

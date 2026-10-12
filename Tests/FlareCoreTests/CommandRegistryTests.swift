@@ -1,6 +1,6 @@
 // CommandRegistryTests.swift: every built-in command round-trips through the
 // {"id", "params"} envelope and behaves the same after decoding (the ids are
-// checked against a hand-written list of all 23), and encode only their
+// checked against a hand-written list of all 27), and encode only their
 // params, so a command decoded after execute is fresh; unknown ids
 // and malformed envelopes throw a CommandError, never crash (seeded fuzz).
 import FlareCore
@@ -20,6 +20,7 @@ import Testing
         "scene.add", "scene.remove", "scene.timing",
         "shape.add", "shape.remove", "shape.setFill", "shape.translate",
         "symbol.add", "symbol.convert", "symbol.remove",
+        "text.add", "text.remove", "text.setFont", "text.setString",
     ]
 
     /// One sample of every built-in command, each valid on the fixture document.
@@ -31,11 +32,12 @@ import Testing
             + MetadataCommandsTests.registrySamples()
             + LabelCommandsTests.registrySamples()
             + SymbolCommandsTests.registrySamples()
+            + TextCommandsTests.registrySamples()
     }
 
-    /// The fixture document plus one unused symbol, so every sample is valid on it.
+    /// The text fixture plus one unused symbol, so every sample is valid on it.
     static func sampleDocument() -> Document {
-        var doc = Fixtures.document()
+        var doc = TextCommandsTests.withText()
         doc.symbols = [Symbol(id: "spark", name: "Spark", durationFrames: 6)]
         return doc
     }
@@ -62,7 +64,7 @@ import Testing
     }
 
     @Test func everyBuiltInCommandIsRegistered() {
-        #expect(Self.expectedIDs.count == 23)
+        #expect(Self.expectedIDs.count == 27)
         #expect(Set(Self.registry.ids) == Self.expectedIDs)
     }
 
