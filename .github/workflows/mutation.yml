@@ -1,0 +1,38 @@
+# Mutation: the full scripts/mutate sweep. Every entry in Tests/mutations/*.json
+# plants its bug and must be caught by its tests. Runs on every push to main,
+# nightly, and on demand. It is a separate workflow from CI on purpose: the fast
+# lane waits for CI on main to finish before its next merge, and a sweep takes
+# far longer than the gate. So a red sweep marks main's commit but does not hold
+# the lane; the per-PR "Mutation" job in ci.yml is the blocking check.
+name: Mutation
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '30 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mutation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sweep:
+    name: Mutation sweep
+    runs-on: ubuntu-latest
+    container: swift:6.3.3-noble
+    timeout-minutes: 120
+    steps:
+      - run: apt-get update -q && apt-get install -y -q --no-install-recommends libsqlite3-dev python3 git
+      - uses: actions/checkout@v4
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - uses: actions/cache@v4
+        with:
+          path: .build
+          key: mutation-swift-6.3.3-${{ hashFiles('Package.resolved') }}-${{ github.sha }}
+          restore-keys: mutation-swift-6.3.3-${{ hashFiles('Package.resolved') }}-
+      - run: python3 scripts/mutate --run

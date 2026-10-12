@@ -40,7 +40,7 @@ LABEL="fast-lane"
 MERGED_LABEL="fast-lane-merged"
 CI_WORKFLOWS=("CI")
 # CI job names, so CI runs started by workflow_dispatch (no PR association) still count.
-CI_CHECKS=("Linux" "macOS")
+CI_CHECKS=("Linux" "macOS" "Mutation anchors" "Mutation")
 CI_FILE="ci.yml"  # the CI workflow file, for run lookups and dispatch
 SELF_WORKFLOW="Fast Lane"
 DENY_RE='^\.github/|^\.claude/|(^|/)(CLAUDE|AGENTS)\.md$|^scripts/(ci|cloud-setup\.sh|fast-lane\.sh)$|(^|/)Package\.(swift|resolved)$|^LICENSE'
