@@ -1,6 +1,7 @@
-// Resample.swift: resizing a PixelBuffer with a separable filter. Each axis is
+// Resample.swift: resizing a PixelBuffer with a separable filter, and the 1-D
+// convolution pass (`convolved`) that resizing and blurring share. Each axis is
 // one 1-D pass over premultiplied components. A sample outside the buffer
-// reads the nearest edge pixel (clamp-to-edge). Each output's weights are
+// reads the nearest edge pixel (clamp-to-edge, `Taps.add`). Each output's weights are
 // normalized to sum to 1, so a constant image stays constant. When
 // downscaling, the filter is widened by the scale factor so every input pixel
 // counts. Weights are summed in Double. Invariant: the output size passed
@@ -43,9 +44,16 @@ public enum ResampleFilter: Hashable, Sendable {
 
 /// The input pixels one output pixel reads along one axis, with their
 /// normalized weights.
-private struct Taps {
+struct Taps {
     var indices: [Int] = []
     var weights: [Double] = []
+
+    /// Adds input pixel `j` with weight `w`, clamping `j` to the nearest edge
+    /// of a line of `length` pixels.
+    mutating func add(_ j: Int, weight w: Double, length: Int) {
+        indices.append(min(max(j, 0), length - 1))
+        weights.append(w)
+    }
 }
 
 extension PixelBuffer {
@@ -86,10 +94,22 @@ extension PixelBuffer {
     ) -> [Float] {
         if length == newLength { return input }
         let taps = taps(length: length, newLength: newLength, filter: filter)
+        return convolved(input, lines: lines, newLength: newLength, src: src, dst: dst) { taps[$0] }
+    }
+
+    /// One 1-D convolution pass over `lines` lines: output pixel `i` of each
+    /// line is the weighted sum of the input pixels `tap(i)` names, summed in
+    /// Double. `tap` is called once per output pixel, not once per line.
+    /// `src` and `dst` are the storage steps, as in `pass`.
+    static func convolved(
+        _ input: [Float], lines: Int, newLength: Int,
+        src: (along: Int, across: Int), dst: (along: Int, across: Int), tap: (Int) -> Taps
+    ) -> [Float] {
         var output = [Float](repeating: 0, count: lines * newLength * channels)
         var sum = [Double](repeating: 0, count: channels)
-        for line in 0..<lines {
-            for (i, tap) in taps.enumerated() {
+        for i in 0..<newLength {
+            let tap = tap(i)
+            for line in 0..<lines {
                 for k in 0..<channels { sum[k] = 0 }
                 for (j, w) in zip(tap.indices, tap.weights) {
                     let base = line * src.across + j * src.along
@@ -115,8 +135,7 @@ extension PixelBuffer {
             for j in first...max(first, last) {
                 let w = filter.weight((Double(j) - center) / stretch)
                 guard w != 0 else { continue }
-                tap.indices.append(min(max(j, 0), length - 1))
-                tap.weights.append(w)
+                tap.add(j, weight: w, length: length)
             }
             let total = tap.weights.reduce(0, +)
             guard total != 0 else {
