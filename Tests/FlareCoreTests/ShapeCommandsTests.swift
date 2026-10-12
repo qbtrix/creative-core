@@ -129,8 +129,8 @@ import Testing
         { e, rng, _ in
             let layer = UndoPropertyTests.anyLayer(e, &rng)
             try e.perform(TranslateShape(sceneID: Fixtures.sceneID, layerID: layer, index: anyIndex(e, layer, &rng),
-                                         dx: Double.random(in: -50...50, using: &rng),
-                                         dy: Double.random(in: -50...50, using: &rng)))
+                                         dx: UndoPropertyTests.anyNumber(in: -50...50, &rng),
+                                         dy: UndoPropertyTests.anyNumber(in: -50...50, &rng)))
         },
     ]
 
