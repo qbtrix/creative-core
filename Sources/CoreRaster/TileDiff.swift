@@ -2,7 +2,8 @@
 // tile of the grid in Tiles.swift whose components differ between two buffers
 // of one size, that tile's index and its before and after contents; unchanged
 // tiles store nothing. Components compare by bit pattern, so 0.0 to -0.0 is a
-// change and undo restores the exact bytes. Every kept tile matches its
+// change and undo restores the exact bytes; `==` compares kept tiles the same
+// way, so equal diffs always undo and redo to the same bytes. Every kept tile matches its
 // `tileRect` in a buffer of the diff's size, so undo and redo can only fail on
 // a buffer of another size, which they reject before writing anything.
 
@@ -10,11 +11,24 @@
 /// and after contents. A plain value; raster commands hold one for undo.
 public struct TileDiff: Equatable, Sendable {
     /// One changed tile: its grid index and its contents before and after.
+    /// Equal only when the indices match and both tiles match bit for bit,
+    /// unlike `PixelBuffer ==`, which treats 0.0 and -0.0 as equal.
     struct Entry: Equatable, Sendable {
         let column: Int
         let row: Int
         let before: PixelBuffer
         let after: PixelBuffer
+
+        static func == (lhs: Entry, rhs: Entry) -> Bool {
+            lhs.column == rhs.column && lhs.row == rhs.row
+                && sameBits(lhs.before, rhs.before) && sameBits(lhs.after, rhs.after)
+        }
+
+        private static func sameBits(_ a: PixelBuffer, _ b: PixelBuffer) -> Bool {
+            guard a.width == b.width, a.height == b.height else { return false }
+            let whole = TileRect(x: 0, y: 0, width: a.width, height: a.height)
+            return !TileDiff.differ(a.components, b.components, in: whole, width: a.width)
+        }
     }
 
     /// The width of the buffers the diff was made from.
