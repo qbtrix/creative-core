@@ -1,7 +1,7 @@
 // Fill.swift: how a shape's interior is painted. A solid color, or a linear
 // or radial gradient through color stops.
 //
-// Invariants (checked by FlareFormat.validate on load):
+// Invariants (checked by the format layer on load):
 // - stop offsets are finite, in 0...1 and sorted ascending (equal is allowed)
 // - a radial radius is finite and > 0
 //
@@ -83,18 +83,18 @@ public enum Fill: Codable, Sendable, Hashable {
         }
     }
 
-    /// Throws `FormatError.invalid` if the fill breaks an invariant above.
+    /// Throws `ModelError.invalidFill` if the fill breaks an invariant above.
     func validate() throws {
         var previous = 0.0
         for stop in stops {
             guard stop.offset.isFinite, (0...1).contains(stop.offset) else {
-                throw FormatError.invalid("gradient stop offset \(stop.offset) outside 0...1")
+                throw ModelError.invalidFill("gradient stop offset \(stop.offset) outside 0...1")
             }
-            guard stop.offset >= previous else { throw FormatError.invalid("gradient stops not sorted") }
+            guard stop.offset >= previous else { throw ModelError.invalidFill("gradient stops not sorted") }
             previous = stop.offset
         }
         if case .radial(_, _, let radius) = self, !(radius.isFinite && radius > 0) {
-            throw FormatError.invalid("radial gradient radius must be finite and > 0")
+            throw ModelError.invalidFill("radial gradient radius must be finite and > 0")
         }
     }
 }

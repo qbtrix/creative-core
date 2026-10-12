@@ -15,22 +15,24 @@ into a check or a test instead of repeating it here.
 FlareCore has four layers. Each depends only on the ones above it. CoreColor and CoreRaster are separate modules (see CLAUDE.md); the compiler enforces their boundaries.
 
 1. **Model**: `Document.swift`, `Fill.swift`, `Path.swift`, `Geometry.swift`,
-   `Symbols.swift`, `Instance.swift`, `StateMachine.swift`, `MachineInputs.swift`.
-   Plain values.
+   `Symbols.swift`, `Instance.swift`, `StateMachine.swift`, `MachineInputs.swift`,
+   `ModelError.swift`. Plain values.
 2. **Evaluation**: `Easing.swift`, `Timeline.swift`, `Sampling.swift`,
    `ShapeBounds.swift`, `HitTest.swift`. Read the model, never change it.
 3. **Commands**: `Command.swift`, `CommandRegistry.swift`, `*Commands.swift`.
    The only code that changes a `Document`.
-4. **Format and export**: `FlareFormat.swift`, `SymbolCycles.swift`, `Export/`.
+4. **Format and export**: `FlareFormat.swift`, `StateMachineValidation.swift`,
+   `SymbolCycles.swift`, `Export/`.
    Bytes in, bytes out.
 
 - **The model never refers to commands or the format.** No `CommandError`,
   `FormatError`, `Command` or `FlareFormat` in a model file. A model type that
-  needs to fail throws a model-level error, which the command and format layers
-  map to their own at the boundary. Review-only; Q8 (#104) fixes the current
-  violations (`Document` lookups, `Fill.validate`) and can add a grep then.
+  needs to fail throws `ModelError`, which the command layer maps with
+  `CommandError.init(_:)` and the format layer with `FormatError.init(_:)`.
+  Test: `ModelErrorTests.modelFilesNameNoUpperLayerType` (keep its file list in
+  step with the model list above).
 - **One error type per layer, and errors don't cross layers.** Today:
-  `GeometryError` (model), `TimelineError` (evaluation), `CommandError`
+  `ModelError` and `GeometryError` (model), `TimelineError` (evaluation), `CommandError`
   (commands), `FormatError` (format), one per exporter. Add a case to your
   layer's enum before you add an enum. Never throw another layer's error to
   save a case. Review-only.
