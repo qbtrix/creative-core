@@ -28,7 +28,7 @@ import Testing
     @Test func undoOfSetLayerFlagsRestores() throws {
         var engine = CommandEngine(document: Fixtures.document())
         let original = engine.document
-        try engine.perform(SetLayerFlags(sceneID: Self.s, layerID: "ball", isVisible: false, isLocked: true))
+        try engine.perform(SetLayerFlags(owner: .scene(Self.s), layerID: "ball", isVisible: false, isLocked: true))
         let ball = try #require(engine.document.scenes.first?.layers.first { $0.id == "ball" })
         #expect(!ball.isVisible)
         #expect(ball.isLocked)
@@ -38,7 +38,7 @@ import Testing
 
     @Test func nilFlagIsLeftUnchanged() throws {
         var engine = CommandEngine(document: Fixtures.document())
-        try engine.perform(SetLayerFlags(sceneID: Self.s, layerID: "ball", isLocked: true))
+        try engine.perform(SetLayerFlags(owner: .scene(Self.s), layerID: "ball", isLocked: true))
         let ball = try #require(engine.document.scenes.first?.layers.first { $0.id == "ball" })
         #expect(ball.isVisible)
         #expect(ball.isLocked)
@@ -47,19 +47,19 @@ import Testing
     @Test func missingLayerThrows() {
         var engine = CommandEngine(document: Fixtures.document())
         #expect(throws: CommandError.layerNotFound("nope")) {
-            try engine.perform(SetLayerFlags(sceneID: Self.s, layerID: "nope", isLocked: true))
+            try engine.perform(SetLayerFlags(owner: .scene(Self.s), layerID: "nope", isLocked: true))
         }
     }
 
     @Test func lockedLayerRejectsSetKeyframeUntilUnlocked() throws {
         var engine = CommandEngine(document: Fixtures.document())
-        try engine.perform(SetLayerFlags(sceneID: Self.s, layerID: "ball", isLocked: true))
+        try engine.perform(SetLayerFlags(owner: .scene(Self.s), layerID: "ball", isLocked: true))
         let locked = engine.document
         let set = SetKeyframe(sceneID: Self.s, layerID: "ball", property: "y", keyframe: Keyframe(frame: 5, value: 1))
         #expect(throws: CommandError.layerLocked("ball")) { try engine.perform(set) }
         #expect(engine.document == locked)
 
-        try engine.perform(SetLayerFlags(sceneID: Self.s, layerID: "ball", isLocked: false))
+        try engine.perform(SetLayerFlags(owner: .scene(Self.s), layerID: "ball", isLocked: false))
         try engine.perform(set)
         let ball = try #require(engine.document.scenes.first?.layers.first { $0.id == "ball" })
         #expect(ball.tracks["y"] == [Keyframe(frame: 5, value: 1)])
@@ -67,7 +67,7 @@ import Testing
 
     @Test func lockedLayerRejectsEveryContentEdit() throws {
         var engine = CommandEngine(document: Fixtures.document())
-        try engine.perform(SetLayerFlags(sceneID: Self.s, layerID: "ball", isLocked: true))
+        try engine.perform(SetLayerFlags(owner: .scene(Self.s), layerID: "ball", isLocked: true))
         let locked = engine.document
         let edits: [any Command] = [
             SetKeyframe(sceneID: Self.s, layerID: "ball", property: "x", keyframe: Keyframe(frame: 0, value: 9)),
@@ -82,15 +82,15 @@ import Testing
             #expect(engine.document == locked)
         }
         // Rename and visibility still work on a locked layer.
-        try engine.perform(RenameLayer(sceneID: Self.s, layerID: "ball", name: "B"))
-        try engine.perform(SetLayerFlags(sceneID: Self.s, layerID: "ball", isVisible: false))
+        try engine.perform(RenameLayer(owner: .scene(Self.s), layerID: "ball", name: "B"))
+        try engine.perform(SetLayerFlags(owner: .scene(Self.s), layerID: "ball", isVisible: false))
     }
 
     @Test func undoOfEditWorksAfterLockIsUndone() throws {
         var engine = CommandEngine(document: Fixtures.document())
         let original = engine.document
         try engine.perform(AddShape(sceneID: Self.s, layerID: "ball", shape: Shape(points: [Point(x: 1, y: 1)])))
-        try engine.perform(SetLayerFlags(sceneID: Self.s, layerID: "ball", isLocked: true))
+        try engine.perform(SetLayerFlags(owner: .scene(Self.s), layerID: "ball", isLocked: true))
         try engine.undo()
         try engine.undo()
         #expect(engine.document == original)
@@ -99,9 +99,9 @@ import Testing
     /// Random flag steps, valid and invalid, for assertUndoRestoresDocument.
     static let undoSteps: [UndoStep] = [
         { e, rng, _ in
-            let layer = UndoPropertyTests.anyLayer(e, &rng)
+            let (owner, layer) = UndoPropertyTests.anyTarget(e, &rng)
             let visible: Bool? = Bool.random(using: &rng) ? Bool.random(using: &rng) : nil
-            try e.perform(SetLayerFlags(sceneID: Fixtures.sceneID, layerID: layer, isVisible: visible,
+            try e.perform(SetLayerFlags(owner: owner, layerID: layer, isVisible: visible,
                                         isLocked: Bool.random(using: &rng)))
         },
     ]

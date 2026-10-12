@@ -14,7 +14,7 @@ import Testing
         var engine = CommandEngine(document: Fixtures.document(), maxUndoDepth: 3)
         var afterTwo: Document?
         for i in 1...5 {
-            try engine.perform(RenameLayer(sceneID: s, layerID: "ball", name: "Name \(i)"))
+            try engine.perform(RenameLayer(owner: .scene(s), layerID: "ball", name: "Name \(i)"))
             if i == 2 { afterTwo = engine.document }
         }
         for _ in 0..<3 { try engine.undo() }
@@ -30,8 +30,8 @@ import Testing
         var engine = CommandEngine(document: Fixtures.document(), maxUndoDepth: 1)
         let original = engine.document
         try engine.group("Two Renames") { e in
-            try e.perform(RenameLayer(sceneID: s, layerID: "ball", name: "A"))
-            try e.perform(RenameLayer(sceneID: s, layerID: "ball", name: "B"))
+            try e.perform(RenameLayer(owner: .scene(s), layerID: "ball", name: "A"))
+            try e.perform(RenameLayer(owner: .scene(s), layerID: "ball", name: "B"))
         }
         try engine.undo()
         #expect(engine.document == original)
@@ -41,7 +41,7 @@ import Testing
         for depth in [0, -5] {
             var engine = CommandEngine(document: Fixtures.document(), maxUndoDepth: depth)
             #expect(engine.maxUndoDepth == 0)
-            try engine.perform(RenameLayer(sceneID: s, layerID: "ball", name: "X"))
+            try engine.perform(RenameLayer(owner: .scene(s), layerID: "ball", name: "X"))
             #expect(engine.document.scenes[0].layers[1].name == "X")
             #expect(!engine.canUndo)
             #expect(throws: CommandError.nothingToUndo) { try engine.undo() }

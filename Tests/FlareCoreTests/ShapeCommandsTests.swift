@@ -92,7 +92,7 @@ import Testing
 
     @Test func lockedLayerRejectsShapeEdits() throws {
         var engine = CommandEngine(document: Fixtures.document())
-        try engine.perform(SetLayerFlags(sceneID: Self.s, layerID: "ball", isLocked: true))
+        try engine.perform(SetLayerFlags(owner: .scene(Self.s), layerID: "ball", isLocked: true))
         let locked = engine.document
         for edit in Self.edits(index: 0) {
             #expect(throws: CommandError.layerLocked("ball")) { try engine.perform(edit) }

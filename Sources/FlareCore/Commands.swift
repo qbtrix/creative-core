@@ -18,89 +18,111 @@ public enum CoreCommands {
     ]
 }
 
-public struct AddLayer: Command {
+public struct AddLayer: LayerCommand {
     public static let id = "layer.add"
     public var label: String { "Add Layer" }
-    public var sceneID: String
+    public var owner: LayerOwner
     public var layer: Layer
     /// Insert position; nil appends.
     public var index: Int?
+    public var layerID: String { layer.id }
 
-    public init(sceneID: String, layer: Layer, index: Int? = nil) {
-        self.sceneID = sceneID
+    private enum CodingKeys: String, CodingKey { case layer, index }
+
+    public init(owner: LayerOwner, layer: Layer, index: Int? = nil) {
+        self.owner = owner
         self.layer = layer
         self.index = index
     }
 
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        try self.init(owner: LayerOwner(from: decoder), layer: c.decode(Layer.self, forKey: .layer),
+                      index: c.decodeIfPresent(Int.self, forKey: .index))
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        try owner.encode(to: encoder)
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(layer, forKey: .layer)
+        try c.encodeIfPresent(index, forKey: .index)
+    }
+
     public mutating func execute(_ document: inout Document) throws {
-        let s = try document.sceneIndex(sceneID)
-        var layers = document.scenes[s].layers
-        guard !layers.contains(where: { $0.id == layer.id }) else { throw CommandError.duplicateID(layer.id) }
-        let at = min(max(index ?? layers.count, 0), layers.count)
-        layers.insert(layer, at: at)
-        document.scenes[s].layers = layers
+        try document.withLayers(owner) { layers in
+            guard !layers.contains(where: { $0.id == layer.id }) else { throw CommandError.duplicateID(layer.id) }
+            layers.insert(layer, at: min(max(index ?? layers.count, 0), layers.count))
+        }
     }
 
     public func undo(_ document: inout Document) throws {
-        let s = try document.sceneIndex(sceneID)
-        guard let i = document.scenes[s].layers.firstIndex(where: { $0.id == layer.id }) else {
-            throw CommandError.layerNotFound(layer.id)
-        }
-        document.scenes[s].layers.remove(at: i)
+        var remove = RemoveLayer(owner: owner, layerID: layer.id)
+        try remove.execute(&document)
     }
 }
 
-public struct RemoveLayer: Command {
+public struct RemoveLayer: LayerCommand {
     public static let id = "layer.remove"
     public var label: String { "Delete Layer" }
-    public var sceneID: String
+    public var owner: LayerOwner
     public var layerID: String
     var removed: Layer?
     var removedIndex: Int?
 
-    private enum CodingKeys: String, CodingKey { case sceneID, layerID }
-
-    public init(sceneID: String, layerID: String) {
-        self.sceneID = sceneID
+    public init(owner: LayerOwner, layerID: String) {
+        self.owner = owner
         self.layerID = layerID
     }
 
+    public init(from decoder: any Decoder) throws { (owner, layerID) = try Self.decodeAddress(from: decoder) }
+    public func encode(to encoder: any Encoder) throws { try encodeAddress(to: encoder) }
+
     public mutating func execute(_ document: inout Document) throws {
-        let s = try document.sceneIndex(sceneID)
-        guard let i = document.scenes[s].layers.firstIndex(where: { $0.id == layerID }) else {
-            throw CommandError.layerNotFound(layerID)
+        let id = layerID
+        (removed, removedIndex) = try document.withLayers(owner) { layers in
+            guard let i = layers.firstIndex(where: { $0.id == id }) else { throw CommandError.layerNotFound(id) }
+            return (layers.remove(at: i), i)
         }
-        removed = document.scenes[s].layers.remove(at: i)
-        removedIndex = i
     }
 
     public func undo(_ document: inout Document) throws {
         guard let removed, let removedIndex else { throw CommandError.notExecuted }
-        let s = try document.sceneIndex(sceneID)
-        let at = min(removedIndex, document.scenes[s].layers.count)
-        document.scenes[s].layers.insert(removed, at: at)
+        try document.withLayers(owner) { layers in
+            layers.insert(removed, at: min(removedIndex, layers.count))
+        }
     }
 }
 
-public struct RenameLayer: Command {
+public struct RenameLayer: LayerCommand {
     public static let id = "layer.rename"
     public var label: String { "Rename Layer" }
-    public var sceneID: String
+    public var owner: LayerOwner
     public var layerID: String
     public var name: String
     var oldName: String?
 
-    private enum CodingKeys: String, CodingKey { case sceneID, layerID, name }
+    private enum CodingKeys: String, CodingKey { case name }
 
-    public init(sceneID: String, layerID: String, name: String) {
-        self.sceneID = sceneID
+    public init(owner: LayerOwner, layerID: String, name: String) {
+        self.owner = owner
         self.layerID = layerID
         self.name = name
     }
 
+    public init(from decoder: any Decoder) throws {
+        (owner, layerID) = try Self.decodeAddress(from: decoder)
+        name = try decoder.container(keyedBy: CodingKeys.self).decode(String.self, forKey: .name)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        try encodeAddress(to: encoder)
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(name, forKey: .name)
+    }
+
     public mutating func execute(_ document: inout Document) throws {
         let newName = name
-        oldName = try document.withLayer(scene: sceneID, layer: layerID) { layer in
+        oldName = try document.withLayer(owner, layer: layerID) { layer in
             defer { layer.name = newName }
             return layer.name
         }
@@ -108,7 +130,7 @@ public struct RenameLayer: Command {
 
     public func undo(_ document: inout Document) throws {
         guard let oldName else { throw CommandError.notExecuted }
-        try document.withLayer(scene: sceneID, layer: layerID) { $0.name = oldName }
+        try document.withLayer(owner, layer: layerID) { $0.name = oldName }
     }
 }
 

@@ -34,7 +34,7 @@ import Testing
         #expect(CommandError(ModelError.invalidFill("d")) == .invalidDocument("d"))
         var engine = CommandEngine(document: Fixtures.document())
         #expect(throws: CommandError.layerNotFound("ghost")) {
-            try engine.perform(RenameLayer(sceneID: Self.s, layerID: "ghost", name: "X"))
+            try engine.perform(RenameLayer(owner: .scene(Self.s), layerID: "ghost", name: "X"))
         }
     }
 

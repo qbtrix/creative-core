@@ -2,17 +2,9 @@
 // CommandEngine validates their result scoped to that layer. A command listed
 // here must never touch another layer, a scene field, a symbol or a machine.
 //
-// Until each family takes an owner param (Q5b to Q5d), it names a scene layer:
+// Until each family takes an owner param (Q5c, Q5d), it names a scene layer:
 // the extension below computes `owner` from `sceneID` for every listed command.
 
-extension AddLayer: SceneLayerCommand {
-    public var layerID: String { layer.id }
-}
-
-extension RemoveLayer: SceneLayerCommand {}
-extension RenameLayer: SceneLayerCommand {}
-extension ReorderLayer: SceneLayerCommand {}
-extension SetLayerFlags: SceneLayerCommand {}
 extension SetKeyframe: SceneLayerCommand {}
 extension MoveKeyframe: SceneLayerCommand {}
 extension RemoveKeyframe: SceneLayerCommand {}
@@ -34,4 +26,22 @@ protocol SceneLayerCommand: LayerCommand {
 
 extension SceneLayerCommand {
     public var owner: LayerOwner { .scene(sceneID) }
+}
+
+/// The key a command writes its `layerID` under, beside its owner's key.
+private enum LayerAddressKey: String, CodingKey { case layerID }
+
+extension LayerCommand {
+    /// Reads the owner and "layerID", flat beside the command's own keys.
+    static func decodeAddress(from decoder: any Decoder) throws -> (LayerOwner, String) {
+        let c = try decoder.container(keyedBy: LayerAddressKey.self)
+        return try (LayerOwner(from: decoder), c.decode(String.self, forKey: .layerID))
+    }
+
+    /// Writes the owner and "layerID", flat beside the command's own keys.
+    func encodeAddress(to encoder: any Encoder) throws {
+        try owner.encode(to: encoder)
+        var c = encoder.container(keyedBy: LayerAddressKey.self)
+        try c.encode(layerID, forKey: .layerID)
+    }
 }
