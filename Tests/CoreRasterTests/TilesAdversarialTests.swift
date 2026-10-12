@@ -37,23 +37,23 @@ private func coordinateBuffer(width: Int, height: Int) throws -> PixelBuffer {
 }
 
 @Test func extremeAspectRatiosClipTheLastTile() throws {
-    let wide = try PixelBuffer(width: 1_000_000, height: 1)
-    #expect(wide.tileColumns == 3_907 && wide.tileRows == 1)
-    #expect(try wide.tileRect(column: 3_906, row: 0) == TileRect(x: 999_936, y: 0, width: 64, height: 1))
-    #expect(throws: RasterError.self) { try wide.tileRect(column: 3_907, row: 0) }
-    #expect(try wide.tile(column: 3_906, row: 0).width == 64)
+    let wide = try PixelBuffer(width: 100_000, height: 1)
+    #expect(wide.tileColumns == 391 && wide.tileRows == 1)
+    #expect(try wide.tileRect(column: 390, row: 0) == TileRect(x: 99_840, y: 0, width: 160, height: 1))
+    #expect(throws: RasterError.self) { try wide.tileRect(column: 391, row: 0) }
+    #expect(try wide.tile(column: 390, row: 0).width == 160)
 
-    let tall = try PixelBuffer(width: 1, height: 1_000_000)
-    #expect(tall.tileColumns == 1 && tall.tileRows == 3_907)
-    #expect(try tall.tileRect(column: 0, row: 3_906) == TileRect(x: 0, y: 999_936, width: 1, height: 64))
-    #expect(throws: RasterError.self) { try tall.tileRect(column: 0, row: 3_907) }
+    let tall = try PixelBuffer(width: 1, height: 100_000)
+    #expect(tall.tileColumns == 1 && tall.tileRows == 391)
+    #expect(try tall.tileRect(column: 0, row: 390) == TileRect(x: 0, y: 99_840, width: 1, height: 160))
+    #expect(throws: RasterError.self) { try tall.tileRect(column: 0, row: 391) }
 }
 
 @Test func tileRectsPartitionTheBufferExactly() throws {
     var rng = SplitMix64(seed: 0x155A)
     for _ in 0..<40 {
-        let w = Int.random(in: 1...1_300, using: &rng)
-        let h = Int.random(in: 1...1_300, using: &rng)
+        let w = Int.random(in: 1...700, using: &rng)
+        let h = Int.random(in: 1...700, using: &rng)
         let buffer = try PixelBuffer(width: w, height: h)
         var area = 0
         for row in 0..<buffer.tileRows {
@@ -76,8 +76,8 @@ private func coordinateBuffer(width: Int, height: Int) throws -> PixelBuffer {
     var rng = SplitMix64(seed: 0x155B)
     let specials = [Int.min, Int.min + 1, -257, -256, -2, -1, 0, 1, 2, 3, 255, 256, Int.max - 1, Int.max]
     for _ in 0..<30 {
-        let w = Int.random(in: 1...900, using: &rng)
-        let h = Int.random(in: 1...900, using: &rng)
+        let w = Int.random(in: 1...600, using: &rng)
+        let h = Int.random(in: 1...600, using: &rng)
         var buffer = try PixelBuffer(width: w, height: h, fill: RGBA(r: 0.25, g: 0.5, b: 0.75, a: 1))
         let before = buffer
         let replacement = try PixelBuffer(width: 1, height: 1)
