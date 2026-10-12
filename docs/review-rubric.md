@@ -56,4 +56,7 @@ merge unless the PR body explains it. The rules behind each question are in
 - [ ] A bug fix comes with a test that failed before the fix?
 - [ ] Randomness is seeded with `SplitMix64`, and new parsers have a fuzz
       test?
+- [ ] New logic with an invariant (a guard, a limit, a formula, an undo path)
+      has an entry in `Tests/mutations/`, and `scripts/mutate --run` reports
+      it caught?
 - [ ] `scripts/ci` printed `CI: PASS` on the rebased branch?

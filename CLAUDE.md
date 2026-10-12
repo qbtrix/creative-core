@@ -70,6 +70,12 @@ the other modules yet.
   default). Add a test that decodes a file without the field.
 - **Every change gets a test.** Swift Testing (`import Testing`, `@Test`,
   `#expect`). Seeded randomness only (`SplitMix64` in `Tests/FlareCoreTests/Support.swift`).
+- **Invariants get a mutation entry.** New logic with an invariant (a guard,
+  a limit, a formula, an undo path) adds one entry to
+  `Tests/mutations/<module>.json` in the same PR, and
+  `scripts/mutate --run --only "<words from its note>"` must report it caught.
+  A refactor that moves an anchor repoints it. See `docs/engineering.md`,
+  "Mutation testing".
 - **Parsers get property and fuzz tests.** Anything that reads untrusted bytes
   gets a seeded fuzz test that asserts it throws instead of crashing.
 - **No new dependencies** without an issue that approves them. GRDB is
@@ -127,6 +133,8 @@ fact and reverts anything wrong.
 scripts/ci                                  # lint + build + test: the gate
 swift test --filter EasingTests             # one suite while iterating
 bash Tests/fast_lane/test_fast_lane.sh      # fast-lane decision tests (needs jq)
+scripts/mutate --validate                   # every mutation anchor resolves once
+scripts/mutate --run --changed-since origin/main  # plant the bugs your diff touches
 ```
 
 ## Layout
