@@ -25,7 +25,7 @@ import Testing
 
     @Test(arguments: 0..<200)
     func undoAllRestoresOriginal(seed: UInt64) throws {
-        try assertUndoRestoresDocument(seed: seed, steps: Self.allSteps)
+        try assertUndoRestoresDocument(seed: seed, steps: Self.allSteps, start: Fixtures.withSymbol())
     }
 
     @Test(arguments: 0..<200)
@@ -50,6 +50,17 @@ import Testing
         return layers.indices.contains(i) ? layers[i].id : "missing"
     }
 
+    /// An owner and one of its layers (or "missing"): the first symbol's when
+    /// there is one, the first scene's, or about one time in eight a missing symbol.
+    static func anyTarget(_ e: CommandEngine, _ rng: inout SplitMix64) -> (LayerOwner, String) {
+        let pick = Int.random(in: 0..<8, using: &rng), symbol = e.document.symbols.first
+        let owner: LayerOwner = if pick == 0 { .symbol("missing") }
+            else if pick < 4, let symbol { .symbol(symbol.id) } else { .scene(Fixtures.sceneID) }
+        let layers = e.document.layers(of: owner) ?? []
+        let i = Int.random(in: 0..<(layers.count + 1), using: &rng)
+        return (owner, layers.indices.contains(i) ? layers[i].id : "missing")
+    }
+
     static func anyProp(_ rng: inout SplitMix64) -> String { props.randomElement(using: &rng) ?? "x" }
 
     /// Layer, keyframe and shape commands (Commands.swift).
@@ -57,15 +68,16 @@ import Testing
         { e, rng, nextID in
             nextID += 1
             let index = Int.random(in: -2...5, using: &rng)
-            try e.perform(AddLayer(sceneID: Fixtures.sceneID,
+            try e.perform(AddLayer(owner: anyTarget(e, &rng).0,
                                    layer: Layer(id: "L\(nextID)", name: "Layer \(nextID)"), index: index))
         },
         { e, rng, _ in
-            try e.perform(RemoveLayer(sceneID: Fixtures.sceneID, layerID: anyLayer(e, &rng)))
+            let (owner, layer) = anyTarget(e, &rng)
+            try e.perform(RemoveLayer(owner: owner, layerID: layer))
         },
         { e, rng, _ in
-            let layer = anyLayer(e, &rng)
-            try e.perform(RenameLayer(sceneID: Fixtures.sceneID, layerID: layer,
+            let (owner, layer) = anyTarget(e, &rng)
+            try e.perform(RenameLayer(owner: owner, layerID: layer,
                                       name: "n\(Int.random(in: -1...30, using: &rng))"))
         },
         { e, rng, _ in
@@ -93,10 +105,10 @@ import Testing
             try e.perform(AddShape(sceneID: Fixtures.sceneID, layerID: layer, shape: shape))
         },
         { e, rng, _ in
-            let layer = anyLayer(e, &rng)
-            let count = e.document.scenes.first?.layers.count ?? 0
+            let (owner, layer) = anyTarget(e, &rng)
+            let count = e.document.layers(of: owner)?.count ?? 0
             let to = Int.random(in: -1...count, using: &rng)
-            try e.perform(ReorderLayer(sceneID: Fixtures.sceneID, layerID: layer, toIndex: to))
+            try e.perform(ReorderLayer(owner: owner, layerID: layer, toIndex: to))
         },
     ]
 }

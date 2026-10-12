@@ -43,7 +43,8 @@ import Testing
     /// every sample is valid on it.
     static func sampleDocument() -> Document {
         var doc = TextCommandsTests.withText()
-        doc.symbols = [Symbol(id: "spark", name: "Spark", durationFrames: 6)]
+        doc.symbols = [Symbol(id: "spark", name: "Spark", durationFrames: 6,
+                              layers: [Layer(id: "glow", name: "Glow"), Layer(id: "core", name: "Core")])]
         doc.scenes[0].guides = GuideCommandsTests.guided().scenes[0].guides
         doc.swatches = [Swatch(name: "Ink", color: .black)]
         return doc
@@ -53,20 +54,33 @@ import Testing
     static func coreSamples() -> [any Command] {
         let s = Fixtures.sceneID
         return [
-            AddLayer(sceneID: s, layer: Layer(id: "new", name: "New"), index: 1),
-            RemoveLayer(sceneID: s, layerID: "bg"),
-            RenameLayer(sceneID: s, layerID: "ball", name: "Sphere"),
+            AddLayer(owner: .scene(s), layer: Layer(id: "new", name: "New"), index: 1),
+            RemoveLayer(owner: .scene(s), layerID: "bg"),
+            RenameLayer(owner: .scene(s), layerID: "ball", name: "Sphere"),
             SetKeyframe(sceneID: s, layerID: "ball", property: "y",
                         keyframe: Keyframe(frame: 12, value: 5, easing: .easeInOut)),
             MoveKeyframe(sceneID: s, layerID: "ball", property: "x", from: 24, to: 30),
             RemoveKeyframe(sceneID: s, layerID: "ball", property: "x", frame: 0),
             AddShape(sceneID: s, layerID: "bg",
                      shape: Shape(points: [Point(x: 1, y: 2), Point(x: 3, y: 4)], closed: false)),
-            ReorderLayer(sceneID: s, layerID: "bg", toIndex: 1),
-            SetLayerFlags(sceneID: s, layerID: "ball", isVisible: false, isLocked: true),
+            ReorderLayer(owner: .scene(s), layerID: "bg", toIndex: 1),
+            SetLayerFlags(owner: .scene(s), layerID: "ball", isVisible: false, isLocked: true),
             RemoveShape(sceneID: s, layerID: "ball", index: 0),
             SetShapeFill(sceneID: s, layerID: "ball", index: 0, fill: .solid(Color(r: 0, g: 0, b: 1))),
             TranslateShape(sceneID: s, layerID: "ball", index: 0, dx: 1, dy: 1),
+        ]
+    }
+
+    /// One symbol-owned sample per command that takes an owner, valid on
+    /// `sampleDocument()`. Kept apart from `samples()`, which holds one per id.
+    static func symbolSamples() -> [any Command] {
+        let sym = LayerOwner.symbol("spark")
+        return [
+            AddLayer(owner: sym, layer: Layer(id: "new", name: "New"), index: 0),
+            RemoveLayer(owner: sym, layerID: "glow"),
+            RenameLayer(owner: sym, layerID: "core", name: "Heart"),
+            ReorderLayer(owner: sym, layerID: "glow", toIndex: 1),
+            SetLayerFlags(owner: sym, layerID: "core", isLocked: true),
         ]
     }
 
@@ -82,11 +96,14 @@ import Testing
     }
 
     @Test func everyBuiltInRoundTripsAndBehavesTheSame() throws {
-        for original in Self.samples() {
+        for original in Self.samples() + Self.symbolSamples() {
             let data = try Self.registry.encode(original)
             let object = try JSONSerialization.jsonObject(with: data) as? [String: Any]
             #expect(object?["id"] as? String == type(of: original).id)
             #expect(object?["params"] is [String: Any])
+            if original is any LayerCommand, let params = object?["params"] as? [String: Any] {
+                #expect(params.keys.filter { $0 == "sceneID" || $0 == "symbolID" }.count == 1, "owner not flat")
+            }
 
             let decoded = try Self.registry.decode(data)
             #expect(type(of: decoded).id == type(of: original).id)
@@ -108,7 +125,7 @@ import Testing
     }
 
     @Test func encodedCommandCarriesParamsOnly() throws {
-        var cmd = RemoveLayer(sceneID: "s1", layerID: "ball")
+        var cmd = RemoveLayer(owner: .scene("s1"), layerID: "ball")
         var d = Fixtures.document()
         try cmd.execute(&d)
         let data = try Self.registry.encode(cmd)
@@ -130,7 +147,7 @@ import Testing
     /// from an executed command performs and undoes exactly on a fresh document.
     @Test func everyBuiltInEncodesTheSameAfterExecute() throws {
         let start = Self.sampleDocument()
-        for original in Self.samples() {
+        for original in Self.samples() + Self.symbolSamples() {
             let id = type(of: original).id
             let before = try Self.registry.encode(original)
             var executed = original
@@ -155,6 +172,25 @@ import Testing
         #expect(doc.scenes[0].layers[1].tracks["x"]?.first?.frame == 5)
     }
 
+    /// Envelopes written before layer list commands took an owner decode as
+    /// scene-owned, perform, and re-encode byte for byte.
+    @Test(arguments: [
+        #"{"id":"layer.add","params":{"index":1,"layer":{"id":"new","instances":[],"isLocked":false,"isVisible":true,"#
+            + #""name":"New","shapes":[],"tracks":{}},"sceneID":"s1"}}"#,
+        #"{"id":"layer.remove","params":{"layerID":"bg","sceneID":"s1"}}"#,
+        #"{"id":"layer.rename","params":{"layerID":"ball","name":"Sphere","sceneID":"s1"}}"#,
+        #"{"id":"layer.reorder","params":{"layerID":"bg","sceneID":"s1","toIndex":1}}"#,
+        #"{"id":"layer.setFlags","params":{"isLocked":true,"layerID":"ball","sceneID":"s1"}}"#,
+    ])
+    func preOwnerLayerEnvelopesStayByteIdentical(_ json: String) throws {
+        let decoded = try Self.registry.decode(Data(json.utf8))
+        #expect((decoded as? any LayerCommand)?.owner == .scene("s1"))
+        #expect(try Self.registry.encode(decoded) == Data(json.utf8))
+        var e = CommandEngine(document: Fixtures.document())
+        try e.perform(decoded)
+        #expect(e.document != Fixtures.document())
+    }
+
     @Test func unknownIDThrows() {
         #expect(throws: CommandError.unknownCommand("layer.explode")) {
             try Self.registry.decode(Data(#"{"id":"layer.explode","params":{}}"#.utf8))
@@ -163,7 +199,7 @@ import Testing
             try CommandRegistry().decode(Data(#"{"id":"layer.add","params":{}}"#.utf8))
         }
         #expect(throws: CommandError.unknownCommand("layer.rename")) {
-            try CommandRegistry().encode(RenameLayer(sceneID: "s", layerID: "l", name: "n"))
+            try CommandRegistry().encode(RenameLayer(owner: .scene("s"), layerID: "l", name: "n"))
         }
     }
 
@@ -174,6 +210,8 @@ import Testing
         #"{"id":"layer.remove","params":null}"#,
         #"{"id":"layer.remove","params":[]}"#,
         #"{"id":"layer.remove","params":{"sceneID":"s1"}}"#,
+        #"{"id":"layer.remove","params":{"layerID":"bg"}}"#,
+        #"{"id":"layer.remove","params":{"layerID":"bg","sceneID":"s1","symbolID":"spark"}}"#,
         #"{"id":"keyframe.move","params":{"sceneID":"s1","layerID":"b","property":"x","from":"0","to":1}}"#,
         #"{"id":"keyframe.move","params":{"sceneID":"s1","layerID":"b","property":"x","from":0,"to":99999999999999999999999}}"#,
     ])

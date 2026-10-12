@@ -70,7 +70,7 @@ import Testing
 
     @Test func undoEndsCoalescing() throws {
         var engine = CommandEngine(document: Fixtures.document())
-        try engine.perform(RenameLayer(sceneID: s, layerID: "ball", name: "Planet"))
+        try engine.perform(RenameLayer(owner: .scene(s), layerID: "ball", name: "Planet"))
         let renamed = engine.document
         try drag(&engine, from: 24, steps: 2, key: "k")
         try engine.undo()
