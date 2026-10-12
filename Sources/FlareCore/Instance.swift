@@ -5,6 +5,7 @@
 // Invariants (checked by the format layer on load):
 // - symbolID names a symbol in Document.symbols
 // - firstFrame >= 0
+// - every transform component is finite
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else

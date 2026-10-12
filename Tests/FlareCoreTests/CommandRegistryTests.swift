@@ -1,6 +1,6 @@
 // CommandRegistryTests.swift: every built-in command round-trips through the
 // {"id", "params"} envelope and behaves the same after decoding (the ids are
-// checked against a hand-written list of all 34), and encode only their
+// checked against a hand-written list of all 37), and encode only their
 // params, so a command decoded after execute is fresh; unknown ids
 // and malformed envelopes throw a CommandError, never crash (seeded fuzz).
 import FlareCore
@@ -16,6 +16,7 @@ import Testing
         "document.metadata",
         "keyframe.move", "keyframe.remove", "keyframe.set", "keyframe.setEasing", "keyframe.shift",
         "guide.add", "guide.move", "guide.remove",
+        "instance.add", "instance.remove", "instance.setTransform",
         "label.remove", "label.set",
         "layer.add", "layer.remove", "layer.rename", "layer.reorder", "layer.setFlags",
         "scene.add", "scene.remove", "scene.timing",
@@ -37,14 +38,17 @@ import Testing
             + SymbolCommandsTests.registrySamples()
             + TextCommandsTests.registrySamples()
             + SwatchCommandsTests.registrySamples()
+            + InstanceCommandsTests.registrySamples()
     }
 
-    /// The text fixture plus one unused symbol, one guide and one swatch, so
-    /// every sample is valid on it.
+    /// The text fixture plus unused two-layer "spark", "dot" (layer "d") placed
+    /// on "bg", one guide and one swatch, so every sample is valid on it.
     static func sampleDocument() -> Document {
         var doc = TextCommandsTests.withText()
         doc.symbols = [Symbol(id: "spark", name: "Spark", durationFrames: 6,
-                              layers: [Layer(id: "glow", name: "Glow"), Layer(id: "core", name: "Core")])]
+                              layers: [Layer(id: "glow", name: "Glow"), Layer(id: "core", name: "Core")]),
+                       Symbol(id: "dot", name: "Dot", layers: [Layer(id: "d", name: "D")])]
+        doc.scenes[0].layers[0].instances = [Instance(symbolID: "dot")]
         doc.scenes[0].guides = GuideCommandsTests.guided().scenes[0].guides
         doc.swatches = [Swatch(name: "Ink", color: .black)]
         return doc
@@ -85,7 +89,7 @@ import Testing
     }
 
     @Test func everyBuiltInCommandIsRegistered() {
-        #expect(Self.expectedIDs.count == 34)
+        #expect(Self.expectedIDs.count == 37)
         #expect(Set(Self.registry.ids) == Self.expectedIDs)
     }
 

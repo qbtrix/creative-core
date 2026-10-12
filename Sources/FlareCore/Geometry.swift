@@ -115,6 +115,11 @@ public struct Transform: Codable, Sendable, Hashable {
 
     public static let identity = Transform()
 
+    /// True if every component is finite (no NaN or infinity).
+    public var isFinite: Bool {
+        [x, y, scaleX, scaleY, rotation].allSatisfy(\.isFinite)
+    }
+
     /// translate * rotate * scale: scale first, then rotate, then move.
     public var matrix: Matrix {
         Matrix.translation(x: x, y: y) * Matrix.rotation(degrees: rotation) * Matrix.scale(x: scaleX, y: scaleY)
