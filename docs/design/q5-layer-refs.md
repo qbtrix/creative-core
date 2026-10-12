@@ -161,8 +161,10 @@ Five issues in the `docs/gaps.md` format. Q5b to Q5d land in order, because each
 
 Not in this breakdown, each its own gap row once this is approved: `SetShapeStroke` (a shape command, so it takes `owner`), `SetSceneCanvas` for size and background (scene-scoped), and the state machine family (document-scoped). None of them depends on the open questions below.
 
-## 6. Open questions
+## 6. Decisions
 
-1. **Call sites.** This plan moves all 132 test call sites to `owner:` and keeps one init per command, per `docs/engineering.md:54-56`. The other path keeps `init(sceneID:layerID:...)` forever as a convenience: fewer changed lines, but two ways to build every layer command. Which one?
-2. **Nested authoring.** Should `ConvertToSymbol` also take an owner, so layers inside a symbol can become a nested symbol? It stays scene-only in this plan.
-3. **Encoding.** Flat `sceneID`/`symbolID` keys cost about 160 lines of hand-written Codable across 18 commands, and buy byte-identical old envelopes. Nested `"owner": {...}` saves no code, because old journals still need a `sceneID` fallback decoder. Is flat the right call?
+Approved with Option A as recommended. The three open questions are settled:
+
+1. **Call sites:** one init per command. All 132 test call sites move to `owner:`, per `docs/engineering.md`. There is no `init(sceneID:layerID:...)` convenience.
+2. **Nested authoring:** out of scope. `ConvertToSymbol` stays scene-only until something needs nested symbols.
+3. **Encoding:** flat `sceneID` / `symbolID` keys, so old journal envelopes stay byte-identical.
