@@ -159,6 +159,10 @@ public enum FlareFormat {
                 if let width = shape.stroke?.width, !(width.isFinite && width >= 0) {
                     throw FormatError.invalid("layer \(layer.id): stroke width must be finite and >= 0")
                 }
+                let points = shape.points + (shape.path?.elements.flatMap(\.points) ?? [])
+                guard points.allSatisfy({ $0.x.isFinite && $0.y.isFinite }) else {
+                    throw FormatError.invalid("layer \(layer.id): shape has a non-finite point")
+                }
             }
             for (property, track) in layer.tracks {
                 guard !track.isEmpty else { throw FormatError.invalid("layer \(layer.id): empty track \(property)") }
@@ -224,6 +228,16 @@ public enum FlareFormat {
 }
 
 extension PathElement {
+    /// Points stored in this element, for the finite check.
+    var points: [Point] {
+        switch self {
+        case .move(let to), .line(let to): [to]
+        case .quad(let control, let to): [control, to]
+        case .cubic(let control1, let control2, let to): [control1, control2, to]
+        case .close: []
+        }
+    }
+
     /// Points stored in this element, for the size limit.
     var pointCount: Int {
         switch self {
