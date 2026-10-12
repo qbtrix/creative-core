@@ -3,9 +3,9 @@
 // Invariants a reader must keep: width and height are at least 1, the pixel
 // count is at most `maxPixels`, `storage.count == width * height * 4`, and every
 // stored component is finite. Every size goes through `validatedSize`, and every
-// write through `setPixel` or `init(checkedWidth:height:storage:)` (whose
-// callers in this module check the same rules), so the invariants hold for any
-// value of this type.
+// write through `setPixel`, `copyRows` or `init(checkedWidth:height:storage:)`
+// (whose callers in this module check the same rules), so the invariants hold
+// for any value of this type.
 
 /// One pixel: four Float32 components. Inside a `PixelBuffer` the color is
 /// premultiplied by alpha; the helpers convert to and from straight alpha.
@@ -103,6 +103,19 @@ public struct PixelBuffer: Equatable, Sendable {
 
     /// Row-major premultiplied components, for this module's image operations.
     var components: [Float] { storage }
+
+    /// Copies all of `source` into this buffer with its top left at (`x`, `y`),
+    /// whole rows at a time. For this module's image operations: the caller
+    /// has checked that the rectangle lies inside this buffer. `source` is a
+    /// valid buffer, so every copied component is finite.
+    mutating func copyRows(from source: PixelBuffer, toX x: Int, toY y: Int) {
+        let rowCount = source.width * Self.channels
+        for row in 0..<source.height {
+            let from = row * rowCount
+            let to = ((y + row) * width + x) * Self.channels
+            storage.replaceSubrange(to..<(to + rowCount), with: source.storage[from..<(from + rowCount)])
+        }
+    }
 
     /// The premultiplied pixel at column `x`, row `y` (0, 0 is top left).
     /// Throws `RasterError.invalid` when the coordinate is outside the buffer.
