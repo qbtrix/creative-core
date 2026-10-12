@@ -24,6 +24,9 @@ import Testing
             },
             "durationFrames" : 48,
             "fps" : 24,
+            "guides" : [
+
+            ],
             "height" : 400,
             "id" : "s1",
             "labels" : {

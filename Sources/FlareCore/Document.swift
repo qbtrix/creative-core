@@ -7,6 +7,7 @@
 // - Scene.fps > 0, Scene.durationFrames >= 0
 // - Scene.width and Scene.height are finite and > 0
 // - Scene label frames are in 0...durationFrames
+// - Scene guide positions are finite
 // - layer ids are unique within a scene or symbol
 // - symbol ids are unique, Symbol.durationFrames >= 0
 // - every layer instance names a known symbol and has firstFrame >= 0
@@ -14,6 +15,7 @@
 //   never stored empty (an empty track is removed, so undo restores equality)
 // - keyframe values and shape points (including path points) are finite
 // - text shapes have a finite font size > 0 and a finite position
+// - swatch names are unique and swatch color channels are finite and in 0...1
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -28,19 +30,23 @@ public struct Document: Codable, Sendable, Hashable {
     public var metadata: Metadata
     /// Interactive state machines. Missing in older v1 files means empty.
     public var stateMachines: [StateMachine]
+    /// The document's color palette, in display order. Missing in older v1
+    /// files means empty.
+    public var swatches: [Swatch]
 
     public init(
         scenes: [Scene] = [], symbols: [Symbol] = [], metadata: Metadata = Metadata(),
-        stateMachines: [StateMachine] = []
+        stateMachines: [StateMachine] = [], swatches: [Swatch] = []
     ) {
         self.scenes = scenes
         self.symbols = symbols
         self.metadata = metadata
         self.stateMachines = stateMachines
+        self.swatches = swatches
     }
 
     private enum CodingKeys: String, CodingKey {
-        case scenes, symbols, metadata, stateMachines
+        case scenes, symbols, metadata, stateMachines, swatches
     }
 
     public init(from decoder: any Decoder) throws {
@@ -49,16 +55,29 @@ public struct Document: Codable, Sendable, Hashable {
         symbols = try container.decodeIfPresent([Symbol].self, forKey: .symbols) ?? []
         metadata = try container.decodeIfPresent(Metadata.self, forKey: .metadata) ?? Metadata()
         stateMachines = try container.decodeIfPresent([StateMachine].self, forKey: .stateMachines) ?? []
+        swatches = try container.decodeIfPresent([Swatch].self, forKey: .swatches) ?? []
     }
 
-    /// Empty metadata and state machines are left out, so documents without
-    /// them encode as before.
+    /// Empty metadata, state machines and swatches are left out, so documents
+    /// without them encode as before.
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(scenes, forKey: .scenes)
         try container.encode(symbols, forKey: .symbols)
         if !metadata.isEmpty { try container.encode(metadata, forKey: .metadata) }
         if !stateMachines.isEmpty { try container.encode(stateMachines, forKey: .stateMachines) }
+        if !swatches.isEmpty { try container.encode(swatches, forKey: .swatches) }
+    }
+}
+
+/// A named color in the document palette. The name is the swatch's key.
+public struct Swatch: Codable, Sendable, Hashable {
+    public var name: String
+    public var color: Color
+
+    public init(name: String, color: Color) {
+        self.name = name
+        self.color = color
     }
 }
 
@@ -106,6 +125,8 @@ public struct Scene: Codable, Sendable, Hashable {
     public var layers: [Layer]
     /// Named frames, label name to frame in `0...durationFrames`.
     public var labels: [String: Int]
+    /// Ruler guides in scene coordinates, in the order they were added.
+    public var guides: [Guide]
 
     public static let defaultWidth: Double = 550
     public static let defaultHeight: Double = 400
@@ -113,7 +134,8 @@ public struct Scene: Codable, Sendable, Hashable {
     public init(
         id: String, name: String, fps: Int = 24, durationFrames: Int = 48,
         width: Double = Scene.defaultWidth, height: Double = Scene.defaultHeight,
-        background: Color = .white, layers: [Layer] = [], labels: [String: Int] = [:]
+        background: Color = .white, layers: [Layer] = [], labels: [String: Int] = [:],
+        guides: [Guide] = []
     ) {
         self.id = id
         self.name = name
@@ -124,13 +146,14 @@ public struct Scene: Codable, Sendable, Hashable {
         self.background = background
         self.layers = layers
         self.labels = labels
+        self.guides = guides
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, name, fps, durationFrames, width, height, background, layers, labels
+        case id, name, fps, durationFrames, width, height, background, layers, labels, guides
     }
 
-    /// Files written before the canvas fields or labels existed decode with the defaults.
+    /// Files written before the canvas fields, labels or guides existed decode with the defaults.
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(String.self, forKey: .id)
@@ -142,6 +165,22 @@ public struct Scene: Codable, Sendable, Hashable {
         background = try c.decodeIfPresent(Color.self, forKey: .background) ?? .white
         layers = try c.decode([Layer].self, forKey: .layers)
         labels = try c.decodeIfPresent([String: Int].self, forKey: .labels) ?? [:]
+        guides = try c.decodeIfPresent([Guide].self, forKey: .guides) ?? []
+    }
+}
+
+/// A ruler guide: a horizontal line at y = `position` or a vertical line at
+/// x = `position`, in scene coordinates. Guides are editing aids and never render.
+public struct Guide: Codable, Sendable, Hashable {
+    public enum Axis: String, Codable, Sendable, Hashable { case horizontal, vertical }
+
+    public var axis: Axis
+    /// Finite.
+    public var position: Double
+
+    public init(axis: Axis, position: Double) {
+        self.axis = axis
+        self.position = position
     }
 }
 
@@ -273,6 +312,9 @@ public struct Color: Codable, Sendable, Hashable {
         self.b = b
         self.a = a
     }
+
+    /// True if every channel is finite and in 0...1.
+    public var isInRange: Bool { [r, g, b, a].allSatisfy { (0...1).contains($0) } }
 
     public static let black = Color(r: 0, g: 0, b: 0)
     public static let white = Color(r: 1, g: 1, b: 1)
