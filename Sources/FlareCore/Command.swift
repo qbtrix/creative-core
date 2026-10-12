@@ -139,7 +139,7 @@ public struct CommandEngine: Sendable {
             pending?.commands.append(cmd)
         } else if let key, key == coalesceKey, let last = undoStack.indices.last {
             if let i = undoStack[last].commands.indices.last,
-               let merged = Self.merged(undoStack[last].commands[i], cmd) {
+               let merged = undoStack[last].commands[i].merged(with: cmd) {
                 undoStack[last].commands[i] = merged
             } else {
                 undoStack[last].commands.append(cmd)
@@ -203,17 +203,21 @@ public struct CommandEngine: Sendable {
 
     /// `last` with `next` merged into it, or nil when `next` is another type or
     /// `last.merge` declines.
-    private static func merged<C: Command>(_ last: C, _ next: any Command) -> (any Command)? {
-        guard let next = next as? C else { return nil }
-        var last = last
-        return last.merge(next) ? last : nil
-    }
-
     private mutating func push(_ entry: Entry) {
         undoStack.append(entry)
         if undoStack.count > maxUndoDepth {
             undoStack.removeFirst(undoStack.count - maxUndoDepth)
         }
         redoStack.removeAll()
+    }
+}
+
+extension Command {
+    /// `self` with `next` folded in, or nil if `next` is another type or
+    /// refuses to merge. A method so the existential opens on any Swift 6.
+    fileprivate func merged(with next: any Command) -> (any Command)? {
+        guard let next = next as? Self else { return nil }
+        var last = self
+        return last.merge(next) ? last : nil
     }
 }
