@@ -44,6 +44,13 @@ private func close(_ a: Color3, _ b: Color3, _ tolerance: Double) -> Bool {
     }
 }
 
+@Test func negativeLMSRoundTripsThroughOKLab() throws {
+    // Linear sRGB (1, -0.5, -0.5) has a negative M response, so OKLab's cube root must keep the sign.
+    let c = Color3(1, -0.5, -0.5)
+    let back = try c.converted(from: .linearSRGB, to: .oklab).converted(from: .oklab, to: .linearSRGB)
+    #expect(close(back, c, 1e-9), "\(back)")
+}
+
 @Test func sRGBWhiteIsD65InXYZ() throws {
     let xyz = try Color3(1, 1, 1).converted(from: .sRGB, to: .xyzD65)
     #expect(close(xyz, Color3(0.95047, 1.0, 1.08883), 1e-4), "\(xyz)")

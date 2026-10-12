@@ -42,6 +42,7 @@ import Testing
         (#"{"format":"flare","version":1,"document":{"scenes":[{"id":"s"}]}}"#, "partial scene"),
         (#"{"format":"flare","version":1,"document":{"scenes":[{"id":"s","name":"S","fps":0,"durationFrames":1,"layers":[]}]}}"#, "fps 0"),
         (#"{"format":"flare","version":1,"document":{"scenes":[{"id":"s","name":"S","fps":24,"durationFrames":1,"layers":[{"id":"l","name":"L","shapes":[],"tracks":{"x":[{"frame":5,"value":0,"easing":{"linear":{}}},{"frame":2,"value":0,"easing":{"linear":{}}}]}}]}]}}"#, "unsorted track"),
+        (#"{"format":"flare","version":1,"document":{"scenes":[{"id":"s","name":"S","fps":24,"durationFrames":1,"layers":[{"id":"l","name":"L","shapes":[],"tracks":{"x":[{"frame":2,"value":0,"easing":{"linear":{}}},{"frame":2,"value":1,"easing":{"linear":{}}}]}}]}]}}"#, "two keyframes on one frame"),
         (#"{"format":"flare","version":1,"document":{"scenes":[{"id":"s","name":"S","fps":24,"durationFrames":1,"layers":[{"id":"l","name":"L","shapes":[],"tracks":{}},{"id":"l","name":"L2","shapes":[],"tracks":{}}]}]}}"#, "duplicate layer id"),
         (#"{"format":"flare","version":1,"document":{"scenes":[{"id":"s","name":"S","fps":24,"durationFrames":1,"layers":[{"id":"l","name":"L","shapes":[],"tracks":{"x":[{"frame":99999999999999999999999,"value":0,"easing":{"linear":{}}}]}}]}]}}"#, "frame overflow"),
     ])

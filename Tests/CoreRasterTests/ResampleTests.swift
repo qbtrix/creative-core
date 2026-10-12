@@ -52,6 +52,18 @@ private func row(_ buffer: PixelBuffer, _ y: Int = 0) throws -> [RGBA] {
     }
 }
 
+@Test func downscalingCountsEveryInputPixel() throws {
+    // 4:1 bilinear: the tent widens to radius 4, so every input pixel gets a
+    // share. An unwidened tent would read only the middle two.
+    var shares: [Float] = []
+    for k in 0..<4 {
+        var line = try PixelBuffer(width: 4, height: 1, fill: RGBA(r: 0, g: 0, b: 0, a: 1))
+        try line.setPixel(x: k, y: 0, RGBA(r: 1, g: 1, b: 1, a: 1))
+        shares.append(try line.resized(width: 1, height: 1, filter: .bilinear).pixel(x: 0, y: 0).r)
+    }
+    #expect(zip(shares, [0.28125, 0.21875, 0.21875, 0.28125]).allSatisfy { abs($0 - $1) <= 1e-6 }, "\(shares)")
+}
+
 @Test func bilinearUpscaleInterpolatesAndClampsAtTheEdges() throws {
     var line = try PixelBuffer(width: 2, height: 1)
     try line.setPixel(x: 1, y: 0, RGBA(r: 1, g: 2, b: 4, a: 1))
