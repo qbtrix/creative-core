@@ -3,5 +3,6 @@
     "commit": "",
     "pr": "",
     "sessionUrl": false
-  }
+  },
+  "enabledMcpjsonServers": ["apple-docs", "context7"]
 }

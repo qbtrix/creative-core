@@ -49,6 +49,19 @@ the other modules yet.
 
 - **One behavior per PR.** Ideally under 200 changed lines, hard cap 400, at
   most 15 files.
+- **Check current docs, not memory.** Before using any platform or library
+  API (SwiftUI, AppKit, macOS 26 APIs, GRDB, Swift stdlib), check current docs
+  with the docs MCP tools; don't rely on memory. If the tools are unavailable,
+  say so in the PR body. `.mcp.json` provides them: `apple-docs`
+  (`searchAppleDocumentation`, then `fetchAppleDocumentation`; Apple's
+  developer docs, Swift stdlib and HIG, read live from developer.apple.com)
+  and `context7` (`resolve-library-id`, then `query-docs`; GRDB is
+  `/groue/grdb.swift/v7.11.1`, the version `Package.swift` pins, and Swift is
+  `/swiftlang/swift`).
+- **Every new source file has a C4 owner.** `scripts/ci` fails when a file
+  under `Sources/` is not in exactly one component's `paths` in
+  `docs/c4/model.json`. Add the file to the component it belongs to, or add a
+  component, in the same PR, and keep that component's description true.
 - **Everything is a command.** Any change to a `Document` goes through a type
   that conforms to `Command` (see `Sources/FlareCore/Command.swift`), with
   `execute` and an exact `undo`. Add new commands to the random steps in
@@ -102,8 +115,9 @@ the other modules yet.
   for this codebase (layers, errors, reuse, validity, commands, export, tests).
 - Before you open a PR, check your diff against `docs/review-rubric.md` and
   fix every "no".
-- `scripts/ci` enforces the mechanical rules (no-crash lint, duplicate code,
-  build, tests). The rest are review-only, and the reviewer applies the rubric.
+- `scripts/ci` enforces the mechanical rules (no-crash lint, C4 ownership,
+  duplicate code, build, tests). The rest are review-only, and the reviewer
+  applies the rubric.
 
 ## Parallel agents
 
@@ -123,14 +137,17 @@ A PR labelled `fast-lane` is merged automatically by
 `.github/workflows/fast-lane.yml` when all of these hold: base `main`, author
 on the allowlist in `scripts/fast-lane.sh`, at most 400 changed lines and 15
 files, no protected path touched (the list above), mergeable, and every check
-green including CI. Otherwise the label is removed with a comment saying why,
-and the PR waits for human review. A human reviews fast-lane merges after the
-fact and reverts anything wrong.
+green including CI. A Belt PR (its body has a `Belt-Run:` or `Belt-Test:`
+line) also waits for Belt's `belt/review` commit status to be success on its
+head; `REQUIRE_BELT_REVIEW` in `scripts/fast-lane.sh` turns that off.
+Otherwise the label is removed with a comment saying why, and the PR waits for
+human review. A human reviews fast-lane merges after the fact and reverts
+anything wrong.
 
 ## Commands
 
 ```bash
-scripts/ci                                  # lint + build + test: the gate
+scripts/ci                                  # lint + C4 ownership + build + test: the gate
 swift test --filter EasingTests             # one suite while iterating
 bash Tests/fast_lane/test_fast_lane.sh      # fast-lane decision tests (needs jq)
 scripts/mutate --validate                   # every mutation anchor resolves once

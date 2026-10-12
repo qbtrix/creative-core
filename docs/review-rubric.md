@@ -17,6 +17,9 @@ merge unless the PR body explains it. The rules behind each question are in
       `UndoPropertyTests`?
 - [ ] Names match the ones already used for the same idea (ids, labels,
       file names, command ids like `family.verb`)?
+- [ ] New files are owned by a C4 component: each new `Sources/` file is in
+      exactly one component's `paths` in `docs/c4/model.json`, and that
+      component's description still says what it holds?
 
 ## 2. Duplication: does it reuse what exists?
 
