@@ -19,6 +19,7 @@ import Testing
         + SymbolCommandsTests.undoSteps
         + LabelCommandsTests.undoSteps
         + MetadataCommandsTests.undoSteps
+        + TextCommandsTests.undoSteps
 
     @Test(arguments: 0..<200)
     func undoAllRestoresOriginal(seed: UInt64) throws {
