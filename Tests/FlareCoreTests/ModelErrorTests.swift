@@ -28,6 +28,7 @@ import Testing
 
     @Test func commandLayerMapsModelErrors() {
         #expect(CommandError(ModelError.sceneNotFound("a")) == .sceneNotFound("a"))
+        #expect(CommandError(ModelError.symbolNotFound("s")) == .symbolNotFound("s"))
         #expect(CommandError(ModelError.layerNotFound("b")) == .layerNotFound("b"))
         #expect(CommandError(ModelError.layerLocked("c")) == .layerLocked("c"))
         #expect(CommandError(ModelError.invalidFill("d")) == .invalidDocument("d"))
@@ -39,6 +40,7 @@ import Testing
 
     @Test func formatLayerMapsModelErrors() {
         #expect(FormatError(ModelError.invalidFill("d")) == .invalid("d"))
+        #expect(FormatError(ModelError.symbolNotFound("s")) == .invalid("symbolNotFound(\"s\")"))
         var doc = Fixtures.document()
         doc.scenes[0].layers[1].shapes[0].fill = .radial(stops: [], center: Point(x: 0, y: 0), radius: -1)
         #expect(throws: FormatError.invalid("radial gradient radius must be finite and > 0")) {
@@ -53,7 +55,7 @@ import Testing
             .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("Sources/FlareCore")
         let modelFiles = ["Document", "Fill", "Path", "Geometry", "Symbols", "Instance", "StateMachine",
-                          "MachineInputs", "ModelError"]
+                          "MachineInputs", "ModelError", "LayerOwner"]
         let forbidden = ["CommandError", "FormatError", "FlareFormat"]
         for name in modelFiles {
             let text = try String(contentsOf: sources.appendingPathComponent("\(name).swift"), encoding: .utf8)

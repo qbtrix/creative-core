@@ -47,11 +47,13 @@ extension Command {
     public mutating func merge(_ next: Self) -> Bool { false }
 }
 
-/// A command whose `execute` changes one layer of one scene and nothing else:
-/// it edits, inserts, removes or moves that layer. CommandEngine then checks
-/// only that layer, plus the document-wide rules that do not scan layers.
+/// A command whose `execute` changes one layer of one scene or symbol and
+/// nothing else: it edits, inserts, removes or moves that layer. CommandEngine
+/// then checks only that layer, plus the document-wide rules that do not scan
+/// layers.
 public protocol LayerCommand: Command {
-    var sceneID: String { get }
+    /// The scene or symbol whose layer list holds the layer.
+    var owner: LayerOwner { get }
     /// The one layer `execute` may change.
     var layerID: String { get }
 }
@@ -103,6 +105,7 @@ extension CommandError {
     init(_ error: ModelError) {
         switch error {
         case .sceneNotFound(let id): self = .sceneNotFound(id)
+        case .symbolNotFound(let id): self = .symbolNotFound(id)
         case .layerNotFound(let id): self = .layerNotFound(id)
         case .layerLocked(let id): self = .layerLocked(id)
         case .invalidFill(let message), .invalidText(let message): self = .invalidDocument(message)
@@ -152,7 +155,7 @@ public struct CommandEngine: Sendable {
         try mappingModelErrors { try cmd.execute(&doc) }
         do {
             if let scoped = cmd as? any LayerCommand {
-                try FlareFormat.validate(doc, layer: scoped.layerID, scene: scoped.sceneID, since: document)
+                try FlareFormat.validate(doc, layer: scoped.layerID, owner: scoped.owner, since: document)
             } else {
                 try FlareFormat.validate(doc)
             }

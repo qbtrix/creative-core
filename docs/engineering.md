@@ -16,7 +16,7 @@ FlareCore has four layers. Each depends only on the ones above it. CoreColor, Co
 
 1. **Model**: `Document.swift`, `Fill.swift`, `Path.swift`, `Geometry.swift`,
    `Symbols.swift`, `Instance.swift`, `StateMachine.swift`, `MachineInputs.swift`,
-   `ModelError.swift`. Plain values.
+   `ModelError.swift`, `LayerOwner.swift`. Plain values.
 2. **Evaluation**: `Easing.swift`, `Timeline.swift`, `Sampling.swift`,
    `ShapeBounds.swift`, `HitTest.swift`. Read the model, never change it.
 3. **Commands**: `Command.swift`, `CommandRegistry.swift`, `*Commands.swift`.

@@ -17,11 +17,6 @@ public enum SymbolCommands {
 }
 
 extension Document {
-    func symbolIndex(_ id: String) throws -> Int {
-        guard let i = symbols.firstIndex(where: { $0.id == id }) else { throw CommandError.symbolNotFound(id) }
-        return i
-    }
-
     /// True if an instance on any scene layer, or on the layers of a symbol
     /// other than `symbolID` itself, names `symbolID`.
     func symbolIsUsed(_ symbolID: String) -> Bool {
