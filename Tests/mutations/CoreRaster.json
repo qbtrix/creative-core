@@ -159,5 +159,33 @@
     "anchor": "storage[i] = min(max(op(storage[i], other.storage[i]), 0), 1)",
     "replacement": "storage[i] = min(op(storage[i], other.storage[i]), 1)",
     "filter": "MaskTests"
+  },
+  {
+    "note": "white balance gains are normalized by the grey luminance",
+    "file": "Sources/CoreRaster/Develop.swift",
+    "anchor": "let gr = Float(r / grey), gg = Float(g / grey), gb = Float(b / grey)",
+    "replacement": "let gr = Float(r), gg = Float(g), gb = Float(b)",
+    "filter": "DevelopAdjustmentTests"
+  },
+  {
+    "note": "contrast pivots on mid grey",
+    "file": "Sources/CoreRaster/Develop.swift",
+    "anchor": "let mapped = pivot * pow(abs(v) / pivot, k)",
+    "replacement": "let mapped = pow(abs(v), k)",
+    "filter": "DevelopAdjustmentTests"
+  },
+  {
+    "note": "shadows weight falls to zero at mid grey",
+    "file": "Sources/CoreRaster/Develop.swift",
+    "anchor": "s * (1 - smoothstep(0, Self.midGrey, lum))",
+    "replacement": "s * (1 - smoothstep(0, 1, lum))",
+    "filter": "DevelopAdjustmentTests"
+  },
+  {
+    "note": "develop sliders reject values outside their range",
+    "file": "Sources/CoreRaster/Develop.swift",
+    "anchor": "guard developRange.contains(value) else {",
+    "replacement": "guard !value.isNaN else {",
+    "filter": "DevelopAdjustmentTests"
   }
 ]

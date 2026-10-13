@@ -1,5 +1,6 @@
 // Adjustments.swift: tone adjustments on a PixelBuffer: exposure, levels and
-// curves. Each one maps every color channel through one transfer function on
+// curves, plus the shared per-pixel loop (`mappingStraight`) that the develop
+// adjustments in `Develop.swift` use too. Each one maps every color channel through one transfer function on
 // unpremultiplied linear values (`RGBA.unpremultiplied`), then premultiplies
 // again (`RGBA.premultiplied`). Alpha is never changed. Parameters are checked
 // before any pixel is touched and throw `RasterError.invalid`; identity
@@ -76,12 +77,20 @@ extension PixelBuffer {
     }
 
     /// Maps each straight color channel through `transfer`, keeping alpha.
-    private func mappingColor(_ transfer: (Float) -> Float) throws -> PixelBuffer {
+    func mappingColor(_ transfer: (Float) -> Float) throws -> PixelBuffer {
+        try mappingStraight { RGBA(r: transfer($0.r), g: transfer($0.g), b: transfer($0.b), a: $0.a) }
+    }
+
+    /// The one per-pixel loop of the tone adjustments (here and in
+    /// `Develop.swift`): maps each unpremultiplied pixel's color through
+    /// `transform`, keeping its alpha, and premultiplies the result again.
+    func mappingStraight(_ transform: (RGBA) -> RGBA) throws -> PixelBuffer {
         var result = self
         for y in 0..<height {
             for x in 0..<width {
                 let p = try pixel(x: x, y: y).unpremultiplied()
-                let mapped = RGBA(r: transfer(p.r), g: transfer(p.g), b: transfer(p.b), a: p.a)
+                var mapped = transform(p)
+                mapped.a = p.a
                 try result.setPixel(x: x, y: y, mapped.premultiplied())
             }
         }
