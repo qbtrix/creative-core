@@ -74,6 +74,7 @@ public struct SetShapeFill: LayerParamsCommand {
     }
 
     public mutating func execute(_ document: inout Document) throws {
+        try fill.validate()
         let (index, fill) = (index, fill)
         oldFill = try document.withEditableLayer(owner, layer: layerID) { layer in
             try layer.checkShapeIndex(index)
