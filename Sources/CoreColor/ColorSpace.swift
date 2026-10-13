@@ -96,15 +96,17 @@ public struct Color3: Codable, Sendable, Hashable {
 }
 
 /// The sRGB transfer curve (IEC 61966-2-1), shared by sRGB and Display P3.
-/// Odd-extended so negative values map to the negated curve.
-enum TransferCurve {
-    static func decode(_ v: Double) -> Double {
+/// Odd-extended so negative values map to the negated curve, and values over
+/// 1 continue the curve. `decode` takes an encoded value to linear light,
+/// `encode` the reverse.
+public enum TransferCurve {
+    public static func decode(_ v: Double) -> Double {
         let a = abs(v)
         let linear = a <= 0.04045 ? a / 12.92 : pow((a + 0.055) / 1.055, 2.4)
         return v < 0 ? -linear : linear
     }
 
-    static func encode(_ v: Double) -> Double {
+    public static func encode(_ v: Double) -> Double {
         let a = abs(v)
         let encoded = a <= 0.0031308 ? a * 12.92 : 1.055 * pow(a, 1.0 / 2.4) - 0.055
         return v < 0 ? -encoded : encoded
