@@ -35,14 +35,32 @@ the other modules yet.
 
 1. **Orient.** Read this file, the issue, and the code it touches. Check the
    issue's "Depends on"; if a dependency has not merged, pick another issue.
-2. **Implement with tests.** Write the test from the issue's acceptance test,
+2. **Branch from dev.** `git fetch origin && git switch -c <branch> origin/dev`.
+   Never branch from or target `main`: it only takes `dev` SHAs that passed
+   full CI.
+3. **Implement with tests.** Write the test from the issue's acceptance test,
    then the code.
-3. **Gate.** Run `scripts/ci`. It must print `CI: PASS`. It is the only gate
-   and it is what CI runs on Linux and macOS.
-4. **Ship.** `git fetch origin && git rebase origin/main`, rerun `scripts/ci`,
-   then open ONE small PR to `main` that closes the issue (`Closes #<n>` in the
-   body). Add the label `fast-lane` to the PR. Then stop.
-5. Don't ask questions. If the issue is impossible as written, comment on the
+4. **Gate.** Run `scripts/ci`. It must print `CI: PASS`. It is your whole
+   check: no CI runs on your PR, and you never start CI yourself for routine
+   work (no `gh workflow run`). Full CI runs on `dev` once a feature is built.
+5. **Ship.** `git fetch origin && git rebase origin/dev`, rerun `scripts/ci`
+   (it must print `CI: PASS` again), push, then open ONE small PR to `dev`
+   with `Closes #<n>`, the `fast-lane` label, and these two lines at the end
+   of the body for the head you pushed:
+   ```
+   Fast-Check: pass
+   Head: <full sha from git rev-parse HEAD>
+   ```
+   After every later push, rerun `scripts/ci` and update the `Head:` line to
+   the new head; the lane ignores a marker for an older head. Then stop.
+   ```bash
+   # body.md: what and why, Closes #<n>, then the two lines for $(git rev-parse HEAD)
+   gh pr create --base dev --label fast-lane --title "<type(scope): what>" --body-file body.md
+   # after a later push, once scripts/ci passed on it: move the marker to the new head
+   gh pr view <n> --json body --jq .body | sed "s/^Head: .*/Head: $(git rev-parse HEAD)/" >body.md
+   gh pr edit <n> --body-file body.md
+   ```
+6. Don't ask questions. If the issue is impossible as written, comment on the
    issue saying why, remove `in-progress`, and stop.
 
 ## Rules
@@ -124,25 +142,40 @@ the other modules yet.
 - Many agents work at once. Keep to your issue's files. Prefer adding a new
   file (one per command family, e.g. `SceneCommands.swift`) over appending to
   a shared one; it avoids merge conflicts.
-- Rebase on `main` before opening the PR, and rerun `scripts/ci` after.
-- If `main` is red because of someone else's merge, do not fix it in your PR.
-  Comment on your issue with the failing test name and stop.
+- Rebase on `origin/dev` before opening the PR, and rerun `scripts/ci` after.
+- If `scripts/ci` fails on `origin/dev` itself because of someone else's merge
+  (look for the open `dev-red` issue), do not fix it in your PR. Comment on
+  your issue with the failing test name and stop.
 - Never edit `.github/`, `CLAUDE.md`, `AGENTS.md`, `scripts/ci`,
   `scripts/cloud-setup.sh`, `scripts/fast-lane.sh`, `Package.swift` or
   `LICENSE` unless your issue says to. Those PRs need human review.
 
 ## Fast lane
 
-A PR labelled `fast-lane` is merged automatically by
-`.github/workflows/fast-lane.yml` when all of these hold: base `main`, author
-on the allowlist in `scripts/fast-lane.sh`, at most 400 changed lines and 15
-files, no protected path touched (the list above), mergeable, and every check
-green including CI. A Belt PR (its body has a `Belt-Run:` or `Belt-Test:`
-line) also waits for Belt's `belt/review` commit status to be success on its
-head; `REQUIRE_BELT_REVIEW` in `scripts/fast-lane.sh` turns that off.
-Otherwise the label is removed with a comment saying why, and the PR waits for
-human review. A human reviews fast-lane merges after the fact and reverts
-anything wrong.
+Crew PRs merge into `dev` at once; `main` moves only when full CI passes on
+`dev`.
+
+- `.github/workflows/fast-lane.yml` squash-merges a PR labelled `fast-lane`
+  into `dev` when all of these hold: base `dev`, author on the allowlist in
+  `scripts/fast-lane.sh`, at most 400 changed lines and 15 files, no protected
+  path touched (the list above), mergeable, no red or running check on the
+  head, and proof the head passed the gate: the `Fast-Check: pass` /
+  `Head: <sha>` lines for the current head, or a passing CI check on it.
+- Each lane run merges every eligible PR, oldest first. A PR that conflicts
+  after an earlier merge gets one comment and waits for a rebase. A fast-lane
+  PR opened against `main` is retargeted to `dev`.
+- A Belt PR (its body has a `Belt-Run:` or `Belt-Test:` line) also waits for
+  Belt's `belt/review` commit status to be success on its head;
+  `REQUIRE_BELT_REVIEW` in `scripts/fast-lane.sh` turns that off.
+- A PR that breaks a hard rule (author, size, protected path) loses the label
+  with a comment saying why and waits for human review.
+- Full CI (Linux, macOS, mutation) runs on `dev` once a feature is built, not
+  per merge: when the supervisor or Belt dispatches it, when the lane merges a
+  PR labelled `feature-done`, and once a day. Green: `main` fast-forwards to
+  that exact SHA. Red: one issue titled "dev is red" (label `dev-red`) names
+  the failing jobs and the culprit range `main..<sha>`. The lane keeps
+  merging while it is open; the next green run moves `main` and closes it.
+- A human reviews fast-lane merges after the fact and reverts anything wrong.
 
 ## Commands
 
@@ -151,7 +184,7 @@ scripts/ci                                  # lint + C4 ownership + build + test
 swift test --filter EasingTests             # one suite while iterating
 bash Tests/fast_lane/test_fast_lane.sh      # fast-lane decision tests (needs jq)
 scripts/mutate --validate                   # every mutation anchor resolves once
-scripts/mutate --run --changed-since origin/main  # plant the bugs your diff touches
+scripts/mutate --run --changed-since origin/dev   # plant the bugs your diff touches
 ```
 
 ## Layout

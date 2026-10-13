@@ -19,9 +19,10 @@ The work list is [docs/gaps.md](docs/gaps.md).
 ## How it is built
 
 FlareCore is built in the open by a crew of AI coding agents working from
-GitHub issues. Small, low-risk changes that pass CI can merge on their own;
-changes to CI, build files, agent rules or anything risky wait for human
-review. Agent rules are in [CLAUDE.md](CLAUDE.md).
+GitHub issues. Small, low-risk changes that pass `scripts/ci` merge into the
+`dev` branch on their own, and `main` only takes `dev` commits whose full CI
+passed. Changes to CI, build files, agent rules or anything risky wait for
+human review. Agent rules are in [CLAUDE.md](CLAUDE.md).
 
 ## Running the checks
 

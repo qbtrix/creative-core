@@ -1,28 +1,47 @@
 # CI: runs scripts/ci (no-crash lint, C4 ownership, swift build, swift test) on
 # Linux and macOS, plus the fast-lane decision tests and mutation testing
-# (scripts/mutate):
-# "Mutation anchors" checks every plan anchor still resolves (seconds, no build),
-# and "Mutation" plants the bugs from the plan entries a PR touches (at most 15)
-# and fails if any test suite lets one through. The full sweep lives in
-# mutation.yml, because the fast lane waits on this workflow's run on main.
-# The fast lane only merges a PR once a check from this workflow ("CI") has
-# passed, so keep the name stable.
-# workflow_dispatch lets the fast lane run CI on main after its merges and on
-# refreshed PR heads: GITHUB_TOKEN pushes and merges fire no other triggers.
+# (scripts/mutate): "Mutation anchors" checks every plan anchor still resolves
+# (seconds, no build), and "Mutation" plants the bugs from the plan entries that
+# the commits since main touch (at most 15) and fails if any suite lets one
+# through. The full sweep lives in mutation.yml, because promotion waits on this
+# workflow and a sweep takes far longer.
+#
+# Branch model: crew PRs merge into dev through the fast lane with no CI of
+# their own; the worker's local scripts/ci is the per-PR check. This workflow
+# runs on dev once a feature is built, not after every merge: on
+# workflow_dispatch (the supervisor or Belt, e.g. after an integrate PR), when
+# the lane merges a PR labelled `feature-done` (it dispatches this once), and
+# daily as a safety net. When every job is green, `promote` fast-forwards main
+# to that exact SHA, so main only holds tested dev SHAs and is the last green.
+# When a job is red, `dev-red` opens or updates one "dev is red" issue with the
+# culprit range main..SHA; the next promotion closes it. No push trigger: main
+# only receives tested SHAs, and a push trigger on dev would fire per merge.
+# pull_request runs only for rare hotfix PRs to main.
+#
+# Trade-off: macOS-only breakage and escaped mutations can sit on dev until the
+# next feature run, so a dev-red culprit range can span several PRs.
+#
+# The fast lane also counts a passing check from this workflow ("CI") on a PR
+# head and reads its job names, so keep those names stable.
 name: CI
 
 on:
   pull_request:
-  push:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    - cron: '17 4 * * *'  # daily; schedule runs on the default branch (dev)
 
 permissions:
   contents: read
 
+# Runs on dev and main never cancel: GitHub keeps the running one plus the
+# newest pending one, so dispatches that pile up collapse into one run.
+# PR runs group by PR number, so a hotfix PR from a branch named dev can't
+# cancel a dev run.
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.sha }}
-  cancel-in-progress: true
+  group: ci-${{ github.event.pull_request.number || github.ref_name }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/dev' }}
 
 jobs:
   linux:
@@ -85,6 +104,86 @@ jobs:
           path: .build
           key: mutation-swift-6.3.3-${{ hashFiles('Package.resolved') }}-${{ github.sha }}
           restore-keys: mutation-swift-6.3.3-${{ hashFiles('Package.resolved') }}-
-      # On main (push or the fast lane's dispatch) nothing is new since origin/main,
-      # so this selects nothing and exits in seconds.
+      # On dev this is the batch of merges main has not taken yet; on a run
+      # whose SHA main already holds it selects nothing and exits in seconds.
       - run: python3 scripts/mutate --run --changed-since origin/main --max 15
+
+  # Fast-forward main to this dev SHA once every job above passed. The only
+  # job that may write contents.
+  promote:
+    name: Promote
+    needs: [linux, macos, fast-lane-tests, mutation-anchors, mutation]
+    if: github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write  # push main
+      issues: write    # close the dev-red issue
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Fast-forward main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          git fetch origin main
+          if git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "main already contains $GITHUB_SHA; nothing to promote."
+            exit 0
+          fi
+          if ! git merge-base --is-ancestor origin/main "$GITHUB_SHA"; then
+            echo "::error::main has diverged from dev. main ($(git rev-parse --short origin/main)) has commits that dev ($(git rev-parse --short "$GITHUB_SHA")) lacks, so main cannot fast-forward. A hotfix probably landed on main: merge main into dev, and the next green dev run promotes. Commits only on main:"
+            git log --oneline "$GITHUB_SHA..origin/main"
+            exit 1
+          fi
+          # A plain push: the remote refuses anything but a fast-forward.
+          git push origin "$GITHUB_SHA:refs/heads/main"
+          for n in $(gh issue list --label dev-red --state open --json number --jq '.[].number'); do
+            gh issue close "$n" --comment "dev is green again at $GITHUB_SHA ($RUN_URL), and main now points there."
+          done
+
+  # Open, or update, the single "dev is red" issue. main is the last green dev
+  # SHA, so main..SHA holds the culprit.
+  dev-red:
+    name: Dev red
+    needs: [linux, macos, fast-lane-tests, mutation-anchors, mutation]
+    if: failure() && github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Open or update the dev-red issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NEEDS: ${{ toJSON(needs) }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          git fetch origin main
+          range="main..$GITHUB_SHA"
+          failed=$(jq -r '[to_entries[] | select(.value.result == "failure") | .key] | join(", ")' <<<"$NEEDS")
+          # Lane and squash merges end their subject with (#N).
+          prs=$(git log --format=%s "origin/$range" | grep -oE '\(#[0-9]+\)$' | tr -d '()' | sort -u | paste -sd' ' - || true)
+          {
+            echo "CI on dev is red, so main stays at the last green dev SHA ($(git rev-parse --short origin/main)). The fast lane keeps merging into dev; the next green dev run promotes main and closes this issue."
+            echo
+            echo "- Run: $RUN_URL"
+            echo "- Failing jobs: $failed"
+            echo "- Culprit range: \`$range\`"
+            echo "- PRs in the range: ${prs:-none found}"
+            echo
+            echo "Commits in the range, newest first:"
+            echo
+            git log -n 100 --format='- %h %s' "origin/$range"
+          } >"$RUNNER_TEMP/body.md"
+          gh label create dev-red --color B60205 --description "CI on dev is red; main holds the last green dev SHA" 2>/dev/null || true
+          n=$(gh issue list --label dev-red --state open --json number --jq '.[0].number // empty')
+          if [[ -n "$n" ]]; then
+            gh issue edit "$n" --body-file "$RUNNER_TEMP/body.md"
+          else
+            gh issue create --title "dev is red" --label dev-red --body-file "$RUNNER_TEMP/body.md"
+          fi
