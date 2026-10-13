@@ -45,6 +45,8 @@ import Testing
         var doc = TextCommandsTests.withText()
         doc.symbols = [Symbol(id: "spark", name: "Spark", durationFrames: 6,
                               layers: [Layer(id: "glow", name: "Glow"), Layer(id: "core", name: "Core")])]
+        doc.symbols[0].layers[1].shapes = doc.scenes[0].layers[1].shapes
+        doc.symbols[0].layers[1].texts = doc.scenes[0].layers[1].texts
         doc.scenes[0].guides = GuideCommandsTests.guided().scenes[0].guides
         doc.swatches = [Swatch(name: "Ink", color: .black)]
         return doc
@@ -81,9 +83,7 @@ import Testing
             RenameLayer(owner: sym, layerID: "core", name: "Heart"),
             ReorderLayer(owner: sym, layerID: "glow", toIndex: 1),
             SetLayerFlags(owner: sym, layerID: "core", isLocked: true),
-            AddShape(owner: sym, layerID: "glow", shape: Shape(points: [Point(x: 1, y: 2)])),
-            AddTextShape(owner: sym, layerID: "core", text: TextCommandsTests.hello),
-        ]
+        ] + ShapeTextOwnerTests.edits(sym, layerID: "core")
     }
 
     @Test func everyBuiltInCommandIsRegistered() {

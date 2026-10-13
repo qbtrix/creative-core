@@ -102,8 +102,8 @@ import Testing
         ]
     }
 
-    static func anyIndex(_ e: CommandEngine, _ owner: LayerOwner, _ layer: String, _ rng: inout SplitMix64) -> Int {
-        let count = e.document.layers(of: owner)?.first { $0.id == layer }?.texts.count ?? 0
+    static func anyIndex(_ e: CommandEngine, _ layer: String, _ rng: inout SplitMix64) -> Int {
+        let count = e.document.scenes.first?.layers.first { $0.id == layer }?.texts.count ?? 0
         return Int.random(in: -1...count, using: &rng)
     }
 
@@ -118,16 +118,16 @@ import Testing
             try e.perform(AddTextShape(owner: owner, layerID: layer, text: text))
         },
         { e, rng, _ in
-            let (owner, layer) = UndoPropertyTests.anyTarget(e, &rng)
-            try e.perform(RemoveTextShape(owner: owner, layerID: layer, index: anyIndex(e, owner, layer, &rng)))
+            let layer = UndoPropertyTests.anyLayer(e, &rng)
+            try e.perform(RemoveTextShape(owner: .scene(s), layerID: layer, index: anyIndex(e, layer, &rng)))
         },
         { e, rng, _ in
-            let (owner, layer) = UndoPropertyTests.anyTarget(e, &rng)
-            try e.perform(SetTextString(owner: owner, layerID: layer, index: anyIndex(e, owner, layer, &rng), string: "s"))
+            let layer = UndoPropertyTests.anyLayer(e, &rng)
+            try e.perform(SetTextString(owner: .scene(s), layerID: layer, index: anyIndex(e, layer, &rng), string: "s"))
         },
         { e, rng, _ in
-            let (owner, layer) = UndoPropertyTests.anyTarget(e, &rng)
-            try e.perform(SetTextFont(owner: owner, layerID: layer, index: anyIndex(e, owner, layer, &rng), family: "A",
+            let layer = UndoPropertyTests.anyLayer(e, &rng)
+            try e.perform(SetTextFont(owner: .scene(s), layerID: layer, index: anyIndex(e, layer, &rng), family: "A",
                                       size: UndoPropertyTests.anyNumber(in: -1...72, &rng)))
         },
     ]

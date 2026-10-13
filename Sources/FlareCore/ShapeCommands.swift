@@ -1,5 +1,5 @@
-// ShapeCommands.swift: edits to existing shapes, addressed by owner (a scene or
-// a symbol), layer and shape index. A bad index throws shapeNotFound; a locked layer throws
+// ShapeCommands.swift: edits to existing shapes, addressed by owner, layer and
+// shape index. A bad index throws shapeNotFound; a locked layer throws
 // layerLocked. Undo restores the stored old value, so it is exact even where
 // floating-point arithmetic would not round-trip.
 #if canImport(FoundationEssentials)
@@ -51,7 +51,7 @@ public struct RemoveShape: LayerItemCommand {
     }
 }
 
-public struct SetShapeFill: LayerCommand {
+public struct SetShapeFill: LayerParamsCommand {
     public static let id = "shape.setFill"
     public var label: String { "Set Fill" }
     public var owner: LayerOwner
@@ -60,8 +60,6 @@ public struct SetShapeFill: LayerCommand {
     public var fill: Fill
     var oldFill: Fill?
 
-    private enum CodingKeys: String, CodingKey { case fill }
-
     public init(owner: LayerOwner, layerID: String, index: Int, fill: Fill) {
         self.owner = owner
         self.layerID = layerID
@@ -69,16 +67,10 @@ public struct SetShapeFill: LayerCommand {
         self.fill = fill
     }
 
-    public init(from decoder: any Decoder) throws {
-        (owner, layerID, index) = try Self.decodeItemAddress(from: decoder)
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        fill = try c.decode(Fill.self, forKey: .fill)
-    }
-
-    public func encode(to encoder: any Encoder) throws {
-        try encodeItemAddress(to: encoder, index: index)
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(fill, forKey: .fill)
+    struct Params: Codable { var index: Int; var fill: Fill }
+    var params: Params { Params(index: index, fill: fill) }
+    init(owner: LayerOwner, layerID: String, params: Params) {
+        self.init(owner: owner, layerID: layerID, index: params.index, fill: params.fill)
     }
 
     public mutating func execute(_ document: inout Document) throws {
@@ -104,7 +96,7 @@ public struct SetShapeFill: LayerCommand {
 /// moves of the same shape merge: dx and dy add up, and the merged command keeps
 /// the first old shape and the last new one, so redo gives back the exact
 /// dragged shape rather than one translation by the rounded sum.
-public struct TranslateShape: LayerCommand {
+public struct TranslateShape: LayerParamsCommand {
     public static let id = "shape.translate"
     public var label: String { "Move Shape" }
     public var owner: LayerOwner
@@ -115,8 +107,6 @@ public struct TranslateShape: LayerCommand {
     var oldShape: Shape?
     var newShape: Shape?
 
-    private enum CodingKeys: String, CodingKey { case dx, dy }
-
     public init(owner: LayerOwner, layerID: String, index: Int, dx: Double, dy: Double) {
         self.owner = owner
         self.layerID = layerID
@@ -125,18 +115,10 @@ public struct TranslateShape: LayerCommand {
         self.dy = dy
     }
 
-    public init(from decoder: any Decoder) throws {
-        (owner, layerID, index) = try Self.decodeItemAddress(from: decoder)
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        dx = try c.decode(Double.self, forKey: .dx)
-        dy = try c.decode(Double.self, forKey: .dy)
-    }
-
-    public func encode(to encoder: any Encoder) throws {
-        try encodeItemAddress(to: encoder, index: index)
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(dx, forKey: .dx)
-        try c.encode(dy, forKey: .dy)
+    struct Params: Codable { var index: Int; var dx: Double; var dy: Double }
+    var params: Params { Params(index: index, dx: dx, dy: dy) }
+    init(owner: LayerOwner, layerID: String, params: Params) {
+        self.init(owner: owner, layerID: layerID, index: params.index, dx: params.dx, dy: params.dy)
     }
 
     public mutating func execute(_ document: inout Document) throws {
