@@ -215,5 +215,12 @@
     "anchor": "for root in symbols.indices where state[root] == 0 {",
     "replacement": "for root in symbols.indices.prefix(1) where state[root] == 0 {",
     "filter": "SymbolCycleTests"
+  },
+  {
+    "note": "fill color check skips the alpha channel, so a NaN alpha is accepted",
+    "file": "Sources/FlareCore/Fill.swift",
+    "anchor": "for color in colors where ![color.r, color.g, color.b, color.a].allSatisfy(\\.isFinite) {",
+    "replacement": "for color in colors where ![color.r, color.g, color.b].allSatisfy(\\.isFinite) {",
+    "filter": "FillColorFiniteTests"
   }
 ]

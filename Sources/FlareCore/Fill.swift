@@ -4,6 +4,7 @@
 // Invariants (checked by the format layer on load):
 // - stop offsets are finite, in 0...1 and sorted ascending (equal is allowed)
 // - a radial radius is finite and > 0
+// - every color channel (solid or stop) is finite, so the document can be saved
 //
 // Encoding: `.solid` is written as the plain color object, exactly as v1 files
 // stored `Shape.fill`, so old files stay byte-stable. Gradients are objects
@@ -85,6 +86,10 @@ public enum Fill: Codable, Sendable, Hashable {
 
     /// Throws `ModelError.invalidFill` if the fill breaks an invariant above.
     func validate() throws {
+        let colors = if case .solid(let color) = self { [color] } else { stops.map(\.color) }
+        for color in colors where ![color.r, color.g, color.b, color.a].allSatisfy(\.isFinite) {
+            throw ModelError.invalidFill("color channels must be finite")
+        }
         var previous = 0.0
         for stop in stops {
             guard stop.offset.isFinite, (0...1).contains(stop.offset) else {
