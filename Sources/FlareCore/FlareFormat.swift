@@ -162,6 +162,7 @@ public enum FlareFormat {
         }
         var swatchNames = Set<String>()
         for swatch in document.swatches {
+            guard !swatch.name.isEmpty else { throw FormatError.invalid("swatch name is empty") }
             guard swatchNames.insert(swatch.name).inserted else {
                 throw FormatError.invalid("duplicate swatch name \(swatch.name)")
             }

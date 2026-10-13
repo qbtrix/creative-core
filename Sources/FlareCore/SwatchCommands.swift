@@ -2,8 +2,9 @@
 // color palette. Same shape as SymbolCommands.swift: params first, undo state
 // as optional vars last. Undo restores the palette exactly, including order.
 //
-// A swatch is keyed by its name, so names stay unique, and every swatch color
-// has channels finite and in 0...1 (both also checked by FlareFormat.validate).
+// A swatch is keyed by its name, so names stay unique and non-empty, and every
+// swatch color has channels finite and in 0...1 (all also checked by
+// FlareFormat.validate).
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -37,6 +38,7 @@ public struct AddSwatch: Command {
     }
 
     public mutating func execute(_ document: inout Document) throws {
+        guard !name.isEmpty else { throw CommandError.emptySwatchName }
         guard !document.swatches.contains(where: { $0.name == name }) else { throw CommandError.duplicateID(name) }
         guard color.isInRange else { throw CommandError.invalidColor(color) }
         document.swatches.append(Swatch(name: name, color: color))
@@ -62,6 +64,7 @@ public struct RenameSwatch: Command {
 
     public mutating func execute(_ document: inout Document) throws {
         let i = try document.swatchIndex(name)
+        guard !newName.isEmpty else { throw CommandError.emptySwatchName }
         guard newName == name || !document.swatches.contains(where: { $0.name == newName }) else {
             throw CommandError.duplicateID(newName)
         }

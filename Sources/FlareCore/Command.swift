@@ -81,6 +81,8 @@ public enum CommandError: Error, Equatable, Sendable {
     case invalidGuidePosition
     /// The document palette has no swatch with this name.
     case swatchNotFound(String)
+    /// A swatch name is empty; swatch names are the palette's keys.
+    case emptySwatchName
     /// A color channel is not finite or not in 0...1.
     case invalidColor(Color)
     /// An index outside the valid range, e.g. a layer position.
