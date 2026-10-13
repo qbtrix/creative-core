@@ -100,8 +100,8 @@
   {
     "note": "resample weights are not normalized to sum 1",
     "file": "Sources/CoreRaster/Resample.swift",
-    "anchor": "tap.weights = tap.weights.map { $0 / total }",
-    "replacement": "tap.weights = tap.weights.map { $0 / total * 1.01 }",
+    "anchor": "weights = weights.map { $0 / total }",
+    "replacement": "weights = weights.map { $0 / total * 1.01 }",
     "filter": "ResampleTests"
   },
   {
@@ -159,5 +159,19 @@
     "anchor": "storage[i] = min(max(op(storage[i], other.storage[i]), 0), 1)",
     "replacement": "storage[i] = min(op(storage[i], other.storage[i]), 1)",
     "filter": "MaskTests"
+  },
+  {
+    "note": "the straighten crop ignores the anti-aliased border band",
+    "file": "Sources/CoreRaster/Rotate.swift",
+    "anchor": "let k = min((w - 1 - c - s) / (w * c + h * s), (h - 1 - c - s) / (w * s + h * c))",
+    "replacement": "let k = min((w - c - s) / (w * c + h * s), (h - c - s) / (w * s + h * c))",
+    "filter": "RotateTests"
+  },
+  {
+    "note": "arbitrary rotation turns counterclockwise",
+    "file": "Sources/CoreRaster/Rotate.swift",
+    "anchor": "let sy = dy * turn.cosine - dx * turn.sine + Double(height) / 2 - 0.5",
+    "replacement": "let sy = dy * turn.cosine + dx * turn.sine + Double(height) / 2 - 0.5",
+    "filter": "RotateTests"
   }
 ]

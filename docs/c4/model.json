@@ -163,12 +163,13 @@
               {
                 "id": "image-ops",
                 "name": "Image Operations",
-                "description": "Masks, resampling, crop and rotate, blur, tone adjustments and histograms over PixelBuffer.",
+                "description": "Masks, resampling, crop, quarter-turn and any-angle rotation with the straighten crop, blur, tone adjustments and histograms over PixelBuffer.",
                 "technology": "Swift 6, Foundation",
                 "paths": [
                   "Sources/CoreRaster/Mask.swift",
                   "Sources/CoreRaster/Resample.swift",
                   "Sources/CoreRaster/Transform.swift",
+                  "Sources/CoreRaster/Rotate.swift",
                   "Sources/CoreRaster/Adjustments.swift",
                   "Sources/CoreRaster/Blur.swift",
                   "Sources/CoreRaster/Histogram.swift"

@@ -56,6 +56,31 @@ struct Taps {
     }
 }
 
+extension Taps {
+    /// The taps of one sample at input coordinate `center` (pixel `j` is at
+    /// `j`) on a line of `length` pixels: `filter` widened by `stretch`,
+    /// clamp-to-edge, weights normalized to sum to 1. `resized` and
+    /// `rotated(degrees:filter:)` both sample through this.
+    init(center: Double, stretch: Double, length: Int, filter: ResampleFilter) {
+        let support = filter.radius * stretch
+        let first = Int((center - support).rounded(.up))
+        let last = Int((center + support).rounded(.down))
+        for j in first...max(first, last) {
+            let w = filter.weight((Double(j) - center) / stretch)
+            guard w != 0 else { continue }
+            add(j, weight: w, length: length)
+        }
+        let total = weights.reduce(0, +)
+        guard total != 0 else {
+            // Unreachable for these filters; read the nearest pixel anyway.
+            indices = [min(max(Int(center.rounded()), 0), length - 1)]
+            weights = [1]
+            return
+        }
+        weights = weights.map { $0 / total }
+    }
+}
+
 extension PixelBuffer {
     /// This image resampled to `width x height` with `filter`. Throws
     /// `RasterError.invalid` for a size `validatedSize` rejects, or when
@@ -126,24 +151,8 @@ extension PixelBuffer {
     private static func taps(length: Int, newLength: Int, filter: ResampleFilter) -> [Taps] {
         let scale = Double(length) / Double(newLength)
         let stretch = max(scale, 1)
-        let support = filter.radius * stretch
         return (0..<newLength).map { i in
-            let center = (Double(i) + 0.5) * scale - 0.5
-            let first = Int((center - support).rounded(.up))
-            let last = Int((center + support).rounded(.down))
-            var tap = Taps()
-            for j in first...max(first, last) {
-                let w = filter.weight((Double(j) - center) / stretch)
-                guard w != 0 else { continue }
-                tap.add(j, weight: w, length: length)
-            }
-            let total = tap.weights.reduce(0, +)
-            guard total != 0 else {
-                // Unreachable for these filters; read the nearest pixel anyway.
-                return Taps(indices: [min(max(Int(center.rounded()), 0), length - 1)], weights: [1])
-            }
-            tap.weights = tap.weights.map { $0 / total }
-            return tap
+            Taps(center: (Double(i) + 0.5) * scale - 0.5, stretch: stretch, length: length, filter: filter)
         }
     }
 }
