@@ -202,6 +202,10 @@ public enum FlareFormat {
                     guard k.value.isFinite else {
                         throw FormatError.invalid("layer \(layer.id): track \(property) has a non-finite value at frame \(k.frame)")
                     }
+                    // Lottie writes scale as a percent, so value × 100 must stay finite too.
+                    guard !["scaleX", "scaleY"].contains(property) || (k.value * 100).isFinite else {
+                        throw FormatError.invalid("layer \(layer.id): track \(property) value × 100 overflows at frame \(k.frame)")
+                    }
                 }
             }
             for instance in layer.instances {
