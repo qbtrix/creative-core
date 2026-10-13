@@ -40,6 +40,34 @@ import Testing
         #expect(entry.fileName == "frame_12345.png")
     }
 
+    @Test func lastFrameOfDurationIsInRange() throws {
+        // #96: the range must lie in 0...durationFrames, so durationFrames itself is allowed.
+        let plan = try PNGExportPlan.plan(scene: Self.scene, frames: 40...48, scale: 1, step: 4)
+        #expect(plan.map(\.frame) == [40, 44, 48])
+        #expect(plan.last?.fileName == "frame_0048.png")
+    }
+
+    @Test func steppedEntriesTakeTimeFromTheirFrame() throws {
+        let plan = try PNGExportPlan.plan(scene: Self.scene, frames: 6...47, scale: 1, step: 12)
+        #expect(plan.map(\.frame) == [6, 18, 30, 42])
+        for entry in plan {
+            #expect(entry.time == (try Timeline.time(ofFrame: entry.frame, fps: Self.scene.fps)))
+        }
+        #expect(plan.map(\.time) == [0.25, 0.75, 1.25, 1.75])
+    }
+
+    @Test func sizeAtThePixelLimitIsAllowed() throws {
+        let side = Double(PNGExportPlan.maxPixels)
+        let scene = Scene(id: "s", name: "Big", fps: 24, durationFrames: 1, width: side / 4, height: 1)
+        let entry = try #require(try PNGExportPlan.plan(scene: scene, frames: 0...0, scale: 4).first)
+        #expect(entry.pixelWidth == PNGExportPlan.maxPixels)
+        #expect(entry.pixelHeight == 4)
+        #expect(throws: PNGExportError.invalidSize(width: side + 4, height: 4)) {
+            try PNGExportPlan.plan(scene: Scene(id: "s", name: "Big", fps: 24, durationFrames: 1,
+                                                width: side / 4 + 1, height: 1), frames: 0...0, scale: 4)
+        }
+    }
+
     @Test func badInputThrows() {
         let s = Self.scene
         #expect(throws: PNGExportError.frameOutOfRange(-1...10)) {

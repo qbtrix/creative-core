@@ -264,5 +264,26 @@
     "anchor": "s.fill = fill.translated(dx: dx, dy: dy)",
     "replacement": "s.fill = fill",
     "filter": "ShapeCommandsTests"
+  },
+  {
+    "note": "PNG export plan rejects a range ending at durationFrames",
+    "file": "Sources/FlareCore/Export/PNGExportPlan.swift",
+    "anchor": "frames.upperBound <= scene.durationFrames else {",
+    "replacement": "frames.upperBound < scene.durationFrames else {",
+    "filter": "PNGExportPlanTests"
+  },
+  {
+    "note": "PNG export plan times a stepped entry by its index instead of its frame",
+    "file": "Sources/FlareCore/Export/PNGExportPlan.swift",
+    "anchor": "time: try Timeline.time(ofFrame: frame, fps: scene.fps)",
+    "replacement": "time: try Timeline.time(ofFrame: i, fps: scene.fps)",
+    "filter": "PNGExportPlanTests"
+  },
+  {
+    "note": "PNG export plan rejects a side of exactly maxPixels",
+    "file": "Sources/FlareCore/Export/PNGExportPlan.swift",
+    "anchor": "width <= limit, height <= limit else {",
+    "replacement": "width < limit, height <= limit else {",
+    "filter": "PNGExportPlanTests"
   }
 ]
