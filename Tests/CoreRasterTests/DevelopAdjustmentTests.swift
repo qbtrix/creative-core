@@ -71,6 +71,41 @@ private func randomBuffer(seed: UInt64) throws -> PixelBuffer {
     }
 }
 
+@Test func contrastMovesValuesOutsideZeroToOneTheContrastWay() throws {
+    // Issue #247: these moved against the contrast direction.
+    let row = try grayRow([-0.5, 1.5, 2, 4])
+    #expect(try grays(row.contrast(100)) == [-0.75, 1.75, 2.5, 5.5])
+    #expect(try grays(row.contrast(-100)) == [-0.25, 1.25, 1.5, 2.5])
+    let wide = try grayRow((-20...40).map { Float($0) / 10 })
+    let before = try grays(wide)
+    for amount in stride(from: Float(-100), through: 100, by: 10) where amount != 0 {
+        let after = try grays(wide.contrast(amount))
+        #expect(zip(after, after.dropFirst()).allSatisfy { $0 <= $1 }, "contrast \(amount)")
+        for (v, out) in zip(before, after) where v < 0 || v > 1 {
+            // More contrast pushes away from mid grey; less pulls toward it
+            // without crossing 0 or 1.
+            let away = (v > 1) == (amount > 0)
+            #expect(away ? out > v : out < v, "contrast \(amount) at \(v)")
+            #expect(v > 1 ? out > 1 : out < 0, "contrast \(amount) at \(v)")
+        }
+    }
+}
+
+@Test func contrastInsideZeroToOneIsTheSCurve() throws {
+    let ramp = try grayRow((0...100).map { Float($0) / 100 })
+    for amount in [Float(-100), -35, 60, 100] {
+        let push = amount / 200
+        let curve = try ramp.curves(points: [
+            CurvePoint(x: 0, y: 0),
+            CurvePoint(x: 0.09, y: 0.09 * (1 - push)),
+            CurvePoint(x: 0.18, y: 0.18),
+            CurvePoint(x: 0.59, y: 0.59 + 0.41 * push),
+            CurvePoint(x: 1, y: 1),
+        ])
+        #expect(try ramp.contrast(amount) == curve, "contrast \(amount)")
+    }
+}
+
 @Test func highlightsAndShadowsMoveOnlyTheirEnd() throws {
     let row = try grayRow([0.9, 0.02])
     let recovered = try grays(row.highlightsShadows(highlights: -100, shadows: 0))

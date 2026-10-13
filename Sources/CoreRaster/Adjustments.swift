@@ -94,20 +94,29 @@ extension PixelBuffer {
         return try mappingPixels { RGBA(r: $0.r * gains.r, g: $0.g * gains.g, b: $0.b * gains.b, a: $0.a) }
     }
 
-    /// Contrast: an S curve through 0, mid grey (0.18, kept exactly) and 1, built
-    /// on `curves`, so it is monotonic. Positive `amount` pushes values away from
-    /// mid grey, negative pulls them toward it. -100...100.
+    /// Contrast: an S curve through 0, mid grey (0.18, kept exactly) and 1 (a
+    /// `MonotoneCurve`, as in `curves`), so it is monotonic. Positive `amount`
+    /// pushes values away from mid grey, negative pulls them toward it.
+    /// Outside 0...1 (unclipped linear values) it continues in a straight line
+    /// from 0 and from 1 with slope 1 + amount/200, so those values move the
+    /// same way: over 1 for more contrast, under 1 for less. -100...100.
     public func contrast(_ amount: Float) throws -> PixelBuffer {
         try Self.checkSlider("contrast", amount)
         if amount == 0 { return self }
         let push = amount / 200
-        return try curves(points: [
+        let curve = try MonotoneCurve([
             CurvePoint(x: 0, y: 0),
             CurvePoint(x: 0.09, y: 0.09 * (1 - push)),
             CurvePoint(x: 0.18, y: 0.18),
             CurvePoint(x: 0.59, y: 0.59 + 0.41 * push),
             CurvePoint(x: 1, y: 1),
         ])
+        let outerSlope = 1 + push
+        return try mappingColor { value in
+            if value > 1 { return 1 + outerSlope * (value - 1) }
+            if value < 0 { return outerSlope * value }
+            return curve.value(value)
+        }
     }
 
     /// Highlights and shadows: an exposure change of up to one stop at 100,
