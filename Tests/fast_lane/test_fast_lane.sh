@@ -86,6 +86,8 @@ check "red main does not mask hard rules" "not-eligible|too big" '.additions = 9
 # belt/review commit status at success on the head; other PRs ignore it.
 BELT='.body = "Closes #1\n\nBelt-Run: act-1"'
 review() { printf '. + [{"__typename":"StatusContext","context":"belt/review","state":"%s"}]' "$1"; }
+# The review gate cases run with the gate on; the shipped default may be off.
+REQUIRE_BELT_REVIEW=1
 check "belt PR, review missing: waits" "pending|waiting for review" "$BELT" "$BASE_FILES" .
 check "belt PR, review pending: waits" "pending|waiting for review" "$BELT" "$BASE_FILES" "$(review PENDING)"
 check "belt PR, review success: eligible" "eligible|150|2|5" "$BELT" "$BASE_FILES" "$(review SUCCESS)"
@@ -109,4 +111,7 @@ else
   echo "FAIL strip_attribution: got '$got'"; fail=1
 fi
 
+# With the gate off, a Belt PR with no review is eligible like any other.
+REQUIRE_BELT_REVIEW=0
+check "gate off: belt PR without review is eligible" "eligible|150|2|5" '.body = "x\nBelt-Run: act-1"' "$BASE_FILES" .
 exit "$fail"
