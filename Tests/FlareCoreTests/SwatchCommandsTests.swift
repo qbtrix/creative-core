@@ -48,7 +48,9 @@ import Testing
         let bad = Color(r: 1.5, g: 0, b: 0)
         SceneCommandTests.rejects(AddSwatch(name: "Red", color: .black), on: start, .duplicateID("Red"))
         SceneCommandTests.rejects(AddSwatch(name: "Hot", color: bad), on: start, .invalidColor(bad))
+        SceneCommandTests.rejects(AddSwatch(name: "", color: .black), on: start, .emptySwatchName)
         SceneCommandTests.rejects(RenameSwatch(name: "Red", newName: "Blue"), on: start, .duplicateID("Blue"))
+        SceneCommandTests.rejects(RenameSwatch(name: "Red", newName: ""), on: start, .emptySwatchName)
         SceneCommandTests.rejects(RenameSwatch(name: "Nope", newName: "X"), on: start, .swatchNotFound("Nope"))
         SceneCommandTests.rejects(SetSwatchColor(name: "Red", color: bad), on: start, .invalidColor(bad))
         SceneCommandTests.rejects(SetSwatchColor(name: "Nope", color: .black), on: start, .swatchNotFound("Nope"))
@@ -85,6 +87,7 @@ import Testing
         #"[{"name":"A","color":{"r":0,"g":0,"b":0,"a":1}},{"name":"A","color":{"r":1,"g":1,"b":1,"a":1}}]"#,
         #"[{"name":"A","color":{"r":0,"g":-0.1,"b":0,"a":1}}]"#,
         #"[{"name":"A","color":{"r":0,"g":0,"b":0,"a":2}}]"#,
+        #"[{"name":"","color":{"r":0,"g":0,"b":0,"a":1}}]"#,
     ])
     func validateRejectsBadPalette(swatches: String) {
         let json = #"""
@@ -110,7 +113,7 @@ import Testing
         ]
     }
 
-    static func anyName(_ rng: inout SplitMix64) -> String { ["A", "B", "C"].randomElement(using: &rng) ?? "A" }
+    static func anyName(_ rng: inout SplitMix64) -> String { ["A", "B", "C", ""].randomElement(using: &rng) ?? "A" }
 
     static func anyColor(_ rng: inout SplitMix64) -> Color {
         Color(r: UndoPropertyTests.anyNumber(in: -0.2...1.2, &rng), g: 0.5, b: 0.5)

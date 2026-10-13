@@ -264,5 +264,26 @@
     "anchor": "s.fill = fill.translated(dx: dx, dy: dy)",
     "replacement": "s.fill = fill",
     "filter": "ShapeCommandsTests"
+  },
+  {
+    "note": "AddSwatch accepts an empty swatch name",
+    "file": "Sources/FlareCore/SwatchCommands.swift",
+    "anchor": "guard !name.isEmpty else { throw CommandError.emptySwatchName }\n",
+    "replacement": "",
+    "filter": "SwatchCommandsTests"
+  },
+  {
+    "note": "RenameSwatch accepts an empty new swatch name",
+    "file": "Sources/FlareCore/SwatchCommands.swift",
+    "anchor": "guard !newName.isEmpty else { throw CommandError.emptySwatchName }\n",
+    "replacement": "",
+    "filter": "SwatchCommandsTests"
+  },
+  {
+    "note": "validate accepts an empty swatch name",
+    "file": "Sources/FlareCore/FlareFormat.swift",
+    "anchor": "guard !swatch.name.isEmpty else { throw FormatError.invalid(\"swatch name is empty\") }\n",
+    "replacement": "",
+    "filter": "SwatchCommandsTests"
   }
 ]

@@ -16,7 +16,7 @@
 //   never stored empty (an empty track is removed, so undo restores equality)
 // - keyframe values and shape points (including path points) are finite
 // - text shapes have a finite font size > 0 and a finite position
-// - swatch names are unique and swatch color channels are finite and in 0...1
+// - swatch names are non-empty and unique, and swatch color channels are finite and in 0...1
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
