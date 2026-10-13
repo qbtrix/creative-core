@@ -19,7 +19,7 @@ import Testing
     }
 
     /// Both edges land exactly on ±max: still finite, so accepted and exported.
-    @Test(arguments: [(max / 2, max / 2), (-max / 2, max / 2), (max, .leastNonzeroMagnitude), (0, max)])
+    @Test(arguments: [(max / 2, max / 2), (-max / 2, max / 2), (max.nextDown, max.ulp), (0, max)] as [(Double, Double)])
     func edgeExactlyAtTheLimitIsAccepted(x: Double, r: Double) throws {
         let d = Self.doc(Self.radial(x, 0, r))
         try FlareFormat.validate(d)
