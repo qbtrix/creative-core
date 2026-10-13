@@ -2,7 +2,10 @@
 // curves, and the develop sliders (white balance, contrast, highlights and
 // shadows). Each one maps every pixel through one function on unpremultiplied
 // linear values (`RGBA.unpremultiplied`), then premultiplies again
-// (`RGBA.premultiplied`), all in `mappingPixels`. Alpha is never changed. Develop
+// (`RGBA.premultiplied`), all in `mappingPixels`. Levels and curves can read
+// sRGB-encoded values instead (`ToneEncoding.sRGB`, CoreColor's
+// TransferCurve): each channel is encoded, mapped, and decoded back to linear,
+// so their parameters mean what a display shows. Alpha is never changed. Develop
 // sliders take -100...100 with 0 as no change. Parameters are checked
 // before any pixel is touched and throw `RasterError.invalid`; identity
 // parameters return the input unchanged, bit for bit; a result component that
@@ -14,6 +17,15 @@ import Musl
 #elseif canImport(Darwin)
 import Darwin
 #endif
+import CoreColor
+
+/// The values levels and curves read and write: linear light, or the
+/// sRGB-encoded values a display shows (mid grey near 0.5), the way photo
+/// editors' tone controls work.
+public enum ToneEncoding: Hashable, Sendable {
+    case linear
+    case sRGB
+}
 
 /// One control point of a tone curve: input `x` maps to output `y`.
 public struct CurvePoint: Hashable, Sendable {
@@ -43,10 +55,11 @@ extension PixelBuffer {
 
     /// Levels: values at or below `inBlack` become `outBlack`, `inWhite`
     /// becomes `outWhite`, with `gamma` (over 1 brightens) applied between.
-    /// Values above `inWhite` are not clipped. Throws for a non-finite
+    /// Values above `inWhite` are not clipped. With `encoding` `.sRGB` every
+    /// parameter is an sRGB-encoded value. Throws for a non-finite
     /// parameter, `inBlack >= inWhite` or `gamma <= 0`.
     public func levels(inBlack: Float, inWhite: Float, gamma: Float,
-                       outBlack: Float, outWhite: Float) throws -> PixelBuffer {
+                       outBlack: Float, outWhite: Float, encoding: ToneEncoding = .linear) throws -> PixelBuffer {
         let params = [inBlack, inWhite, gamma, outBlack, outWhite]
         guard params.allSatisfy(\.isFinite) else {
             throw RasterError.invalid("levels \(params): every parameter must be finite")
@@ -61,7 +74,7 @@ extension PixelBuffer {
         let inRange = Double(inWhite) - Double(inBlack)
         let outRange = Double(outWhite) - Double(outBlack)
         let exponent = 1 / Double(gamma)
-        return try mappingColor { value in
+        return try mappingColor(encoding) { value in
             let t = max((Double(value) - Double(inBlack)) / inRange, 0)
             return Float(Double(outBlack) + outRange * pow(t, exponent))
         }
@@ -69,12 +82,13 @@ extension PixelBuffer {
 
     /// Curves: a monotone cubic (Fritsch-Carlson) through `points`, applied to
     /// each color channel. Outside the first and last x the curve continues in
-    /// a straight line along its end tangent. Throws for fewer than 2 points,
+    /// a straight line along its end tangent. With `encoding` `.sRGB` the
+    /// points are sRGB-encoded values. Throws for fewer than 2 points,
     /// a non-finite coordinate, an x outside 0...1, or x not strictly increasing.
-    public func curves(points: [CurvePoint]) throws -> PixelBuffer {
+    public func curves(points: [CurvePoint], encoding: ToneEncoding = .linear) throws -> PixelBuffer {
         let curve = try MonotoneCurve(points)
         if points.allSatisfy({ $0.x == $0.y }) { return self }
-        return try mappingColor(curve.value)
+        return try mappingColor(encoding, curve.value)
     }
 
     /// White balance: per-channel gains on linear color. A positive
@@ -150,9 +164,39 @@ extension PixelBuffer {
         return t * t * (3 - 2 * t)
     }
 
+    /// Steps in the table an sRGB tone mapping reads for values in 0...1.
+    static let toneTableSteps = 4096
+
     /// Maps each straight color channel through `transfer`, keeping alpha.
-    private func mappingColor(_ transfer: (Float) -> Float) throws -> PixelBuffer {
-        try mappingPixels { RGBA(r: transfer($0.r), g: transfer($0.g), b: transfer($0.b), a: $0.a) }
+    /// With `.sRGB`, `transfer` sees and returns encoded values. The whole
+    /// encode, map, decode is tabulated once over 0...1, at steps even in the
+    /// value's square root, and read with linear interpolation there (two pows
+    /// per value made it five times slower); values outside 0...1 are mapped
+    /// exactly.
+    private func mappingColor(_ encoding: ToneEncoding = .linear, _ transfer: (Float) -> Float) throws -> PixelBuffer {
+        try withoutActuallyEscaping(transfer) { transfer in
+            let channel: (Float) -> Float
+            switch encoding {
+            case .linear:
+                channel = transfer
+            case .sRGB:
+                let exact = { (v: Float) -> Float in Float(TransferCurve.decode(Double(transfer(Float(TransferCurve.encode(Double(v))))))) }
+                let steps = Self.toneTableSteps
+                // Spaced by the square root of the value, so the steps near
+                // black, where the transfer curve is steepest, are fine.
+                let table = (0...steps).map { (i: Int) -> Float in
+                    let u = Float(i) / Float(steps)
+                    return exact(u * u)
+                }
+                channel = { v in
+                    guard v >= 0, v <= 1 else { return exact(v) }
+                    let f = v.squareRoot() * Float(steps)
+                    let i = min(Int(f), steps - 1)
+                    return table[i] + (table[i + 1] - table[i]) * (f - Float(i))
+                }
+            }
+            return try mappingPixels { RGBA(r: channel($0.r), g: channel($0.g), b: channel($0.b), a: $0.a) }
+        }
     }
 
     /// Maps each straight pixel through `transform`, which must keep alpha.

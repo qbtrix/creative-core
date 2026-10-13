@@ -208,5 +208,19 @@
     "anchor": "case 1?: return rotated(.degrees90)",
     "replacement": "case 1?: return rotated(.degrees270)",
     "filter": "RotateTests"
+  },
+  {
+    "note": "sRGB levels and curves leave the result encoded instead of decoding it back to linear",
+    "file": "Sources/CoreRaster/Adjustments.swift",
+    "anchor": "let exact = { (v: Float) -> Float in Float(TransferCurve.decode(Double(transfer(Float(TransferCurve.encode(Double(v))))))) }",
+    "replacement": "let exact = { (v: Float) -> Float in transfer(Float(TransferCurve.encode(Double(v)))) }",
+    "filter": "ToneEncodingTests"
+  },
+  {
+    "note": "the sRGB histogram counts linear values",
+    "file": "Sources/CoreRaster/Histogram.swift",
+    "anchor": "let shown: (Float) -> Float = encoding == .sRGB ? { Float(TransferCurve.encode(Double($0))) } : { $0 }",
+    "replacement": "let shown: (Float) -> Float = { $0 }",
+    "filter": "ToneEncodingTests|HistogramTests"
   }
 ]

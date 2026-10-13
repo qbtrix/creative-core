@@ -1,11 +1,15 @@
 // Histogram.swift: per-channel histograms of a PixelBuffer. Red, green, blue
 // and Rec. 709 luminance are counted over unpremultiplied linear values
 // (`RGBA.unpremultiplied`) clamped to 0...1, with clipping counts taken before
-// the clamp. Invariants a reader must keep: `bins` is in `binRange`, every
+// the clamp. With `ToneEncoding.sRGB` each count is of the sRGB-encoded value
+// instead (luminance: the encoded linear luminance), the axis levels and
+// curves use in that encoding. Invariants a reader must keep: `bins` is in `binRange`, every
 // channel array has `bins` entries, each channel's counts sum to the number of
 // non-transparent pixels, and fully transparent pixels (alpha 0) are counted
 // only in `transparent`. Bin k holds values in [k/bins, (k+1)/bins); the last
 // bin also holds 1.
+
+import CoreColor
 
 /// Counts of a buffer's pixels by channel value, plus clipping counts.
 public struct Histogram: Equatable, Hashable, Sendable {
@@ -29,15 +33,17 @@ public struct Histogram: Equatable, Hashable, Sendable {
     /// Fully transparent pixels, which are in no channel's counts.
     public let transparent: Int
 
-    /// Counts `buffer` into `bins` bins per channel. Throws
-    /// `RasterError.invalid` when `bins` is outside `binRange`.
-    public init(of buffer: PixelBuffer, bins: Int = 256) throws {
+    /// Counts `buffer` into `bins` bins per channel, on linear or
+    /// sRGB-encoded values. Throws `RasterError.invalid` when `bins` is
+    /// outside `binRange`.
+    public init(of buffer: PixelBuffer, bins: Int = 256, encoding: ToneEncoding = .linear) throws {
         guard Self.binRange.contains(bins) else {
             throw RasterError.invalid("histogram bins \(bins): must be in \(Self.binRange)")
         }
         var red = [Int](repeating: 0, count: bins), green = red, blue = red, luminance = red
         var shadowClipped = 0, highlightClipped = 0, transparent = 0
         let c = buffer.components, w = Self.luminanceWeights
+        let shown: (Float) -> Float = encoding == .sRGB ? { Float(TransferCurve.encode(Double($0))) } : { $0 }
         for i in stride(from: 0, to: c.count, by: PixelBuffer.channels) {
             let p = RGBA(r: c[i], g: c[i + 1], b: c[i + 2], a: c[i + 3])
             guard p.a != 0 else {
@@ -48,10 +54,10 @@ public struct Histogram: Equatable, Hashable, Sendable {
             if s.r <= 0 || s.g <= 0 || s.b <= 0 { shadowClipped += 1 }
             if s.r >= 1 || s.g >= 1 || s.b >= 1 { highlightClipped += 1 }
             let r = min(max(s.r, 0), 1), g = min(max(s.g, 0), 1), b = min(max(s.b, 0), 1)
-            red[Self.bin(r, of: bins)] += 1
-            green[Self.bin(g, of: bins)] += 1
-            blue[Self.bin(b, of: bins)] += 1
-            luminance[Self.bin(w.r * r + w.g * g + w.b * b, of: bins)] += 1
+            red[Self.bin(shown(r), of: bins)] += 1
+            green[Self.bin(shown(g), of: bins)] += 1
+            blue[Self.bin(shown(b), of: bins)] += 1
+            luminance[Self.bin(shown(w.r * r + w.g * g + w.b * b), of: bins)] += 1
         }
         self.bins = bins
         self.red = red
