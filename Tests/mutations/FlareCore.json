@@ -285,5 +285,26 @@
     "anchor": "guard ![\"scaleX\", \"scaleY\"].contains(property) || (k.value * 100).isFinite else {",
     "replacement": "guard ![\"scaleX\", \"scaleY\"].contains(property) || k.value.isFinite else {",
     "filter": "ScaleKeyframeOverflowTests"
+  },
+  {
+    "note": "AddSwatch accepts an empty swatch name",
+    "file": "Sources/FlareCore/SwatchCommands.swift",
+    "anchor": "guard !name.isEmpty else { throw CommandError.emptySwatchName }\n",
+    "replacement": "",
+    "filter": "SwatchCommandsTests"
+  },
+  {
+    "note": "RenameSwatch accepts an empty new swatch name",
+    "file": "Sources/FlareCore/SwatchCommands.swift",
+    "anchor": "guard !newName.isEmpty else { throw CommandError.emptySwatchName }\n",
+    "replacement": "",
+    "filter": "SwatchCommandsTests"
+  },
+  {
+    "note": "validate accepts an empty swatch name",
+    "file": "Sources/FlareCore/FlareFormat.swift",
+    "anchor": "guard !swatch.name.isEmpty else { throw FormatError.invalid(\"swatch name is empty\") }\n",
+    "replacement": "",
+    "filter": "SwatchCommandsTests"
   }
 ]
