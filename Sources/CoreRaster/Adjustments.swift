@@ -1,7 +1,9 @@
-// Adjustments.swift: tone adjustments on a PixelBuffer: exposure, levels and
-// curves. Each one maps every color channel through one transfer function on
-// unpremultiplied linear values (`RGBA.unpremultiplied`), then premultiplies
-// again (`RGBA.premultiplied`). Alpha is never changed. Parameters are checked
+// Adjustments.swift: tone adjustments on a PixelBuffer: exposure, levels,
+// curves, and the develop sliders (white balance, contrast, highlights and
+// shadows). Each one maps every pixel through one function on unpremultiplied
+// linear values (`RGBA.unpremultiplied`), then premultiplies again
+// (`RGBA.premultiplied`), all in `mappingPixels`. Alpha is never changed. Develop
+// sliders take -100...100 with 0 as no change. Parameters are checked
 // before any pixel is touched and throw `RasterError.invalid`; identity
 // parameters return the input unchanged, bit for bit; a result component that
 // overflows to infinity throws (from `setPixel`).
@@ -75,13 +77,81 @@ extension PixelBuffer {
         return try mappingColor(curve.value)
     }
 
+    /// White balance: per-channel gains on linear color. A positive
+    /// `temperature` warms (red up, blue down); a positive `tint` pushes toward
+    /// magenta (green down). At 100 a channel moves by half a stop before the
+    /// gains are scaled so their Rec. 709 luminance is 1, which keeps a neutral
+    /// grey's luminance. Both in -100...100.
+    public func whiteBalance(temperature: Float, tint: Float) throws -> PixelBuffer {
+        try Self.checkSlider("temperature", temperature)
+        try Self.checkSlider("tint", tint)
+        if temperature == 0, tint == 0 { return self }
+        let warm = Double(temperature) / 200, magenta = Double(tint) / 200
+        let r = pow(2, warm), g = pow(2, -magenta), b = pow(2, -warm)
+        let w = Histogram.luminanceWeights
+        let norm = Double(w.r) * r + Double(w.g) * g + Double(w.b) * b
+        let gains = (r: Float(r / norm), g: Float(g / norm), b: Float(b / norm))
+        return try mappingPixels { RGBA(r: $0.r * gains.r, g: $0.g * gains.g, b: $0.b * gains.b, a: $0.a) }
+    }
+
+    /// Contrast: an S curve through 0, mid grey (0.18, kept exactly) and 1, built
+    /// on `curves`, so it is monotonic. Positive `amount` pushes values away from
+    /// mid grey, negative pulls them toward it. -100...100.
+    public func contrast(_ amount: Float) throws -> PixelBuffer {
+        try Self.checkSlider("contrast", amount)
+        if amount == 0 { return self }
+        let push = amount / 200
+        return try curves(points: [
+            CurvePoint(x: 0, y: 0),
+            CurvePoint(x: 0.09, y: 0.09 * (1 - push)),
+            CurvePoint(x: 0.18, y: 0.18),
+            CurvePoint(x: 0.59, y: 0.59 + 0.41 * push),
+            CurvePoint(x: 1, y: 1),
+        ])
+    }
+
+    /// Highlights and shadows: an exposure change of up to one stop at 100,
+    /// weighted per pixel by its Rec. 709 luminance with a smoothstep falloff.
+    /// `highlights` acts above mid grey (0.18) and `shadows` below 0.5, so
+    /// each leaves the other end of the range alone. Both in -100...100.
+    public func highlightsShadows(highlights: Float, shadows: Float) throws -> PixelBuffer {
+        try Self.checkSlider("highlights", highlights)
+        try Self.checkSlider("shadows", shadows)
+        if highlights == 0, shadows == 0 { return self }
+        let w = Histogram.luminanceWeights
+        return try mappingPixels { p in
+            let luma = w.r * p.r + w.g * p.g + w.b * p.b
+            let stops = highlights / 100 * Self.smoothstep(0.18, 1, luma)
+                + shadows / 100 * (1 - Self.smoothstep(0, 0.5, luma))
+            let gain = Float(pow(2, Double(stops)))
+            return RGBA(r: p.r * gain, g: p.g * gain, b: p.b * gain, a: p.a)
+        }
+    }
+
+    /// Throws unless `value` is a finite develop-slider value in -100...100.
+    private static func checkSlider(_ name: String, _ value: Float) throws {
+        guard value.isFinite, (-100...100).contains(value) else {
+            throw RasterError.invalid("\(name) \(value): must be in -100...100")
+        }
+    }
+
+    /// 0 at or below `edge0`, 1 at or above `edge1`, a smooth cubic between.
+    private static func smoothstep(_ edge0: Float, _ edge1: Float, _ x: Float) -> Float {
+        let t = min(max((x - edge0) / (edge1 - edge0), 0), 1)
+        return t * t * (3 - 2 * t)
+    }
+
     /// Maps each straight color channel through `transfer`, keeping alpha.
     private func mappingColor(_ transfer: (Float) -> Float) throws -> PixelBuffer {
+        try mappingPixels { RGBA(r: transfer($0.r), g: transfer($0.g), b: transfer($0.b), a: $0.a) }
+    }
+
+    /// Maps each straight pixel through `transform`, which must keep alpha.
+    private func mappingPixels(_ transform: (RGBA) -> RGBA) throws -> PixelBuffer {
         var result = self
         for y in 0..<height {
             for x in 0..<width {
-                let p = try pixel(x: x, y: y).unpremultiplied()
-                let mapped = RGBA(r: transfer(p.r), g: transfer(p.g), b: transfer(p.b), a: p.a)
+                let mapped = try transform(pixel(x: x, y: y).unpremultiplied())
                 try result.setPixel(x: x, y: y, mapped.premultiplied())
             }
         }
