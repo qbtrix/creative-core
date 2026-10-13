@@ -1,9 +1,10 @@
 # Mutation: the full scripts/mutate sweep. Every entry in Tests/mutations/*.json
-# plants its bug and must be caught by its tests. Runs on every push to main,
-# nightly, and on demand. It is a separate workflow from CI on purpose: the fast
-# lane waits for CI on main to finish before its next merge, and a sweep takes
-# far longer than the gate. So a red sweep marks main's commit but does not hold
-# the lane; the per-PR "Mutation" job in ci.yml is the blocking check.
+# plants its bug and must be caught by its tests. Runs nightly on the default
+# branch (dev), on a person's push to main (a hotfix; promotions push with
+# GITHUB_TOKEN and fire nothing), and on demand. It is a separate workflow from
+# CI on purpose: promotion to main waits for CI, and a sweep takes far longer.
+# So a red sweep marks its commit but holds nothing; the "Mutation" job in
+# ci.yml, over the commits main has not taken yet, is the blocking check.
 name: Mutation
 
 on:

@@ -117,7 +117,9 @@ FlareCore has four layers. Each depends only on the ones above it. CoreColor, Co
   reads untrusted bytes gets a seeded fuzz test that asserts it throws instead
   of crashing. Review-only; copy the shape of `CommandFuzzTests`.
 - **Proof is the gate.** "It compiles" is not done. Gate: `scripts/ci` prints
-  `CI: PASS` on your rebased branch; the PR body names the proving test.
+  `CI: PASS` on your branch rebased on `origin/dev`; the PR body names the
+  proving test and carries the `Fast-Check: pass` / `Head: <sha>` marker for
+  that head.
 
 ## Mutation testing
 
@@ -152,9 +154,11 @@ Plans live in `Tests/mutations/<module>.json`, one entry per bug:
 
 **New logic with an invariant gets one mutation entry in the same PR**: a
 guard, a limit, a formula, an undo path. CI, not `scripts/ci`: the `Mutation anchors` job
-fails on a stale anchor, and the `Mutation` job plants the entries a PR adds
-or whose files it changes (15 at most) and fails on any escape. The full sweep
-runs on every push to main and nightly (`.github/workflows/mutation.yml`).
+fails on a stale anchor, and the `Mutation` job plants the entries that the
+commits on `dev` since `main` add or touch (15 at most) and fails on any
+escape. CI runs on `dev` once a feature is built, not on your PR, so run
+`scripts/mutate --run --changed-since origin/dev` before you push. The full
+sweep runs nightly (`.github/workflows/mutation.yml`).
 
 ## Reading cost
 

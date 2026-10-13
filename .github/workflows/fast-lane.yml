@@ -1,22 +1,27 @@
-# Fast lane: squash-merge small, green, allowlisted PRs labelled `fast-lane`
-# into main. All logic lives in scripts/fast-lane.sh; agent rules in CLAUDE.md.
+# Fast lane: squash-merge small, checked, allowlisted PRs labelled `fast-lane`
+# into dev. All logic lives in scripts/fast-lane.sh; agent rules in CLAUDE.md.
+# Full CI runs on dev once a feature is built (the lane dispatches it after
+# merging a `feature-done` PR), and ci.yml's `promote` job moves main to a dev
+# SHA only when that run is green.
 #
 # Safety: this workflow never checks out or runs PR code. It checks out only
-# scripts/fast-lane.sh from the trusted main branch and talks to the GitHub API.
-# workflow_run fires from the copy of this file on the default branch (main),
-# so that trigger starts working once this file reaches main.
+# scripts/fast-lane.sh from main (green, promoted code) and talks to the GitHub
+# API. workflow_run and schedule fire from the copy of this file on the default
+# branch, so those triggers follow whatever branch is the default (dev).
 name: Fast Lane
 
 on:
   pull_request_target:
-    types: [labeled, synchronize, ready_for_review]
-    branches: [main]
+    # edited: the worker updates the Fast-Check marker in the body after a push.
+    types: [labeled, synchronize, edited, ready_for_review]
+    # main too, so a fast-lane PR opened against main gets retargeted to dev.
+    branches: [dev, main]
   workflow_run:
     workflows: [CI]
     types: [completed]
-  # Heartbeat: runs started by GITHUB_TOKEN (CI dispatched on refreshed PRs and
-  # on main after merges) fire no workflow_run, so nothing would re-check those
-  # PRs. A sweep every 5 minutes closes that gap. Free on a public repo.
+  # Heartbeat: CI runs started by GITHUB_TOKEN fire no workflow_run, and a
+  # marker edited while a sweep runs would wait for the next event. A sweep
+  # every 5 minutes closes both gaps. Free on a public repo.
   schedule:
     - cron: '*/5 * * * *'
   workflow_dispatch:
@@ -31,10 +36,13 @@ permissions:
   pull-requests: write
   checks: read
   statuses: read
-  actions: write  # dispatch CI on main and refreshed PR heads
+  actions: write  # dispatch CI on dev after merging a feature-done PR
 
+# Every run sweeps every open fast-lane PR, so one lane at a time is enough:
+# GitHub keeps the running sweep plus the newest pending one, and two sweeps
+# never race to merge the same PR.
 concurrency:
-  group: fast-lane-${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha || inputs.pr || github.run_id }}
+  group: fast-lane
   cancel-in-progress: false
 
 jobs:
@@ -52,17 +60,9 @@ jobs:
           persist-credentials: false
           sparse-checkout: scripts/fast-lane.sh
           sparse-checkout-cone-mode: false
-      - name: Evaluate
+      - name: Sweep
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
-          EVENT: ${{ github.event_name }}
-          PR: ${{ github.event.pull_request.number }}
-          SHA: ${{ github.event.workflow_run.head_sha }}
           PR_INPUT: ${{ inputs.pr }}
-        run: |
-          case "$EVENT" in
-            pull_request_target) bash scripts/fast-lane.sh "$PR" ;;
-            workflow_run) bash scripts/fast-lane.sh --sha "$SHA" ;;
-            *) bash scripts/fast-lane.sh ${PR_INPUT:+"$PR_INPUT"} ;;
-          esac
+        run: bash scripts/fast-lane.sh ${PR_INPUT:+"$PR_INPUT"}
