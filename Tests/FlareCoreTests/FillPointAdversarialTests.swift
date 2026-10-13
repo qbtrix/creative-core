@@ -78,7 +78,9 @@ import Foundation
             .linear(stops: Self.stops, start: Point(x: -big, y: big), end: Point(x: big, y: -big)),
             .linear(stops: Self.stops, start: Point(x: .leastNonzeroMagnitude, y: -0.0), end: Point(x: 0, y: 0)),
             .linear(stops: [], start: Point(x: 3, y: 3), end: Point(x: 3, y: 3)),
-            .radial(stops: Self.stops, center: Point(x: -big, y: .leastNonzeroMagnitude), radius: big),
+            // The largest radial extent that validates: center.x - radius is exactly -big (#200).
+            .radial(stops: Self.stops, center: Point(x: -big / 2, y: .leastNonzeroMagnitude), radius: big / 2),
+            .radial(stops: Self.stops, center: Point(x: 0, y: -big), radius: big),
         ]
         for fill in fills {
             var e = CommandEngine(document: ShapeTextOwnerTests.start())
