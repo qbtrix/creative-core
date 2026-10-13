@@ -245,6 +245,13 @@
     "filter": "FillRadialExtentTests"
   },
   {
+    "note": "scale track is not checked as percent, so scaleX × 100 may overflow in Lottie",
+    "file": "Sources/FlareCore/FlareFormat.swift",
+    "anchor": "guard !percentScaled.contains(property) || (k.value * 100).isFinite else {",
+    "replacement": "guard !percentScaled.contains(property) || k.value.isFinite else {",
+    "filter": "ScaleKeyframeOverflowTests"
+  },
+  {
     "note": "scene background color is not checked, so a NaN background is accepted",
     "file": "Sources/FlareCore/FlareFormat.swift",
     "anchor": "guard scene.background.isFinite else {",

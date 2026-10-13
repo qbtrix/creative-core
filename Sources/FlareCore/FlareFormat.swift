@@ -46,6 +46,8 @@ public enum FlareFormat {
     /// Most points allowed in the whole document, counting `Shape.points` and
     /// the points of every path element.
     public static let maxTotalPoints = 1_000_000
+    /// Tracks that Lottie export writes as percent (value × 100).
+    static let percentScaled: Set<String> = ["scaleX", "scaleY"]
 
     struct Header: Decodable {
         var format: String?
@@ -201,6 +203,10 @@ public enum FlareFormat {
                     previous = k.frame
                     guard k.value.isFinite else {
                         throw FormatError.invalid("layer \(layer.id): track \(property) has a non-finite value at frame \(k.frame)")
+                    }
+                    // Lottie stores scale in percent, so scale × 100 must stay finite too.
+                    guard !percentScaled.contains(property) || (k.value * 100).isFinite else {
+                        throw FormatError.invalid("layer \(layer.id): track \(property) × 100 overflows at frame \(k.frame)")
                     }
                 }
             }
