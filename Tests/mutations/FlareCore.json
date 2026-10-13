@@ -278,5 +278,12 @@
     "anchor": "let r = rounded == \"0\" && radius > 0 ? plainDecimal(\"\\(radius)\") : rounded",
     "replacement": "let r = rounded",
     "filter": "SVGExporterTests"
+  },
+  {
+    "note": "scale keyframe value times 100 may overflow, so Lottie export throws",
+    "file": "Sources/FlareCore/FlareFormat.swift",
+    "anchor": "guard ![\"scaleX\", \"scaleY\"].contains(property) || (k.value * 100).isFinite else {",
+    "replacement": "guard ![\"scaleX\", \"scaleY\"].contains(property) || k.value.isFinite else {",
+    "filter": "ScaleKeyframeOverflowTests"
   }
 ]

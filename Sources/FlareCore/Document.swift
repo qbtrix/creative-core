@@ -14,7 +14,8 @@
 // - every layer instance names a known symbol and has firstFrame >= 0
 // - each track is sorted by frame, frames are unique and >= 0, and a track is
 //   never stored empty (an empty track is removed, so undo restores equality)
-// - keyframe values and shape points (including path points) are finite
+// - keyframe values and shape points (including path points) are finite, and a
+//   scaleX/scaleY value × 100 is finite too (Lottie writes scale as a percent)
 // - text shapes have a finite font size > 0 and a finite position
 // - swatch names are unique and swatch color channels are finite and in 0...1
 #if canImport(FoundationEssentials)
