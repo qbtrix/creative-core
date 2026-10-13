@@ -264,5 +264,40 @@
     "anchor": "s.fill = fill.translated(dx: dx, dy: dy)",
     "replacement": "s.fill = fill",
     "filter": "ShapeCommandsTests"
+  },
+  {
+    "note": "AddGuide drops its finite-position guard",
+    "file": "Sources/FlareCore/GuideCommands.swift",
+    "anchor": "guard position.isFinite else { throw CommandError.invalidGuidePosition }\n        let s = try document.sceneIndex(sceneID)\n        addedIndex",
+    "replacement": "let s = try document.sceneIndex(sceneID)\n        addedIndex",
+    "filter": "GuideCommandsTests"
+  },
+  {
+    "note": "MoveGuide drops its finite-position guard",
+    "file": "Sources/FlareCore/GuideCommands.swift",
+    "anchor": "guard position.isFinite else { throw CommandError.invalidGuidePosition }\n        let s = try document.sceneIndex(sceneID)\n        guard document.scenes[s].guides.indices.contains(index) else { throw CommandError.invalidIndex(index) }\n        oldPosition",
+    "replacement": "let s = try document.sceneIndex(sceneID)\n        guard document.scenes[s].guides.indices.contains(index) else { throw CommandError.invalidIndex(index) }\n        oldPosition",
+    "filter": "GuideCommandsTests"
+  },
+  {
+    "note": "MoveGuide undo keeps the new position instead of restoring the old one",
+    "file": "Sources/FlareCore/GuideCommands.swift",
+    "anchor": "document.scenes[s].guides[index].position = oldPosition",
+    "replacement": "document.scenes[s].guides[index].position = position",
+    "filter": "GuideCommandsTests"
+  },
+  {
+    "note": "RemoveGuide undo appends the guide instead of reinserting it at its index",
+    "file": "Sources/FlareCore/GuideCommands.swift",
+    "anchor": "document.scenes[s].guides.insert(removed, at: index)",
+    "replacement": "document.scenes[s].guides.append(removed)",
+    "filter": "GuideCommandsTests"
+  },
+  {
+    "note": "validate accepts an infinite guide position",
+    "file": "Sources/FlareCore/FlareFormat.swift",
+    "anchor": "guard scene.guides.allSatisfy({ $0.position.isFinite }) else {",
+    "replacement": "guard scene.guides.allSatisfy({ !$0.position.isNaN }) else {",
+    "filter": "GuideCommandsTests"
   }
 ]

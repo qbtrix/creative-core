@@ -67,6 +67,9 @@ import Testing
         SceneCommandTests.rejects(MoveGuide(sceneID: Fixtures.sceneID, index: 2, position: 1), on: start,
                                   .invalidIndex(2))
         SceneCommandTests.rejects(RemoveGuide(sceneID: Fixtures.sceneID, index: -1), on: start, .invalidIndex(-1))
+        SceneCommandTests.rejects(RemoveGuide(sceneID: Fixtures.sceneID, index: 2), on: start, .invalidIndex(2))
+        SceneCommandTests.rejects(RemoveGuide(sceneID: Fixtures.sceneID, index: 0), on: Fixtures.document(),
+                                  .invalidIndex(0))
         SceneCommandTests.rejects(AddGuide(sceneID: "missing", axis: .vertical, position: 1), on: start,
                                   .sceneNotFound("missing"))
     }
@@ -80,6 +83,17 @@ import Testing
         #expect(doc.scenes.first?.guides == [])
         let encoded = try FlareFormat.encode(doc)
         #expect(try FlareFormat.encode(FlareFormat.decode(encoded)) == encoded)
+    }
+
+    @Test func fileGuidesAreAxisAndScenePosition() throws {
+        let json = #"""
+        {"format":"flare","version":1,
+         "document":{"scenes":[{"id":"s","name":"S","fps":24,"durationFrames":10,"layers":[],
+          "guides":[{"axis":"horizontal","position":12.5},{"axis":"vertical","position":-40}]}]}}
+        """#
+        let doc = try FlareFormat.decode(Data(json.utf8))
+        #expect(doc.scenes.first?.guides == [Guide(axis: .horizontal, position: 12.5),
+                                             Guide(axis: .vertical, position: -40)])
     }
 
     @Test func guidesRoundTripByteStable() throws {
