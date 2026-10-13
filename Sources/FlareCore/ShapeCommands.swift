@@ -19,7 +19,7 @@ extension Layer {
     }
 }
 
-public struct RemoveShape: LayerCommand {
+public struct RemoveShape: LayerItemCommand {
     public static let id = "shape.remove"
     public var label: String { "Delete Shape" }
     public var owner: LayerOwner
@@ -27,23 +27,10 @@ public struct RemoveShape: LayerCommand {
     public var index: Int
     var removed: Shape?
 
-    private enum CodingKeys: String, CodingKey { case index }
-
     public init(owner: LayerOwner, layerID: String, index: Int) {
         self.owner = owner
         self.layerID = layerID
         self.index = index
-    }
-
-    public init(from decoder: any Decoder) throws {
-        (owner, layerID) = try Self.decodeAddress(from: decoder)
-        index = try decoder.container(keyedBy: CodingKeys.self).decode(Int.self, forKey: .index)
-    }
-
-    public func encode(to encoder: any Encoder) throws {
-        try encodeAddress(to: encoder)
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(index, forKey: .index)
     }
 
     public mutating func execute(_ document: inout Document) throws {
@@ -73,7 +60,7 @@ public struct SetShapeFill: LayerCommand {
     public var fill: Fill
     var oldFill: Fill?
 
-    private enum CodingKeys: String, CodingKey { case index, fill }
+    private enum CodingKeys: String, CodingKey { case fill }
 
     public init(owner: LayerOwner, layerID: String, index: Int, fill: Fill) {
         self.owner = owner
@@ -83,16 +70,14 @@ public struct SetShapeFill: LayerCommand {
     }
 
     public init(from decoder: any Decoder) throws {
-        (owner, layerID) = try Self.decodeAddress(from: decoder)
+        (owner, layerID, index) = try Self.decodeItemAddress(from: decoder)
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        index = try c.decode(Int.self, forKey: .index)
         fill = try c.decode(Fill.self, forKey: .fill)
     }
 
     public func encode(to encoder: any Encoder) throws {
-        try encodeAddress(to: encoder)
+        try encodeItemAddress(to: encoder, index: index)
         var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(index, forKey: .index)
         try c.encode(fill, forKey: .fill)
     }
 
@@ -130,7 +115,7 @@ public struct TranslateShape: LayerCommand {
     var oldShape: Shape?
     var newShape: Shape?
 
-    private enum CodingKeys: String, CodingKey { case index, dx, dy }
+    private enum CodingKeys: String, CodingKey { case dx, dy }
 
     public init(owner: LayerOwner, layerID: String, index: Int, dx: Double, dy: Double) {
         self.owner = owner
@@ -141,17 +126,15 @@ public struct TranslateShape: LayerCommand {
     }
 
     public init(from decoder: any Decoder) throws {
-        (owner, layerID) = try Self.decodeAddress(from: decoder)
+        (owner, layerID, index) = try Self.decodeItemAddress(from: decoder)
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        index = try c.decode(Int.self, forKey: .index)
         dx = try c.decode(Double.self, forKey: .dx)
         dy = try c.decode(Double.self, forKey: .dy)
     }
 
     public func encode(to encoder: any Encoder) throws {
-        try encodeAddress(to: encoder)
+        try encodeItemAddress(to: encoder, index: index)
         var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(index, forKey: .index)
         try c.encode(dx, forKey: .dx)
         try c.encode(dy, forKey: .dy)
     }

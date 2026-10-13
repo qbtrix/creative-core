@@ -91,7 +91,7 @@ public struct AddTextShape: LayerCommand {
     }
 }
 
-public struct RemoveTextShape: LayerCommand {
+public struct RemoveTextShape: LayerItemCommand {
     public static let id = "text.remove"
     public var label: String { "Delete Text" }
     public var owner: LayerOwner
@@ -99,23 +99,10 @@ public struct RemoveTextShape: LayerCommand {
     public var index: Int
     var removed: TextShape?
 
-    private enum CodingKeys: String, CodingKey { case index }
-
     public init(owner: LayerOwner, layerID: String, index: Int) {
         self.owner = owner
         self.layerID = layerID
         self.index = index
-    }
-
-    public init(from decoder: any Decoder) throws {
-        (owner, layerID) = try Self.decodeAddress(from: decoder)
-        index = try decoder.container(keyedBy: CodingKeys.self).decode(Int.self, forKey: .index)
-    }
-
-    public func encode(to encoder: any Encoder) throws {
-        try encodeAddress(to: encoder)
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(index, forKey: .index)
     }
 
     public mutating func execute(_ document: inout Document) throws {
@@ -143,7 +130,7 @@ public struct SetTextString: LayerCommand {
     public var string: String
     var oldText: TextShape?
 
-    private enum CodingKeys: String, CodingKey { case index, string }
+    private enum CodingKeys: String, CodingKey { case string }
 
     public init(owner: LayerOwner, layerID: String, index: Int, string: String) {
         self.owner = owner
@@ -153,16 +140,14 @@ public struct SetTextString: LayerCommand {
     }
 
     public init(from decoder: any Decoder) throws {
-        (owner, layerID) = try Self.decodeAddress(from: decoder)
+        (owner, layerID, index) = try Self.decodeItemAddress(from: decoder)
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        index = try c.decode(Int.self, forKey: .index)
         string = try c.decode(String.self, forKey: .string)
     }
 
     public func encode(to encoder: any Encoder) throws {
-        try encodeAddress(to: encoder)
+        try encodeItemAddress(to: encoder, index: index)
         var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(index, forKey: .index)
         try c.encode(string, forKey: .string)
     }
 
@@ -187,7 +172,7 @@ public struct SetTextFont: LayerCommand {
     public var size: Double
     var oldText: TextShape?
 
-    private enum CodingKeys: String, CodingKey { case index, family, size }
+    private enum CodingKeys: String, CodingKey { case family, size }
 
     public init(owner: LayerOwner, layerID: String, index: Int, family: String, size: Double) {
         self.owner = owner
@@ -198,17 +183,15 @@ public struct SetTextFont: LayerCommand {
     }
 
     public init(from decoder: any Decoder) throws {
-        (owner, layerID) = try Self.decodeAddress(from: decoder)
+        (owner, layerID, index) = try Self.decodeItemAddress(from: decoder)
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        index = try c.decode(Int.self, forKey: .index)
         family = try c.decode(String.self, forKey: .family)
         size = try c.decode(Double.self, forKey: .size)
     }
 
     public func encode(to encoder: any Encoder) throws {
-        try encodeAddress(to: encoder)
+        try encodeItemAddress(to: encoder, index: index)
         var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(index, forKey: .index)
         try c.encode(family, forKey: .family)
         try c.encode(size, forKey: .size)
     }
