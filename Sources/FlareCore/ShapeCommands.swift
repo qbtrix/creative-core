@@ -1,4 +1,4 @@
-// ShapeCommands.swift: edits to existing shapes, addressed by scene, layer and
+// ShapeCommands.swift: edits to existing shapes, addressed by owner, layer and
 // shape index. A bad index throws shapeNotFound; a locked layer throws
 // layerLocked. Undo restores the stored old value, so it is exact even where
 // floating-point arithmetic would not round-trip.
@@ -19,25 +19,23 @@ extension Layer {
     }
 }
 
-public struct RemoveShape: Command {
+public struct RemoveShape: LayerItemCommand {
     public static let id = "shape.remove"
     public var label: String { "Delete Shape" }
-    public var sceneID: String
+    public var owner: LayerOwner
     public var layerID: String
     public var index: Int
     var removed: Shape?
 
-    private enum CodingKeys: String, CodingKey { case sceneID, layerID, index }
-
-    public init(sceneID: String, layerID: String, index: Int) {
-        self.sceneID = sceneID
+    public init(owner: LayerOwner, layerID: String, index: Int) {
+        self.owner = owner
         self.layerID = layerID
         self.index = index
     }
 
     public mutating func execute(_ document: inout Document) throws {
         let index = index
-        removed = try document.withEditableLayer(scene: sceneID, layer: layerID) { layer in
+        removed = try document.withEditableLayer(owner, layer: layerID) { layer in
             try layer.checkShapeIndex(index)
             return layer.shapes.remove(at: index)
         }
@@ -46,34 +44,38 @@ public struct RemoveShape: Command {
     public func undo(_ document: inout Document) throws {
         guard let removed else { throw CommandError.notExecuted }
         let index = index
-        try document.withLayer(scene: sceneID, layer: layerID) { layer in
+        try document.withLayer(owner, layer: layerID) { layer in
             guard index >= 0, index <= layer.shapes.count else { throw CommandError.shapeNotFound(index) }
             layer.shapes.insert(removed, at: index)
         }
     }
 }
 
-public struct SetShapeFill: Command {
+public struct SetShapeFill: LayerParamsCommand {
     public static let id = "shape.setFill"
     public var label: String { "Set Fill" }
-    public var sceneID: String
+    public var owner: LayerOwner
     public var layerID: String
     public var index: Int
     public var fill: Fill
     var oldFill: Fill?
 
-    private enum CodingKeys: String, CodingKey { case sceneID, layerID, index, fill }
-
-    public init(sceneID: String, layerID: String, index: Int, fill: Fill) {
-        self.sceneID = sceneID
+    public init(owner: LayerOwner, layerID: String, index: Int, fill: Fill) {
+        self.owner = owner
         self.layerID = layerID
         self.index = index
         self.fill = fill
     }
 
+    struct Params: Codable { var index: Int; var fill: Fill }
+    var params: Params { Params(index: index, fill: fill) }
+    init(owner: LayerOwner, layerID: String, params: Params) {
+        self.init(owner: owner, layerID: layerID, index: params.index, fill: params.fill)
+    }
+
     public mutating func execute(_ document: inout Document) throws {
         let (index, fill) = (index, fill)
-        oldFill = try document.withEditableLayer(scene: sceneID, layer: layerID) { layer in
+        oldFill = try document.withEditableLayer(owner, layer: layerID) { layer in
             try layer.checkShapeIndex(index)
             defer { layer.shapes[index].fill = fill }
             return layer.shapes[index].fill
@@ -83,7 +85,7 @@ public struct SetShapeFill: Command {
     public func undo(_ document: inout Document) throws {
         guard let oldFill else { throw CommandError.notExecuted }
         let index = index
-        try document.withLayer(scene: sceneID, layer: layerID) { layer in
+        try document.withLayer(owner, layer: layerID) { layer in
             try layer.checkShapeIndex(index)
             layer.shapes[index].fill = oldFill
         }
@@ -94,10 +96,10 @@ public struct SetShapeFill: Command {
 /// moves of the same shape merge: dx and dy add up, and the merged command keeps
 /// the first old shape and the last new one, so redo gives back the exact
 /// dragged shape rather than one translation by the rounded sum.
-public struct TranslateShape: Command {
+public struct TranslateShape: LayerParamsCommand {
     public static let id = "shape.translate"
     public var label: String { "Move Shape" }
-    public var sceneID: String
+    public var owner: LayerOwner
     public var layerID: String
     public var index: Int
     public var dx: Double
@@ -105,19 +107,23 @@ public struct TranslateShape: Command {
     var oldShape: Shape?
     var newShape: Shape?
 
-    private enum CodingKeys: String, CodingKey { case sceneID, layerID, index, dx, dy }
-
-    public init(sceneID: String, layerID: String, index: Int, dx: Double, dy: Double) {
-        self.sceneID = sceneID
+    public init(owner: LayerOwner, layerID: String, index: Int, dx: Double, dy: Double) {
+        self.owner = owner
         self.layerID = layerID
         self.index = index
         self.dx = dx
         self.dy = dy
     }
 
+    struct Params: Codable { var index: Int; var dx: Double; var dy: Double }
+    var params: Params { Params(index: index, dx: dx, dy: dy) }
+    init(owner: LayerOwner, layerID: String, params: Params) {
+        self.init(owner: owner, layerID: layerID, index: params.index, dx: params.dx, dy: params.dy)
+    }
+
     public mutating func execute(_ document: inout Document) throws {
         let (index, dx, dy, recordedOld, recordedNew) = (index, dx, dy, oldShape, newShape)
-        (oldShape, newShape) = try document.withEditableLayer(scene: sceneID, layer: layerID) { layer in
+        (oldShape, newShape) = try document.withEditableLayer(owner, layer: layerID) { layer in
             try layer.checkShapeIndex(index)
             let old = layer.shapes[index]
             // Redo from the recorded start replays the recorded result exactly.
@@ -130,7 +136,7 @@ public struct TranslateShape: Command {
 
     public mutating func merge(_ next: TranslateShape) -> Bool {
         guard oldShape != nil, next.oldShape == newShape, next.newShape != nil,
-              (next.sceneID, next.layerID, next.index) == (sceneID, layerID, index) else { return false }
+              (next.owner, next.layerID, next.index) == (owner, layerID, index) else { return false }
         dx += next.dx
         dy += next.dy
         newShape = next.newShape
@@ -140,7 +146,7 @@ public struct TranslateShape: Command {
     public func undo(_ document: inout Document) throws {
         guard let oldShape else { throw CommandError.notExecuted }
         let index = index
-        try document.withLayer(scene: sceneID, layer: layerID) { layer in
+        try document.withLayer(owner, layer: layerID) { layer in
             try layer.checkShapeIndex(index)
             layer.shapes[index] = oldShape
         }

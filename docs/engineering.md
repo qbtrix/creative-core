@@ -68,8 +68,8 @@ FlareCore has four layers. Each depends only on the ones above it. CoreColor, Co
   `CommandError.invalidDocument` instead of committing a broken one
   (`CommandEngineTests.performRejectsCommandsThatBreakTheFormat`). The guard
   is a backstop, not a substitute for rejecting bad params up front. A command
-  that changes only one layer conforms to `LayerCommand` (listed in
-  `LayerCommand.swift`) so the check is scoped to that layer; the undo property
+  that changes only one layer conforms to `LayerCommand`, naming it by a
+  `LayerOwner` and a layer id, so the check is scoped to that layer; the undo property
   tests validate the whole document after every step to keep the scope honest.
 - **Types first, guards second.** When a value can be wrong (a negative
   duration, an empty track), prefer a type that can't hold the wrong value.

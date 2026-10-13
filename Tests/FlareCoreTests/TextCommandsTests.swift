@@ -20,16 +20,16 @@ import Testing
     @Test func addEditRemoveEachUndoExactly() throws {
         var engine = CommandEngine(document: Fixtures.document())
         var history = [engine.document]
-        try engine.perform(AddTextShape(sceneID: Self.s, layerID: "ball", text: Self.hello))
+        try engine.perform(AddTextShape(owner: .scene(Self.s), layerID: "ball", text: Self.hello))
         history.append(engine.document)
-        try engine.perform(SetTextString(sceneID: Self.s, layerID: "ball", index: 0, string: "Bye"))
+        try engine.perform(SetTextString(owner: .scene(Self.s), layerID: "ball", index: 0, string: "Bye"))
         history.append(engine.document)
-        try engine.perform(SetTextFont(sceneID: Self.s, layerID: "ball", index: 0, family: "Courier", size: 9.5))
+        try engine.perform(SetTextFont(owner: .scene(Self.s), layerID: "ball", index: 0, family: "Courier", size: 9.5))
         history.append(engine.document)
         var edited = Self.hello
         (edited.string, edited.fontFamily, edited.fontSize) = ("Bye", "Courier", 9.5)
         #expect(engine.document.scenes.first?.layers.last?.texts == [edited])
-        try engine.perform(RemoveTextShape(sceneID: Self.s, layerID: "ball", index: 0))
+        try engine.perform(RemoveTextShape(owner: .scene(Self.s), layerID: "ball", index: 0))
         #expect(engine.document.scenes.first?.layers.last?.texts == [])
         while let previous = history.popLast() {
             try engine.undo()
@@ -44,10 +44,10 @@ import Testing
         bad.fontSize = size
         var engine = CommandEngine(document: Self.withText())
         #expect(throws: CommandError.self) {
-            try engine.perform(AddTextShape(sceneID: Self.s, layerID: "ball", text: bad))
+            try engine.perform(AddTextShape(owner: .scene(Self.s), layerID: "ball", text: bad))
         }
         #expect(throws: CommandError.self) {
-            try engine.perform(SetTextFont(sceneID: Self.s, layerID: "ball", index: 0, family: "X", size: size))
+            try engine.perform(SetTextFont(owner: .scene(Self.s), layerID: "ball", index: 0, family: "X", size: size))
         }
         #expect(engine.document == Self.withText())
         #expect(!engine.canUndo)
@@ -55,13 +55,13 @@ import Testing
 
     @Test func badIndexAndLockedLayerThrow() {
         let start = Self.withText()
-        SceneCommandTests.rejects(RemoveTextShape(sceneID: Self.s, layerID: "ball", index: 1), on: start,
+        SceneCommandTests.rejects(RemoveTextShape(owner: .scene(Self.s), layerID: "ball", index: 1), on: start,
                                   .shapeNotFound(1))
-        SceneCommandTests.rejects(SetTextString(sceneID: Self.s, layerID: "ball", index: -1, string: "x"), on: start,
+        SceneCommandTests.rejects(SetTextString(owner: .scene(Self.s), layerID: "ball", index: -1, string: "x"), on: start,
                                   .shapeNotFound(-1))
         var locked = start
         locked.scenes[0].layers[1].isLocked = true
-        let addToBall = AddTextShape(sceneID: Self.s, layerID: "ball", text: Self.hello)
+        let addToBall = AddTextShape(owner: .scene(Self.s), layerID: "ball", text: Self.hello)
         for command in Self.registrySamples().dropFirst() + [addToBall] {
             var engine = CommandEngine(document: locked)
             #expect(throws: CommandError.layerLocked("ball")) { try engine.perform(command) }
@@ -95,10 +95,10 @@ import Testing
     /// One sample of each text command for CommandRegistryTests, valid on its sample document.
     static func registrySamples() -> [any Command] {
         [
-            AddTextShape(sceneID: s, layerID: "bg", text: hello),
-            RemoveTextShape(sceneID: s, layerID: "ball", index: 0),
-            SetTextString(sceneID: s, layerID: "ball", index: 0, string: "Hi"),
-            SetTextFont(sceneID: s, layerID: "ball", index: 0, family: "Courier", size: 12),
+            AddTextShape(owner: .scene(s), layerID: "bg", text: hello),
+            RemoveTextShape(owner: .scene(s), layerID: "ball", index: 0),
+            SetTextString(owner: .scene(s), layerID: "ball", index: 0, string: "Hi"),
+            SetTextFont(owner: .scene(s), layerID: "ball", index: 0, family: "Courier", size: 12),
         ]
     }
 
@@ -114,19 +114,20 @@ import Testing
             let text = TextShape(string: "t\(nextID)", fontFamily: "F",
                                  fontSize: UndoPropertyTests.anyNumber(in: -1...72, &rng),
                                  position: Point(x: UndoPropertyTests.anyNumber(in: -50...50, &rng), y: 0))
-            try e.perform(AddTextShape(sceneID: s, layerID: UndoPropertyTests.anyLayer(e, &rng), text: text))
+            let (owner, layer) = UndoPropertyTests.anyTarget(e, &rng)
+            try e.perform(AddTextShape(owner: owner, layerID: layer, text: text))
         },
         { e, rng, _ in
             let layer = UndoPropertyTests.anyLayer(e, &rng)
-            try e.perform(RemoveTextShape(sceneID: s, layerID: layer, index: anyIndex(e, layer, &rng)))
+            try e.perform(RemoveTextShape(owner: .scene(s), layerID: layer, index: anyIndex(e, layer, &rng)))
         },
         { e, rng, _ in
             let layer = UndoPropertyTests.anyLayer(e, &rng)
-            try e.perform(SetTextString(sceneID: s, layerID: layer, index: anyIndex(e, layer, &rng), string: "s"))
+            try e.perform(SetTextString(owner: .scene(s), layerID: layer, index: anyIndex(e, layer, &rng), string: "s"))
         },
         { e, rng, _ in
             let layer = UndoPropertyTests.anyLayer(e, &rng)
-            try e.perform(SetTextFont(sceneID: s, layerID: layer, index: anyIndex(e, layer, &rng), family: "A",
+            try e.perform(SetTextFont(owner: .scene(s), layerID: layer, index: anyIndex(e, layer, &rng), family: "A",
                                       size: UndoPropertyTests.anyNumber(in: -1...72, &rng)))
         },
     ]

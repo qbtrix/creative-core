@@ -10,14 +10,6 @@ extension MoveKeyframe: SceneLayerCommand {}
 extension RemoveKeyframe: SceneLayerCommand {}
 extension SetKeyframeEasing: SceneLayerCommand {}
 extension ShiftKeyframes: SceneLayerCommand {}
-extension AddShape: SceneLayerCommand {}
-extension RemoveShape: SceneLayerCommand {}
-extension SetShapeFill: SceneLayerCommand {}
-extension TranslateShape: SceneLayerCommand {}
-extension AddTextShape: SceneLayerCommand {}
-extension RemoveTextShape: SceneLayerCommand {}
-extension SetTextString: SceneLayerCommand {}
-extension SetTextFont: SceneLayerCommand {}
 
 /// The listed commands that still address a layer by scene id.
 protocol SceneLayerCommand: LayerCommand {
@@ -43,5 +35,42 @@ extension LayerCommand {
         try owner.encode(to: encoder)
         var c = encoder.container(keyedBy: LayerAddressKey.self)
         try c.encode(layerID, forKey: .layerID)
+    }
+}
+
+/// A layer command whose own params are one synthesized-Codable `Params`,
+/// written flat beside its owner and "layerID". Its Codable comes from here.
+protocol LayerParamsCommand: LayerCommand {
+    associatedtype Params: Codable
+    var params: Params { get }
+    init(owner: LayerOwner, layerID: String, params: Params)
+}
+
+extension LayerParamsCommand {
+    public init(from decoder: any Decoder) throws {
+        let (owner, layerID) = try Self.decodeAddress(from: decoder)
+        try self.init(owner: owner, layerID: layerID, params: Params(from: decoder))
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        try encodeAddress(to: encoder)
+        try params.encode(to: encoder)
+    }
+}
+
+/// The params of a command that edits one item (a shape or a text) of a layer.
+struct ItemIndex: Codable { var index: Int }
+
+/// A layer command whose only own param is an item index.
+protocol LayerItemCommand: LayerParamsCommand where Params == ItemIndex {
+    var index: Int { get }
+    init(owner: LayerOwner, layerID: String, index: Int)
+}
+
+extension LayerItemCommand {
+    var params: ItemIndex { ItemIndex(index: index) }
+
+    init(owner: LayerOwner, layerID: String, params: ItemIndex) {
+        self.init(owner: owner, layerID: layerID, index: params.index)
     }
 }

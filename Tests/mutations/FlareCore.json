@@ -98,6 +98,13 @@
     "filter": "CoalesceTests"
   },
   {
+    "note": "shape merge ignores the owner, so a scene drag joins a symbol drag",
+    "file": "Sources/FlareCore/ShapeCommands.swift",
+    "anchor": "(next.owner, next.layerID, next.index) == (owner, layerID, index)",
+    "replacement": "(next.layerID, next.index) == (layerID, index)",
+    "filter": "ShapeTextOwnerTests"
+  },
+  {
     "note": "SetKeyframe encodes its undo state (Q3: commands encode params only)",
     "file": "Sources/FlareCore/Commands.swift",
     "anchor": "private enum CodingKeys: String, CodingKey { case sceneID, layerID, property, keyframe }",

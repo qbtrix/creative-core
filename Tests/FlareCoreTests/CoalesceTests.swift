@@ -124,7 +124,7 @@ import Testing
         var engine = CommandEngine(document: Fixtures.document())
         let original = engine.document
         for _ in 0..<300 {
-            try engine.perform(TranslateShape(sceneID: s, layerID: "ball", index: 0, dx: 0.1, dy: -0.3),
+            try engine.perform(TranslateShape(owner: .scene(s), layerID: "ball", index: 0, dx: 0.1, dy: -0.3),
                                coalesceKey: "drag")
         }
         let dragged = engine.document
@@ -169,9 +169,9 @@ import Testing
     @Test func unrelatedCommandsInARunStaySeparate() throws {
         var engine = CommandEngine(document: Fixtures.document())
         let original = engine.document
-        try engine.perform(TranslateShape(sceneID: s, layerID: "ball", index: 0, dx: 1, dy: 0), coalesceKey: "k")
+        try engine.perform(TranslateShape(owner: .scene(s), layerID: "ball", index: 0, dx: 1, dy: 0), coalesceKey: "k")
         try drag(&engine, from: 24, steps: 2, key: "k")
-        try engine.perform(TranslateShape(sceneID: s, layerID: "ball", index: 0, dx: 1, dy: 0), coalesceKey: "k")
+        try engine.perform(TranslateShape(owner: .scene(s), layerID: "ball", index: 0, dx: 1, dy: 0), coalesceKey: "k")
         #expect(engine.undoStack.first?.commands.count == 3)
         try engine.undo()
         #expect(engine.document == original)

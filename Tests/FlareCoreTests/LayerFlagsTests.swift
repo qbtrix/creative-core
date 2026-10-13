@@ -75,7 +75,7 @@ import Testing
             RemoveKeyframe(sceneID: Self.s, layerID: "ball", property: "x", frame: 0),
             SetKeyframeEasing(sceneID: Self.s, layerID: "ball", property: "x", frame: 0, easing: .linear),
             ShiftKeyframes(sceneID: Self.s, layerID: "ball", fromFrame: 0, toFrame: 30, delta: 1),
-            AddShape(sceneID: Self.s, layerID: "ball", shape: Shape(points: [Point(x: 0, y: 0)])),
+            AddShape(owner: .scene(Self.s), layerID: "ball", shape: Shape(points: [Point(x: 0, y: 0)])),
         ]
         for edit in edits {
             #expect(throws: CommandError.layerLocked("ball")) { try engine.perform(edit) }
@@ -89,7 +89,7 @@ import Testing
     @Test func undoOfEditWorksAfterLockIsUndone() throws {
         var engine = CommandEngine(document: Fixtures.document())
         let original = engine.document
-        try engine.perform(AddShape(sceneID: Self.s, layerID: "ball", shape: Shape(points: [Point(x: 1, y: 1)])))
+        try engine.perform(AddShape(owner: .scene(Self.s), layerID: "ball", shape: Shape(points: [Point(x: 1, y: 1)])))
         try engine.perform(SetLayerFlags(owner: .scene(Self.s), layerID: "ball", isLocked: true))
         try engine.undo()
         try engine.undo()

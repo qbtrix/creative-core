@@ -45,6 +45,8 @@ import Testing
         var doc = TextCommandsTests.withText()
         doc.symbols = [Symbol(id: "spark", name: "Spark", durationFrames: 6,
                               layers: [Layer(id: "glow", name: "Glow"), Layer(id: "core", name: "Core")])]
+        doc.symbols[0].layers[1].shapes = doc.scenes[0].layers[1].shapes
+        doc.symbols[0].layers[1].texts = doc.scenes[0].layers[1].texts
         doc.scenes[0].guides = GuideCommandsTests.guided().scenes[0].guides
         doc.swatches = [Swatch(name: "Ink", color: .black)]
         return doc
@@ -61,13 +63,13 @@ import Testing
                         keyframe: Keyframe(frame: 12, value: 5, easing: .easeInOut)),
             MoveKeyframe(sceneID: s, layerID: "ball", property: "x", from: 24, to: 30),
             RemoveKeyframe(sceneID: s, layerID: "ball", property: "x", frame: 0),
-            AddShape(sceneID: s, layerID: "bg",
+            AddShape(owner: .scene(s), layerID: "bg",
                      shape: Shape(points: [Point(x: 1, y: 2), Point(x: 3, y: 4)], closed: false)),
             ReorderLayer(owner: .scene(s), layerID: "bg", toIndex: 1),
             SetLayerFlags(owner: .scene(s), layerID: "ball", isVisible: false, isLocked: true),
-            RemoveShape(sceneID: s, layerID: "ball", index: 0),
-            SetShapeFill(sceneID: s, layerID: "ball", index: 0, fill: .solid(Color(r: 0, g: 0, b: 1))),
-            TranslateShape(sceneID: s, layerID: "ball", index: 0, dx: 1, dy: 1),
+            RemoveShape(owner: .scene(s), layerID: "ball", index: 0),
+            SetShapeFill(owner: .scene(s), layerID: "ball", index: 0, fill: .solid(Color(r: 0, g: 0, b: 1))),
+            TranslateShape(owner: .scene(s), layerID: "ball", index: 0, dx: 1, dy: 1),
         ]
     }
 
@@ -81,7 +83,7 @@ import Testing
             RenameLayer(owner: sym, layerID: "core", name: "Heart"),
             ReorderLayer(owner: sym, layerID: "glow", toIndex: 1),
             SetLayerFlags(owner: sym, layerID: "core", isLocked: true),
-        ]
+        ] + ShapeTextOwnerTests.edits(sym, layerID: "core")
     }
 
     @Test func everyBuiltInCommandIsRegistered() {
