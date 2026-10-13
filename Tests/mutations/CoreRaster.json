@@ -194,5 +194,19 @@
     "anchor": "let outerSlope = 1 + push",
     "replacement": "let outerSlope = 1 - push",
     "filter": "DevelopAdjustmentTests"
+  },
+  {
+    "note": "straightenCrop leaves no margin for the kernel, so pixels near its corners read past the image",
+    "file": "Sources/CoreRaster/Rotate.swift",
+    "anchor": "let margin = turn.quarters == nil ? 2 * ResampleFilter.lanczos3.radius - 1 : 0",
+    "replacement": "let margin = 0.0",
+    "filter": "RotateTests"
+  },
+  {
+    "note": "a 90 degree rotation by angle takes the counterclockwise quarter turn",
+    "file": "Sources/CoreRaster/Rotate.swift",
+    "anchor": "case 1?: return rotated(.degrees90)",
+    "replacement": "case 1?: return rotated(.degrees270)",
+    "filter": "RotateTests"
   }
 ]
