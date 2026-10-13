@@ -3,8 +3,9 @@
 //
 // Invariants (checked by the format layer on load):
 // - stop offsets are finite, in 0...1 and sorted ascending (equal is allowed)
-// - a radial radius is finite and > 0, and center.x ± radius is finite, so the
-//   gradient's edge (Lottie writes it as center.x + radius) does not overflow
+// - a radial radius is finite and > 0, and center.x ± radius is finite and
+//   differs from center.x, so the gradient's edge (Lottie writes it as
+//   center.x + radius) neither overflows nor rounds back onto the center
 // - every color channel (solid or stop) is finite, so the document can be saved
 // - gradient start, end and center points are finite, for the same reason
 //
@@ -112,9 +113,13 @@ public enum Fill: Codable, Sendable, Hashable {
             guard radius.isFinite, radius > 0 else {
                 throw ModelError.invalidFill("radial gradient radius must be finite and > 0")
             }
-            let edges = [Point(x: center.x - radius, y: center.y), Point(x: center.x + radius, y: center.y)]
+            let (low, high) = (center.x - radius, center.x + radius)
+            let edges = [Point(x: low, y: center.y), Point(x: high, y: center.y)]
             guard edges.allSatisfy(\.isFinite) else {
                 throw ModelError.invalidFill("radial gradient center ± radius must be finite")
+            }
+            guard low < center.x, high > center.x else {
+                throw ModelError.invalidFill("radial gradient radius too small to move its edge off center.x")
             }
         }
     }

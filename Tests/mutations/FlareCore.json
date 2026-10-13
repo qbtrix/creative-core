@@ -245,6 +245,13 @@
     "filter": "FillRadialExtentTests"
   },
   {
+    "note": "radial edge may round back onto center.x, so Lottie writes a zero-length gradient",
+    "file": "Sources/FlareCore/Fill.swift",
+    "anchor": "guard low < center.x, high > center.x else {",
+    "replacement": "guard low <= center.x, high >= center.x else {",
+    "filter": "FillRadialEdgeOffCenterTests"
+  },
+  {
     "note": "scene background color is not checked, so a NaN background is accepted",
     "file": "Sources/FlareCore/FlareFormat.swift",
     "anchor": "guard scene.background.isFinite else {",

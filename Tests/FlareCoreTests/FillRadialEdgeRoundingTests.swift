@@ -1,8 +1,9 @@
 // FillRadialEdgeRoundingTests.swift: the radial edge check (#200, kept by #233)
 // at the rounding boundary. center.x ± radius is a rounded sum, so the limit
-// sits half an ulp past the largest Double, not at it. The check, the Lottie
-// edge and the load path must agree there; dragging a gradient near the limit
-// is accepted exactly when its moved edges stay finite.
+// sits half an ulp past the largest Double, not at it. An edge must also
+// differ from center.x (#235), so a center at ±max never validates. The check,
+// the Lottie edge and the load path must agree there; dragging a gradient near
+// the limit is accepted exactly when its moved edges stay finite.
 @testable import FlareCore
 import Testing
 #if canImport(FoundationEssentials)
@@ -20,21 +21,28 @@ import Foundation
 
     static func edgesFinite(_ x: Double, _ r: Double) -> Bool { (x + r).isFinite && (x - r).isFinite }
 
-    /// max + half an ulp ties to even and overflows; anything below rounds back to max.
-    @Test(arguments: [max, -max])
+    /// The message validation gives for this center and radius, or nil if it passes.
+    static func edgeError(_ x: Double, _ r: Double) -> String? {
+        guard edgesFinite(x, r) else { return edgeMessage }
+        return x - r < x && x + r > x ? nil : FillRadialEdgeOffCenterTests.message
+    }
+
+    /// From the step below max, max + half an ulp ties to even and overflows;
+    /// anything below rounds back to max.
+    @Test(arguments: [max.nextDown, -max.nextDown])
     func halfAnUlpPastTheLimitIsTheCutoff(x: Double) throws {
-        let below = FillRadialExtentAdversarialTests.doc(Self.radial(x, Self.halfUlp.nextDown))
+        let below = FillRadialExtentAdversarialTests.doc(Self.radial(x, (Self.max.ulp + Self.halfUlp).nextDown))
         try FlareFormat.validate(below)
         _ = try LottieExporter.export(scene: below.scenes[0])
         _ = try SVGExporter.export(scene: below.scenes[0], frame: 0)
         #expect(throws: ModelError.invalidFill(Self.edgeMessage)) {
-            try Self.radial(x, Self.halfUlp).validate()
+            try Self.radial(x, Self.max.ulp + Self.halfUlp).validate()
         }
     }
 
     /// Seeded fuzz a few ulps either side of the limit: the check accepts
-    /// exactly when both edges are finite, and every accepted fill round-trips
-    /// and exports.
+    /// exactly when both edges are finite and off the center, and every
+    /// accepted fill round-trips and exports.
     @Test(arguments: [UInt64(1), 200, 233])
     func checkMatchesTheEdgeSumNearTheLimit(seed: UInt64) throws {
         var rng = SplitMix64(seed: seed)
@@ -48,9 +56,9 @@ import Foundation
             let up = Bool.random(using: &rng)
             for _ in 0..<Int.random(in: 0...3, using: &rng) { r = up ? r.nextUp : r.nextDown }
             let d = FillRadialExtentAdversarialTests.doc(Self.radial(x, r))
-            guard Self.edgesFinite(x, r) else {
+            if let message = Self.edgeError(x, r) {
                 rejected += 1
-                #expect(throws: FormatError.invalid(Self.edgeMessage), "\(x) \(r)") { try FlareFormat.validate(d) }
+                #expect(throws: FormatError.invalid(message), "\(x) \(r)") { try FlareFormat.validate(d) }
                 continue
             }
             accepted += 1

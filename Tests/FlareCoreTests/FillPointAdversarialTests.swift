@@ -25,15 +25,21 @@ import Foundation
         return Point(x: pick(), y: pick())
     }
 
-    /// A random gradient with finite colors and radius, and whether its points are finite.
-    static func fill(_ rng: inout SplitMix64) -> (Fill, Bool) {
+    /// A random gradient with finite colors and radius, and the error validation
+    /// gives for it: nil when its points are finite and a radial edge moves off
+    /// center.x (a center near ±max swallows a small radius, #235).
+    static func fill(_ rng: inout SplitMix64) -> (Fill, String?) {
+        let pointsMessage = "gradient points must be finite"
         if Bool.random(using: &rng) {
             let (start, end) = (point(&rng), point(&rng))
-            return (.linear(stops: stops, start: start, end: end), start.isFinite && end.isFinite)
+            return (.linear(stops: stops, start: start, end: end),
+                    start.isFinite && end.isFinite ? nil : pointsMessage)
         }
         let center = point(&rng)
-        return (.radial(stops: stops, center: center, radius: Double.random(in: 0.5...50, using: &rng)),
-                center.isFinite)
+        let radius = Double.random(in: 0.5...50, using: &rng)
+        let fill = Fill.radial(stops: stops, center: center, radius: radius)
+        guard center.isFinite else { return (fill, pointsMessage) }
+        return (fill, FillRadialEdgeRoundingTests.edgeError(center.x, radius))
     }
 
     @Test func pointIsFiniteMatchesBothCoordinates() {
@@ -50,19 +56,19 @@ import Foundation
         var e = CommandEngine(document: ShapeTextOwnerTests.start())
         var history = [e.document]
         for _ in 0..<300 {
-            let (fill, ok) = Self.fill(&rng)
+            let (fill, error) = Self.fill(&rng)
             let cmd = FillColorAdversarialTests.command(&rng, fill: fill)
             let (before, depth) = (e.document, e.undoStack.count)
-            if ok {
-                try e.perform(cmd)
-                #expect(try FlareFormat.decode(FlareFormat.encode(e.document)) == e.document)
-                history.append(e.document)
-            } else {
-                #expect(throws: CommandError.invalidDocument("gradient points must be finite"), "\(fill)") {
+            if let error {
+                #expect(throws: CommandError.invalidDocument(error), "\(fill)") {
                     try e.perform(cmd)
                 }
                 #expect(e.document == before)
                 #expect(e.undoStack.count == depth)
+            } else {
+                try e.perform(cmd)
+                #expect(try FlareFormat.decode(FlareFormat.encode(e.document)) == e.document)
+                history.append(e.document)
             }
         }
         while e.canUndo {

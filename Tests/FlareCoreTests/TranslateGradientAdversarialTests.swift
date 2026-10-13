@@ -26,7 +26,7 @@ import Testing
     @Test(arguments: [
         Fill.linear(stops: stops, start: Point(x: 0, y: 0), end: Point(x: .greatestFiniteMagnitude, y: 0)),
         Fill.linear(stops: stops, start: Point(x: .greatestFiniteMagnitude, y: 0), end: Point(x: 0, y: 0)),
-        Fill.radial(stops: stops, center: Point(x: .greatestFiniteMagnitude, y: 0), radius: 1),
+        Fill.radial(stops: stops, center: Point(x: .greatestFiniteMagnitude / 2, y: 0), radius: .greatestFiniteMagnitude / 2),
     ])
     func overflowOnlyInGradientIsRejected(fill: Fill) throws {
         let start = Self.doc(Shape(points: [Point(x: 0, y: 0), Point(x: 1, y: 1)], fill: fill))
