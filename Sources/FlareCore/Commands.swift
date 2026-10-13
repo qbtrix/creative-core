@@ -286,6 +286,7 @@ public struct AddShape: LayerParamsCommand {
 
     public mutating func execute(_ document: inout Document) throws {
         try shape.fill.validate()
+        try shape.stroke?.validate()
         let shape = shape
         insertedAt = try document.withEditableLayer(owner, layer: layerID) { layer in
             layer.shapes.append(shape)

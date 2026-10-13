@@ -87,7 +87,7 @@ public enum Fill: Codable, Sendable, Hashable {
     /// Throws `ModelError.invalidFill` if the fill breaks an invariant above.
     func validate() throws {
         let colors = if case .solid(let color) = self { [color] } else { stops.map(\.color) }
-        for color in colors where ![color.r, color.g, color.b, color.a].allSatisfy(\.isFinite) {
+        for color in colors where !color.isFinite {
             throw ModelError.invalidFill("color channels must be finite")
         }
         var previous = 0.0

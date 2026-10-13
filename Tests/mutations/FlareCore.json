@@ -217,10 +217,17 @@
     "filter": "SymbolCycleTests"
   },
   {
-    "note": "fill color check skips the alpha channel, so a NaN alpha is accepted",
-    "file": "Sources/FlareCore/Fill.swift",
-    "anchor": "for color in colors where ![color.r, color.g, color.b, color.a].allSatisfy(\\.isFinite) {",
-    "replacement": "for color in colors where ![color.r, color.g, color.b].allSatisfy(\\.isFinite) {",
-    "filter": "FillColorFiniteTests"
+    "note": "color finite check skips the alpha channel, so a NaN alpha is accepted",
+    "file": "Sources/FlareCore/Document.swift",
+    "anchor": "public var isFinite: Bool { [r, g, b, a].allSatisfy(\\.isFinite) }",
+    "replacement": "public var isFinite: Bool { [r, g, b].allSatisfy(\\.isFinite) }",
+    "filter": "FillColorFiniteTests|StrokeColorFiniteTests"
+  },
+  {
+    "note": "stroke color check reads only the red channel, so a NaN green, blue or alpha stroke is accepted",
+    "file": "Sources/FlareCore/Document.swift",
+    "anchor": "guard color.isFinite else { throw ModelError.invalidStroke(",
+    "replacement": "guard color.r.isFinite else { throw ModelError.invalidStroke(",
+    "filter": "StrokeColorFiniteTests"
   }
 ]

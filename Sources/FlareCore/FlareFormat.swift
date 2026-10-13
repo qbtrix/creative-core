@@ -29,7 +29,7 @@ extension FormatError {
     /// The format-layer form of a model error, so loaders see only FormatError.
     init(_ error: ModelError) {
         switch error {
-        case .invalidFill(let message), .invalidText(let message): self = .invalid(message)
+        case .invalidFill(let message), .invalidText(let message), .invalidStroke(let message): self = .invalid(message)
         case .sceneNotFound, .symbolNotFound, .layerNotFound, .layerLocked: self = .invalid("\(error)")
         }
     }
@@ -176,10 +176,10 @@ public enum FlareFormat {
         try checkUniqueIDs(layers, owner: owner)
         for layer in layers {
             for shape in layer.shapes {
-                do { try shape.fill.validate() } catch let error as ModelError { throw FormatError(error) }
-                if let width = shape.stroke?.width, !(width.isFinite && width >= 0) {
-                    throw FormatError.invalid("layer \(layer.id): stroke width must be finite and >= 0")
-                }
+                do {
+                    try shape.fill.validate()
+                    try shape.stroke?.validate()
+                } catch let error as ModelError { throw FormatError(error) }
                 let points = shape.points + (shape.path?.elements.flatMap(\.points) ?? [])
                 guard points.allSatisfy({ $0.x.isFinite && $0.y.isFinite }) else {
                     throw FormatError.invalid("layer \(layer.id): shape has a non-finite point")
