@@ -168,6 +168,13 @@
     "filter": "DevelopAdjustmentTests"
   },
   {
+    "note": "the adjustment pixel loop stores a non-finite component",
+    "file": "Sources/CoreRaster/Adjustments.swift",
+    "anchor": "guard mapped.isFinite else {",
+    "replacement": "guard mapped.isFinite || mapped.r.isInfinite else {",
+    "filter": "DevelopAdjustment"
+  },
+  {
     "note": "develop slider range check lets values above 100 through",
     "file": "Sources/CoreRaster/Adjustments.swift",
     "anchor": "guard value.isFinite, (-100...100).contains(value) else {",
