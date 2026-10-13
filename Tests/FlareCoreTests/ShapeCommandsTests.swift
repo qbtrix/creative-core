@@ -62,6 +62,29 @@ import Testing
         #expect(engine.document == doc)
     }
 
+    static let stops = [GradientStop(offset: 0, color: .black), GradientStop(offset: 1, color: .white)]
+
+    @Test(arguments: [
+        (Fill.linear(stops: stops, start: Point(x: 0, y: 0), end: Point(x: 10, y: 0)),
+         Fill.linear(stops: stops, start: Point(x: 100, y: -5), end: Point(x: 110, y: -5))),
+        (Fill.radial(stops: stops, center: Point(x: 5, y: 5), radius: 4),
+         Fill.radial(stops: stops, center: Point(x: 105, y: 0), radius: 4)),
+        (Fill.solid(.white), Fill.solid(.white)),
+    ])
+    func translateShapeMovesGradientGeometry(fill: Fill, moved: Fill) throws {
+        var engine = CommandEngine(document: Fixtures.document())
+        try engine.perform(SetShapeFill(owner: .scene(Self.s), layerID: "ball", index: 0, fill: fill))
+        let before = engine.document
+        try engine.perform(TranslateShape(owner: .scene(Self.s), layerID: "ball", index: 0, dx: 100, dy: -5))
+        let shape = try #require(Self.ball(engine).shapes.first)
+        #expect(shape.points.first == Point(x: 100, y: -5))
+        #expect(shape.fill == moved)
+        try engine.undo()
+        #expect(engine.document == before)
+        try engine.redo()
+        #expect(try Self.ball(engine).shapes.first?.fill == moved)
+    }
+
     @Test func translateUndoIsExactDespiteRounding() throws {
         let shape = Shape(points: [Point(x: 0.1, y: 0.7)])
         let doc = Document(scenes: [Scene(id: "s", name: "S", layers: [Layer(id: "l", name: "L", shapes: [shape])])])
@@ -121,8 +144,9 @@ import Testing
         { e, rng, _ in
             let (owner, layer) = UndoPropertyTests.anyTarget(e, &rng)
             let color = Color(r: Double.random(in: 0...1, using: &rng), g: 0, b: 1)
-            let fill = Bool.random(using: &rng) ? Fill.solid(color)
-                : .linear(stops: [GradientStop(offset: 0, color: color)], start: Point(x: 0, y: 0), end: Point(x: 1, y: 1))
+            let stops = [GradientStop(offset: 0, color: color)]
+            let fill = [Fill.solid(color), .linear(stops: stops, start: Point(x: 0, y: 0), end: Point(x: 1, y: 1)),
+                        .radial(stops: stops, center: Point(x: 0.3, y: 0.7), radius: 2)][Int.random(in: 0...2, using: &rng)]
             try e.perform(SetShapeFill(owner: owner, layerID: layer,
                                        index: anyIndex(e, owner, layer, &rng), fill: fill))
         },
