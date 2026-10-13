@@ -85,10 +85,9 @@ FlareCore has four layers. Each depends only on the ones above it. CoreColor, Co
 - **Every new command is a step in `UndoPropertyTests`.** Test:
   `UndoPropertyTests` (only for commands you add there; Q7 (#103) covers the
   families it skips today).
-- **A layer's address is `LayerOwner` plus `layerID`.** A command that edits a
-  layer or its content takes `owner:` (a scene or a symbol) and resolves it with
-  `Document.withLayer`; only scene-scoped commands take `sceneID`. Test:
-  `ShapeTextOwnerTests`, `LayerListOwnerAdversarialTests`.
+- **A layer's address is `LayerOwner` plus `layerID`.** Layer and content
+  commands take `owner:` (a scene or a symbol); only scene-scoped commands take
+  `sceneID`. Test: `ShapeTextOwnerTests`, `LayerListOwnerAdversarialTests`.
 - **Commands encode their params only.** State that `execute` records for
   `undo` stays out of the encoded form (custom `CodingKeys`), so a decoded
   command is a fresh one. Review-only; Q3 (#99) tracks the commands that leak.

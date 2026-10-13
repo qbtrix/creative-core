@@ -36,8 +36,7 @@ import Testing
             let command = edit
             var engine = CommandEngine(document: Self.document())
             try engine.perform(command)
-            let wing = try #require(engine.document.symbols.first?.layers.first)
-            #expect(check(wing), "\(type(of: command).id)")
+            #expect(try check(#require(engine.document.symbols.first?.layers.first)), "\(type(of: command).id)")
             #expect(engine.document.scenes == Self.document().scenes)
             try engine.undo()
             #expect(engine.document == Self.document(), "\(type(of: command).id)")

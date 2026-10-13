@@ -182,8 +182,8 @@ import Testing
         #expect(doc.scenes[0].layers[1].tracks["x"]?.first?.frame == 5)
     }
 
-    /// Envelopes written before layer list, shape and text commands took an
-    /// owner decode as scene-owned, perform, and re-encode byte for byte.
+    /// Envelopes written before layer, shape and text commands took an owner decode as
+    /// scene-owned, perform, and re-encode byte for byte.
     @Test(arguments: [
         #"{"id":"layer.add","params":{"index":1,"layer":{"id":"new","instances":[],"isLocked":false,"isVisible":true,"#
             + #""name":"New","shapes":[],"tracks":{}},"sceneID":"s1"}}"#,

@@ -3,7 +3,7 @@
 // here must never touch another layer, a scene field, a symbol or a machine.
 //
 // Until the keyframe family takes an owner param (Q5c), it names a scene layer:
-// `SceneLayerCommand` computes `owner` from `sceneID` for it.
+// the extension below computes `owner` from `sceneID` for it.
 
 extension SetKeyframe: SceneLayerCommand {}
 extension MoveKeyframe: SceneLayerCommand {}
@@ -11,11 +11,11 @@ extension RemoveKeyframe: SceneLayerCommand {}
 extension SetKeyframeEasing: SceneLayerCommand {}
 extension ShiftKeyframes: SceneLayerCommand {}
 extension AddShape: LayerCommand {}
-extension RemoveShape: LayerCommand {}
+extension RemoveShape: LayerItemCommand {}
 extension SetShapeFill: LayerCommand {}
 extension TranslateShape: LayerCommand {}
 extension AddTextShape: LayerCommand {}
-extension RemoveTextShape: LayerCommand {}
+extension RemoveTextShape: LayerItemCommand {}
 extension SetTextString: LayerCommand {}
 extension SetTextFont: LayerCommand {}
 
@@ -56,4 +56,20 @@ extension LayerCommand {
         try encodeAddress(to: encoder)
         try params.encode(to: encoder)
     }
+}
+
+/// A layer command whose only other param is the index of a shape or text.
+protocol LayerItemCommand: LayerCommand {
+    var index: Int { get }
+    init(owner: LayerOwner, layerID: String, index: Int)
+}
+
+private struct ItemIndex: Codable { var index: Int }
+
+extension LayerItemCommand {
+    public init(from decoder: any Decoder) throws {
+        let (owner, layerID, p) = try Self.decodeAddress(from: decoder, params: ItemIndex.self)
+        self.init(owner: owner, layerID: layerID, index: p.index)
+    }
+    public func encode(to encoder: any Encoder) throws { try encodeAddress(to: encoder, params: ItemIndex(index: index)) }
 }

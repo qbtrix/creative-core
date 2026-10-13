@@ -27,19 +27,11 @@ public struct RemoveShape: Command {
     public var index: Int
     var removed: Shape?
 
-    private struct Params: Codable { var index: Int }
-
     public init(owner: LayerOwner, layerID: String, index: Int) {
         self.owner = owner
         self.layerID = layerID
         self.index = index
     }
-
-    public init(from decoder: any Decoder) throws {
-        let (owner, layerID, p) = try Self.decodeAddress(from: decoder, params: Params.self)
-        self.init(owner: owner, layerID: layerID, index: p.index)
-    }
-    public func encode(to encoder: any Encoder) throws { try encodeAddress(to: encoder, params: Params(index: index)) }
 
     public mutating func execute(_ document: inout Document) throws {
         let index = index
