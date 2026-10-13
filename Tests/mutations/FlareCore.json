@@ -229,5 +229,12 @@
     "anchor": "guard color.isFinite else { throw ModelError.invalidStroke(",
     "replacement": "guard color.r.isFinite else { throw ModelError.invalidStroke(",
     "filter": "StrokeColorFiniteTests"
+  },
+  {
+    "note": "radial gradient center is not checked, so a NaN center is accepted",
+    "file": "Sources/FlareCore/Fill.swift",
+    "anchor": "case .radial(_, let center, _): [center]",
+    "replacement": "case .radial: []",
+    "filter": "FillPointFiniteTests"
   }
 ]

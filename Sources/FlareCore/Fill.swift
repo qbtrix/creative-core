@@ -5,6 +5,7 @@
 // - stop offsets are finite, in 0...1 and sorted ascending (equal is allowed)
 // - a radial radius is finite and > 0
 // - every color channel (solid or stop) is finite, so the document can be saved
+// - gradient start, end and center points are finite, for the same reason
 //
 // Encoding: `.solid` is written as the plain color object, exactly as v1 files
 // stored `Shape.fill`, so old files stay byte-stable. Gradients are objects
@@ -89,6 +90,14 @@ public enum Fill: Codable, Sendable, Hashable {
         let colors = if case .solid(let color) = self { [color] } else { stops.map(\.color) }
         for color in colors where !color.isFinite {
             throw ModelError.invalidFill("color channels must be finite")
+        }
+        let points: [Point] = switch self {
+        case .solid: []
+        case .linear(_, let start, let end): [start, end]
+        case .radial(_, let center, _): [center]
+        }
+        for point in points where !point.isFinite {
+            throw ModelError.invalidFill("gradient points must be finite")
         }
         var previous = 0.0
         for stop in stops {
