@@ -17,7 +17,8 @@
 #
 # Eligibility (all must hold): open, not draft, label `fast-lane`, base
 # BASE_BRANCH, author in FAST_LANE_AUTHORS, size within MAX_LINES/MAX_FILES, no
-# changed path matching DENY_RE, MERGEABLE, no red or running check on the head,
+# changed or renamed-away path under PROTECTED (CLAUDE.md's "Never edit" list),
+# MERGEABLE, no red or running check on the head,
 # and proof the head passed the gate: a passing check from CI_WORKFLOWS on the
 # head, or the worker's marker in the PR body, a line `Fast-Check: pass`
 # followed by the line `Head: <full head sha>` for the current head (the same
@@ -68,7 +69,22 @@ SELF_WORKFLOW="Fast Lane"
 # The lane job's own check run on the head. Check runs read off the commit carry
 # no workflow name, so the lane drops its own (running) check by this name.
 SELF_CHECK="fast-lane"
-DENY_RE='^\.github/|^\.claude/|(^|/)(CLAUDE|AGENTS)\.md$|^scripts/(ci|cloud-setup\.sh|fast-lane\.sh|mutate)$|(^|/)Package\.(swift|resolved)$|^LICENSE'
+# PROTECTED is exactly the backticked paths in CLAUDE.md's "**Never edit**"
+# bullet; Tests/fast_lane checks the two match. A path ending in / is that
+# folder at the root, a path with a / is that file, and a bare name is that
+# file in any folder (docs/AGENTS.md too). Matching ignores case.
+PROTECTED=(Package.swift Package.resolved .github/ .claude/ scripts/ci scripts/cloud-setup.sh
+  scripts/fast-lane.sh scripts/mutate CLAUDE.md AGENTS.md LICENSE)
+deny_re() {
+  local p re=""
+  for p in "${PROTECTED[@]}"; do
+    p="${p//./\\.}"
+    case "$p" in */) p="^$p" ;; */*) p="^$p\$" ;; *) p="(^|/)$p\$" ;; esac
+    re+="${re:+|}$p"
+  done
+  echo "$re"
+}
+DENY_RE=$(deny_re)
 
 # The worker's proof that scripts/ci passed on the head: this line, then `Head: <sha>`.
 MARKER_LINE="Fast-Check: pass"
@@ -261,7 +277,8 @@ evaluate() {
   else
     jq '.statusCheckRollup // []' "$tmp/pr.json" >"$tmp/checks.json"
   fi
-  gh api "repos/$REPO/pulls/$n/files" --paginate --jq '.[].filename' >"$tmp/files.txt"
+  # A rename counts under both names, so moving a protected file away is caught.
+  gh api "repos/$REPO/pulls/$n/files" --paginate --jq '.[] | .filename, (.previous_filename // empty)' >"$tmp/files.txt"
 
   echo "PR #$n:" >&2
   local decision kind rest
@@ -336,7 +353,7 @@ main() {
   while (( $# )); do
     case "$1" in
       --dry-run) DRY_RUN=1 ;;
-      -h|--help) sed -n '2,45p' "$0"; return 0 ;;
+      -h|--help) sed -n '2,46p' "$0"; return 0 ;;
       *) prs+=("$1") ;;
     esac
     shift
