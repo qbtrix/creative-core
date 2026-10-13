@@ -80,19 +80,21 @@ import Testing
 
     @Test func dragMergesOnlyWithinOneOwner() throws {
         var start = Fixtures.withSymbol()
+        let ball = start.scenes[0].layers[1].shapes[0]
         start.symbols[0].id = Fixtures.sceneID  // a symbol sharing the scene's id
         start.symbols[0].layers[0].id = "ball"  // and a layer sharing the scene layer's id
-        start.symbols[0].layers[0].shapes = [Self.square]
+        // Three steps of 1 end on the scene ball's shape, so only the owner tells the two apart.
+        start.symbols[0].layers[0].shapes = [ball.translated(dx: -3, dy: 0)]
         var e = CommandEngine(document: start)
         let s = Fixtures.sceneID
         for _ in 0..<3 {
             try e.perform(TranslateShape(owner: .symbol(s), layerID: "ball", index: 0, dx: 1, dy: 0), coalesceKey: "drag")
         }
         #expect(e.undoStack.first?.commands.count == 1)
+        #expect(e.document.symbols[0].layers[0].shapes == [ball])
         try e.perform(TranslateShape(owner: .scene(s), layerID: "ball", index: 0, dx: 1, dy: 0), coalesceKey: "drag")
         #expect(e.undoStack.first?.commands.count == 2)
-        #expect(e.document.symbols[0].layers[0].shapes[0].points[0] == Point(x: 3, y: 0))
-        #expect(e.document.scenes[0].layers[1].shapes[0].points[0] == Point(x: 1, y: 0))
+        #expect(e.document.scenes[0].layers[1].shapes == [ball.translated(dx: 1, dy: 0)])
         try e.undo()
         #expect(e.document == start)
     }
