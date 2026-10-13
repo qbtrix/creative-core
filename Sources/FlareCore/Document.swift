@@ -8,6 +8,7 @@
 // - Scene.width and Scene.height are finite and > 0
 // - Scene label frames are in 0...durationFrames
 // - Scene guide positions are finite
+// - Scene background color channels are finite
 // - layer ids are unique within a scene or symbol
 // - symbol ids are unique, Symbol.durationFrames >= 0
 // - every layer instance names a known symbol and has firstFrame >= 0

@@ -151,6 +151,9 @@ public enum FlareFormat {
             guard scene.guides.allSatisfy({ $0.position.isFinite }) else {
                 throw FormatError.invalid("scene \(scene.id): guide position must be finite")
             }
+            guard scene.background.isFinite else {
+                throw FormatError.invalid("scene \(scene.id): background color channels must be finite")
+            }
         }
         var symbolIDs = Set<String>()
         for symbol in document.symbols {

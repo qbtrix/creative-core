@@ -236,5 +236,19 @@
     "anchor": "case .radial(_, let center, _): [center]",
     "replacement": "case .radial: []",
     "filter": "FillPointFiniteTests"
+  },
+  {
+    "note": "scene background color is not checked, so a NaN background is accepted",
+    "file": "Sources/FlareCore/FlareFormat.swift",
+    "anchor": "guard scene.background.isFinite else {",
+    "replacement": "guard scene.background.isFinite || true else {",
+    "filter": "SceneBackgroundFiniteTests"
+  },
+  {
+    "note": "AddScene skips its background check, so a NaN background reaches the engine backstop",
+    "file": "Sources/FlareCore/SceneCommands.swift",
+    "anchor": "guard scene.background.isFinite else {",
+    "replacement": "guard scene.background.isFinite || true else {",
+    "filter": "SceneBackgroundFiniteTests"
   }
 ]
