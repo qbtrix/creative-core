@@ -250,5 +250,12 @@
     "anchor": "guard scene.background.isFinite else {",
     "replacement": "guard scene.background.isFinite || true else {",
     "filter": "SceneBackgroundFiniteTests"
+  },
+  {
+    "note": "translating a shape leaves its gradient start, end or center behind",
+    "file": "Sources/FlareCore/ShapeCommands.swift",
+    "anchor": "s.fill = fill.translated(dx: dx, dy: dy)",
+    "replacement": "s.fill = fill",
+    "filter": "ShapeCommandsTests"
   }
 ]
