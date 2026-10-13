@@ -58,6 +58,11 @@ public enum LottieExporter {
         return value
     }
 
+    /// `value` × 100, Lottie's percent scale; throws if the product overflows.
+    static func percent(_ value: Double) throws -> Double {
+        try finite(value * 100)
+    }
+
     /// A layer's shape items at `frame`: one group per instance, holding the
     /// symbol's visible layers, on top of one group per shape. `path` is the
     /// ids of the symbols being drawn around the layer.
@@ -194,7 +199,8 @@ struct LottieLayer: Encodable, Sendable {
         }
         ks = LottieTransform(
             p: position,
-            s: LottieStatic([try value("scaleX", 1) * 100, try value("scaleY", 1) * 100]),
+            s: LottieStatic([try LottieExporter.percent(value("scaleX", 1)),
+                             try LottieExporter.percent(value("scaleY", 1))]),
             r: LottieStatic(try value("rotation", 0)),
             o: LottieStatic(min(max(try value("opacity", 1), 0), 1) * 100)
         )
@@ -321,7 +327,7 @@ struct LottieItem: Encodable, Sendable {
         var item = LottieItem(ty: "tr")
         item.p = LottieStatic([try f(t.x), try f(t.y)])
         item.a = LottieStatic([0, 0])
-        item.s = LottieStatic([try f(t.scaleX) * 100, try f(t.scaleY) * 100])
+        item.s = LottieStatic([try LottieExporter.percent(t.scaleX), try LottieExporter.percent(t.scaleY)])
         item.r = .rotation(LottieStatic(try f(t.rotation)))
         item.o = LottieStatic(min(max(try f(opacity), 0), 1) * 100)
         return item
