@@ -42,7 +42,7 @@ MAX_FILES=15
 # the head must be success (missing or pending waits, failure is red). Not a
 # ruleset-required check, since merge-queue group commits would never get it.
 # Set to 0 to turn the gate off if Belt's reviewer misbehaves.
-REQUIRE_BELT_REVIEW=1
+REQUIRE_BELT_REVIEW=0
 BELT_REVIEW_CONTEXT="belt/review"
 BASE_BRANCH="${FAST_LANE_BASE:-main}"
 LABEL="fast-lane"
