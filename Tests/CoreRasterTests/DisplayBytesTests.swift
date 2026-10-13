@@ -1,6 +1,7 @@
 // DisplayBytesTests.swift: PixelBuffer to and from 8-bit RGBA display bytes.
 // Known values (linear 0.5 is sRGB byte 188, sRGB red in Display P3),
-// unpremultiplying, clamping, transparent pixels, round trips on seeded
+// unpremultiplying, clamping, transparent pixels (leftover color included),
+// alpha rounding to nearest at every byte step, round trips on seeded
 // random pixels and bytes in both color spaces, and every bad size, byte
 // count or color space throws, with a seeded fuzz that never crashes.
 import CoreColor
@@ -31,6 +32,24 @@ private func row(_ pixels: [RGBA]) throws -> PixelBuffer {
     let buffer = try PixelBuffer(width: 2, height: 2)
     #expect(try buffer.rgba8() == [UInt8](repeating: 0, count: 16))
     #expect(try buffer.rgba8(colorSpace: .displayP3) == [UInt8](repeating: 0, count: 16))
+}
+
+@Test func alphaZeroDropsLeftoverColor() throws {
+    let buffer = try row([RGBA(r: 0.7, g: 3, b: -1, a: 0), RGBA(r: 1, g: 1, b: 1, a: 0)])
+    for space in PixelBuffer.displayColorSpaces {
+        #expect(try buffer.rgba8(colorSpace: space) == [UInt8](repeating: 0, count: 8))
+        let decoded = try PixelBuffer(rgba8: [255, 128, 7, 0], width: 1, height: 1, colorSpace: space)
+        #expect(try decoded.pixel(x: 0, y: 0) == .clear)
+    }
+}
+
+@Test func alphaRoundsToNearestByte() throws {
+    for k in 0..<255 {
+        let below = Float(Double(k) + 0.49) / 255
+        let above = Float(Double(k) + 0.51) / 255
+        let bytes = try row([RGBA(r: 0, g: 0, b: 0, a: below), RGBA(r: 0, g: 0, b: 0, a: above)]).rgba8()
+        #expect(bytes[3] == UInt8(k) && bytes[7] == UInt8(k + 1))
+    }
 }
 
 @Test func outOfRangeValuesClamp() throws {
