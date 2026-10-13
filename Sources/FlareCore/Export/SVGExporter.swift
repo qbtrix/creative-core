@@ -152,8 +152,12 @@ public enum SVGExporter {
                 + "x2=\"\(try number(end.x))\" y2=\"\(try number(end.y))\">"
             close = "</linearGradient>"
         case .radial(_, let center, let radius):
+            // A valid radius below the rounding step would round to r="0", which
+            // disables the gradient, so write it unrounded instead.
+            let rounded = try number(radius)
+            let r = rounded == "0" && radius > 0 ? plainDecimal("\(radius)") : rounded
             open = "<radialGradient id=\"\(id)\" gradientUnits=\"userSpaceOnUse\" "
-                + "cx=\"\(try number(center.x))\" cy=\"\(try number(center.y))\" r=\"\(try number(radius))\">"
+                + "cx=\"\(try number(center.x))\" cy=\"\(try number(center.y))\" r=\"\(r)\">"
             close = "</radialGradient>"
         }
         let stops = try fill.stops.map { stop in

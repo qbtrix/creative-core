@@ -89,6 +89,16 @@ struct SVGExporterTests {
         #expect(d == "M0 30000000000000000000000 L-4000000000000000000 0.5")
     }
 
+    @Test func tinyValidRadialRadiusExportsPositive() throws {
+        let fill = Fill.radial(stops: [GradientStop(offset: 0, color: .black), GradientStop(offset: 1, color: .white)],
+                               center: Point(x: 5, y: 5), radius: 0.00001)
+        try fill.validate()
+        let svg = try SVGExporter.gradient(fill, id: "g0")
+        #expect(svg.contains(#"cx="5" cy="5" r="0.00001">"#))
+        #expect(try SVGExporter.gradient(.radial(stops: [], center: Point(x: 0, y: 0), radius: 0.00006), id: "g")
+            .contains(#"r="0.0001">"#))
+    }
+
     @Test func nonFiniteValuesThrow() {
         var scene = squareScene()
         scene.layers[0].shapes[0].points[0].x = .nan
