@@ -159,5 +159,33 @@
     "anchor": "storage[i] = min(max(op(storage[i], other.storage[i]), 0), 1)",
     "replacement": "storage[i] = min(op(storage[i], other.storage[i]), 1)",
     "filter": "MaskTests"
+  },
+  {
+    "note": "white balance gains are not normalized to keep grey luminance",
+    "file": "Sources/CoreRaster/Adjustments.swift",
+    "anchor": "let gains = (r: Float(r / norm), g: Float(g / norm), b: Float(b / norm))",
+    "replacement": "let gains = (r: Float(r), g: Float(g), b: Float(b))",
+    "filter": "DevelopAdjustmentTests"
+  },
+  {
+    "note": "develop slider range check lets values above 100 through",
+    "file": "Sources/CoreRaster/Adjustments.swift",
+    "anchor": "guard value.isFinite, (-100...100).contains(value) else {",
+    "replacement": "guard value.isFinite, value >= -100 else {",
+    "filter": "DevelopAdjustmentTests"
+  },
+  {
+    "note": "shadows weight is not inverted so shadows moves the bright end",
+    "file": "Sources/CoreRaster/Adjustments.swift",
+    "anchor": "+ shadows / 100 * (1 - Self.smoothstep(0, 0.5, luma))",
+    "replacement": "+ shadows / 100 * Self.smoothstep(0, 0.5, luma)",
+    "filter": "DevelopAdjustmentTests"
+  },
+  {
+    "note": "contrast pivot point leaves mid grey",
+    "file": "Sources/CoreRaster/Adjustments.swift",
+    "anchor": "CurvePoint(x: 0.18, y: 0.18),",
+    "replacement": "CurvePoint(x: 0.18, y: 0.18 + push * 0.05),",
+    "filter": "DevelopAdjustmentTests"
   }
 ]
