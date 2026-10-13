@@ -1,5 +1,5 @@
-// ShapeCommands.swift: edits to existing shapes, addressed by owner (a scene
-// or a symbol), layer and shape index. A bad index throws shapeNotFound; a locked layer throws
+// ShapeCommands.swift: edits to existing shapes, addressed by owner, layer and
+// shape index. A bad index throws shapeNotFound; a locked layer throws
 // layerLocked. Undo restores the stored old value, so it is exact even where
 // floating-point arithmetic would not round-trip.
 #if canImport(FoundationEssentials)
@@ -19,7 +19,7 @@ extension Layer {
     }
 }
 
-public struct RemoveShape: LayerCommand {
+public struct RemoveShape: Command {
     public static let id = "shape.remove"
     public var label: String { "Delete Shape" }
     public var owner: LayerOwner
@@ -27,14 +27,19 @@ public struct RemoveShape: LayerCommand {
     public var index: Int
     var removed: Shape?
 
+    private struct Params: Codable { var index: Int }
+
     public init(owner: LayerOwner, layerID: String, index: Int) {
         self.owner = owner
         self.layerID = layerID
         self.index = index
     }
 
-    public init(from decoder: any Decoder) throws { (owner, layerID, index) = try Self.decodeItemAddress(from: decoder) }
-    public func encode(to encoder: any Encoder) throws { try encodeItemAddress(index: index, to: encoder) }
+    public init(from decoder: any Decoder) throws {
+        let (owner, layerID, p) = try Self.decodeAddress(from: decoder, params: Params.self)
+        self.init(owner: owner, layerID: layerID, index: p.index)
+    }
+    public func encode(to encoder: any Encoder) throws { try encodeAddress(to: encoder, params: Params(index: index)) }
 
     public mutating func execute(_ document: inout Document) throws {
         let index = index
@@ -54,7 +59,7 @@ public struct RemoveShape: LayerCommand {
     }
 }
 
-public struct SetShapeFill: LayerCommand {
+public struct SetShapeFill: Command {
     public static let id = "shape.setFill"
     public var label: String { "Set Fill" }
     public var owner: LayerOwner
@@ -63,7 +68,7 @@ public struct SetShapeFill: LayerCommand {
     public var fill: Fill
     var oldFill: Fill?
 
-    private enum CodingKeys: String, CodingKey { case fill }
+    private struct Params: Codable { var index: Int; var fill: Fill }
 
     public init(owner: LayerOwner, layerID: String, index: Int, fill: Fill) {
         self.owner = owner
@@ -73,15 +78,10 @@ public struct SetShapeFill: LayerCommand {
     }
 
     public init(from decoder: any Decoder) throws {
-        (owner, layerID, index) = try Self.decodeItemAddress(from: decoder)
-        fill = try decoder.container(keyedBy: CodingKeys.self).decode(Fill.self, forKey: .fill)
+        let (owner, layerID, p) = try Self.decodeAddress(from: decoder, params: Params.self)
+        self.init(owner: owner, layerID: layerID, index: p.index, fill: p.fill)
     }
-
-    public func encode(to encoder: any Encoder) throws {
-        try encodeItemAddress(index: index, to: encoder)
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(fill, forKey: .fill)
-    }
+    public func encode(to encoder: any Encoder) throws { try encodeAddress(to: encoder, params: Params(index: index, fill: fill)) }
 
     public mutating func execute(_ document: inout Document) throws {
         let (index, fill) = (index, fill)
@@ -105,9 +105,9 @@ public struct SetShapeFill: LayerCommand {
 /// Moves every point of a shape, including its path, by (dx, dy). Consecutive
 /// moves of the same shape merge: dx and dy add up, and the merged command keeps
 /// the first old shape and the last new one, so redo gives back the exact
-/// dragged shape rather than one translation by the rounded sum. Moves under
-/// different owners never merge, even when the layer ids match.
-public struct TranslateShape: LayerCommand {
+/// dragged shape rather than one translation by the rounded sum.
+/// Moves under different owners never merge, even with the same layer id.
+public struct TranslateShape: Command {
     public static let id = "shape.translate"
     public var label: String { "Move Shape" }
     public var owner: LayerOwner
@@ -118,7 +118,7 @@ public struct TranslateShape: LayerCommand {
     var oldShape: Shape?
     var newShape: Shape?
 
-    private enum CodingKeys: String, CodingKey { case dx, dy }
+    private struct Params: Codable { var index: Int; var dx: Double; var dy: Double }
 
     public init(owner: LayerOwner, layerID: String, index: Int, dx: Double, dy: Double) {
         self.owner = owner
@@ -129,18 +129,10 @@ public struct TranslateShape: LayerCommand {
     }
 
     public init(from decoder: any Decoder) throws {
-        (owner, layerID, index) = try Self.decodeItemAddress(from: decoder)
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        dx = try c.decode(Double.self, forKey: .dx)
-        dy = try c.decode(Double.self, forKey: .dy)
+        let (owner, layerID, p) = try Self.decodeAddress(from: decoder, params: Params.self)
+        self.init(owner: owner, layerID: layerID, index: p.index, dx: p.dx, dy: p.dy)
     }
-
-    public func encode(to encoder: any Encoder) throws {
-        try encodeItemAddress(index: index, to: encoder)
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(dx, forKey: .dx)
-        try c.encode(dy, forKey: .dy)
-    }
+    public func encode(to encoder: any Encoder) throws { try encodeAddress(to: encoder, params: Params(index: index, dx: dx, dy: dy)) }
 
     public mutating func execute(_ document: inout Document) throws {
         let (index, dx, dy, recordedOld, recordedNew) = (index, dx, dy, oldShape, newShape)
@@ -157,7 +149,7 @@ public struct TranslateShape: LayerCommand {
 
     public mutating func merge(_ next: TranslateShape) -> Bool {
         guard oldShape != nil, next.oldShape == newShape, next.newShape != nil,
-              next.owner == owner, (next.layerID, next.index) == (layerID, index) else { return false }
+              (next.owner, next.layerID, next.index) == (owner, layerID, index) else { return false }
         dx += next.dx
         dy += next.dy
         newShape = next.newShape

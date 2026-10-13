@@ -107,27 +107,28 @@ import Testing
         }
     }
 
-    static func anyIndex(_ e: CommandEngine, _ owner: LayerOwner, _ layer: String, _ rng: inout SplitMix64) -> Int {
-        let count = e.document.layers(of: owner)?.first { $0.id == layer }?.shapes.count ?? 0
+    static func anyIndex(_ e: CommandEngine, _ layer: String, _ rng: inout SplitMix64) -> Int {
+        let count = e.document.scenes.first?.layers.first { $0.id == layer }?.shapes.count ?? 0
         return Int.random(in: -1...count, using: &rng)
     }
 
     /// Random shape edit steps, valid and invalid, for assertUndoRestoresDocument.
     static let undoSteps: [UndoStep] = [
         { e, rng, _ in
-            let (owner, layer) = UndoPropertyTests.anyTarget(e, &rng)
-            try e.perform(RemoveShape(owner: owner, layerID: layer, index: anyIndex(e, owner, layer, &rng)))
+            let layer = UndoPropertyTests.anyLayer(e, &rng)
+            try e.perform(RemoveShape(owner: .scene(Fixtures.sceneID), layerID: layer, index: anyIndex(e, layer, &rng)))
         },
         { e, rng, _ in
-            let (owner, layer) = UndoPropertyTests.anyTarget(e, &rng)
+            let layer = UndoPropertyTests.anyLayer(e, &rng)
             let color = Color(r: Double.random(in: 0...1, using: &rng), g: 0, b: 1)
             let fill = Bool.random(using: &rng) ? Fill.solid(color)
                 : .linear(stops: [GradientStop(offset: 0, color: color)], start: Point(x: 0, y: 0), end: Point(x: 1, y: 1))
-            try e.perform(SetShapeFill(owner: owner, layerID: layer, index: anyIndex(e, owner, layer, &rng), fill: fill))
+            try e.perform(SetShapeFill(owner: .scene(Fixtures.sceneID), layerID: layer,
+                                       index: anyIndex(e, layer, &rng), fill: fill))
         },
         { e, rng, _ in
-            let (owner, layer) = UndoPropertyTests.anyTarget(e, &rng)
-            try e.perform(TranslateShape(owner: owner, layerID: layer, index: anyIndex(e, owner, layer, &rng),
+            let layer = UndoPropertyTests.anyLayer(e, &rng)
+            try e.perform(TranslateShape(owner: .scene(Fixtures.sceneID), layerID: layer, index: anyIndex(e, layer, &rng),
                                          dx: UndoPropertyTests.anyNumber(in: -50...50, &rng),
                                          dy: UndoPropertyTests.anyNumber(in: -50...50, &rng)),
                           coalesceKey: Bool.random(using: &rng) ? "drag" : nil)
@@ -136,7 +137,6 @@ import Testing
 
     @Test(arguments: 0..<200)
     func undoAllRestoresOriginal(seed: UInt64) throws {
-        try assertUndoRestoresDocument(seed: seed, steps: UndoPropertyTests.coreSteps + Self.undoSteps,
-                                       start: Fixtures.withSymbol())
+        try assertUndoRestoresDocument(seed: seed, steps: UndoPropertyTests.coreSteps + Self.undoSteps)
     }
 }

@@ -264,7 +264,7 @@ public struct RemoveKeyframe: Command {
     }
 }
 
-public struct AddShape: LayerCommand {
+public struct AddShape: Command {
     public static let id = "shape.add"
     public var label: String { "Add Shape" }
     public var owner: LayerOwner
@@ -272,7 +272,7 @@ public struct AddShape: LayerCommand {
     public var shape: Shape
     var insertedAt: Int?
 
-    private enum CodingKeys: String, CodingKey { case shape }
+    private struct Params: Codable { var shape: Shape }
 
     public init(owner: LayerOwner, layerID: String, shape: Shape) {
         self.owner = owner
@@ -281,15 +281,10 @@ public struct AddShape: LayerCommand {
     }
 
     public init(from decoder: any Decoder) throws {
-        (owner, layerID) = try Self.decodeAddress(from: decoder)
-        shape = try decoder.container(keyedBy: CodingKeys.self).decode(Shape.self, forKey: .shape)
+        let (owner, layerID, p) = try Self.decodeAddress(from: decoder, params: Params.self)
+        self.init(owner: owner, layerID: layerID, shape: p.shape)
     }
-
-    public func encode(to encoder: any Encoder) throws {
-        try encodeAddress(to: encoder)
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(shape, forKey: .shape)
-    }
+    public func encode(to encoder: any Encoder) throws { try encodeAddress(to: encoder, params: Params(shape: shape)) }
 
     public mutating func execute(_ document: inout Document) throws {
         let shape = shape

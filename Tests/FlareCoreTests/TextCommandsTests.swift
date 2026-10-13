@@ -17,14 +17,6 @@ import Testing
         return doc
     }
 
-    /// `withText()` plus `Fixtures.withSymbol()`'s symbol, its "wing" holding text too.
-    static func withTextAndSymbol() -> Document {
-        var doc = withText()
-        doc.symbols = Fixtures.withSymbol().symbols
-        doc.symbols[0].layers[0].texts = [hello]
-        return doc
-    }
-
     @Test func addEditRemoveEachUndoExactly() throws {
         var engine = CommandEngine(document: Fixtures.document())
         var history = [engine.document]
@@ -110,8 +102,8 @@ import Testing
         ]
     }
 
-    static func anyIndex(_ e: CommandEngine, _ owner: LayerOwner, _ layer: String, _ rng: inout SplitMix64) -> Int {
-        let count = e.document.layers(of: owner)?.first { $0.id == layer }?.texts.count ?? 0
+    static func anyIndex(_ e: CommandEngine, _ layer: String, _ rng: inout SplitMix64) -> Int {
+        let count = e.document.scenes.first?.layers.first { $0.id == layer }?.texts.count ?? 0
         return Int.random(in: -1...count, using: &rng)
     }
 
@@ -122,20 +114,19 @@ import Testing
             let text = TextShape(string: "t\(nextID)", fontFamily: "F",
                                  fontSize: UndoPropertyTests.anyNumber(in: -1...72, &rng),
                                  position: Point(x: UndoPropertyTests.anyNumber(in: -50...50, &rng), y: 0))
-            let (owner, layer) = UndoPropertyTests.anyTarget(e, &rng)
-            try e.perform(AddTextShape(owner: owner, layerID: layer, text: text))
+            try e.perform(AddTextShape(owner: .scene(s), layerID: UndoPropertyTests.anyLayer(e, &rng), text: text))
         },
         { e, rng, _ in
-            let (owner, layer) = UndoPropertyTests.anyTarget(e, &rng)
-            try e.perform(RemoveTextShape(owner: owner, layerID: layer, index: anyIndex(e, owner, layer, &rng)))
+            let layer = UndoPropertyTests.anyLayer(e, &rng)
+            try e.perform(RemoveTextShape(owner: .scene(s), layerID: layer, index: anyIndex(e, layer, &rng)))
         },
         { e, rng, _ in
-            let (owner, layer) = UndoPropertyTests.anyTarget(e, &rng)
-            try e.perform(SetTextString(owner: owner, layerID: layer, index: anyIndex(e, owner, layer, &rng), string: "s"))
+            let layer = UndoPropertyTests.anyLayer(e, &rng)
+            try e.perform(SetTextString(owner: .scene(s), layerID: layer, index: anyIndex(e, layer, &rng), string: "s"))
         },
         { e, rng, _ in
-            let (owner, layer) = UndoPropertyTests.anyTarget(e, &rng)
-            try e.perform(SetTextFont(owner: owner, layerID: layer, index: anyIndex(e, owner, layer, &rng), family: "A",
+            let layer = UndoPropertyTests.anyLayer(e, &rng)
+            try e.perform(SetTextFont(owner: .scene(s), layerID: layer, index: anyIndex(e, layer, &rng), family: "A",
                                       size: UndoPropertyTests.anyNumber(in: -1...72, &rng)))
         },
     ]
@@ -143,6 +134,6 @@ import Testing
     @Test(arguments: 0..<200)
     func undoAllRestoresOriginal(seed: UInt64) throws {
         try assertUndoRestoresDocument(seed: seed, steps: UndoPropertyTests.coreSteps + Self.undoSteps,
-                                       start: Self.withTextAndSymbol())
+                                       start: Self.withText())
     }
 }

@@ -212,7 +212,7 @@
   {
     "note": "a shape drag merges across owners, so a scene move folds into a symbol drag",
     "file": "Sources/FlareCore/ShapeCommands.swift",
-    "anchor": "next.owner == owner, (next.layerID, next.index) == (layerID, index)",
+    "anchor": "(next.owner, next.layerID, next.index) == (owner, layerID, index)",
     "replacement": "(next.layerID, next.index) == (layerID, index)",
     "filter": "ShapeTextOwnerTests|CoalesceTests"
   }

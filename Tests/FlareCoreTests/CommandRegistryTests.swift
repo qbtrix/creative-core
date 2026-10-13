@@ -182,8 +182,8 @@ import Testing
         #expect(doc.scenes[0].layers[1].tracks["x"]?.first?.frame == 5)
     }
 
-    /// Envelopes written before layer list commands took an owner decode as
-    /// scene-owned, perform, and re-encode byte for byte.
+    /// Envelopes written before layer list, shape and text commands took an
+    /// owner decode as scene-owned, perform, and re-encode byte for byte.
     @Test(arguments: [
         #"{"id":"layer.add","params":{"index":1,"layer":{"id":"new","instances":[],"isLocked":false,"isVisible":true,"#
             + #""name":"New","shapes":[],"tracks":{}},"sceneID":"s1"}}"#,
@@ -191,14 +191,24 @@ import Testing
         #"{"id":"layer.rename","params":{"layerID":"ball","name":"Sphere","sceneID":"s1"}}"#,
         #"{"id":"layer.reorder","params":{"layerID":"bg","sceneID":"s1","toIndex":1}}"#,
         #"{"id":"layer.setFlags","params":{"isLocked":true,"layerID":"ball","sceneID":"s1"}}"#,
+        #"{"id":"shape.add","params":{"layerID":"ball","sceneID":"s1","shape":{"closed":false,"#
+            + #""fill":{"a":1,"b":0,"g":0,"r":0},"points":[{"x":1,"y":2},{"x":3,"y":4}]}}}"#,
+        #"{"id":"shape.remove","params":{"index":0,"layerID":"ball","sceneID":"s1"}}"#,
+        #"{"id":"shape.setFill","params":{"fill":{"a":1,"b":1,"g":0,"r":0},"index":0,"layerID":"ball","sceneID":"s1"}}"#,
+        #"{"id":"shape.translate","params":{"dx":1.5,"dy":-2,"index":0,"layerID":"ball","sceneID":"s1"}}"#,
+        #"{"id":"text.add","params":{"layerID":"ball","sceneID":"s1","text":{"fill":{"a":1,"b":0,"g":0,"r":0},"#
+            + #""fontFamily":"Helvetica","fontSize":24,"position":{"x":10,"y":20},"string":"Hi"}}}"#,
+        #"{"id":"text.remove","params":{"index":0,"layerID":"ball","sceneID":"s1"}}"#,
+        #"{"id":"text.setString","params":{"index":0,"layerID":"ball","sceneID":"s1","string":"Bye"}}"#,
+        #"{"id":"text.setFont","params":{"family":"Courier","index":0,"layerID":"ball","sceneID":"s1","size":12}}"#,
     ])
     func preOwnerLayerEnvelopesStayByteIdentical(_ json: String) throws {
         let decoded = try Self.registry.decode(Data(json.utf8))
         #expect((decoded as? any LayerCommand)?.owner == .scene("s1"))
         #expect(try Self.registry.encode(decoded) == Data(json.utf8))
-        var e = CommandEngine(document: Fixtures.document())
+        var e = CommandEngine(document: TextCommandsTests.withText())
         try e.perform(decoded)
-        #expect(e.document != Fixtures.document())
+        #expect(e.document != TextCommandsTests.withText())
     }
 
     @Test func unknownIDThrows() {
