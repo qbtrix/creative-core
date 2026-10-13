@@ -1,5 +1,5 @@
 // ModelError.swift: the error the model layer throws (Document lookups, fill
-// and text validation). The model never names an error of the layers above it; the
+// text and stroke validation). The model never names an error of the layers above it; the
 // command and format layers each map this to their own error type, in one
 // initializer beside that type.
 #if canImport(FoundationEssentials)
@@ -18,4 +18,6 @@ public enum ModelError: Error, Equatable, Sendable {
     case invalidFill(String)
     /// A text shape breaks an invariant listed beside `TextShape`.
     case invalidText(String)
+    /// A stroke breaks an invariant listed beside `Stroke`.
+    case invalidStroke(String)
 }

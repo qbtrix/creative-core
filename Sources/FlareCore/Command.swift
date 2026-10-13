@@ -108,7 +108,7 @@ extension CommandError {
         case .symbolNotFound(let id): self = .symbolNotFound(id)
         case .layerNotFound(let id): self = .layerNotFound(id)
         case .layerLocked(let id): self = .layerLocked(id)
-        case .invalidFill(let message), .invalidText(let message): self = .invalidDocument(message)
+        case .invalidFill(let message), .invalidText(let message), .invalidStroke(let message): self = .invalidDocument(message)
         }
     }
 }

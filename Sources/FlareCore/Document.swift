@@ -316,6 +316,9 @@ public struct Color: Codable, Sendable, Hashable {
     /// True if every channel is finite and in 0...1.
     public var isInRange: Bool { [r, g, b, a].allSatisfy { (0...1).contains($0) } }
 
+    /// True if every channel is finite, so the color can be encoded and saved.
+    public var isFinite: Bool { [r, g, b, a].allSatisfy(\.isFinite) }
+
     public static let black = Color(r: 0, g: 0, b: 0)
     public static let white = Color(r: 1, g: 1, b: 1)
 }
@@ -368,8 +371,9 @@ public struct TextShape: Codable, Sendable, Hashable {
     }
 }
 
-/// How a shape's outline is drawn. `width` is in points, finite and >= 0
-/// (checked by the format layer on load).
+/// How a shape's outline is drawn. `width` is in points, finite and >= 0, and
+/// every color channel is finite (checked by `validate`, which the format layer
+/// runs on load).
 public struct Stroke: Codable, Sendable, Hashable {
     public enum Join: String, Codable, Sendable, Hashable, CaseIterable {
         case miter, round, bevel
@@ -389,6 +393,12 @@ public struct Stroke: Codable, Sendable, Hashable {
         self.width = width
         self.join = join
         self.cap = cap
+    }
+
+    /// Throws `ModelError.invalidStroke` if an invariant above breaks.
+    func validate() throws {
+        guard width.isFinite, width >= 0 else { throw ModelError.invalidStroke("stroke width must be finite and >= 0") }
+        guard color.isFinite else { throw ModelError.invalidStroke("color channels must be finite") }
     }
 }
 
