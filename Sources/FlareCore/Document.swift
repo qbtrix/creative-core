@@ -447,7 +447,7 @@ extension Document {
         }
     }
 
-    // Scene-only forms, kept until every command family takes an owner (Q5d).
+    // Scene-only forms, kept for the keyframe family until it takes an owner (Q5c).
     @discardableResult
     mutating func withLayer<T>(scene: String, layer: String, _ body: (inout Layer) throws -> T) throws -> T {
         try withLayer(.scene(scene), layer: layer, body)
