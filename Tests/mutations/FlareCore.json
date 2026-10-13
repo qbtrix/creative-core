@@ -264,5 +264,12 @@
     "anchor": "s.fill = fill.translated(dx: dx, dy: dy)",
     "replacement": "s.fill = fill",
     "filter": "ShapeCommandsTests"
+  },
+  {
+    "note": "Lottie scale percent skips the overflow check after multiplying by 100",
+    "file": "Sources/FlareCore/Export/LottieExporter.swift",
+    "anchor": "try finite(try finite(scale) * 100)",
+    "replacement": "try finite(scale) * 100",
+    "filter": "LottieScaleOverflowTests"
   }
 ]
