@@ -264,25 +264,36 @@ public struct RemoveKeyframe: Command {
     }
 }
 
-public struct AddShape: Command {
+public struct AddShape: LayerCommand {
     public static let id = "shape.add"
     public var label: String { "Add Shape" }
-    public var sceneID: String
+    public var owner: LayerOwner
     public var layerID: String
     public var shape: Shape
     var insertedAt: Int?
 
-    private enum CodingKeys: String, CodingKey { case sceneID, layerID, shape }
+    private enum CodingKeys: String, CodingKey { case shape }
 
-    public init(sceneID: String, layerID: String, shape: Shape) {
-        self.sceneID = sceneID
+    public init(owner: LayerOwner, layerID: String, shape: Shape) {
+        self.owner = owner
         self.layerID = layerID
         self.shape = shape
     }
 
+    public init(from decoder: any Decoder) throws {
+        (owner, layerID) = try Self.decodeAddress(from: decoder)
+        shape = try decoder.container(keyedBy: CodingKeys.self).decode(Shape.self, forKey: .shape)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        try encodeAddress(to: encoder)
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(shape, forKey: .shape)
+    }
+
     public mutating func execute(_ document: inout Document) throws {
         let shape = shape
-        insertedAt = try document.withEditableLayer(scene: sceneID, layer: layerID) { layer in
+        insertedAt = try document.withEditableLayer(owner, layer: layerID) { layer in
             layer.shapes.append(shape)
             return layer.shapes.count - 1
         }
@@ -290,7 +301,7 @@ public struct AddShape: Command {
 
     public func undo(_ document: inout Document) throws {
         guard let insertedAt else { throw CommandError.notExecuted }
-        try document.withLayer(scene: sceneID, layer: layerID) { layer in
+        try document.withLayer(owner, layer: layerID) { layer in
             guard layer.shapes.indices.contains(insertedAt) else { throw CommandError.shapeNotFound(insertedAt) }
             layer.shapes.remove(at: insertedAt)
         }

@@ -2,22 +2,15 @@
 // CommandEngine validates their result scoped to that layer. A command listed
 // here must never touch another layer, a scene field, a symbol or a machine.
 //
-// Until each family takes an owner param (Q5c, Q5d), it names a scene layer:
-// the extension below computes `owner` from `sceneID` for every listed command.
+// Every family but the keyframe one takes an owner param and conforms where it
+// is declared. Until the keyframe family does (Q5c), it names a scene layer:
+// `SceneLayerCommand` computes `owner` from `sceneID` for it.
 
 extension SetKeyframe: SceneLayerCommand {}
 extension MoveKeyframe: SceneLayerCommand {}
 extension RemoveKeyframe: SceneLayerCommand {}
 extension SetKeyframeEasing: SceneLayerCommand {}
 extension ShiftKeyframes: SceneLayerCommand {}
-extension AddShape: SceneLayerCommand {}
-extension RemoveShape: SceneLayerCommand {}
-extension SetShapeFill: SceneLayerCommand {}
-extension TranslateShape: SceneLayerCommand {}
-extension AddTextShape: SceneLayerCommand {}
-extension RemoveTextShape: SceneLayerCommand {}
-extension SetTextString: SceneLayerCommand {}
-extension SetTextFont: SceneLayerCommand {}
 
 /// The listed commands that still address a layer by scene id.
 protocol SceneLayerCommand: LayerCommand {
