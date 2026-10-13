@@ -146,9 +146,12 @@ the other modules yet.
 - If `scripts/ci` fails on `origin/dev` itself because of someone else's merge
   (look for the open `dev-red` issue), do not fix it in your PR. Comment on
   your issue with the failing test name and stop.
-- Never edit `.github/`, `CLAUDE.md`, `AGENTS.md`, `scripts/ci`,
-  `scripts/cloud-setup.sh`, `scripts/fast-lane.sh`, `Package.swift` or
-  `LICENSE` unless your issue says to. Those PRs need human review.
+- **Never edit** `.github/`, `.claude/`, `CLAUDE.md`, `AGENTS.md`,
+  `scripts/ci`, `scripts/cloud-setup.sh`, `scripts/fast-lane.sh`,
+  `scripts/mutate`, `Package.swift`, `Package.resolved` or `LICENSE` unless
+  your issue says to. Those PRs need human review. The fast lane refuses
+  exactly this list (PROTECTED in scripts/fast-lane.sh; its tests read this
+  bullet), so every path here goes in backticks and nothing else.
 
 ## Fast lane
 

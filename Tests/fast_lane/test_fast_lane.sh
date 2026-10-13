@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Tests/fast_lane/test_fast_lane.sh: fixture tests for the pure `decide`
-# function in scripts/fast-lane.sh. No network, needs bash and jq.
+# function in scripts/fast-lane.sh, its PROTECTED list against CLAUDE.md's
+# "Never edit" bullet, and whole sweeps against a stub `gh`. No network,
+# needs bash and jq.
 #
 # checks-green.json is a check rollup shaped like a green flare-core PR: the CI
 # workflow's Linux and macOS jobs plus one SKIPPED CI job, a non-CI workflow
@@ -54,6 +56,9 @@ check "deny agent rules, any case" "not-eligible|touches protected paths: docs/a
   . 'docs/agents.md' .
 check "similar names are allowed" "eligible|150|2|5 checks green" \
   . $'scripts/ci-helpers.sh\nSources/FlareCore/PackageSwiftNotes.swift' .
+check "deny .claude, Package.resolved, scripts/mutate and a nested CLAUDE.md" \
+  "not-eligible|touches protected paths: .claude/settings.json, Package.resolved, scripts/mutate, Sources/FlareCore/CLAUDE.md" \
+  . $'.claude/settings.json\nPackage.resolved\nscripts/mutate\nSources/FlareCore/CLAUDE.md' .
 check "too big (lines)" "not-eligible|too big: 401 lines" '.additions = 401 | .deletions = 0' "$BASE_FILES" .
 check "too big (files)" "not-eligible|too big: 150 lines, 16 files" '.changedFiles = 16' "$BASE_FILES" .
 check "non-allowlisted author" "not-eligible|author someone is not on the fast-lane allowlist" \
@@ -86,6 +91,22 @@ check "behind dev is still eligible (no freshness rule)" "eligible|150|2|5 check
 check "red CI outranks a conflict" "red|Linux" \
   '.mergeable = "CONFLICTING" | .mergeStateStatus = "DIRTY"' "$BASE_FILES" \
   'map(if .name == "Linux" then .conclusion = "FAILURE" else . end)'
+
+# PROTECTED is exactly the backticked paths in CLAUDE.md's "**Never edit**"
+# bullet, and decide refuses a file under each one.
+# shellcheck disable=SC2016 # the backticks are literal markdown
+claude_list=$(awk '/^- \*\*Never edit\*\*/ {on = 1} on && /^$/ {exit} on' "$here/../../CLAUDE.md" \
+  | grep -oE '`[^`]+`' | tr -d '`' | sort -u)
+lane_list=$(printf '%s\n' "${PROTECTED[@]}" | sort -u)
+if [[ -n "$claude_list" && "$claude_list" == "$lane_list" ]]; then
+  echo "ok   PROTECTED matches CLAUDE.md's Never edit list"
+else
+  echo "FAIL PROTECTED vs CLAUDE.md: $(diff <(echo "$claude_list") <(echo "$lane_list") | grep '^[<>]' | paste -sd' ' -)"; fail=1
+fi
+for p in "${PROTECTED[@]}"; do
+  f="$p"; [[ "$p" == */ ]] && f="${p}x.swift"
+  check "refuses $f" "not-eligible|touches protected paths: $f" . "$f" .
+done
 
 # The worker's marker: a line `Fast-Check: pass`, then `Head: <full head sha>`.
 mark() { printf '.body = "Closes #1\n\n%s\n%s"' "$1" "$2"; }
@@ -153,6 +174,7 @@ check "gate off: belt PR without review is eligible" "eligible|150|2|5 checks gr
 # A whole sweep against a stub `gh` that answers from per-PR fixtures and logs
 # every write: #4 and #7 are eligible, #5 is based on main, #6 conflicts.
 # sweep <PRs labelled feature-done> runs main() and leaves the writes in $sw/calls.
+# Files come from $sw/files.<n>.json (raw API shape, the lane's --jq applied).
 sw="$tmp/sweep"
 gh() {
   local a="$*" n
@@ -163,7 +185,10 @@ gh() {
     "pr view "*"--json closingIssuesReferences "*) ;;
     "pr view "*) cat "$sw/$3.json" ;;
     "api "*"/check-runs"*|"api "*"/status "*) echo '[]' ;;
-    "api "*"/pulls/"*"/files "*) echo "Sources/FlareCore/Timeline.swift" ;;
+    "api "*"/pulls/"*"/files "*)
+      n="${2#*/pulls/}"; n="${n%%/*}"
+      if [[ -e "$sw/files.$n.json" ]]; then jq -r "${!#}" "$sw/files.$n.json"
+      else jq -rn '[{filename: "Sources/FlareCore/Timeline.swift", status: "modified"}]' | jq -r "${!#}"; fi ;;
     "api "*"/issues/"*"/comments "*) n="${2#*/issues/}"; cat "$sw/${n%%/*}.comments" 2>/dev/null || true ;;
     "pr comment "*) echo "$a" >>"$sw/calls"; printf '%s\n' "${!#}" >>"$sw/$3.comments" ;;
     "pr merge "*) echo "$a" >>"$sw/calls"; touch "$sw/$3.merged" ;;
@@ -192,4 +217,12 @@ expect "never merges the conflicting PR" "$(grep -c '^pr merge 6' "$sw/calls")" 
 expect "routine merges start no CI" "$(grep -c '^workflow run' "$sw/calls")" 0
 sweep 4 7
 expect "feature-done merges dispatch CI on dev once" "$(grep -c '^workflow run ci.yml .*--ref dev' "$sw/calls")" 1
+# A rename away from a protected path is refused under its old name.
+rm -rf "$sw"; mkdir -p "$sw"; : >"$sw/calls"
+jq '.number = 4' <<<"$BASE_PR" | jq "$MARKED" >"$sw/4.json"
+echo '[{"filename": "tools/mutate", "previous_filename": "scripts/mutate", "status": "renamed"}]' >"$sw/files.4.json"
+( main 4 ) >/dev/null 2>&1 || { echo "FAIL sweep: main exited non-zero"; fail=1; }
+expect "a rename away from a protected path is refused" \
+  "$(grep -c '^pr comment 4 .*touches protected paths: scripts/mutate\.' "$sw/calls")" 1
+expect "never merges it" "$(grep -c '^pr merge 4' "$sw/calls")" 0
 exit "$fail"
