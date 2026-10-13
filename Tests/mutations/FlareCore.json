@@ -238,6 +238,13 @@
     "filter": "FillPointFiniteTests"
   },
   {
+    "note": "radial gradient edge is not checked, so center.x + radius may overflow",
+    "file": "Sources/FlareCore/Fill.swift",
+    "anchor": "guard edges.allSatisfy(\\.isFinite) else {",
+    "replacement": "guard !edges.isEmpty else {",
+    "filter": "FillRadialExtentTests"
+  },
+  {
     "note": "scene background color is not checked, so a NaN background is accepted",
     "file": "Sources/FlareCore/FlareFormat.swift",
     "anchor": "guard scene.background.isFinite else {",
