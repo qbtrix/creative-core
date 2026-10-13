@@ -93,7 +93,8 @@ public struct SetShapeFill: LayerParamsCommand {
     }
 }
 
-/// Moves every point of a shape, including its path, by (dx, dy). Consecutive
+/// Moves every point of a shape, including its path and its gradient's start,
+/// end or center, by (dx, dy). Consecutive
 /// moves of the same shape merge: dx and dy add up, and the merged command keeps
 /// the first old shape and the last new one, so redo gives back the exact
 /// dragged shape rather than one translation by the rounded sum.
@@ -158,11 +159,27 @@ extension Point {
     func translated(dx: Double, dy: Double) -> Point { Point(x: x + dx, y: y + dy) }
 }
 
+extension Fill {
+    /// This fill moved by (dx, dy): a gradient's start, end or center, which
+    /// are in shape space. A solid fill has no geometry and comes back as is.
+    func translated(dx: Double, dy: Double) -> Fill {
+        switch self {
+        case .solid: self
+        case .linear(let stops, let start, let end):
+            .linear(stops: stops, start: start.translated(dx: dx, dy: dy), end: end.translated(dx: dx, dy: dy))
+        case .radial(let stops, let center, let radius):
+            .radial(stops: stops, center: center.translated(dx: dx, dy: dy), radius: radius)
+        }
+    }
+}
+
 extension Shape {
-    /// This shape moved by (dx, dy): its points and every point of its path.
+    /// This shape moved by (dx, dy): its points, every point of its path and
+    /// its gradient's geometry, so the fill moves with the shape.
     public func translated(dx: Double, dy: Double) -> Shape {
         var s = self
         s.points = points.map { $0.translated(dx: dx, dy: dy) }
+        s.fill = fill.translated(dx: dx, dy: dy)
         s.path = path.map { p in
             Path(elements: p.elements.map { e in
                 switch e {
