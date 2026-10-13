@@ -297,6 +297,9 @@ public struct Point: Codable, Sendable, Hashable {
         self.x = x
         self.y = y
     }
+
+    /// Both coordinates are finite, so the point can be saved.
+    public var isFinite: Bool { x.isFinite && y.isFinite }
 }
 
 /// RGBA, each channel in 0...1.
@@ -366,7 +369,7 @@ public struct TextShape: Codable, Sendable, Hashable {
     /// Throws `ModelError.invalidText` or `invalidFill` if an invariant above breaks.
     func validate() throws {
         guard fontSize.isFinite, fontSize > 0 else { throw ModelError.invalidText("font size must be finite and > 0") }
-        guard position.x.isFinite, position.y.isFinite else { throw ModelError.invalidText("position not finite") }
+        guard position.isFinite else { throw ModelError.invalidText("position not finite") }
         try fill.validate()
     }
 }
