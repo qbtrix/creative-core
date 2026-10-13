@@ -139,12 +139,12 @@ import Testing
             try e.perform(AddLayer(owner: .scene(s), layer: Layer(id: "bad", name: "b", tracks: ["x": []])))
         }
         let nanShape = Shape(points: [Point(x: .nan, y: 0), Point(x: 1, y: 1)])
-        #expect(throws: CommandError.self) { try e.perform(AddShape(sceneID: s, layerID: "ball", shape: nanShape)) }
+        #expect(throws: CommandError.self) { try e.perform(AddShape(owner: .scene(s), layerID: "ball", shape: nanShape)) }
         let curve = Shape(points: [], path: Path(elements: [.move(to: Point(x: 0, y: 0)),
                                                              .line(to: Point(x: 0, y: -.infinity))]))
-        #expect(throws: CommandError.self) { try e.perform(AddShape(sceneID: s, layerID: "ball", shape: curve)) }
+        #expect(throws: CommandError.self) { try e.perform(AddShape(owner: .scene(s), layerID: "ball", shape: curve)) }
         #expect(throws: CommandError.self) {
-            try e.perform(TranslateShape(sceneID: s, layerID: "ball", index: 0, dx: .infinity, dy: 0))
+            try e.perform(TranslateShape(owner: .scene(s), layerID: "ball", index: 0, dx: .infinity, dy: 0))
         }
         // Every rejected command left the document untouched and saveable.
         #expect(e.document == before)

@@ -100,9 +100,9 @@ import Testing
                                          frame: Int.random(in: -1...30, using: &rng)))
         },
         { e, rng, _ in
-            let layer = anyLayer(e, &rng)
+            let (owner, layer) = anyTarget(e, &rng)
             let shape = Shape(points: [Point(x: anyNumber(in: -1...30, &rng), y: 0), Point(x: 1, y: 1)], closed: false)
-            try e.perform(AddShape(sceneID: Fixtures.sceneID, layerID: layer, shape: shape))
+            try e.perform(AddShape(owner: owner, layerID: layer, shape: shape))
         },
         { e, rng, _ in
             let (owner, layer) = anyTarget(e, &rng)

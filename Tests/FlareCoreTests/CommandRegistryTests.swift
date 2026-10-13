@@ -44,7 +44,9 @@ import Testing
     static func sampleDocument() -> Document {
         var doc = TextCommandsTests.withText()
         doc.symbols = [Symbol(id: "spark", name: "Spark", durationFrames: 6,
-                              layers: [Layer(id: "glow", name: "Glow"), Layer(id: "core", name: "Core")])]
+                              layers: [Layer(id: "glow", name: "Glow"), Layer(id: "core", name: "Core",
+                                             shapes: Fixtures.document().scenes[0].layers[1].shapes,
+                                             texts: [TextCommandsTests.hello])])]
         doc.scenes[0].guides = GuideCommandsTests.guided().scenes[0].guides
         doc.swatches = [Swatch(name: "Ink", color: .black)]
         return doc
@@ -61,13 +63,13 @@ import Testing
                         keyframe: Keyframe(frame: 12, value: 5, easing: .easeInOut)),
             MoveKeyframe(sceneID: s, layerID: "ball", property: "x", from: 24, to: 30),
             RemoveKeyframe(sceneID: s, layerID: "ball", property: "x", frame: 0),
-            AddShape(sceneID: s, layerID: "bg",
+            AddShape(owner: .scene(s), layerID: "bg",
                      shape: Shape(points: [Point(x: 1, y: 2), Point(x: 3, y: 4)], closed: false)),
             ReorderLayer(owner: .scene(s), layerID: "bg", toIndex: 1),
             SetLayerFlags(owner: .scene(s), layerID: "ball", isVisible: false, isLocked: true),
-            RemoveShape(sceneID: s, layerID: "ball", index: 0),
-            SetShapeFill(sceneID: s, layerID: "ball", index: 0, fill: .solid(Color(r: 0, g: 0, b: 1))),
-            TranslateShape(sceneID: s, layerID: "ball", index: 0, dx: 1, dy: 1),
+            RemoveShape(owner: .scene(s), layerID: "ball", index: 0),
+            SetShapeFill(owner: .scene(s), layerID: "ball", index: 0, fill: .solid(Color(r: 0, g: 0, b: 1))),
+            TranslateShape(owner: .scene(s), layerID: "ball", index: 0, dx: 1, dy: 1),
         ]
     }
 
@@ -81,6 +83,14 @@ import Testing
             RenameLayer(owner: sym, layerID: "core", name: "Heart"),
             ReorderLayer(owner: sym, layerID: "glow", toIndex: 1),
             SetLayerFlags(owner: sym, layerID: "core", isLocked: true),
+            AddShape(owner: sym, layerID: "glow", shape: Shape(points: [Point(x: 1, y: 2)])),
+            RemoveShape(owner: sym, layerID: "core", index: 0),
+            SetShapeFill(owner: sym, layerID: "core", index: 0, fill: .solid(.white)),
+            TranslateShape(owner: sym, layerID: "core", index: 0, dx: 2, dy: 3),
+            AddTextShape(owner: sym, layerID: "glow", text: TextCommandsTests.hello),
+            RemoveTextShape(owner: sym, layerID: "core", index: 0),
+            SetTextString(owner: sym, layerID: "core", index: 0, string: "Yo"),
+            SetTextFont(owner: sym, layerID: "core", index: 0, family: "Mono", size: 9),
         ]
     }
 

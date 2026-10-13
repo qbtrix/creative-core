@@ -208,5 +208,12 @@
     "anchor": "for root in symbols.indices where state[root] == 0 {",
     "replacement": "for root in symbols.indices.prefix(1) where state[root] == 0 {",
     "filter": "SymbolCycleTests"
+  },
+  {
+    "note": "a shape drag merges across owners, so a scene move folds into a symbol drag",
+    "file": "Sources/FlareCore/ShapeCommands.swift",
+    "anchor": "next.owner == owner, (next.layerID, next.index) == (layerID, index)",
+    "replacement": "(next.layerID, next.index) == (layerID, index)",
+    "filter": "ShapeTextOwnerTests|CoalesceTests"
   }
 ]
