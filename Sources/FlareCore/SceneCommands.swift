@@ -30,6 +30,9 @@ public struct AddScene: Command {
         }
         guard scene.fps > 0 else { throw CommandError.invalidFPS(scene.fps) }
         guard scene.durationFrames >= 0 else { throw CommandError.invalidDuration(scene.durationFrames) }
+        guard scene.background.isFinite else {
+            throw CommandError.invalidDocument("background color channels must be finite")
+        }
         let count = document.scenes.count
         let at = min(max(index ?? count, 0), count)
         document.scenes.insert(scene, at: at)
