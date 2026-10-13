@@ -9,7 +9,7 @@
 // sliders take -100...100 with 0 as no change. Parameters are checked
 // before any pixel is touched and throw `RasterError.invalid`; identity
 // parameters return the input unchanged, bit for bit; a result component that
-// overflows to infinity throws (from `setPixel`).
+// overflows to infinity throws, as `setPixel` would.
 #if canImport(Glibc)
 import Glibc
 #elseif canImport(Musl)
@@ -200,15 +200,26 @@ extension PixelBuffer {
     }
 
     /// Maps each straight pixel through `transform`, which must keep alpha.
+    /// One pass over the storage, without the per-pixel bounds checks of
+    /// `pixel` / `setPixel` (issue #248); like `setPixel` it throws for a
+    /// non-finite result.
     private func mappingPixels(_ transform: (RGBA) -> RGBA) throws -> PixelBuffer {
-        var result = self
-        for y in 0..<height {
-            for x in 0..<width {
-                let mapped = try transform(pixel(x: x, y: y).unpremultiplied())
-                try result.setPixel(x: x, y: y, mapped.premultiplied())
+        let source = components
+        var storage = source
+        let channels = Self.channels
+        for i in stride(from: 0, to: source.count, by: channels) {
+            let p = RGBA(r: source[i], g: source[i + 1], b: source[i + 2], a: source[i + 3])
+            let mapped = transform(p.unpremultiplied()).premultiplied()
+            guard mapped.isFinite else {
+                let n = i / channels
+                throw RasterError.invalid("pixel \(mapped) at (\(n % width), \(n / width)): components must be finite")
             }
+            storage[i] = mapped.r
+            storage[i + 1] = mapped.g
+            storage[i + 2] = mapped.b
+            storage[i + 3] = mapped.a
         }
-        return result
+        return PixelBuffer(checkedWidth: width, height: height, storage: storage)
     }
 }
 
