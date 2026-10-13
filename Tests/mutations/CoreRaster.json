@@ -229,5 +229,19 @@
     "anchor": "let shown: (Float) -> Float = encoding == .sRGB ? { Float(TransferCurve.encode(Double($0))) } : { $0 }",
     "replacement": "let shown: (Float) -> Float = { $0 }",
     "filter": "ToneEncodingTests|HistogramTests"
+  },
+  {
+    "note": "clone reads its source from the partly written result",
+    "file": "Sources/CoreRaster/Retouch.swift",
+    "anchor": "let s = try pixel(x: x + dx, y: y + dy)",
+    "replacement": "let s = try result.pixel(x: x + dx, y: y + dy)",
+    "filter": "RetouchTests"
+  },
+  {
+    "note": "clone accepts a mask of the wrong size",
+    "file": "Sources/CoreRaster/Retouch.swift",
+    "anchor": "guard mask.width == width, mask.height == height else {",
+    "replacement": "guard mask.width >= width, mask.height >= height else {",
+    "filter": "RetouchTests"
   }
 ]
