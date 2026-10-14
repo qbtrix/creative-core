@@ -27,7 +27,7 @@
               {
                 "id": "document-commands",
                 "name": "Document and Command Engine",
-                "description": "The document model (Document > Scene > Layer > Shape, keyframe tracks, fills, text shapes, ruler guides, the swatch palette, metadata, frame labels) and its ModelError; LayerOwner, which addresses a scene's or a symbol's layer list; the Command protocol and CommandEngine with exact undo/redo, groups, coalescing, an undo depth limit and layer-scoped validation for single-layer commands; the CommandRegistry that decodes any command from a JSON envelope; the built-in command families (scene, layer, shape, text, keyframe, label, guide, swatch, metadata); and the .flare v1 file format with validation. Every document change goes through a Command.",
+                "description": "The document model (Document > Scene > Layer > Shape, keyframe tracks, fills, text shapes, ruler guides, the swatch palette, metadata, frame labels) and its ModelError; LayerOwner, which addresses a scene's or a symbol's layer list; the Command protocol and CommandEngine with exact undo/redo, groups, coalescing, an undo depth limit and layer-scoped validation for single-layer commands; the CommandRegistry that decodes any command from a JSON envelope; the built-in command families (scene, layer, shape, text, keyframe, label, guide, swatch, metadata), with the stroke, path and duplicate-layer commands, scene canvas, rename and reorder; and the .flare v1 file format with validation. Every document change goes through a Command.",
                 "technology": "Swift 6, Foundation",
                 "paths": [
                   "Sources/FlareCore/Document.swift",
@@ -53,13 +53,18 @@
               {
                 "id": "geometry",
                 "name": "Geometry",
-                "description": "2D affine Matrix, the Transform (position, scale, rotation) layers and instances use, axis-aligned Rect, vector Paths with line, quadratic and cubic segments, tight shape bounds, and point hit testing (even-odd and nonzero fill, strokes, through instances). Never returns non-finite values.",
+                "description": "2D affine Matrix, the Transform (position, scale, rotation; scene space is y down) layers and instances use, axis-aligned Rect, vector Paths with line, quadratic and cubic segments and their affine transform, tight shape bounds, and point hit testing (even-odd and nonzero fill, strokes, through instances). The per-frame render list of a scene or symbol: one walk that gives the layer and instance tree exporters write and the flat paint-order items (matrix, multiplied opacity, inherited lock, address) the stage draws; the queries over it (topmost hit with a tolerance, marquee, world bounds with stroke); and the path builders for rectangles, ellipses, polygons and stars. Nothing here traps on non-finite input.",
                 "technology": "Swift 6, Foundation",
                 "paths": [
                   "Sources/FlareCore/Geometry.swift",
                   "Sources/FlareCore/Path.swift",
                   "Sources/FlareCore/ShapeBounds.swift",
-                  "Sources/FlareCore/HitTest.swift"
+                  "Sources/FlareCore/HitTest.swift",
+                  "Sources/FlareCore/RenderList.swift",
+                  "Sources/FlareCore/HitQuery.swift",
+                  "Sources/FlareCore/Marquee.swift",
+                  "Sources/FlareCore/WorldBounds.swift",
+                  "Sources/FlareCore/PathBuilders*.swift"
                 ]
               },
               {
@@ -85,7 +90,7 @@
               {
                 "id": "symbols",
                 "name": "Symbols",
-                "description": "Reusable symbol definitions and their instances on layers: how an instance maps the host timeline onto the symbol's own timeline, the add/remove/convert-to-symbol commands, and the check that rejects symbols that contain themselves.",
+                "description": "Reusable symbol definitions and their instances on layers: how an instance maps the host timeline onto the symbol's own timeline, the add/remove/convert-to-symbol commands, the instance add, remove, move and playback commands, and the check that rejects symbols that contain themselves.",
                 "technology": "Swift 6, Foundation",
                 "paths": [
                   "Sources/FlareCore/Symbols.swift",

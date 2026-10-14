@@ -102,7 +102,7 @@ public struct Transform: Codable, Sendable, Hashable {
     public var y: Double
     public var scaleX: Double
     public var scaleY: Double
-    /// Degrees, counter-clockwise in a y-up frame.
+    /// Degrees, clockwise on screen: scene space is y down, as the exporters draw it.
     public var rotation: Double
 
     public init(x: Double = 0, y: Double = 0, scaleX: Double = 1, scaleY: Double = 1, rotation: Double = 0) {
