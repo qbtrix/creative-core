@@ -8,7 +8,7 @@
 // - inverted() never returns non-finite values: a singular or degenerate
 //   matrix throws GeometryError.singularMatrix
 // - Transform.matrix is translate * rotate * scale, rotation in degrees,
-//   counter-clockwise in a y-up frame (rotate 90 maps (1, 0) to (0, 1))
+//   clockwise on screen (scene space is y down; rotate 90 maps (1, 0) to (0, 1))
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -31,11 +31,12 @@ public enum GeometryError: Error, Equatable, Sendable {
     case invalidTolerance
     /// A coordinate, size or ratio that is NaN or infinite.
     case nonFinite
-    /// A polygon or star whose shape can't be built: a side or point count
-    /// below 3 or above `PathBuilders.maxSides`, or a finite star inner ratio
-    /// outside (0, 1]. Fix it by passing a count in 3...maxSides and a ratio
-    /// greater than 0 and at most 1.
+    /// A polygon side count or star point count below 3 or above
+    /// `PathBuilders.maxSides`. Fix it by passing a count in 3...maxSides.
     case invalidSides
+    /// A finite star inner ratio outside (0, 1]. Fix it by passing a ratio
+    /// greater than 0 and at most 1.
+    case invalidRatio
 }
 
 public struct Matrix: Codable, Sendable, Hashable {
