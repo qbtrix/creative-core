@@ -33,5 +33,12 @@
     "anchor": "guard tolerance.isFinite, tolerance >= 0 else { return nil }",
     "replacement": "guard tolerance.isFinite else { return nil }",
     "filter": "HitQueryTests"
+  },
+  {
+    "note": "hit query bounds prefilter ignores the tolerance, so near misses within the slop are rejected",
+    "file": "Sources/FlareCore/HitQuery.swift",
+    "anchor": "box.contains(point, widenedBy: tolerance)",
+    "replacement": "box.contains(point, widenedBy: 0)",
+    "filter": "HitQueryTests"
   }
 ]

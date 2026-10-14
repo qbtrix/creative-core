@@ -5,7 +5,10 @@
 // from the list. At tolerance 0 the test is exactly `Shape.hits` in the
 // item's local space, so it agrees with `Layer.hits`. A positive tolerance
 // (the zoom slop of a pointer) also accepts a point within `tolerance` plus
-// the scaled half stroke of the outline in scene space.
+// the scaled half stroke of the outline in scene space. Before the exact
+// test, an item whose `worldBounds` widened by `tolerance` misses the point is
+// rejected; that box holds everything the exact test can accept, so the
+// result is the same, only cheaper for the many items far from the pointer.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -20,6 +23,7 @@ extension RenderList {
     public func hit(_ point: Point, tolerance: Double = 0, rule: FillRule = .nonZero) -> RenderAddress? {
         guard tolerance.isFinite, tolerance >= 0 else { return nil }
         for item in items.reversed() where !item.isLocked && !item.isText {
+            guard let box = item.worldBounds, box.contains(point, widenedBy: tolerance) else { continue }
             guard let inverse = try? item.matrix.inverted() else { continue }
             let shape = Shape(points: [], path: item.outline, stroke: item.stroke)
             if shape.hits(inverse.apply(point), rule: rule) { return item.address }
@@ -44,6 +48,14 @@ extension RenderItem {
             for (a, b) in zip(line, line.dropFirst()) where distance(point, a, b) <= reach { return true }
         }
         return false
+    }
+}
+
+extension Rect {
+    /// Whether `point` lies in the rect grown by `margin` on every side,
+    /// edges included.
+    fileprivate func contains(_ point: Point, widenedBy margin: Double) -> Bool {
+        point.x >= minX - margin && point.x <= maxX + margin && point.y >= minY - margin && point.y <= maxY + margin
     }
 }
 
