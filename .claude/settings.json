@@ -11,13 +11,18 @@
   "permissions": {
     "defaultMode": "auto",
     "allow": [
-      "Workflow"
+      "WebFetch",
+      "WebSearch",
+      "Workflow",
+      "mcp__apple-docs",
+      "mcp__context7",
+      "mcp__github"
     ]
   },
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Workflow",
+        "matcher": "Workflow|WebFetch|WebSearch|mcp__.*",
         "hooks": [
           {
             "type": "command",
