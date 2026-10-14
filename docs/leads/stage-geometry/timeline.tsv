@@ -14,3 +14,7 @@ utc	stage	event	ref	note
 2026-10-14T16:39Z	3	stage-end	wave b	base for wave c 992ba1b
 2026-10-14T16:39Z	3	stage-start	wave c	SG-4 SG-7
 2026-10-14T16:44Z	3	heartbeat	wave c	SG-4 SG-7 building (wf_d25b650f-e91)
+2026-10-14T16:44Z	3	pr-merged	#280	SG-4 marquee, 8fa8cc6
+2026-10-14T16:48Z	3	pr-merged	#281	SG-7 polygon/star, 1817e03
+2026-10-14T16:46Z	3	stage-end	wave c	base for wave d 1817e03
+2026-10-14T16:46Z	3	stage-start	wave d	SG-8
