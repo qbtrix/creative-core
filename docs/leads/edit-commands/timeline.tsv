@@ -15,3 +15,5 @@ utc	stage	event	ref	note
 2026-10-14T16:40Z	3	pr-merged	#279	EC-5 stroke/path
 2026-10-14T16:40Z	3	stage-start	wave-c	EC-6 on 8cb7c28
 2026-10-14T16:45Z	3	heartbeat	-	waiting on builders or the lane
+2026-10-14T16:48Z	3	pr-merged	#282	EC-6 duplicate layer (closes #216)
+2026-10-14T16:48Z	3	stage-start	wave-d	EC-7a on 79398f9
