@@ -28,7 +28,7 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 |---|---|---|---|---|---|---|---|---|
 | 1 | 94d993b | PASS (740 tests) | 94/94 (validate: 151 anchors) | - | clarity, contract, undo, robustness, tests | 9 (1 major: SetInstanceTransform merge owner guard untested; 8 minor: docs/labels/errors, SetKeyframe coalesce step, AddInstance undo guard untested) | #293, #294 (merged) | no |
 | 2 | 923c083 | PASS (743 tests) | 97/97 (validate: 154 anchors) | none on dev yet (last CI run 09:30Z predates the feature) | same five | 6 minor (DuplicateLayer undo error, two messages without ids, ScrubMerge frame-24 value, registry header count, dead scene-only withLayer pair, Transform.isFinite y untested); 0 blocker/major | #296 (merged) | yes |
-| 3 | 3a1b50a | PASS (747 tests) | 102/102 (validate: 157 anchors) | none on dev yet | same five | 6 (1 major: locked-layer guard of SetInstanceTransform/SetInstancePlayback untested; 5 minor: SetShapeStroke message, invalidIndex doc, KeyframeOwner comment, fuzz lacks symbols/instances, instance undo-before-execute) | r3-b1 (wf_b5ce49d9-1d7) | no |
+| 3 | 3a1b50a | PASS (747 tests) | 102/102 (validate: 157 anchors) | none on dev yet | same five | 6 (1 major: locked-layer guard of SetInstanceTransform/SetInstancePlayback untested; 5 minor: SetShapeStroke message, invalidIndex doc, KeyframeOwner comment, fuzz lacks symbols/instances, instance undo-before-execute) | #298 | no |
 
 ## Decisions
 - Waves follow the packet (a EC-1+EC-4; b EC-2, EC-3, EC-5; c EC-6; d EC-7a; e EC-7b; f EC-8; g EC-9; h EC-10): the shared-test-file chain forces the sequence.
