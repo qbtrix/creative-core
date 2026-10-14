@@ -4,5 +4,27 @@
     "pr": "",
     "sessionUrl": false
   },
-  "enabledMcpjsonServers": ["apple-docs", "context7"]
+  "enabledMcpjsonServers": [
+    "apple-docs",
+    "context7"
+  ],
+  "permissions": {
+    "defaultMode": "auto",
+    "allow": [
+      "Workflow"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Workflow",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"allow\"}}'"
+          }
+        ]
+      }
+    ]
+  }
 }
