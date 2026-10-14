@@ -1,0 +1,159 @@
+{
+  "clean": false,
+  "confirmed": [
+    {
+      "severity": "minor",
+      "where": "Sources/FlareCore/PathBuilders+Polygon.swift:154 (PathBuilders.star) / Sources/FlareCore/Geometry.swift:38 (GeometryError.invalidSides)",
+      "what": "`star(in:points:innerRatio:)` throws `GeometryError.invalidSides` for a finite inner ratio outside (0, 1], such as 0 or 1.5. The case name refers only to the side count, so a caller who catches it, or reads it in a log, sees 'invalid sides' when the count was fine and the ratio was wrong. Only the doc comment on the case explains that it also covers the ratio.",
+      "why": "First-use clarity: an error case should say what went wrong. A caller that maps `invalidSides` to a message like 'a polygon needs at least 3 sides' shows that message for a bad ratio. The packet names `invalidSides` for side counts only ('a polygon with fewer than 3 sides'), and its rule that 'doc comments may add, not rename' allows adding a case.",
+      "fix": "Add `case invalidRatio` to `GeometryError` with a doc comment ('a star inner ratio outside (0, 1]; pass a value greater than 0 and at most 1'). Throw it from the ratio guard in `star`. Trim the `invalidSides` doc back to the count.",
+      "files": [
+        "Sources/FlareCore/Geometry.swift",
+        "Sources/FlareCore/PathBuilders+Polygon.swift",
+        "Tests/FlareCoreTests/PolygonStarBuilderTests.swift"
+      ],
+      "test": "In PolygonStarBuilderTests, `#expect(throws: GeometryError.invalidRatio) { try PathBuilders.star(in: rect, points: 5, innerRatio: 1.5) }` and the same for innerRatio 0. Today both throw `.invalidSides`, so the test fails.",
+      "lens": "clarity",
+      "refuted": false,
+      "reason": "I checked the read-only checkout of cb1f3f8 and the finding holds. At Geometry.swift:33-37, the doc comment says `GeometryError.invalidSides` covers two things: a side or point count outside 3...maxSides, and a finite star inner ratio outside (0, 1]. So `star(in:points:innerRatio:)` throws `invalidSides` when the point count is valid and only the ratio is wrong, and the case name says nothing about the ratio. The packet's error table (stage-geometry.md:64) gives `invalidSides` only for \"a polygon with fewer than 3 sides\" and leaves the ratio case unnamed. Its SG-7 acceptance (line 242) only says a ratio of 0 or 1.5 \"throws\". This is a real but minor clarity problem: a caller that matches on `invalidSides` and reports a side-count message would show that message for a bad ratio. A separate case such as `invalidRatio` would fix it, and the packet allows adding one. I did not write a scratch test, because the doc comment already states this behaviour."
+    },
+    {
+      "severity": "minor",
+      "where": "Sources/FlareCore/Geometry.swift:10-11 (file header invariant) vs Geometry.swift:114 (Transform.rotation doc)",
+      "what": "SG-1 changed the `Transform.rotation` doc to 'Degrees, clockwise on screen: scene space is y down'. The file header a few lines above still says 'rotation in degrees, counter-clockwise in a y-up frame'. Both describe the same math, but a new reader sees 'clockwise' in one place and 'counter-clockwise' in another and has to work out which frame each one means.",
+      "why": "First-use clarity: the packet asked for the rotation direction to be stated one way ('clockwise on screen: scene space is y down'). The two statements in the same file now frame it in opposite terms, which is the confusion the doc fix was meant to remove.",
+      "fix": "Change the header invariant to match, for example: '- Transform.matrix is translate * rotate * scale, rotation in degrees, clockwise on screen (scene space is y down: rotate 90 maps (1, 0) to (0, 1))'.",
+      "files": [
+        "Sources/FlareCore/Geometry.swift"
+      ],
+      "test": "This is a doc-only change, so no unit test fails before the fix. Add a review check: `grep -n 'counter-clockwise' Sources/FlareCore/Geometry.swift` should return nothing.",
+      "lens": "clarity",
+      "refuted": false,
+      "reason": "I confirmed this at cb1f3f8. In Sources/FlareCore/Geometry.swift, the header at lines 10-11 still says \"rotation in degrees, counter-clockwise in a y-up frame (rotate 90 maps (1, 0) to (0, 1))\". The Transform.rotation doc at line 114 says \"Degrees, clockwise on screen: scene space is y down\". Both describe the same math, but the file now states the direction in opposite terms. The packet asked for the direction to be stated one way, so the finding stands. It is minor and only a doc change: rewrite the header in terms of clockwise on screen with y down, and keep the \"rotate 90 maps (1, 0) to (0, 1)\" example."
+    },
+    {
+      "severity": "minor",
+      "where": "Sources/FlareCore/HitQuery.swift:306 (RenderList.hit, worldBounds prefilter)",
+      "what": "`hit` skips any item whose `worldBounds` is nil, before the exact test runs. `worldBounds` is nil when the scaled half stroke overflows, for example stroke width 1e308 (finite, so `Stroke.validate` and FlareFormat accept it) under a layer scale of 2: `1e308 * 2 / 2` is infinite. The fill of such a shape can never be hit. `Layer.hits` and `Shape.hits` still hit it, because `contains` runs first and a non-finite stroke reach is ignored. The packet's SG-3 pseudocode skips only items whose matrix can't be inverted. HitQuery.swift's header says the prefilter box \"holds everything the exact test can accept, so the result is the same\", and this case breaks that claim.",
+      "why": "SG-3 acceptance and pseudocode: at tolerance 0, `hit` agrees exactly with `Layer.hits`, and the only item skipped is one with a singular matrix. Neither `agreesWithLayerHitsAtToleranceZero` nor `prefilteredHitEqualsBruteForce` uses a stroke whose scaled width overflows, so neither catches this.",
+      "fix": "Use the box only to reject, never to skip. When `item.worldBounds` is nil, fall through to the exact test: `if let box = item.worldBounds, !box.contains(point, widenedBy: tolerance) { continue }`. Alternatively, build the prefilter box from the outline alone when the stroke term is not finite.",
+      "files": [
+        "Sources/FlareCore/HitQuery.swift",
+        "Tests/FlareCoreTests/HitQueryTests.swift"
+      ],
+      "test": "HitQueryTests: a layer with tracks scaleX = scaleY = 2 holding a 0...10 square with `Stroke(width: 1e308)`. Expect `list.hit(Point(x: 10, y: 10))` to be non-nil and equal to `scene.layers.contains { $0.hits(p, at: 0, symbols: [], rule: .nonZero) }`, which is true. Today `hit` returns nil.",
+      "lens": "contract",
+      "refuted": false,
+      "reason": "The finding holds; I read the code at cb1f3f8 and did not need a scratch test. In Sources/FlareCore/WorldBounds.swift, RenderItem.worldBounds computes `half = max(width,0) * matrix.maxAxisScale / 2` and returns nil when `half` is not finite. With stroke width 1e308 and a layer scale of 2, `half` is inf, so the box is nil. In Sources/FlareCore/HitQuery.swift (line 29 in this checkout, not 306), RenderList.hit does `guard let box = item.worldBounds, box.contains(...) else { continue }`. That guard runs before the matrix inversion and before Shape.hits, so the item is skipped even though its matrix can be inverted. In the item's local space the exact test sees only half of 1e308, which is finite, so Shape.hits would accept the point (through the fill, and also through the stroke reach). Layer.hits therefore hits a point that RenderList.hit misses at tolerance 0. That contradicts SG-3, which says the two agree and that only items with a singular matrix are skipped. It also contradicts the header's claim that the box \"holds everything the exact test can accept\". A 1e308 stroke is finite, so validation accepts it. The fix is to treat a nil box from overflow as \"do not prefilter\" rather than \"skip\". The same nil skip also appears in Marquee.swift."
+    },
+    {
+      "severity": "minor",
+      "where": "Sources/FlareCore/RenderList.swift:261 (Walker expansion budget) and Sources/FlareCore/Export/SVGExporter.swift:48 (sceneTooLarge)",
+      "what": "The render list has a behaviour the packet does not specify. Once instance expansion has spent `maxExpandedPoints`, every later instance of a symbol that exists becomes `.unresolved`, `isTruncated` is set, and `SVGExporter.export` now throws a new `SVGExportError.sceneTooLarge`. A valid scene that exported before SG-2 can now fail: `truncatedListThrowsSceneTooLarge` builds one (20 layers, each with 300 instances of a stored 1,000-point symbol). The same scene's render list also silently drops those items from the stage, hit and marquee results.",
+      "why": "The packet's renderList Error column puts only missing or cyclic symbols in `.unresolved`. SG-2 and journey step 2 require the exporter to write the same bytes as before it moved onto the list, and to throw only the errors it already threw (`unsupported(\"text\")`, `unresolvedSymbol`). The contract slice has no `isTruncated` and no `sceneTooLarge`.",
+      "fix": "Have the lead record this as an approved deviation in docs/blueprints/core/features/stage-geometry.md: add a renderList Error row for the expansion budget and an SG-2 note on `sceneTooLarge`, with the reason (fan-out files would otherwise build billions of items). Otherwise, raise or remove the budget so that every scene the pre-change exporter could write still exports byte for byte.",
+      "files": [
+        "docs/blueprints/core/features/stage-geometry.md",
+        "Sources/FlareCore/RenderList.swift",
+        "Sources/FlareCore/Export/SVGExporter.swift"
+      ],
+      "test": "SVGRenderListTests.truncatedListThrowsSceneTooLarge, read as a packet check: under SG-2 as written, this valid 6,000,000-point scene should export without throwing. Today it throws `sceneTooLarge`.",
+      "lens": "contract",
+      "refuted": false,
+      "reason": "The finding holds; I could not refute it. At cb1f3f8, RenderList.swift:261 has a guard `expanded < RenderList.maxExpandedPoints`. Once the budget is spent, every later instance of a symbol that exists becomes `.unresolved`, and `isTruncated` is set to true. SVGExporter.export (line ~48) then throws the new `SVGExportError.sceneTooLarge`. The base exporter at 3339b90 only threw `nonFiniteValue`, `unresolvedSymbol` and `unsupported`, and it had no expansion budget. So a valid scene that exported before can now throw. In stage, hit and marquee, those instances are silently dropped as `.unresolved`. The packet docs/blueprints/core/features/stage-geometry.md never mentions truncation, `isTruncated` or `sceneTooLarge`; its only \"budget\" lines are the timing budgets in SG-8. This change is a contract deviation from SG-2, which requires the exporter to keep its bytes and its existing errors. I did not write a scratch test, because the code and the existing `truncatedListThrowsSceneTooLarge` test already show the behaviour."
+    },
+    {
+      "severity": "minor",
+      "where": "Sources/FlareCore/HitTest.swift:57 Path.isWithin (guard !startsPolyline, let a = previous)",
+      "what": "Path.isWithin is new streaming logic, and its invariant is that it never measures a segment that bridges two subpaths: when a point starts a new polyline it resets `previous` instead of joining it to the last point. No file in Tests/mutations anchors HitTest.swift or this guard. The new early-stop walk in Path.forEachFlattenedPoint has no entry either. If the `!startsPolyline` check is dropped, a pointer in the gap between two subpaths counts as on the stroke. HitTestTests.streamedIsWithinEqualsFlattenAll would most likely catch that, but no mutation entry proves it.",
+      "why": "CLAUDE.md, 'Invariants get a mutation entry': new logic with an invariant (a guard) adds one entry to Tests/mutations/<module>.json, and scripts/mutate must report it caught. The 108/108 score says nothing about this guard because nothing plants a bug there.",
+      "fix": "Add one entry, for example to Tests/mutations/FlareHitQuery.json: file Sources/FlareCore/HitTest.swift, anchor `guard !startsPolyline, let a = previous else { return false }`, replacement `guard let a = previous else { return false }`, note 'isWithin bridges the gap between two subpaths', filter HitTestTests. Then run `scripts/mutate --run --only \"bridges the gap\"` and confirm it is caught.",
+      "files": [
+        "Sources/FlareCore/HitTest.swift",
+        "Tests/mutations/FlareHitQuery.json",
+        "Tests/FlareCoreTests/HitTestTests.swift"
+      ],
+      "test": "HitTestTests: Path(elements: [.move(0,0), .line(10,0), .move(10,10), .line(20,10)]).isWithin(0.5, of: Point(x: 10, y: 5), flatness: 0.1) must be false. With the guard dropped, the segment (10,0)-(10,10) is measured and the call returns true. The seeded streamedIsWithinEqualsFlattenAll test also fails against the flatten-all reference.",
+      "lens": "tests",
+      "refuted": false,
+      "reason": "I could not refute this. At cb1f3f8, Sources/FlareCore/HitTest.swift:57 contains `guard !startsPolyline, let a = previous else { return false }` inside the new streaming Path.isWithin. The feature diff changes this file and Path.swift, where forEachFlattenedPoint gets the early-stop walk. I searched every Tests/mutations/*.json for isWithin, startsPolyline, Polyline, forEachFlat and previous, and none of them anchors this guard or the early-stop walk. The only matches are unrelated scrub and keyframe entries. So the 108/108 mutation score does not cover this invariant, which breaks CLAUDE.md's \"Invariants get a mutation entry\" rule. The finding is minor because HitTestTests probably catches the mutation; I did not run it to check."
+    },
+    {
+      "severity": "minor",
+      "where": "Sources/FlareCore/RenderList.swift Walker.walk (the shapes loop, then the texts loop, then the instances loop)",
+      "what": "The header lists 'paint order: in a layer its shapes, then texts, then instances' as an invariant, and `items` is documented as the leaves in paint order. No test can see the order of shapes and texts inside one layer. In the NestedScene fixture the only text sits on its own layer, 'label', and no layer holds both a shape and a text. RenderListTests.itemsAreVisibleLeavesInPaintOrder would still pass if the texts loop ran before the shapes loop. HitQuery and Marquee skip text, and SVG export throws on text, so no other test catches it. No Tests/mutations entry covers this order.",
+      "why": "This is a test that would still pass with the behavior removed. The stage draws `items` in this order, so a text could be drawn under its layer's shapes without any test failing. CLAUDE.md, 'Invariants get a mutation entry'.",
+      "fix": "In RenderListTests, give one layer both a shape and a text (for example, add a shape to NestedScene's 'label' layer, or build a small scene in a new test), and assert the item keys are [..|s0, ..|t0]. Add a FlareRenderList.json entry that moves the texts loop above the shapes loop, with filter RenderListTests.",
+      "files": [
+        "Tests/FlareCoreTests/RenderListTests.swift",
+        "Tests/mutations/FlareRenderList.json",
+        "Sources/FlareCore/RenderList.swift"
+      ],
+      "test": "A layer with shapes:[square] and texts:[t] must give item keys ['scene s||L|s0', 'scene s||L|t0']. If the texts loop runs before the shapes loop, the result is [t0, s0] and the test fails.",
+      "lens": "tests",
+      "refuted": false,
+      "reason": "I couldn't refute this; the gap is real. At cb1f3f8, Sources/FlareCore/RenderList.swift Walker.walk (lines 242-255) loops over shapes, then texts, then instances. In every test, any layer that has texts has nothing else: NestedScene \"label\" in RenderListTests.swift:44 and the \"text\" layers in HitQueryTests.swift:76 and MarqueeTests.swift:44. No fixture puts a shape and a text on the same layer, so if the texts loop ran before the shapes loop, every leaf would still come out in the same order and itemsAreVisibleLeavesInPaintOrder would still pass. Tests/mutations/FlareRenderList.json has 13 entries and none of them covers shape-versus-text order. I didn't run a scratch mutation; this conclusion comes from reading the fixtures."
+    },
+    {
+      "severity": "major",
+      "where": "Sources/FlareCore/RenderList.swift:46 (RenderList.maxExpandedPoints)",
+      "what": "RenderList.swift is in the evaluation layer (layer 2), but `maxExpandedPoints = 4 * FlareFormat.maxTotalPoints` makes it depend on FlareFormat, which is in the format layer (layer 4). Its doc comment (line 42) names FlareFormat too. None of the other new evaluation files (HitQuery, Marquee, WorldBounds) refers to a format type.",
+      "why": "engineering.md, Layers: \"Each depends only on the ones above it.\" Evaluation may read the model only and must not reach down into format and export. Review rubric 1.1: \"Each changed file stays in its layer.\"",
+      "fix": "Give the budget its own literal in RenderList (`public static let maxExpandedPoints = 4_000_000`) and add a test that checks it still equals 4 * FlareFormat.maxTotalPoints. Or move the shared point limit into a model-layer constant that both FlareFormat and RenderList read.",
+      "files": [
+        "Sources/FlareCore/RenderList.swift",
+        "Tests/FlareCoreTests/RenderListTests.swift"
+      ],
+      "test": "Extend ModelErrorTests.modelFilesNameNoUpperLayerType (or add a sibling test) to the evaluation file list (RenderList, HitQuery, Marquee, WorldBounds, HitTest, ShapeBounds, Sampling, Easing, Timeline) and assert that no file names `FlareFormat`, `FormatError`, `Command` or `CommandError` outside comments. RenderList.swift fails it today.",
+      "lens": "design",
+      "refuted": false,
+      "reason": "The finding holds. At cb1f3f8 the file Sources/FlareCore/RenderList.swift is new in this feature (277 lines added since 3339b90). Line 46 reads `public static let maxExpandedPoints = 4 * FlareFormat.maxTotalPoints`, and the doc comment on line 42 also names FlareFormat. docs/engineering.md (\"Layers\") puts RenderList.swift in layer 2 (Evaluation: \"Read the model, never change it\") and FlareFormat.swift in layer 4, and says \"Each depends only on the ones above it.\" So this is a downward dependency from evaluation into format. The other evaluation files use no format type: the only mention in them is a comment in Timeline.swift. That is not a compile-time dependency. The automated test (ModelErrorTests) only checks model files, so CI does not catch this, and the rubric item 1.1 reviewer is the one who has to. The fix is easy: move the point cap into a model or evaluation constant that FlareFormat reads, or give the budget its own literal value."
+    },
+    {
+      "severity": "minor",
+      "where": "Sources/FlareCore/RenderList.swift:186-195 (RenderList.Outline.init)",
+      "what": "Outline.init counts stored points with its own switch (`.move, .line: 1; .quad: 2; .cubic: 3; .close: 0`). That is a near-copy of `PathElement.pointCount` in FlareFormat.swift:277, which computes exactly the same thing for the format's size limit.",
+      "why": "engineering.md, \"Reuse before you write\": search for the helper first, and if it is private elsewhere make it internal and call it. Review rubric 2.4: no near-copy that jscpd misses of a function in another file. The two counts must agree because the budget is defined as a multiple of the format's point cap.",
+      "fix": "Move `pointCount` from its FlareFormat.swift extension into Path.swift (model layer, next to `endPoint`). Then write `points = path.elements.reduce(0) { $0 + $1.pointCount }` in Outline and have FlareFormat keep calling the same property. This also fixes the layer direction for the first finding.",
+      "files": [
+        "Sources/FlareCore/RenderList.swift",
+        "Sources/FlareCore/FlareFormat.swift",
+        "Sources/FlareCore/Path.swift"
+      ],
+      "test": "Mutation entry: change `case .cubic: 3` to `case .cubic: 2` in the single shared `pointCount`. Both FormatLimitsTests and the RenderList budget tests should then catch it. Today a change to one copy goes unnoticed by the other's tests.",
+      "lens": "design",
+      "refuted": false,
+      "reason": "The finding stands; I could not refute it. At cb1f3f8 the private struct `RenderList.Outline` has an initializer at Sources/FlareCore/RenderList.swift:186-195. It sums points with its own switch: `.move`, `.line` count 1, `.quad` 2, `.cubic` 3, `.close` 0. That switch is the same, case for case, as `PathElement.pointCount` at Sources/FlareCore/FlareFormat.swift:277-284, which is internal (it has no access modifier) and is already used by the format's size limit at FlareFormat.swift:258. RenderList.swift is new in this feature's diff (3339b90..cb1f3f8, +277 lines), so the copy belongs to this feature and is not fixed on dev. The fix is to write `path.elements.reduce(0) { $0 + $1.pointCount }`. Severity is minor: the two counts give the same numbers today, but they can drift apart, and the render budget is defined from the format's point cap. No scratch test was needed, since reading the code is enough to show the copy."
+    },
+    {
+      "severity": "minor",
+      "where": "Sources/FlareCore/Geometry.swift:10-11 (file header invariants)",
+      "what": "The Transform.rotation doc comment now says \"Degrees, clockwise on screen: scene space is y down\". The file header in the same file still lists as an invariant \"rotation in degrees, counter-clockwise in a y-up frame\". The file now contradicts itself.",
+      "why": "engineering.md, Reading cost: each file opens with a comment on what it is for now and the invariants a reader must keep; \"edit it when the file changes\". The header also doesn't mention the new GeometryError cases or Rect.normalized.",
+      "fix": "Change the header line to \"rotation in degrees, clockwise on screen (scene space is y down; rotate 90 maps (1, 0) to (0, 1))\".",
+      "files": [
+        "Sources/FlareCore/Geometry.swift"
+      ],
+      "test": "Review-only. No test reads comments.",
+      "lens": "design",
+      "refuted": false,
+      "reason": "Confirmed at cb1f3f8 in Sources/FlareCore/Geometry.swift. Line 113, the Transform.rotation doc comment, says \"Degrees, clockwise on screen: scene space is y down\". Lines 10-11 of the header still say \"rotation in degrees, counter-clockwise in a y-up frame (rotate 90 maps (1, 0) to (0, 1))\". To be exact, the two do not disagree about the math. Matrix.rotation (a=c, b=s, c=-s) sends (1,0) to (0,1) at 90 degrees, which is counter-clockwise if y points up and clockwise if y points down. What is wrong is the framing: the header describes rotation in a y-up frame, but the scene is y-down, so a reader who skims it gets the opposite on-screen direction from the field's doc comment. This feature changed the file (+18/-1) without updating the header. The header also still lists only the singularMatrix invariant, while the GeometryError enum now has invalidTolerance, nonFinite and invalidSides. The new Rect.normalized at line 172 is not mentioned either. That breaks engineering.md's rule to keep the file header current. The finding is minor, documentation only, and inside this feature's diff."
+    },
+    {
+      "severity": "minor",
+      "where": "Sources/FlareCore/HitQuery.swift:43-44 (RenderItem.isNear) and Sources/FlareCore/WorldBounds.swift:31-34 (RenderItem.worldBounds)",
+      "what": "Two files compute the scene-space half stroke of an item separately: `width / 2 * matrix.maxAxisScale` with an isFinite/positive guard in HitQuery, and `max(width, 0) * matrix.maxAxisScale / 2` with different guards in WorldBounds. HitQuery's header says the worldBounds prefilter is sound only because the box \"holds everything the exact test can accept\". That holds only while these two formulas stay in step.",
+      "why": "engineering.md, \"Reuse before you write\" and review rubric 2.4: no near-copy of the same logic in another file. If one copy changes and the other does not, the hit prefilter can reject points the exact test would accept.",
+      "fix": "Add one internal `RenderItem.sceneHalfStroke: Double?` (nil when the stroke width or scale is not finite, 0 when there is no stroke) in WorldBounds.swift, and use it in both `worldBounds` and `isNear`.",
+      "files": [
+        "Sources/FlareCore/WorldBounds.swift",
+        "Sources/FlareCore/HitQuery.swift"
+      ],
+      "test": "HitQueryTests: hit a point just inside the outer stroke edge of a scaled (scale 2) stroked shape at tolerance 1. A mutation that changes the `/ 2` in only one of the two copies makes this test fail. With one shared helper, the mutation moves both together.",
+      "lens": "design",
+      "refuted": false,
+      "reason": "The finding holds. Both files were added in this feature's diff (3339b90..cb1f3f8). At SHA cb1f3f8 they compute the scene-space half stroke in two different ways. Sources/FlareCore/HitQuery.swift:43-44 (isNear) uses `if let width = stroke?.width, width.isFinite, width > 0 { halfStroke = width / 2 * matrix.maxAxisScale }`. Sources/FlareCore/WorldBounds.swift:31-34 (worldBounds) uses `Swift.max(width, 0) * matrix.maxAxisScale / 2` with its own guards for isFinite and nil. They share only `maxAxisScale`. Today they give the same result for every finite width (a negative width gives 0 in both, and a non-finite width means no box, so no hit). So there is no wrong result now. But HitQuery's header says the prefilter is correct because the box \"holds everything the exact test can accept\", and that only stays true while these two formulas match. Changing one (for example a miter or square-cap allowance, or a different clamp) without the other would let the prefilter reject points the exact test accepts. This is the near-copy that rubric 2.4 and \"Reuse before you write\" forbid. The fix is a single shared helper, for example `RenderItem.sceneHalfStroke: Double?`, that both files call. Severity: minor."
+    }
+  ],
+  "refuted": 0
+}
