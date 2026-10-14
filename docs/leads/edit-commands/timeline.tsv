@@ -43,3 +43,4 @@ utc	stage	event	ref	note
 2026-10-14T17:44Z	4	round-clean	round-2	no blocker or major; 6 minor go to r2-b1
 2026-10-14T17:48Z	4	pr-merged	#296	r2-b1 minor fixes
 2026-10-14T17:48Z	4	stage-start	round-3	3a1b50a
+2026-10-14T17:51Z	4	heartbeat	-	waiting on agents or the lane
