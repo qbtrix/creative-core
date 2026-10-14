@@ -1,0 +1,37 @@
+[
+  {
+    "note": "hit query walks items in paint order, so the bottom item wins instead of the topmost",
+    "file": "Sources/FlareCore/HitQuery.swift",
+    "anchor": "for item in items.reversed() where !item.isLocked && !item.isText {",
+    "replacement": "for item in items where !item.isLocked && !item.isText {",
+    "filter": "HitQueryTests"
+  },
+  {
+    "note": "hit query picks locked and text items",
+    "file": "Sources/FlareCore/HitQuery.swift",
+    "anchor": "for item in items.reversed() where !item.isLocked && !item.isText {",
+    "replacement": "for item in items.reversed() {",
+    "filter": "HitQueryTests"
+  },
+  {
+    "note": "hit query tolerance is double counted in the stroke reach",
+    "file": "Sources/FlareCore/HitQuery.swift",
+    "anchor": "let reach = tolerance + halfStroke",
+    "replacement": "let reach = 2 * tolerance + halfStroke",
+    "filter": "HitQueryTests"
+  },
+  {
+    "note": "hit query tolerance is ignored",
+    "file": "Sources/FlareCore/HitQuery.swift",
+    "anchor": "if tolerance > 0, item.isNear(point, tolerance: tolerance) { return item.address }",
+    "replacement": "",
+    "filter": "HitQueryTests"
+  },
+  {
+    "note": "hit query accepts a negative tolerance",
+    "file": "Sources/FlareCore/HitQuery.swift",
+    "anchor": "guard tolerance.isFinite, tolerance >= 0 else { return nil }",
+    "replacement": "guard tolerance.isFinite else { return nil }",
+    "filter": "HitQueryTests"
+  }
+]
