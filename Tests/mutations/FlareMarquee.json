@@ -1,0 +1,30 @@
+[
+  {
+    "note": "marquee picks locked and text items",
+    "file": "Sources/FlareCore/Marquee.swift",
+    "anchor": "for item in items where !item.isLocked && !item.isText {",
+    "replacement": "for item in items {",
+    "filter": "MarqueeTests"
+  },
+  {
+    "note": "marquee uses the bare outline instead of the stroke inclusive world bounds",
+    "file": "Sources/FlareCore/Marquee.swift",
+    "anchor": "guard let box = item.worldBounds, box.meets(area) else { continue }",
+    "replacement": "guard let box = item.outline.transformed(by: item.matrix).bounds, box.meets(area) else { continue }",
+    "filter": "MarqueeTests"
+  },
+  {
+    "note": "marquee accepts a zero area rect",
+    "file": "Sources/FlareCore/Marquee.swift",
+    "anchor": "guard area.maxX - area.minX > 0, area.maxY - area.minY > 0 else { return [] }",
+    "replacement": "",
+    "filter": "MarqueeTests"
+  },
+  {
+    "note": "marquee accepts a non finite rect",
+    "file": "Sources/FlareCore/Marquee.swift",
+    "anchor": "guard [rect.minX, rect.minY, rect.maxX, rect.maxY].allSatisfy(\\.isFinite) else { return [] }",
+    "replacement": "",
+    "filter": "MarqueeTests"
+  }
+]
