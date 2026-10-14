@@ -172,6 +172,21 @@ import Testing
                           coalesceKey: Bool.random(using: &rng) ? "drag" : nil)
         },
         { e, rng, _ in
+            // A drag: 2-4 coalesced SetInstanceTransform steps on one instance, so
+            // SetInstanceTransform.merge runs. A rejected step partway leaves the run as it was.
+            let (owner, layer) = UndoPropertyTests.anyTarget(e, &rng)
+            let count = e.document.layers(of: owner)?.first { $0.id == layer }?.instances.count ?? 0
+            let index = Int.random(in: -1...count, using: &rng)
+            func drag(_ e: inout CommandEngine, _ rng: inout SplitMix64) throws {
+                let transform = Transform(x: UndoPropertyTests.anyNumber(in: -50...50, &rng),
+                                          rotation: UndoPropertyTests.anyNumber(in: -90...90, &rng))
+                try e.perform(SetInstanceTransform(owner: owner, layerID: layer, index: index, transform: transform),
+                              coalesceKey: "drag")
+            }
+            try drag(&e, &rng)
+            for _ in 1..<Int.random(in: 2...4, using: &rng) { try? drag(&e, &rng) }
+        },
+        { e, rng, _ in
             let (owner, layer) = UndoPropertyTests.anyTarget(e, &rng)
             let count = e.document.layers(of: owner)?.first { $0.id == layer }?.instances.count ?? 0
             let loop = [Instance.LoopMode.loop, .playOnce, .singleFrame].randomElement(using: &rng) ?? .loop
@@ -180,9 +195,18 @@ import Testing
         },
     ]
 
+    /// `document()` with two "spark" instances on bg and one on tail, so a drag
+    /// can edit an instance whose AddInstance undo would not hide a bad merge.
+    static func placed() -> Document {
+        var doc = document()
+        doc.scenes[0].layers[0].instances = [spark, Instance(symbolID: "spark", firstFrame: 2)]
+        doc.symbols[0].layers[1].instances = [spark]
+        return doc
+    }
+
     @Test(arguments: 0..<200)
     func undoAllRestoresOriginal(seed: UInt64) throws {
         try assertUndoRestoresDocument(seed: seed, steps: UndoPropertyTests.coreSteps + Self.undoSteps,
-                                       start: Self.document())
+                                       start: Self.placed())
     }
 }

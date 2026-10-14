@@ -12,5 +12,12 @@
     "anchor": "        position = next.position\n        return true",
     "replacement": "        position = next.position\n        oldPosition = next.oldPosition\n        return true",
     "filter": "GuideMergeTests"
+  },
+  {
+    "note": "the guide undo property drags move guide so a merged run keeping the later old position fails undo all",
+    "file": "Sources/FlareCore/GuideCommands.swift",
+    "anchor": "        position = next.position\n        return true",
+    "replacement": "        position = next.position\n        oldPosition = next.oldPosition\n        return true",
+    "filter": "GuideCommandsTests"
   }
 ]

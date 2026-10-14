@@ -102,7 +102,7 @@ public struct SetShapeFill: LayerParamsCommand {
 /// "layer ball shape 0: stroke color channels must be finite".
 public struct SetShapeStroke: LayerParamsCommand {
     public static let id = "shape.setStroke"
-    public var label: String { "Set Stroke" }
+    public var label: String { stroke == nil ? "Remove Stroke" : "Set Stroke" }
     public var owner: LayerOwner
     public var layerID: String
     public var index: Int

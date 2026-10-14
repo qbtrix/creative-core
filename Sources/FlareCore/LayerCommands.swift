@@ -120,9 +120,10 @@ public struct ReorderLayer: LayerCommand {
 /// the layer except its id, the first of "<id>-copy", "<id>-copy-2", ... that no
 /// layer of the owner uses, and its name, "<name> copy". Undo removes the copy
 /// only if it still sits at index + 1: it throws `invalidDocument` when the copy
-/// moved to another index, and `layerNotFound` when no layer has its id. A LayerCommand for `layerID`, though it
-/// inserts the copy: the scoped check validates that layer, which the copy
-/// equals but for its fresh id, and checks the limits because the list grew.
+/// moved to another index, and `layerNotFound` when no layer has its id.
+// A LayerCommand for `layerID`, though it inserts the copy: the engine's scoped
+// check validates that layer, which the copy equals but for its fresh id, and
+// checks the document limits because the layer list grew.
 public struct DuplicateLayer: LayerCommand {
     public static let id = "layer.duplicate"
     public var label: String { "Duplicate Layer" }
