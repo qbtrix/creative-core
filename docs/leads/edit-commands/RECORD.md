@@ -11,9 +11,9 @@ Next: wait for wave b PRs (EC-2, EC-3, EC-5) and the lane merge, then wave c (EC
 |---|---|---|---|---|---|---|---|
 | EC-1 | a | 5 keyframe commands take `owner:`; MoveKeyframe.merge compares it; SceneLayerCommand deleted (finishes #176) | packet EC-1 row | existing suites + anyTarget symbol layers | FlareCore.json 10, 11 repointed, 15 re-anchored | #272 | merged |
 | EC-4 | a | MoveGuide.merge | GuideCommands.swift, GuideMergeTests.swift, FlareGuideMerge.json | GuideMergeTests | FlareGuideMerge.json | #270 | merged |
-| EC-2 | b | KeyframeOwnerTests (replaces #176) | KeyframeOwnerTests.swift, FlareKeyframeOwner.json | KeyframeOwnerTests | FlareKeyframeOwner.json | – | todo |
-| EC-3 | b | SetKeyframe.merge for scrubs | Commands.swift, ScrubMergeTests.swift, FlareScrubMerge.json | ScrubMergeTests.twoHundredStepsAreOneCommand | FlareScrubMerge.json | – | todo |
-| EC-5 | b | SetShapeStroke, SetShapePath | ShapeCommands.swift + tests | StrokePathCommandTests | FlareStrokePath.json | – | todo |
+| EC-2 | b | KeyframeOwnerTests (replaces #176) | KeyframeOwnerTests.swift, FlareKeyframeOwner.json | KeyframeOwnerTests | FlareKeyframeOwner.json | #276 | merged |
+| EC-3 | b | SetKeyframe.merge for scrubs | Commands.swift, ScrubMergeTests.swift, FlareScrubMerge.json | ScrubMergeTests.twoHundredStepsAreOneCommand | FlareScrubMerge.json | #273 | merged |
+| EC-5 | b | SetShapeStroke, SetShapePath | ShapeCommands.swift + tests | StrokePathCommandTests | FlareStrokePath.json | #279 | open |
 | EC-6 | c | DuplicateLayer | LayerCommands.swift + tests | DuplicateLayerTests | FlareDuplicateLayer.json | – | todo |
 | EC-7a | d | SetSceneCanvas | SceneCommands.swift + tests | SceneCanvasCommandTests | FlareSceneCanvas.json | – | todo |
 | EC-7b | e | RenameScene, ReorderScene, CommandError.emptyName | SceneCommands.swift, Command.swift + tests | SceneEditCommandTests | FlareSceneEdit.json | – | todo |
@@ -32,4 +32,6 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 - gh CLI is not authenticated in this environment; PRs and labels go through the GitHub MCP tools.
 
 ## Open
+- #176 closed as replaced by #272 + #276.
+- Builder gates flake on timing-budget tests (RetouchBounds, EngineStress budget) under 4-CPU load; reruns pass. Watch in the Anatomy gate.
 - Builder branches are lead/edit-commands-<task> (a nested lead/edit-commands/<task> cannot coexist with the lead branch).
