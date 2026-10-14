@@ -1,0 +1,23 @@
+[
+  {
+    "note": "set instance transform merge crosses owners and instance indices",
+    "file": "Sources/FlareCore/InstanceCommands.swift",
+    "anchor": "        guard (next.owner, next.layerID, next.index) == (owner, layerID, index) else { return false }",
+    "replacement": "        guard next.layerID == layerID || true else { return false }",
+    "filter": "InstanceTransformPlaybackTests"
+  },
+  {
+    "note": "set instance transform merge takes the later old transform instead of keeping the first",
+    "file": "Sources/FlareCore/InstanceCommands.swift",
+    "anchor": "        transform = next.transform",
+    "replacement": "        (transform, oldTransform) = (next.transform, next.oldTransform)",
+    "filter": "InstanceTransformPlaybackTests"
+  },
+  {
+    "note": "set instance playback skips the first frame guard so a negative first frame reaches the layer",
+    "file": "Sources/FlareCore/InstanceCommands.swift",
+    "anchor": "        guard firstFrame >= 0 else { throw CommandError.invalidFrame(firstFrame) }",
+    "replacement": "",
+    "filter": "InstanceTransformPlaybackTests"
+  }
+]

@@ -102,6 +102,8 @@ import Testing
         [
             AddInstance(owner: .symbol("dot"), layerID: "d", instance: spark),
             RemoveInstance(owner: .scene(s), layerID: "bg", index: 0),
+            SetInstanceTransform(owner: .scene(s), layerID: "bg", index: 0, transform: Transform(x: 3, rotation: 45)),
+            SetInstancePlayback(owner: .scene(s), layerID: "bg", index: 0, firstFrame: 2, loop: .singleFrame),
         ]
     }
 
@@ -118,6 +120,22 @@ import Testing
             let (owner, layer) = UndoPropertyTests.anyTarget(e, &rng)
             let count = e.document.layers(of: owner)?.first { $0.id == layer }?.instances.count ?? 0
             try e.perform(RemoveInstance(owner: owner, layerID: layer, index: Int.random(in: -1...count, using: &rng)))
+        },
+        { e, rng, _ in
+            let (owner, layer) = UndoPropertyTests.anyTarget(e, &rng)
+            let count = e.document.layers(of: owner)?.first { $0.id == layer }?.instances.count ?? 0
+            let transform = Transform(x: UndoPropertyTests.anyNumber(in: -50...50, &rng),
+                                      rotation: UndoPropertyTests.anyNumber(in: -90...90, &rng))
+            try e.perform(SetInstanceTransform(owner: owner, layerID: layer,
+                                               index: Int.random(in: -1...count, using: &rng), transform: transform),
+                          coalesceKey: Bool.random(using: &rng) ? "drag" : nil)
+        },
+        { e, rng, _ in
+            let (owner, layer) = UndoPropertyTests.anyTarget(e, &rng)
+            let count = e.document.layers(of: owner)?.first { $0.id == layer }?.instances.count ?? 0
+            let loop = [Instance.LoopMode.loop, .playOnce, .singleFrame].randomElement(using: &rng) ?? .loop
+            try e.perform(SetInstancePlayback(owner: owner, layerID: layer, index: Int.random(in: -1...count, using: &rng),
+                                              firstFrame: Int.random(in: -1...5, using: &rng), loop: loop))
         },
     ]
 
