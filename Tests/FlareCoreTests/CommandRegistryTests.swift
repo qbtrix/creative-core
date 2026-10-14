@@ -1,6 +1,6 @@
 // CommandRegistryTests.swift: every built-in command round-trips through the
 // {"id", "params"} envelope and behaves the same after decoding (the ids are
-// checked against a hand-written list of all 42), and encode only their
+// checked against a hand-written list of all 44), and encode only their
 // params, so a command decoded after execute is fresh; unknown ids
 // and malformed envelopes throw a CommandError, never crash (seeded fuzz).
 import FlareCore

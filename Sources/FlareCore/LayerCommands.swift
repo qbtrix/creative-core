@@ -119,7 +119,8 @@ public struct ReorderLayer: LayerCommand {
 /// Inserts a copy of a layer just above it (at its index + 1). The copy equals
 /// the layer except its id, the first of "<id>-copy", "<id>-copy-2", ... that no
 /// layer of the owner uses, and its name, "<name> copy". Undo removes the copy
-/// only if it still sits at index + 1. A LayerCommand for `layerID`, though it
+/// only if it still sits at index + 1: it throws `invalidDocument` when the copy
+/// moved to another index, and `layerNotFound` when no layer has its id. A LayerCommand for `layerID`, though it
 /// inserts the copy: the scoped check validates that layer, which the copy
 /// equals but for its fresh id, and checks the limits because the list grew.
 public struct DuplicateLayer: LayerCommand {
@@ -153,7 +154,11 @@ public struct DuplicateLayer: LayerCommand {
         guard let inserted else { throw CommandError.notExecuted }
         try document.withLayers(owner) { layers in
             guard layers.indices.contains(inserted.index), layers[inserted.index].id == inserted.id else {
-                throw CommandError.layerNotFound(inserted.id)
+                guard layers.contains(where: { $0.id == inserted.id }) else {
+                    throw CommandError.layerNotFound(inserted.id)
+                }
+                throw CommandError.invalidDocument(
+                    "layer \(inserted.id): the duplicate is no longer at index \(inserted.index)")
             }
             layers.remove(at: inserted.index)
         }

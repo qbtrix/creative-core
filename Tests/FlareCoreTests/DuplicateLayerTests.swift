@@ -87,7 +87,14 @@ import Testing
         // Something else moved the copy away from index + 1.
         doc.scenes[0].layers.swapAt(1, 2)
         let moved = doc
-        #expect(throws: CommandError.layerNotFound("bg-copy")) { try cmd.undo(&doc) }
+        #expect(throws: CommandError.invalidDocument("layer bg-copy: the duplicate is no longer at index 1")) {
+            try cmd.undo(&doc)
+        }
         #expect(doc == moved)
+        // Something else removed the copy: no layer has its id.
+        doc.scenes[0].layers.removeAll { $0.id == "bg-copy" }
+        let removed = doc
+        #expect(throws: CommandError.layerNotFound("bg-copy")) { try cmd.undo(&doc) }
+        #expect(doc == removed)
     }
 }

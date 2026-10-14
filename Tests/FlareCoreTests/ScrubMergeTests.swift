@@ -1,6 +1,7 @@
 // ScrubMergeTests.swift: an inspector scrub (SetKeyframe steps on one key
 // under one coalesce key) is one undo entry holding one command that keeps the
-// key from before the first step and takes the last value. Steps for another
+// key from before the first step and takes the last value (101, never the
+// fixture key's 100, so the scrub visibly lands). Steps for another
 // owner, layer, property or frame do not merge into it.
 @testable import FlareCore
 import Foundation
@@ -11,7 +12,7 @@ import Testing
 
     static func step(_ i: Int, frame: Int) -> SetKeyframe {
         SetKeyframe(owner: owner, layerID: "ball", property: "x",
-                    keyframe: Keyframe(frame: frame, value: Double(i) * 0.5, easing: .easeIn))
+                    keyframe: Keyframe(frame: frame, value: Double(i) * 0.5 + 1, easing: .easeIn))
     }
 
     /// Scrubs 200 steps on `frame` and checks one entry with one command whose
@@ -24,21 +25,21 @@ import Testing
         }
         #expect(engine.undoStack.count == 1)
         #expect(engine.undoStack.first?.commands.count == 1)
-        #expect(engine.document.scenes.first?.layers.last?.keyframe(at: frame, property: "x")?.value == 100)
+        #expect(engine.document.scenes.first?.layers.last?.keyframe(at: frame, property: "x")?.value == 101)
 
         let command = try #require(engine.undoStack.first?.commands.first)
         let data = try CommandRegistry.builtIn.encode(command)
         let object = try JSONSerialization.jsonObject(with: data) as? [String: Any]
         let params = object?["params"] as? [String: Any]
         let keyframe = params?["keyframe"] as? [String: Any]
-        #expect(keyframe?["value"] as? Double == 100)
+        #expect(keyframe?["value"] as? Double == 101)
         #expect(keyframe?["frame"] as? Int == frame)
 
         try engine.undo()
         #expect(!engine.canUndo)
         let afterUndo = engine.document
         try engine.redo()
-        #expect(engine.document.scenes.first?.layers.last?.keyframe(at: frame, property: "x")?.value == 100)
+        #expect(engine.document.scenes.first?.layers.last?.keyframe(at: frame, property: "x")?.value == 101)
         return (original, afterUndo)
     }
 
@@ -59,7 +60,7 @@ import Testing
         var a = Self.step(1, frame: 6)
         let same = a.merge(Self.step(2, frame: 6))
         #expect(same)
-        #expect(a.keyframe == Keyframe(frame: 6, value: 1, easing: .easeIn))
+        #expect(a.keyframe == Keyframe(frame: 6, value: 2, easing: .easeIn))
 
         let others = [
             SetKeyframe(owner: .symbol(Fixtures.sceneID), layerID: "ball", property: "x",
