@@ -24,3 +24,4 @@ utc	stage	event	ref	note
 2026-10-14T17:00Z	3	heartbeat	-	waiting on builders or the lane
 2026-10-14T17:07Z	3	pr-merged	#286	EC-8 add/remove instance
 2026-10-14T17:07Z	3	stage-start	wave-g	EC-9 on a0717b2
+2026-10-14T17:15Z	3	heartbeat	-	waiting on builders or the lane
