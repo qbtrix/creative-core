@@ -61,52 +61,71 @@ extension Path {
     ///
     /// Throws `GeometryError.invalidTolerance` when tolerance <= 0 or non-finite.
     public func flattened(tolerance: Double) throws -> [[Point]] {
-        guard tolerance.isFinite, tolerance > 0 else { throw GeometryError.invalidTolerance }
         var result: [[Point]] = []
         var current: [Point] = []
+        try forEachFlattenedPoint(tolerance: tolerance) { point, startsPolyline in
+            if startsPolyline {
+                if !current.isEmpty { result.append(current) }
+                current = [point]
+            } else {
+                current.append(point)
+            }
+            return false
+        }
+        if !current.isEmpty { result.append(current) }
+        return result
+    }
+
+    /// Streams the points of `flattened(tolerance:)` in order without building
+    /// the polylines: `visit` gets each point and whether it starts a new
+    /// polyline, and returns true to stop early. Returns whether a visit
+    /// stopped the walk. Memory stays constant however many points the path
+    /// flattens to.
+    ///
+    /// Throws `GeometryError.invalidTolerance` when tolerance <= 0 or non-finite.
+    @discardableResult
+    func forEachFlattenedPoint(tolerance: Double, _ visit: (Point, Bool) -> Bool) throws -> Bool {
+        guard tolerance.isFinite, tolerance > 0 else { throw GeometryError.invalidTolerance }
+        // `last` is the end of the open polyline, nil when none is open.
+        var last: Point?
         var subpathStart: Point?
 
-        func finish() {
-            if !current.isEmpty { result.append(current) }
-            current = []
+        func emit(_ point: Point, starts: Bool) -> Bool {
+            last = point
+            return visit(point, starts)
         }
 
         for element in elements {
             switch element {
             case .move(let to):
-                finish()
-                current = [to]
                 subpathStart = to
+                if emit(to, starts: true) { return true }
                 continue
             case .close:
-                if let start = subpathStart, !current.isEmpty {
-                    current.append(start)
-                }
-                finish()
+                if let start = subpathStart, last != nil, emit(start, starts: false) { return true }
+                last = nil
                 continue
             default:
                 break
             }
             // A drawing element: needs a start point.
-            guard let from = current.last ?? subpathStart else {
+            guard let from = last ?? subpathStart else {
                 if let end = element.endPoint {
-                    current = [end]
                     subpathStart = end
+                    if emit(end, starts: true) { return true }
                 }
                 continue
             }
-            if current.isEmpty {
-                current = [from]
-            }
+            if last == nil, emit(from, starts: true) { return true }
             switch element {
             case .line(let to):
-                current.append(to)
+                if emit(to, starts: false) { return true }
             case .quad(let c, let to):
                 // Wang's bound for degree 2: n^2 >= (2*1/8) * |p0 - 2c + p2| / tol.
                 let m = norm(from.x - 2 * c.x + to.x, from.y - 2 * c.y + to.y)
                 let n = Self.segmentCount((0.25 * m / tolerance).squareRoot())
                 for i in 1...n {
-                    current.append(quadAt(from, c, to, Double(i) / Double(n)))
+                    if emit(quadAt(from, c, to, Double(i) / Double(n)), starts: false) { return true }
                 }
             case .cubic(let c1, let c2, let to):
                 // Wang's bound for degree 3: n^2 >= (3*2/8) * max second difference / tol.
@@ -116,14 +135,13 @@ extension Path {
                 )
                 let n = Self.segmentCount((0.75 * m / tolerance).squareRoot())
                 for i in 1...n {
-                    current.append(cubicAt(from, c1, c2, to, Double(i) / Double(n)))
+                    if emit(cubicAt(from, c1, c2, to, Double(i) / Double(n)), starts: false) { return true }
                 }
             case .move, .close:
                 break
             }
         }
-        finish()
-        return result
+        return false
     }
 
     /// `ceil(raw)` clamped to 1...maxFlattenSegments; NaN gives 1.

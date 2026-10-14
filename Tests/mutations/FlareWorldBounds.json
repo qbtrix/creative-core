@@ -26,5 +26,12 @@
     "anchor": "guard half.isFinite else { return nil }",
     "replacement": "",
     "filter": "WorldBoundsTests"
+  },
+  {
+    "note": "world bounds negative stroke width clamp dropped so the box inverts",
+    "file": "Sources/FlareCore/WorldBounds.swift",
+    "anchor": "let half = Swift.max(width, 0) * matrix.maxAxisScale / 2",
+    "replacement": "let half = width * matrix.maxAxisScale / 2",
+    "filter": "WorldBoundsTests"
   }
 ]
