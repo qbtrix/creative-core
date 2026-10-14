@@ -3,7 +3,8 @@
 // row are narrower or shorter when the size isn't a multiple of `tileSize`, so
 // every tile lies inside the buffer. Tile reads and writes copy whole rows.
 
-/// A tile's position and size in pixels within its buffer.
+/// A rectangle of pixels within a buffer: a tile's position and size, or a
+/// mask's covered bounds (`Mask.coveredBounds`).
 public struct TileRect: Equatable, Sendable {
     public var x: Int
     public var y: Int

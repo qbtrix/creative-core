@@ -47,6 +47,33 @@ public struct Mask: Equatable, Sendable {
         return storage[y * width + x]
     }
 
+    /// Row-major coverage, for this module's image operations.
+    var values: [Float] { storage }
+
+    /// The smallest rectangle that holds every pixel with coverage above 0,
+    /// or nil when no pixel is covered. One read of each coverage value, so
+    /// an operation can limit its per-pixel work to what the mask touches.
+    public var coveredBounds: TileRect? {
+        var minX = width, maxX = -1, minY = height, maxY = -1
+        storage.withUnsafeBufferPointer { values in
+            for y in 0..<height {
+                let start = y * width
+                let end = start + width
+                var first = start
+                while first < end, values[first] == 0 { first += 1 }
+                if first == end { continue }
+                var last = end - 1
+                while values[last] == 0 { last -= 1 }
+                minX = min(minX, first - start)
+                maxX = max(maxX, last - start)
+                minY = min(minY, y)
+                maxY = y
+            }
+        }
+        guard maxY >= 0 else { return nil }
+        return TileRect(x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1)
+    }
+
     /// The sum of every pixel's coverage: the covered area in pixels.
     public var area: Double {
         storage.reduce(0) { $0 + Double($1) }
