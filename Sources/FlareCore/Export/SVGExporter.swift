@@ -13,6 +13,8 @@
 // Each layer's <g> carries its id and name, XML-escaped. Numbers are rounded
 // to 4 decimals and never use exponent notation; a non-finite value throws.
 // Text is not drawn yet: a visible layer with text throws `unsupported("text")`.
+// A render list that stopped expanding instances at its budget throws
+// `sceneTooLarge` before anything is written.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -24,6 +26,11 @@ public enum SVGExportError: Error, Equatable, Sendable {
     /// An instance names a symbol that is missing, contains itself, or is
     /// nested deeper than `Instance.maxNestingDepth`.
     case unresolvedSymbol(String)
+    /// The scene's instances expand past `RenderList.maxExpandedPoints`
+    /// (its render list `isTruncated`), e.g. symbols that nest two or more
+    /// instances of each other many levels deep. Every symbol exists; place
+    /// fewer instances or flatten the nesting.
+    case sceneTooLarge
     /// The scene draws something this exporter cannot write yet, e.g. "text".
     case unsupported(String)
 }
@@ -38,7 +45,9 @@ public enum SVGExporter {
             "<rect width=\"\(w)\" height=\"\(h)\"\(try fill(scene.background))/>",
         ]
         var gradients = 0
-        for node in scene.renderList(at: frame, symbols: symbols).nodes {
+        let list = scene.renderList(at: frame, symbols: symbols)
+        if list.isTruncated { throw SVGExportError.sceneTooLarge }
+        for node in list.nodes {
             try emit(node, inSymbol: false, into: &lines, gradients: &gradients)
         }
         lines.append("</svg>")

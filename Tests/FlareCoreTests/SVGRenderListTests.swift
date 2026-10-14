@@ -109,4 +109,20 @@ import Testing
             try SVGExporter.export(scene: both, frame: 0, symbols: NestedScene.symbols)
         }
     }
+
+    /// A list truncated at the expansion budget throws `sceneTooLarge`, not
+    /// `unresolvedSymbol`: every symbol exists. 20 layers each place a
+    /// 1,000-point symbol 300 times, 6,000,000 points in all.
+    @Test func truncatedListThrowsSceneTooLarge() {
+        let leaf = Symbol(id: "leaf", name: "Leaf", layers: [
+            Layer(id: "l", name: "L", shapes: [Shape(points: (0..<1_000).map { Point(x: Double($0), y: 0) })]),
+        ])
+        let row = Array(repeating: Instance(symbolID: "leaf"), count: 300)
+        let scene = Scene(id: "s", name: "S", layers: (0..<20).map { Layer(id: "r\($0)", name: "R", instances: row) })
+        let list = scene.renderList(at: 0, symbols: [leaf])
+        #expect(list.isTruncated)
+        #expect(throws: SVGExportError.sceneTooLarge) {
+            try SVGExporter.export(scene: scene, frame: 0, symbols: [leaf])
+        }
+    }
 }
