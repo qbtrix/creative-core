@@ -34,6 +34,7 @@ import Testing
         #expect(Self.ids(list.marquee(Self.everything)) == ["c:0", "a:0", "b:0"])
         // Touching an edge counts; a rect beside everything picks nothing.
         #expect(Self.ids(list.marquee(Rect(minX: 50, minY: 0, maxX: 60, maxY: 5))) == ["c:0"])
+        #expect(Self.ids(list.marquee(Rect(minX: 32, minY: 0, maxX: 40, maxY: 5))) == ["c:0"])
         #expect(list.marquee(Rect(minX: 60.5, minY: 0, maxX: 70, maxY: 5)).isEmpty)
     }
 
