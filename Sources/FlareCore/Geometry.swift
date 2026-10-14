@@ -27,6 +27,10 @@ public enum GeometryError: Error, Equatable, Sendable {
     case singularMatrix
     /// A flattening tolerance that is zero, negative or not finite.
     case invalidTolerance
+    /// A coordinate, size or ratio that is NaN or infinite.
+    case nonFinite
+    /// A polygon or star with fewer than 3 sides or points.
+    case invalidSides
 }
 
 public struct Matrix: Codable, Sendable, Hashable {
