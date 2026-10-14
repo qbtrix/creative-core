@@ -4,7 +4,7 @@ Issue: #268 · Packet: docs/blueprints/core/features/edit-commands.md
 Run: act-1a13b1450f1-6p7n · Session: claude/edit-commands-lead-rsmd3t · Started: 2026-10-14T15:00Z
 Stage: 5 finish
 Base: e9a0f7eb202f7b5ed1e3950128d2aa95b34ac679
-Next: r4-b1 is the feature-done PR; wait for its merge and the CI run it dispatches on dev, then post Belt-Contact-Sheet on #268
+Next: wait for CI run 38629317426 on dev (98be31a, dispatched by the #299 merge); green -> contact sheet on #268, red -> file gap issues (round budget spent)
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -29,7 +29,7 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 | 1 | 94d993b | PASS (740 tests) | 94/94 (validate: 151 anchors) | - | clarity, contract, undo, robustness, tests | 9 (1 major: SetInstanceTransform merge owner guard untested; 8 minor: docs/labels/errors, SetKeyframe coalesce step, AddInstance undo guard untested) | #293, #294 (merged) | no |
 | 2 | 923c083 | PASS (743 tests) | 97/97 (validate: 154 anchors) | none on dev yet (last CI run 09:30Z predates the feature) | same five | 6 minor (DuplicateLayer undo error, two messages without ids, ScrubMerge frame-24 value, registry header count, dead scene-only withLayer pair, Transform.isFinite y untested); 0 blocker/major | #296 (merged) | yes |
 | 3 | 3a1b50a | PASS (747 tests) | 102/102 (validate: 157 anchors) | none on dev yet | same five | 6 (1 major: locked-layer guard of SetInstanceTransform/SetInstancePlayback untested; 5 minor: SetShapeStroke message, invalidIndex doc, KeyframeOwner comment, fuzz lacks symbols/instances, instance undo-before-execute) | #298 (merged) | no |
-| 4 | e9a0f7e | PASS (756 tests) | 112/112 (validate: 167 anchors) | none on dev yet | same five | 4 minor (DuplicateLayer doc, ReorderScene toIndex doc, Remove Stroke label, drag merges not exercised by undo property); 0 blocker/major | r4-b1, feature-done (wf_991e154e-432) | yes |
+| 4 | e9a0f7e | PASS (756 tests) | 112/112 (validate: 167 anchors) | none on dev yet | same five | 4 minor (DuplicateLayer doc, ReorderScene toIndex doc, Remove Stroke label, drag merges not exercised by undo property); 0 blocker/major | #299 (feature-done, merged) | yes |
 
 ## Decisions
 - Waves follow the packet (a EC-1+EC-4; b EC-2, EC-3, EC-5; c EC-6; d EC-7a; e EC-7b; f EC-8; g EC-9; h EC-10): the shared-test-file chain forces the sequence.

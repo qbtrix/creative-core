@@ -59,3 +59,5 @@ utc	stage	event	ref	note
 2026-10-14T20:00Z	4	gate-run	e9a0f7e	CI: PASS 756 tests; mutate 112/112
 2026-10-14T20:00Z	4	round-clean	round-4	4 minor; budget reached (4 rounds)
 2026-10-14T20:00Z	5	stage-start	finish	r4-b1 carries feature-done
+2026-10-14T20:07Z	5	pr-merged	#299	r4-b1, feature-done
+2026-10-14T20:07Z	5	ci-run	38629317426	dispatched on 98be31a, queued
