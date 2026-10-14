@@ -42,3 +42,5 @@ utc	stage	event	ref	note
 2026-10-14T18:02Z	4	stage-end	round 2	all fixes merged
 2026-10-14T18:02Z	4	stage-start	round 3	cb1f3f8
 2026-10-14T22:08Z	4	heartbeat	round 3	resumed after plan-usage pause; round 3 gate on cb1f3f8 next
+2026-10-14T22:22Z	4	gate-run	cb1f3f8	CI: FAIL only CoreRaster smallDabOn12MegapixelsIsFast timing (1.76 s, 1.63 s vs 1.5 s; 0.59 s alone), filed #300; validate 163 anchors; mutants 108/108
+2026-10-14T22:22Z	4	stage-start	round 3 panel	six lenses, wf_77fa88e6-ab3

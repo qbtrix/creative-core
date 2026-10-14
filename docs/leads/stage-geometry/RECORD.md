@@ -4,7 +4,7 @@ Issue: #267 · Packet: docs/blueprints/core/features/stage-geometry.md
 Run: act-1a13b145104-0zef · Session: session_01HWAU426RJRzBTT7hAE7fER · Started: 2026-10-14T15:43Z
 Stage: 4 round 3
 Base: cb1f3f8af96cd3c77ffbd3029c12ad6b32c32000 (round 3; feature's first base 3339b904450d73eeae5dc404593972b82f24f46e)
-Next: round 3 on cb1f3f8: gate + mutation (scratchpad round-3), then the critic panel with the same six lenses. Round 4 is the last allowed.
+Next: round 3 panel running (wf_77fa88e6-ab3); then fix batch or round 4. Gate on cb1f3f8: only #300 timing flake outside the feature; mutants 108/108.
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
