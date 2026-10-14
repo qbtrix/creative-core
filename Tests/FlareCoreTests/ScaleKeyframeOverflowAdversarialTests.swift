@@ -63,11 +63,11 @@ import Testing
     /// and the refused perform leaves the undo stack alone.
     @Test func engineRefusesScaleYAndKeepsHistory() throws {
         var e = CommandEngine(document: Fixtures.document())
-        try e.perform(SetKeyframe(sceneID: "s1", layerID: "ball", property: "scaleY",
+        try e.perform(SetKeyframe(owner: .scene("s1"), layerID: "ball", property: "scaleY",
                                   keyframe: Keyframe(frame: 0, value: Self.limit)))
         let before = e.document
         #expect(throws: CommandError.self) {
-            try e.perform(SetKeyframe(sceneID: "s1", layerID: "ball", property: "scaleY",
+            try e.perform(SetKeyframe(owner: .scene("s1"), layerID: "ball", property: "scaleY",
                                       keyframe: Keyframe(frame: 5, value: -1e307)))
         }
         #expect(e.document == before)

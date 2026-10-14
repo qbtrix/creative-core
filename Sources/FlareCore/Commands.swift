@@ -134,36 +134,41 @@ public struct RenameLayer: LayerCommand {
     }
 }
 
-public struct SetKeyframe: Command {
+public struct SetKeyframe: LayerParamsCommand {
     public static let id = "keyframe.set"
     public var label: String { "Set Keyframe" }
-    public var sceneID: String
+    public var owner: LayerOwner
     public var layerID: String
     public var property: String
     public var keyframe: Keyframe
     var previous: Keyframe?
     var executed: Bool?
 
-    private enum CodingKeys: String, CodingKey { case sceneID, layerID, property, keyframe }
-
-    public init(sceneID: String, layerID: String, property: String, keyframe: Keyframe) {
-        self.sceneID = sceneID
+    public init(owner: LayerOwner, layerID: String, property: String, keyframe: Keyframe) {
+        self.owner = owner
         self.layerID = layerID
         self.property = property
         self.keyframe = keyframe
     }
 
+    /// The encoded params: never `previous` or `executed`, which are undo state.
+    struct Params: Codable { var property: String; var keyframe: Keyframe }
+    var params: Params { Params(property: property, keyframe: keyframe) }
+    init(owner: LayerOwner, layerID: String, params: Params) {
+        self.init(owner: owner, layerID: layerID, property: params.property, keyframe: params.keyframe)
+    }
+
     public mutating func execute(_ document: inout Document) throws {
         guard keyframe.frame >= 0 else { throw CommandError.invalidFrame(keyframe.frame) }
         let (k, p) = (keyframe, property)
-        previous = try document.withEditableLayer(scene: sceneID, layer: layerID) { $0.setKeyframe(k, property: p) }
+        previous = try document.withEditableLayer(owner, layer: layerID) { $0.setKeyframe(k, property: p) }
         executed = true
     }
 
     public func undo(_ document: inout Document) throws {
         guard executed == true else { throw CommandError.notExecuted }
         let (frame, p, previous) = (keyframe.frame, property, previous)
-        try document.withLayer(scene: sceneID, layer: layerID) { layer in
+        try document.withLayer(owner, layer: layerID) { layer in
             if let previous {
                 layer.setKeyframe(previous, property: p)
             } else {
@@ -173,47 +178,54 @@ public struct SetKeyframe: Command {
     }
 }
 
-public struct MoveKeyframe: Command {
+public struct MoveKeyframe: LayerParamsCommand {
     public static let id = "keyframe.move"
     public var label: String { "Move Keyframe" }
-    public var sceneID: String
+    public var owner: LayerOwner
     public var layerID: String
     public var property: String
     public var from: Int
     public var to: Int
 
-    public init(sceneID: String, layerID: String, property: String, from: Int, to: Int) {
-        self.sceneID = sceneID
+    public init(owner: LayerOwner, layerID: String, property: String, from: Int, to: Int) {
+        self.owner = owner
         self.layerID = layerID
         self.property = property
         self.from = from
         self.to = to
     }
 
+    struct Params: Codable { var property: String; var from: Int; var to: Int }
+    var params: Params { Params(property: property, from: from, to: to) }
+    init(owner: LayerOwner, layerID: String, params: Params) {
+        self.init(owner: owner, layerID: layerID, property: params.property, from: params.from, to: params.to)
+    }
+
     public mutating func execute(_ document: inout Document) throws {
-        try Self.move(&document, sceneID, layerID, property, from, to, checkLock: true)
+        try Self.move(&document, owner, layerID, property, from, to, checkLock: true)
     }
 
     public func undo(_ document: inout Document) throws {
-        try Self.move(&document, sceneID, layerID, property, to, from, checkLock: false)
+        try Self.move(&document, owner, layerID, property, to, from, checkLock: false)
     }
 
     /// A drag step that picks the keyframe up where this one put it down: the
     /// merged command moves it straight from `from` to `next.to`. Exact, because
-    /// the steps between only moved this keyframe.
+    /// the steps between only moved this keyframe. Drags on different owners
+    /// never merge, even when the layer ids match.
     public mutating func merge(_ next: MoveKeyframe) -> Bool {
-        guard (next.sceneID, next.layerID, next.property, next.from) == (sceneID, layerID, property, to)
+        guard (next.owner, next.layerID, next.property, next.from) == (owner, layerID, property, to)
         else { return false }
         to = next.to
         return true
     }
 
     private static func move(
-        _ document: inout Document, _ scene: String, _ layer: String, _ p: String, _ from: Int, _ to: Int,
+        _ document: inout Document, _ owner: LayerOwner, _ layer: String, _ p: String, _ from: Int, _ to: Int,
         checkLock: Bool
     ) throws {
         guard to >= 0 else { throw CommandError.invalidFrame(to) }
-        try document.withLayer(scene: scene, layer: layer) { layer in
+        try document.withLayer(owner, layer: layer) { layer in
             guard !checkLock || !layer.isLocked else { throw CommandError.layerLocked(layer.id) }
             guard var k = layer.keyframe(at: from, property: p) else {
                 throw CommandError.keyframeNotFound(property: p, frame: from)
@@ -229,27 +241,31 @@ public struct MoveKeyframe: Command {
     }
 }
 
-public struct RemoveKeyframe: Command {
+public struct RemoveKeyframe: LayerParamsCommand {
     public static let id = "keyframe.remove"
     public var label: String { "Delete Keyframe" }
-    public var sceneID: String
+    public var owner: LayerOwner
     public var layerID: String
     public var property: String
     public var frame: Int
     var removed: Keyframe?
 
-    private enum CodingKeys: String, CodingKey { case sceneID, layerID, property, frame }
-
-    public init(sceneID: String, layerID: String, property: String, frame: Int) {
-        self.sceneID = sceneID
+    public init(owner: LayerOwner, layerID: String, property: String, frame: Int) {
+        self.owner = owner
         self.layerID = layerID
         self.property = property
         self.frame = frame
     }
 
+    struct Params: Codable { var property: String; var frame: Int }
+    var params: Params { Params(property: property, frame: frame) }
+    init(owner: LayerOwner, layerID: String, params: Params) {
+        self.init(owner: owner, layerID: layerID, property: params.property, frame: params.frame)
+    }
+
     public mutating func execute(_ document: inout Document) throws {
         let (f, p) = (frame, property)
-        removed = try document.withEditableLayer(scene: sceneID, layer: layerID) { layer in
+        removed = try document.withEditableLayer(owner, layer: layerID) { layer in
             guard let k = layer.removeKeyframe(at: f, property: p) else {
                 throw CommandError.keyframeNotFound(property: p, frame: f)
             }
@@ -260,7 +276,7 @@ public struct RemoveKeyframe: Command {
     public func undo(_ document: inout Document) throws {
         guard let removed else { throw CommandError.notExecuted }
         let p = property
-        try document.withLayer(scene: sceneID, layer: layerID) { $0.setKeyframe(removed, property: p) }
+        try document.withLayer(owner, layer: layerID) { $0.setKeyframe(removed, property: p) }
     }
 }
 

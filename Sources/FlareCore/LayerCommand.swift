@@ -1,24 +1,8 @@
 // LayerCommand.swift: the built-in commands that change only one layer, so
-// CommandEngine validates their result scoped to that layer. A command listed
-// here must never touch another layer, a scene field, a symbol or a machine.
-//
-// Until each family takes an owner param (Q5c, Q5d), it names a scene layer:
-// the extension below computes `owner` from `sceneID` for every listed command.
-
-extension SetKeyframe: SceneLayerCommand {}
-extension MoveKeyframe: SceneLayerCommand {}
-extension RemoveKeyframe: SceneLayerCommand {}
-extension SetKeyframeEasing: SceneLayerCommand {}
-extension ShiftKeyframes: SceneLayerCommand {}
-
-/// The listed commands that still address a layer by scene id.
-protocol SceneLayerCommand: LayerCommand {
-    var sceneID: String { get }
-}
-
-extension SceneLayerCommand {
-    public var owner: LayerOwner { .scene(sceneID) }
-}
+// CommandEngine validates their result scoped to that layer. A command that
+// conforms must never touch another layer, a scene or symbol field, or a
+// machine. Each names its layer by `owner` (a scene or a symbol) and
+// `layerID`, encoded flat beside its own keys by the helpers below.
 
 /// The key a command writes its `layerID` under, beside its owner's key.
 private enum LayerAddressKey: String, CodingKey { case layerID }

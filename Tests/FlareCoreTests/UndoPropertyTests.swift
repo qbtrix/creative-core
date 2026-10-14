@@ -81,22 +81,22 @@ import Testing
                                       name: "n\(Int.random(in: -1...30, using: &rng))"))
         },
         { e, rng, _ in
-            let layer = anyLayer(e, &rng), prop = anyProp(&rng)
+            let (owner, layer) = anyTarget(e, &rng), prop = anyProp(&rng)
             let easing: Easing = Bool.random(using: &rng) ? .linear : .easeInOut
             let k = Keyframe(frame: Int.random(in: -1...30, using: &rng),
                              value: anyNumber(in: -100...100, &rng), easing: easing)
-            try e.perform(SetKeyframe(sceneID: Fixtures.sceneID, layerID: layer, property: prop, keyframe: k))
+            try e.perform(SetKeyframe(owner: owner, layerID: layer, property: prop, keyframe: k))
         },
         { e, rng, _ in
-            let layer = anyLayer(e, &rng), prop = anyProp(&rng)
-            try e.perform(MoveKeyframe(sceneID: Fixtures.sceneID, layerID: layer, property: prop,
+            let (owner, layer) = anyTarget(e, &rng), prop = anyProp(&rng)
+            try e.perform(MoveKeyframe(owner: owner, layerID: layer, property: prop,
                                        from: Int.random(in: -1...30, using: &rng),
                                        to: Int.random(in: -1...30, using: &rng)),
                           coalesceKey: Bool.random(using: &rng) ? "drag" : nil)
         },
         { e, rng, _ in
-            let layer = anyLayer(e, &rng), prop = anyProp(&rng)
-            try e.perform(RemoveKeyframe(sceneID: Fixtures.sceneID, layerID: layer, property: prop,
+            let (owner, layer) = anyTarget(e, &rng), prop = anyProp(&rng)
+            try e.perform(RemoveKeyframe(owner: owner, layerID: layer, property: prop,
                                          frame: Int.random(in: -1...30, using: &rng)))
         },
         { e, rng, _ in

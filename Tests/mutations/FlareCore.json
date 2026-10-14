@@ -72,8 +72,8 @@
   {
     "note": "keyframe merge accepts a step that does not start where the last one ended",
     "file": "Sources/FlareCore/Commands.swift",
-    "anchor": "guard (next.sceneID, next.layerID, next.property, next.from) == (sceneID, layerID, property, to)",
-    "replacement": "guard (next.sceneID, next.layerID, next.property) == (sceneID, layerID, property)",
+    "anchor": "guard (next.owner, next.layerID, next.property, next.from) == (owner, layerID, property, to)",
+    "replacement": "guard (next.owner, next.layerID, next.property) == (owner, layerID, property)",
     "filter": "CoalesceTests|UndoPropertyTests"
   },
   {
@@ -107,8 +107,8 @@
   {
     "note": "SetKeyframe encodes its undo state (Q3: commands encode params only)",
     "file": "Sources/FlareCore/Commands.swift",
-    "anchor": "private enum CodingKeys: String, CodingKey { case sceneID, layerID, property, keyframe }",
-    "replacement": "private enum CodingKeys: String, CodingKey { case sceneID, layerID, property, keyframe, previous, executed }",
+    "anchor": "    struct Params: Codable { var property: String; var keyframe: Keyframe }\n    var params: Params { Params(property: property, keyframe: keyframe) }",
+    "replacement": "    struct Params: Codable { var property: String; var keyframe: Keyframe; var previous: Keyframe?; var executed: Bool? }\n    var params: Params { Params(property: property, keyframe: keyframe, previous: previous, executed: executed) }",
     "filter": "CommandRegistryTests"
   },
   {

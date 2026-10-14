@@ -1,6 +1,8 @@
 // KeyframeCommands.swift: keyframe edits beyond set/move/remove. Each command
 // validates its params, throws a CommandError instead of crashing, and records
-// just enough in execute() for undo() to restore the document exactly.
+// just enough in execute() for undo() to restore the document exactly. Like
+// every keyframe command, each names its layer by `owner` (a scene or a
+// symbol), encoded flat beside its own keys.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -13,42 +15,47 @@ public enum KeyframeCommands {
 }
 
 /// Changes the easing of the keyframe at `frame`; its frame and value stay.
-public struct SetKeyframeEasing: Command {
+public struct SetKeyframeEasing: LayerParamsCommand {
     public static let id = "keyframe.setEasing"
     public var label: String { "Set Keyframe Easing" }
-    public var sceneID: String
+    public var owner: LayerOwner
     public var layerID: String
     public var property: String
     public var frame: Int
     public var easing: Easing
     var oldEasing: Easing?
 
-    private enum CodingKeys: String, CodingKey { case sceneID, layerID, property, frame, easing }
-
-    public init(sceneID: String, layerID: String, property: String, frame: Int, easing: Easing) {
-        self.sceneID = sceneID
+    public init(owner: LayerOwner, layerID: String, property: String, frame: Int, easing: Easing) {
+        self.owner = owner
         self.layerID = layerID
         self.property = property
         self.frame = frame
         self.easing = easing
     }
 
+    struct Params: Codable { var property: String; var frame: Int; var easing: Easing }
+    var params: Params { Params(property: property, frame: frame, easing: easing) }
+    init(owner: LayerOwner, layerID: String, params: Params) {
+        self.init(owner: owner, layerID: layerID, property: params.property,
+                  frame: params.frame, easing: params.easing)
+    }
+
     public mutating func execute(_ document: inout Document) throws {
-        oldEasing = try Self.replace(&document, sceneID, layerID, property, frame, easing, checkLock: true)
+        oldEasing = try Self.replace(&document, owner, layerID, property, frame, easing, checkLock: true)
     }
 
     public func undo(_ document: inout Document) throws {
         guard let oldEasing else { throw CommandError.notExecuted }
-        try Self.replace(&document, sceneID, layerID, property, frame, oldEasing, checkLock: false)
+        try Self.replace(&document, owner, layerID, property, frame, oldEasing, checkLock: false)
     }
 
     /// Sets the easing in place and returns the one it replaced.
     @discardableResult
     private static func replace(
-        _ document: inout Document, _ scene: String, _ layer: String, _ p: String, _ frame: Int, _ easing: Easing,
+        _ document: inout Document, _ owner: LayerOwner, _ layer: String, _ p: String, _ frame: Int, _ easing: Easing,
         checkLock: Bool
     ) throws -> Easing {
-        try document.withLayer(scene: scene, layer: layer) { layer in
+        try document.withLayer(owner, layer: layer) { layer in
             guard !checkLock || !layer.isLocked else { throw CommandError.layerLocked(layer.id) }
             guard var k = layer.keyframe(at: frame, property: p) else {
                 throw CommandError.keyframeNotFound(property: p, frame: frame)
@@ -65,29 +72,34 @@ public struct SetKeyframeEasing: Command {
 /// the layer, by `delta` frames. An empty range (`fromFrame > toFrame`) moves
 /// nothing. Throws if a result is negative or lands on a keyframe outside the
 /// range on the same track.
-public struct ShiftKeyframes: Command {
+public struct ShiftKeyframes: LayerParamsCommand {
     public static let id = "keyframe.shift"
     public var label: String { "Shift Keyframes" }
-    public var sceneID: String
+    public var owner: LayerOwner
     public var layerID: String
     public var fromFrame: Int
     public var toFrame: Int
     public var delta: Int
     var oldTracks: [String: [Keyframe]]?
 
-    private enum CodingKeys: String, CodingKey { case sceneID, layerID, fromFrame, toFrame, delta }
-
-    public init(sceneID: String, layerID: String, fromFrame: Int, toFrame: Int, delta: Int) {
-        self.sceneID = sceneID
+    public init(owner: LayerOwner, layerID: String, fromFrame: Int, toFrame: Int, delta: Int) {
+        self.owner = owner
         self.layerID = layerID
         self.fromFrame = fromFrame
         self.toFrame = toFrame
         self.delta = delta
     }
 
+    struct Params: Codable { var fromFrame: Int; var toFrame: Int; var delta: Int }
+    var params: Params { Params(fromFrame: fromFrame, toFrame: toFrame, delta: delta) }
+    init(owner: LayerOwner, layerID: String, params: Params) {
+        self.init(owner: owner, layerID: layerID,
+                  fromFrame: params.fromFrame, toFrame: params.toFrame, delta: params.delta)
+    }
+
     public mutating func execute(_ document: inout Document) throws {
         let (from, to, delta) = (fromFrame, toFrame, self.delta)
-        oldTracks = try document.withEditableLayer(scene: sceneID, layer: layerID) { layer in
+        oldTracks = try document.withEditableLayer(owner, layer: layerID) { layer in
             var shifted: [String: [Keyframe]] = [:]
             for (property, track) in layer.tracks {
                 let outside = Set(track.filter { $0.frame < from || $0.frame > to }.map(\.frame))
@@ -115,6 +127,6 @@ public struct ShiftKeyframes: Command {
 
     public func undo(_ document: inout Document) throws {
         guard let oldTracks else { throw CommandError.notExecuted }
-        try document.withLayer(scene: sceneID, layer: layerID) { $0.tracks = oldTracks }
+        try document.withLayer(owner, layer: layerID) { $0.tracks = oldTracks }
     }
 }
