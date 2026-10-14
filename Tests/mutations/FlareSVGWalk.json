@@ -1,0 +1,9 @@
+[
+  {
+    "note": "svg render-list walk drops an instance's children, so nested symbol layers vanish from the export",
+    "file": "Sources/FlareCore/Export/SVGExporter.swift",
+    "anchor": "try emit(child, inSymbol: true, into: &lines, gradients: &gradients)",
+    "replacement": "_ = child",
+    "filter": "SVGRenderListTests"
+  }
+]
