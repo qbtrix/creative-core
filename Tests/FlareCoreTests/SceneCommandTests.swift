@@ -104,6 +104,7 @@ import Testing
             AddScene(scene: Scene(id: "s2", name: "Two", fps: 30, durationFrames: 60), index: 1),
             RemoveScene(sceneID: Fixtures.sceneID),
             SetSceneTiming(sceneID: Fixtures.sceneID, fps: 30, durationFrames: 90),
+            SetSceneCanvas(sceneID: Fixtures.sceneID, width: 1920, height: 1080, background: Color(r: 0, g: 0.2, b: 0.4)),
         ]
     }
 
@@ -129,6 +130,15 @@ import Testing
             let scene = anyScene(e, &rng)
             try e.perform(SetSceneTiming(sceneID: scene, fps: Int.random(in: -1...60, using: &rng),
                                          durationFrames: Int.random(in: -1...30, using: &rng)))
+        },
+        { e, rng, _ in
+            // Mostly valid sizes; sometimes zero, negative or NaN, or a NaN channel.
+            let sizes: [Double] = [1, 64, 640, 1920, 0, -1, .nan]
+            let w = sizes.randomElement(using: &rng) ?? 1
+            let h = sizes[0..<4].randomElement(using: &rng) ?? 1
+            let red = Int.random(in: 0..<4, using: &rng) == 0 ? .nan : Double.random(in: 0...1, using: &rng)
+            try e.perform(SetSceneCanvas(sceneID: anyScene(e, &rng), width: w, height: h,
+                                         background: Color(r: red, g: 0.5, b: 0.5)))
         },
     ]
 

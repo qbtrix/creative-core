@@ -1,0 +1,23 @@
+[
+  {
+    "note": "a scene canvas set lets a zero or negative width or height through",
+    "file": "Sources/FlareCore/SceneCommands.swift",
+    "anchor": "guard width.isFinite, width > 0, height.isFinite, height > 0 else {",
+    "replacement": "guard width.isFinite, height.isFinite else {",
+    "filter": "SceneCanvasCommandTests"
+  },
+  {
+    "note": "a scene canvas set lets a non-finite background channel through",
+    "file": "Sources/FlareCore/SceneCommands.swift",
+    "anchor": "guard background.isFinite else { throw CommandError.invalidDocument(",
+    "replacement": "guard background.isFinite || true else { throw CommandError.invalidDocument(",
+    "filter": "SceneCanvasCommandTests"
+  },
+  {
+    "note": "undoing a scene canvas set keeps the new background instead of the old one",
+    "file": "Sources/FlareCore/SceneCommands.swift",
+    "anchor": "document.scenes[s].background = oldBackground",
+    "replacement": "document.scenes[s].background = background",
+    "filter": "SceneCanvasCommandTests"
+  }
+]
