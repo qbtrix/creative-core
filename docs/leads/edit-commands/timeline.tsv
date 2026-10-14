@@ -19,3 +19,5 @@ utc	stage	event	ref	note
 2026-10-14T16:48Z	3	stage-start	wave-d	EC-7a on 79398f9
 2026-10-14T16:53Z	3	pr-merged	#283	EC-7a scene canvas
 2026-10-14T16:53Z	3	stage-start	wave-e	EC-7b on 8311e8b
+2026-10-14T17:00Z	3	pr-merged	#285	EC-7b rename/reorder (closes #217)
+2026-10-14T17:00Z	3	stage-start	wave-f	EC-8 on 31930e7

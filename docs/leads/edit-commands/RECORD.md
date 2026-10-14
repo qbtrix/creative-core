@@ -2,9 +2,9 @@
 
 Issue: #268 · Packet: docs/blueprints/core/features/edit-commands.md
 Run: act-1a13b1450f1-6p7n · Session: claude/edit-commands-lead-rsmd3t · Started: 2026-10-14T15:00Z
-Stage: 3 wave e
-Base: 8311e8b2571a1a530e55088ea1e614bcd97e3095
-Next: wait for wave e PR (EC-7b) and the lane merge, then wave f (EC-8)
+Stage: 3 wave f
+Base: 31930e73f50539e5a64671bf9dd0dc4812c068e1
+Next: wait for wave f PR (EC-8) and the lane merge, then wave g (EC-9)
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -16,7 +16,7 @@ Next: wait for wave e PR (EC-7b) and the lane merge, then wave f (EC-8)
 | EC-5 | b | SetShapeStroke, SetShapePath | ShapeCommands.swift + tests | StrokePathCommandTests | FlareStrokePath.json | #279 | merged |
 | EC-6 | c | DuplicateLayer | LayerCommands.swift + tests | DuplicateLayerTests | FlareDuplicateLayer.json | #282 | merged |
 | EC-7a | d | SetSceneCanvas | SceneCommands.swift + tests | SceneCanvasCommandTests | FlareSceneCanvas.json | #283 | merged |
-| EC-7b | e | RenameScene, ReorderScene, CommandError.emptyName | SceneCommands.swift, Command.swift + tests | SceneEditCommandTests | FlareSceneEdit.json | – | todo |
+| EC-7b | e | RenameScene, ReorderScene, CommandError.emptyName | SceneCommands.swift, Command.swift + tests | SceneEditCommandTests | FlareSceneEdit.json | #285 | merged |
 | EC-8 | f | AddInstance, RemoveInstance, invalidTransform, validate (finishes #178) | InstanceCommands.swift, Instance.swift, Command.swift, FlareFormat.swift, CommandRegistry.swift + tests | InstanceCommandsTests | FlareInstances.json | – | todo |
 | EC-9 | g | SetInstanceTransform (drag merge), SetInstancePlayback (replaces #178) | InstanceCommands.swift + tests | InstanceTransformPlaybackTests | FlareInstancePlayback.json | – | todo |
 | EC-10 | h | QB-L7 drag-step budget; feature-done | DragStepBudgetTests.swift | DragStepBudgetTests | – | – | todo |
