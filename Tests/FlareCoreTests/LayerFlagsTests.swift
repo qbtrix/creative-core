@@ -96,13 +96,18 @@ import Testing
         #expect(engine.document == original)
     }
 
-    /// Random flag steps, valid and invalid, for assertUndoRestoresDocument.
+    /// Random flag and duplicate steps, valid and invalid, for assertUndoRestoresDocument.
     static let undoSteps: [UndoStep] = [
         { e, rng, _ in
             let (owner, layer) = UndoPropertyTests.anyTarget(e, &rng)
             let visible: Bool? = Bool.random(using: &rng) ? Bool.random(using: &rng) : nil
             try e.perform(SetLayerFlags(owner: owner, layerID: layer, isVisible: visible,
                                         isLocked: Bool.random(using: &rng)))
+        },
+        { e, rng, _ in
+            // Mostly a real layer, so the step adds to EngineStressTests' successes.
+            let (owner, layer) = UndoPropertyTests.anyTarget(e, &rng)
+            try e.perform(DuplicateLayer(owner: owner, layerID: layer))
         },
     ]
 
