@@ -2,7 +2,10 @@
 // items in paint order with exact addresses, multiplies opacity and matrices
 // down the tree, inherits locks from host layers, skips hidden layers and
 // marks missing or cyclic symbols unresolved; Path.transformed keeps cubics;
-// 1,000 seeded broken scenes build a list without trapping.
+// a fan-out of symbols stops at RenderList.maxRenderItems; a caller outside
+// the module builds an address; 1,000 seeded broken scenes build a list,
+// hit, marquee and bound without trapping. The import is not @testable, so
+// the public inits are what these tests compile against.
 import FlareCore
 import Testing
 
@@ -99,6 +102,9 @@ enum NestedScene {
         }
         #expect(host.isLocked && host.opacity == 0.5 && host.transform == Transform(x: 10) && inner.count == 1)
         #expect(host.children[2] == .unresolved(index: 1, symbolID: "missing"))
+        // A nested layer keeps its own lock flag and opacity, not the host's.
+        guard case .layer(let outerLayer)? = inner.first else { Issue.record("no outerLayer node"); return }
+        #expect(outerLayer.id == "outerLayer" && !outerLayer.isLocked && outerLayer.opacity == 0.5)
         let noMissing = NestedScene.scene(withMissing: false).renderList(at: 0, symbols: NestedScene.symbols)
         #expect(noMissing.items == list.items)
         let empty = Scene(id: "e", name: "E", layers: [Layer(id: "empty", name: "Empty")]).renderList(at: 0, symbols: [])
@@ -138,19 +144,101 @@ enum NestedScene {
         }
     }
 
-    /// Never crash: random NaN transforms, missing symbols and cycles.
+    /// Every node in the tree, leaves included.
+    static func nodeCount(_ nodes: [RenderNode]) -> Int {
+        nodes.reduce(0) { sum, node in
+            switch node {
+            case .layer(let l): sum + 1 + nodeCount(l.children)
+            case .instance(_, _, _, _, let children): sum + 1 + nodeCount(children)
+            case .shape, .text, .unresolved: sum + 1
+            }
+        }
+    }
+
+    static func hasUnresolved(_ nodes: [RenderNode]) -> Bool {
+        nodes.contains { node in
+            switch node {
+            case .layer(let l): hasUnresolved(l.children)
+            case .instance(_, _, _, _, let children): hasUnresolved(children)
+            case .unresolved: true
+            case .shape, .text: false
+            }
+        }
+    }
+
+    /// 40 symbols, each holding two instances of the next: 2^40 leaves
+    /// unbounded. The walk stops expanding at the budget instead.
+    @Test func fanOutIsBounded() throws {
+        let rect = Shape(points: [], path: try PathBuilders.rectangle(in: Rect(minX: 0, minY: 0, maxX: 4, maxY: 4)))
+        let symbols = (0..<40).map { i in
+            let layer = i == 39
+                ? Layer(id: "l\(i)", name: "L", shapes: [rect])
+                : Layer(id: "l\(i)", name: "L", instances: [Instance(symbolID: "s\(i + 1)"), Instance(symbolID: "s\(i + 1)")])
+            return Symbol(id: "s\(i)", name: "S", layers: [layer])
+        }
+        let scene = Scene(id: "fan", name: "Fan", layers: [Layer(id: "top", name: "Top", instances: [Instance(symbolID: "s0")])])
+        let list = scene.renderList(at: 0, symbols: symbols)
+        #expect(list.items.count <= RenderList.maxRenderItems && !list.items.isEmpty)
+        // Items plus nodes stay within the budget, give or take one chain.
+        #expect(list.items.count + Self.nodeCount(list.nodes) < RenderList.maxRenderItems + 100)
+        #expect(Self.hasUnresolved(list.nodes))
+        do {
+            _ = try SVGExporter.export(scene: scene, frame: 0, symbols: symbols)
+            Issue.record("an over-budget export must throw")
+        } catch let error as SVGExportError {
+            guard case .unresolvedSymbol = error else { Issue.record("wrong error \(error)"); return }
+        }
+    }
+
+    /// A caller outside the module builds an address from a selection it holds.
+    @Test func publicAddressInit() throws {
+        let address = RenderAddress(owner: .scene("s"), hosts: [], layerID: "main", shapeIndex: 0, textIndex: nil)
+        let box = try #require(NestedScene.list.worldBounds(of: [address]))
+        #expect(box == Rect(minX: 0, minY: 0, maxX: 10, maxY: 10))
+        let nested = RenderAddress(owner: .scene("s"), hosts: [InstanceHost(layerID: "host", instanceIndex: 0)],
+                                   layerID: "outerLayer", shapeIndex: 0, textIndex: nil)
+        #expect(NestedScene.list.items.contains { $0.address == nested })
+    }
+
+    /// Never crash: random NaN transforms, missing symbols and cycles, then
+    /// every public query on the result.
     @Test func seededScenesNeverTrap() {
         var rng = SplitMix64(seed: 0x5E61)
         let weird: [Double] = [.nan, .infinity, -.infinity, 0, 1, -3, 0.5, 1e308]
         func value() -> Double { weird[Int(rng.next() % UInt64(weird.count))] }
         func count() -> Int { Int(rng.next() % 3) }
+        func point() -> Point { Point(x: value(), y: value()) }
+        func shape() -> Shape {
+            switch rng.next() % 3 {
+            case 0: Shape(points: [point()])
+            case 1: Shape(points: (0..<4).map { _ in point() }, stroke: Stroke(width: value()))
+            default:
+                Shape(points: [], path: Path(elements: [
+                    .move(to: point()), .cubic(control1: point(), control2: point(), to: point()), .close,
+                ]), stroke: Stroke(width: value()))
+            }
+        }
+        func query(_ list: RenderList) {
+            let addresses = Set(list.items.map(\.address))
+            for t in [0, 4, Double.nan, 1e300] {
+                let hit = list.hit(point(), tolerance: t)
+                #expect(hit.map(addresses.contains) ?? true)
+            }
+            let picked = list.marquee(Rect(minX: value(), minY: value(), maxX: value(), maxY: value()))
+            #expect(picked.allSatisfy(addresses.contains))
+            let all = list.worldBounds(of: Array(addresses))
+            #expect(all.map { _ in !addresses.isEmpty } ?? true)
+            for item in list.items {
+                #expect(item.worldBounds.map { _ in !item.isText } ?? true)
+            }
+        }
         func layers(_ prefix: String) -> [Layer] {
             (0..<count()).map { i in
                 var tracks: [String: [Keyframe]] = [:]
                 for k in ["x", "y", "scaleX", "rotation", "opacity"] where rng.next() % 2 == 0 {
                     tracks[k] = [Keyframe(frame: 0, value: value())]
                 }
-                let shapes = (0..<count()).map { _ in Shape(points: [Point(x: value(), y: value())]) }
+                let shapes = (0..<count()).map { _ in shape() }
                 let instances = (0..<count()).map { _ in
                     Instance(symbolID: ["a", "b", "c", "zz"][Int(rng.next() % 4)],
                              transform: Transform(x: value(), scaleX: value(), rotation: value()))
@@ -173,8 +261,10 @@ enum NestedScene {
             let symbols = ["a", "b", "c"].map { Symbol(id: $0, name: $0, durationFrames: 4, layers: layers($0)) }
             let list = Scene(id: "s\(n)", name: "S", layers: layers("t")).renderList(at: value(), symbols: symbols)
             #expect(list.items.count == leaves(list.nodes))
+            query(list)
             let own = symbols[n % 3].renderList(at: Double(n), symbols: symbols)
             #expect(own.items.count == leaves(own.nodes))
+            query(own)
         }
     }
 }

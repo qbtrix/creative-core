@@ -26,5 +26,33 @@
     "anchor": "hosts: hosts + [InstanceHost(layerID: layer.id, instanceIndex: i)],",
     "replacement": "hosts: [InstanceHost(layerID: layer.id, instanceIndex: i)],",
     "filter": "RenderListTests"
+  },
+  {
+    "note": "render list size budget raised past maxRenderItems, so a symbol fan-out builds more items than the cap",
+    "file": "Sources/FlareCore/RenderList.swift",
+    "anchor": "guard built < RenderList.maxRenderItems,",
+    "replacement": "guard built < RenderList.maxRenderItems * 2,",
+    "filter": "RenderListTests"
+  },
+  {
+    "note": "render list layer node reports the inherited lock instead of the layer's own lock flag",
+    "file": "Sources/FlareCore/RenderList.swift",
+    "anchor": "isLocked: layer.isLocked, children: children)",
+    "replacement": "isLocked: lk, children: children)",
+    "filter": "RenderListTests"
+  },
+  {
+    "note": "render list layer matrix composed in the wrong order, layer transform before its parent",
+    "file": "Sources/FlareCore/RenderList.swift",
+    "anchor": "let m = parent * t.matrix",
+    "replacement": "let m = t.matrix * parent",
+    "filter": "RenderListTests"
+  },
+  {
+    "note": "render list instance matrix composed in the wrong order, instance transform before its layer",
+    "file": "Sources/FlareCore/RenderList.swift",
+    "anchor": "parent: m * inst.transform.matrix,",
+    "replacement": "parent: inst.transform.matrix * m,",
+    "filter": "RenderListTests"
   }
 ]
