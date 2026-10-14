@@ -39,7 +39,7 @@ import Testing
         let original = Fixtures.document()
         var e = CommandEngine(document: original)
         #expect(throws: CommandError.self) {
-            try e.perform(SetKeyframe(sceneID: "s1", layerID: "ball", property: "scaleX",
+            try e.perform(SetKeyframe(owner: .scene("s1"), layerID: "ball", property: "scaleX",
                                       keyframe: Keyframe(frame: 0, value: 1e307)))
         }
         #expect(e.document == original)

@@ -55,7 +55,7 @@ import Testing
         var engine = CommandEngine(document: Fixtures.document())
         try engine.perform(SetLayerFlags(owner: .scene(Self.s), layerID: "ball", isLocked: true))
         let locked = engine.document
-        let set = SetKeyframe(sceneID: Self.s, layerID: "ball", property: "y", keyframe: Keyframe(frame: 5, value: 1))
+        let set = SetKeyframe(owner: .scene(Self.s), layerID: "ball", property: "y", keyframe: Keyframe(frame: 5, value: 1))
         #expect(throws: CommandError.layerLocked("ball")) { try engine.perform(set) }
         #expect(engine.document == locked)
 
@@ -70,11 +70,11 @@ import Testing
         try engine.perform(SetLayerFlags(owner: .scene(Self.s), layerID: "ball", isLocked: true))
         let locked = engine.document
         let edits: [any Command] = [
-            SetKeyframe(sceneID: Self.s, layerID: "ball", property: "x", keyframe: Keyframe(frame: 0, value: 9)),
-            MoveKeyframe(sceneID: Self.s, layerID: "ball", property: "x", from: 0, to: 5),
-            RemoveKeyframe(sceneID: Self.s, layerID: "ball", property: "x", frame: 0),
-            SetKeyframeEasing(sceneID: Self.s, layerID: "ball", property: "x", frame: 0, easing: .linear),
-            ShiftKeyframes(sceneID: Self.s, layerID: "ball", fromFrame: 0, toFrame: 30, delta: 1),
+            SetKeyframe(owner: .scene(Self.s), layerID: "ball", property: "x", keyframe: Keyframe(frame: 0, value: 9)),
+            MoveKeyframe(owner: .scene(Self.s), layerID: "ball", property: "x", from: 0, to: 5),
+            RemoveKeyframe(owner: .scene(Self.s), layerID: "ball", property: "x", frame: 0),
+            SetKeyframeEasing(owner: .scene(Self.s), layerID: "ball", property: "x", frame: 0, easing: .linear),
+            ShiftKeyframes(owner: .scene(Self.s), layerID: "ball", fromFrame: 0, toFrame: 30, delta: 1),
             AddShape(owner: .scene(Self.s), layerID: "ball", shape: Shape(points: [Point(x: 0, y: 0)])),
         ]
         for edit in edits {

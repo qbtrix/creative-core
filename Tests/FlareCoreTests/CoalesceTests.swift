@@ -11,7 +11,7 @@ import Testing
     func drag(_ engine: inout CommandEngine, from: Int, steps: Int, key: String?) throws {
         for i in 0..<steps {
             try engine.perform(
-                MoveKeyframe(sceneID: s, layerID: "ball", property: "x", from: from + i, to: from + i + 1),
+                MoveKeyframe(owner: .scene(s), layerID: "ball", property: "x", from: from + i, to: from + i + 1),
                 coalesceKey: key)
         }
     }
@@ -159,8 +159,8 @@ import Testing
     @Test func movesOfDifferentKeyframesInARunStaySeparate() throws {
         var engine = CommandEngine(document: Fixtures.document())
         let original = engine.document
-        try engine.perform(MoveKeyframe(sceneID: s, layerID: "ball", property: "x", from: 24, to: 25), coalesceKey: "k")
-        try engine.perform(MoveKeyframe(sceneID: s, layerID: "ball", property: "x", from: 0, to: 5), coalesceKey: "k")
+        try engine.perform(MoveKeyframe(owner: .scene(s), layerID: "ball", property: "x", from: 24, to: 25), coalesceKey: "k")
+        try engine.perform(MoveKeyframe(owner: .scene(s), layerID: "ball", property: "x", from: 0, to: 5), coalesceKey: "k")
         #expect(engine.undoStack.first?.commands.count == 2)
         try engine.undo()
         #expect(engine.document == original)
