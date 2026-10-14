@@ -1,7 +1,8 @@
 // HitQueryTests.swift: RenderList.hit picks the topmost unlocked, non-text
 // item under a point, adds the tolerance once, keeps the instance chain in
 // the address, refuses bad tolerances, and at tolerance 0 agrees with
-// Layer.hits on 200 seeded points.
+// Layer.hits on 200 seeded points. The world-bounds prefilter never changes
+// the answer of a brute-force scan of the exact per-item test.
 import FlareCore
 import Testing
 
@@ -93,5 +94,58 @@ import Testing
             if expected { hits += 1 }
         }
         #expect(hits > 20 && hits < 180)
+    }
+
+    /// The exact per-item test of `RenderList.hit`, without the bounds prefilter.
+    static func bruteForceHit(_ list: RenderList, _ p: Point, tolerance: Double) -> RenderAddress? {
+        for item in list.items.reversed() where !item.isLocked && !item.isText {
+            guard let inverse = try? item.matrix.inverted() else { continue }
+            if Shape(points: [], path: item.outline, stroke: item.stroke).hits(inverse.apply(p), rule: .nonZero) {
+                return item.address
+            }
+            guard tolerance > 0 else { continue }
+            let m = item.matrix
+            let scale = max(m.a * m.a + m.b * m.b, m.c * m.c + m.d * m.d).squareRoot()
+            let width = item.stroke?.width ?? 0
+            let reach = tolerance + (width.isFinite && width > 0 ? width / 2 * scale : 0)
+            guard let lines = try? item.outline.transformed(by: m).flattened(tolerance: max(tolerance / 8, 1e-3)) else {
+                continue
+            }
+            for line in lines {
+                for (a, b) in zip(line, line.dropFirst()) where segmentDistance(p, a, b) <= reach { return item.address }
+            }
+        }
+        return nil
+    }
+
+    static func segmentDistance(_ p: Point, _ a: Point, _ b: Point) -> Double {
+        let dx = b.x - a.x, dy = b.y - a.y
+        let lengthSquared = dx * dx + dy * dy
+        let t = lengthSquared > 0 ? min(max(((p.x - a.x) * dx + (p.y - a.y) * dy) / lengthSquared, 0), 1) : 0
+        let ex = p.x - (a.x + t * dx), ey = p.y - (a.y + t * dy)
+        return (ex * ex + ey * ey).squareRoot()
+    }
+
+    @Test(arguments: [0.0, 4.0]) func prefilteredHitEqualsBruteForce(tolerance: Double) throws {
+        let (scene, symbols) = try StageBudgetTests.scene(seed: 2026)
+        let list = scene.renderList(at: StageBudgetTests.frame, symbols: symbols)
+        var rng = SplitMix64(seed: 0x5347_3301)
+        var hits = 0
+        for i in 0..<120 {
+            let p: Point
+            if i.isMultiple(of: 2) {
+                p = Point(x: Double.random(in: -20...570, using: &rng), y: Double.random(in: -20...420, using: &rng))
+            } else {
+                // Just outside a random item's box, where only the tolerance can reach.
+                let item = list.items[Int.random(in: 0..<list.items.count, using: &rng)]
+                let box = try #require(item.worldBounds)
+                p = Point(x: box.maxX + Double.random(in: 0...5, using: &rng),
+                          y: Double.random(in: box.minY...box.maxY, using: &rng))
+            }
+            let expected = Self.bruteForceHit(list, p, tolerance: tolerance)
+            #expect(list.hit(p, tolerance: tolerance) == expected, "\(p)")
+            if expected != nil { hits += 1 }
+        }
+        #expect(hits > 10 && hits < 110)
     }
 }
