@@ -37,3 +37,5 @@ utc	stage	event	ref	note
 2026-10-14T17:36Z	4	pr-merged	#293	r1-b1 instance fixes
 2026-10-14T17:36Z	4	pr-merged	#294	r1-b2 docs and scrub undo step
 2026-10-14T17:36Z	4	stage-start	round-2	923c083
+2026-10-14T17:42Z	4	gate-run	923c083	CI: PASS 743 tests
+2026-10-14T17:42Z	4	round-findings	round-2	panel clean: 6 minor confirmed, fix batch r2-b1
