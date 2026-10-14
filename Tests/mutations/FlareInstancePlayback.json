@@ -40,5 +40,12 @@
     "anchor": "        old = try document.withEditableLayer(",
     "replacement": "        old = try document.withLayer(",
     "filter": "InstanceTransformPlaybackTests"
+  },
+  {
+    "note": "the instance undo property drags set instance transform so a merged run keeping the later old transform fails undo all",
+    "file": "Sources/FlareCore/InstanceCommands.swift",
+    "anchor": "        transform = next.transform",
+    "replacement": "        (transform, oldTransform) = (next.transform, next.oldTransform)",
+    "filter": "InstanceCommandsTests"
   }
 ]

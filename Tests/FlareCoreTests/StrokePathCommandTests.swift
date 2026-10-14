@@ -38,6 +38,11 @@ import Testing
         #expect(Self.shape(engine)?.stroke == thick)
     }
 
+    @Test func labelSaysRemoveForANilStroke() {
+        #expect(SetShapeStroke(owner: .scene(Self.s), layerID: "ball", index: 0, stroke: nil).label == "Remove Stroke")
+        #expect(SetShapeStroke(owner: .scene(Self.s), layerID: "ball", index: 0, stroke: Stroke()).label == "Set Stroke")
+    }
+
     @Test(arguments: [-1.0, Double.nan, Double.infinity])
     func badStrokeWidthThrowsAndChangesNothing(width: Double) throws {
         var engine = CommandEngine(document: Fixtures.document())

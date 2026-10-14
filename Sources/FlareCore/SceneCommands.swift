@@ -190,8 +190,9 @@ public struct RenameScene: Command {
     }
 }
 
-/// Moves a scene to `toIndex` in the scene list. An index outside the list
-/// throws `invalidIndex` before any change; undo moves it back exactly.
+/// Moves a scene to `toIndex` in the scene list. `toIndex` is the scene's
+/// position after the move, so it must be in `0..<scenes.count`; any other
+/// index throws `invalidIndex` before any change. Undo moves it back exactly.
 public struct ReorderScene: Command {
     public static let id = "scene.reorder"
     public var label: String { "Reorder Scene" }

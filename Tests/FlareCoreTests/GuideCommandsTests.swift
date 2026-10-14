@@ -122,6 +122,19 @@ import Testing
                           coalesceKey: Bool.random(using: &rng) ? "drag" : nil)
         },
         { e, rng, _ in
+            // A drag: 2-4 coalesced MoveGuide steps on one guide, so MoveGuide.merge
+            // runs. A rejected step partway leaves the run as it was.
+            let count = e.document.scenes.first { $0.id == Fixtures.sceneID }?.guides.count ?? 0
+            let index = Int.random(in: -1...count, using: &rng)
+            func drag(_ e: inout CommandEngine, _ rng: inout SplitMix64) throws {
+                try e.perform(MoveGuide(sceneID: Fixtures.sceneID, index: index,
+                                        position: UndoPropertyTests.anyNumber(in: -500...500, &rng)),
+                              coalesceKey: "drag")
+            }
+            try drag(&e, &rng)
+            for _ in 1..<Int.random(in: 2...4, using: &rng) { try? drag(&e, &rng) }
+        },
+        { e, rng, _ in
             try e.perform(RemoveGuide(sceneID: Fixtures.sceneID, index: Int.random(in: -1...4, using: &rng)))
         },
     ]
