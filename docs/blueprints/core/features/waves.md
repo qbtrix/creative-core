@@ -9,8 +9,8 @@ treats the open PRs. Base: `origin/dev` 1b45592 (2026-10-14).
 
 | wave | feature | packet | covers | waits on | unblocks in Flare | feature issue |
 |---|---|---|---|---|---|---|
-| 1 | What the stage draws and what a click picks | `stage-geometry.md` | #213, #214, #215, #182 | nothing | `live-stage` (with `edit-commands`) | filed with this plan |
-| 1 | Undoable edits on scene and symbol layers | `edit-commands.md` | #171, #219, #216, #217, #173 | nothing | `live-keys`, `live-scenes`; `live-stage` (with `stage-geometry`) | filed with this plan |
+| 1 | What the stage draws and what a click picks | `stage-geometry.md` | #213, #214, #215, #182 | nothing | `live-stage` (with `edit-commands`) | #267 |
+| 1 | Undoable edits on scene and symbol layers | `edit-commands.md` | #171, #219, #216, #217, #173 | nothing | `live-keys`, `live-scenes`; `live-stage` (with `stage-geometry`) | #268 |
 
 Flare's "waits on" cells, mapped to the task that closes each issue:
 
