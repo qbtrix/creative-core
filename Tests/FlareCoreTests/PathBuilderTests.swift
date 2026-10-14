@@ -110,6 +110,23 @@ import Testing
         }
     }
 
+    /// The shape tools draw rects in any drag direction: a rect with swapped
+    /// edges builds the same path as the ordered one.
+    @Test func reversedRectBuildsTheSamePath() throws {
+        let ordered = Rect(minX: 0, minY: 0, maxX: 100, maxY: 40)
+        for reversed in [
+            Rect(minX: 100, minY: 40, maxX: 0, maxY: 0), Rect(minX: 100, minY: 0, maxX: 0, maxY: 40),
+            Rect(minX: 0, minY: 40, maxX: 100, maxY: 0),
+        ] {
+            #expect(try PathBuilders.rectangle(in: reversed, cornerRadius: 10)
+                == PathBuilders.rectangle(in: ordered, cornerRadius: 10))
+            #expect(try PathBuilders.ellipse(in: reversed) == PathBuilders.ellipse(in: ordered))
+            #expect(try PathBuilders.polygon(in: reversed, sides: 5) == PathBuilders.polygon(in: ordered, sides: 5))
+            #expect(try PathBuilders.star(in: reversed, points: 5, innerRatio: 0.5)
+                == PathBuilders.star(in: ordered, points: 5, innerRatio: 0.5))
+        }
+    }
+
     @Test func zeroSizeAndHugeRectsGiveFinitePoints() throws {
         let rects = [
             Rect(minX: 5, minY: 5, maxX: 5, maxY: 5), Rect(minX: 0, minY: 3, maxX: 0, maxY: 50),

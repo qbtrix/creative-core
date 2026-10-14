@@ -29,7 +29,10 @@ public enum GeometryError: Error, Equatable, Sendable {
     case invalidTolerance
     /// A coordinate, size or ratio that is NaN or infinite.
     case nonFinite
-    /// A polygon or star with fewer than 3 sides or points.
+    /// A polygon or star whose shape can't be built: a side or point count
+    /// below 3 or above `PathBuilders.maxSides`, or a finite star inner ratio
+    /// outside (0, 1]. Fix it by passing a count in 3...maxSides and a ratio
+    /// greater than 0 and at most 1.
     case invalidSides
 }
 
@@ -161,6 +164,14 @@ public struct Rect: Codable, Sendable, Hashable {
 
     public var width: Double { maxX - minX }
     public var height: Double { maxY - minY }
+
+    /// The same rect with `minX <= maxX` and `minY <= maxY`, whichever way
+    /// it was dragged; nil when an edge is NaN or infinite.
+    var normalized: Rect? {
+        guard [minX, minY, maxX, maxY].allSatisfy(\.isFinite) else { return nil }
+        return Rect(minX: Swift.min(minX, maxX), minY: Swift.min(minY, maxY),
+                    maxX: Swift.max(minX, maxX), maxY: Swift.max(minY, maxY))
+    }
 }
 
 /// Sine and cosine of an angle in degrees, exact at multiples of 90.

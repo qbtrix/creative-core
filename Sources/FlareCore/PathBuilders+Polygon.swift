@@ -4,7 +4,8 @@
 // Invariants:
 // - a polygon has 3 to maxSides sides, a star 3 to maxSides points; any other
 //   count throws GeometryError.invalidSides
-// - a star's inner ratio is finite and in (0, 1]
+// - a star's inner ratio is finite (else GeometryError.nonFinite) and in
+//   (0, 1] (else GeometryError.invalidSides)
 // - the first vertex is the top centre of the rect; the rest run clockwise on
 //   screen, angle 2πk / n from the top
 // - a star's inner vertices sit at the inner ratio times the outer radii
