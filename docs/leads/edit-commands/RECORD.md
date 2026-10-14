@@ -26,7 +26,7 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 ## Rounds
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
 |---|---|---|---|---|---|---|---|---|
-| 1 | 94d993b | PASS (740 tests) | running | - | clarity, contract, undo, robustness, tests | 9 (1 major: SetInstanceTransform merge owner guard untested; 8 minor: docs/labels/errors, SetKeyframe coalesce step, AddInstance undo guard untested) | r1-b1, r1-b2 (fix-batch wf_081512f1-eea) | no |
+| 1 | 94d993b | PASS (740 tests) | 94/94 (validate: 151 anchors) | - | clarity, contract, undo, robustness, tests | 9 (1 major: SetInstanceTransform merge owner guard untested; 8 minor: docs/labels/errors, SetKeyframe coalesce step, AddInstance undo guard untested) | r1-b1, r1-b2 (fix-batch wf_081512f1-eea) | no |
 
 ## Decisions
 - Waves follow the packet (a EC-1+EC-4; b EC-2, EC-3, EC-5; c EC-6; d EC-7a; e EC-7b; f EC-8; g EC-9; h EC-10): the shared-test-file chain forces the sequence.
