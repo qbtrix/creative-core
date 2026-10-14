@@ -119,8 +119,8 @@ import Testing
         ])
         let row = Array(repeating: Instance(symbolID: "leaf"), count: 300)
         let scene = Scene(id: "s", name: "S", layers: (0..<20).map { Layer(id: "r\($0)", name: "R", instances: row) })
-        let list = scene.renderList(at: 0, symbols: [leaf])
-        #expect(list.isTruncated)
+        let truncated = scene.renderList(at: 0, symbols: [leaf]).isTruncated
+        #expect(truncated)
         #expect(throws: SVGExportError.sceneTooLarge) {
             try SVGExporter.export(scene: scene, frame: 0, symbols: [leaf])
         }

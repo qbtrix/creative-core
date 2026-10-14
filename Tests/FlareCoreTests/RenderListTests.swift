@@ -192,8 +192,9 @@ enum NestedScene {
         let rect = Shape(points: [], path: try PathBuilders.rectangle(in: Rect(minX: 0, minY: 0, maxX: 4, maxY: 4)))
         let (scene, symbols) = Self.fanOut(depth: 39, leaf: rect)
         let list = scene.renderList(at: 0, symbols: symbols)
-        #expect(list.isTruncated && Self.hasUnresolved(list.nodes) && !list.items.isEmpty)
-        #expect(list.items.count < RenderList.maxExpandedPoints / 200)
+        let (truncated, unresolved, count) = (list.isTruncated, Self.hasUnresolved(list.nodes), list.items.count)
+        #expect(truncated && unresolved && count > 0)
+        #expect(count < RenderList.maxExpandedPoints / 200)
     }
 
     /// 2^14 copies of a 200,000-point shape unbounded (billions of points):
@@ -202,9 +203,10 @@ enum NestedScene {
         let heavy = Shape(points: (0..<200_000).map { Point(x: Double($0 % 7), y: Double($0 % 5)) })
         let (scene, symbols) = Self.fanOut(depth: 14, leaf: heavy)
         let list = scene.renderList(at: 0, symbols: symbols)
-        #expect(list.isTruncated && !list.items.isEmpty)
+        let (truncated, count, elements) = (list.isTruncated, list.items.count, Self.outlineElements(list))
+        #expect(truncated && count > 0)
         // At most one symbol's own content past the budget.
-        #expect(Self.outlineElements(list) <= RenderList.maxExpandedPoints + 200_001)
+        #expect(elements <= RenderList.maxExpandedPoints + 200_001)
     }
 
     /// A valid v1-sized scene: one layer of 30,000 shapes, then an instance
@@ -216,8 +218,10 @@ enum NestedScene {
         let host = Layer(id: "host", name: "Host", instances: [Instance(symbolID: "outer")])
         let scene = Scene(id: "s", name: "S", width: 100, height: 100, layers: [big, host])
         let list = scene.renderList(at: 0, symbols: NestedScene.symbols)
-        #expect(!list.isTruncated && !Self.hasUnresolved(list.nodes) && list.items.count == 30_002)
-        #expect(list.items.last?.address.layerID == "innerLayer")
+        let (truncated, unresolved, count) = (list.isTruncated, Self.hasUnresolved(list.nodes), list.items.count)
+        #expect(!truncated && !unresolved && count == 30_002)
+        let lastLayer = list.items.last?.address.layerID
+        #expect(lastLayer == "innerLayer")
         _ = try SVGExporter.export(scene: scene, frame: 0, symbols: NestedScene.symbols)
     }
 
@@ -230,8 +234,9 @@ enum NestedScene {
         let heavy = Layer(id: "heavy", name: "Heavy", shapes: shapes)
         let host = Layer(id: "host", name: "Host", instances: [Instance(symbolID: "inner")])
         let list = Scene(id: "s", name: "S", layers: [heavy, host]).renderList(at: 0, symbols: NestedScene.symbols)
-        #expect(Self.outlineElements(list) > RenderList.maxExpandedPoints)
-        #expect(!list.isTruncated && list.items.count == shapes.count + 1)
+        let (truncated, count, elements) = (list.isTruncated, list.items.count, Self.outlineElements(list))
+        #expect(elements > RenderList.maxExpandedPoints)
+        #expect(!truncated && count == shapes.count + 1)
     }
 
     /// A 300-shape symbol placed 100 times expands every instance.
@@ -241,7 +246,8 @@ enum NestedScene {
         ])
         let layer = Layer(id: "l", name: "L", instances: Array(repeating: Instance(symbolID: "many"), count: 100))
         let list = Scene(id: "s", name: "S", layers: [layer]).renderList(at: 0, symbols: [symbol])
-        #expect(!list.isTruncated && !Self.hasUnresolved(list.nodes) && list.items.count == 30_000)
+        let (truncated, unresolved, count) = (list.isTruncated, Self.hasUnresolved(list.nodes), list.items.count)
+        #expect(!truncated && !unresolved && count == 30_000)
     }
 
     /// The instance node carries the symbol frame, not the host frame: host
