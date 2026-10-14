@@ -4,7 +4,7 @@ Issue: #267 · Packet: docs/blueprints/core/features/stage-geometry.md
 Run: act-1a13b145104-0zef · Session: session_01HWAU426RJRzBTT7hAE7fER · Started: 2026-10-14T15:43Z
 Stage: 4 round 1
 Base: 1817e035cbfd08ddeeb476b185547503577044fe (wave d; feature's first base 3339b904450d73eeae5dc404593972b82f24f46e)
-Next: wait for r1-b2..b4 (wf_3a1f1967-58a) and r1-b5 (wf_6fc3d441-c0f, base 478aa93) to merge; then round 2 on the new origin/dev with the same six lenses.
+Next: r1-b5 merged (#287, ee8f364); wait for r1-b2..b4 (wf_3a1f1967-58a) to merge; then round 2 on the new origin/dev with the same six lenses.
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |

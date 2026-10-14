@@ -26,3 +26,4 @@ utc	stage	event	ref	note
 2026-10-14T16:58Z	4	pr-opened	#284	r1-b1 hit prefilter + SG-8 budgets
 2026-10-14T16:59Z	4	pr-merged	#284	r1-b1 hit prefilter + SG-8, 478aa93
 2026-10-14T16:59Z	4	heartbeat	round 1	r1-b5 launched on 478aa93
+2026-10-14T17:08Z	4	pr-merged	#287	r1-b5 hit refactor + tests, ee8f364
