@@ -3,3 +3,4 @@ utc	stage	event	ref	note
 2026-10-14T15:43Z	1	stage-end	packet	packet read, tasks copied
 2026-10-14T15:45Z	2	stage-end	plan	waves a-h per packet
 2026-10-14T15:45Z	3	stage-start	wave-a	EC-1, EC-4 builders started
+2026-10-14T16:00Z	3	heartbeat	-	waiting on builders or the lane
