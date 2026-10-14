@@ -16,7 +16,7 @@ import Testing
         "document.metadata",
         "keyframe.move", "keyframe.remove", "keyframe.set", "keyframe.setEasing", "keyframe.shift",
         "guide.add", "guide.move", "guide.remove",
-        "instance.add", "instance.remove",
+        "instance.add", "instance.remove", "instance.setPlayback", "instance.setTransform",
         "label.remove", "label.set",
         "layer.add", "layer.duplicate", "layer.remove", "layer.rename", "layer.reorder", "layer.setFlags",
         "scene.add", "scene.remove", "scene.rename", "scene.reorder", "scene.setCanvas", "scene.timing",
@@ -98,7 +98,7 @@ import Testing
     }
 
     @Test func everyBuiltInCommandIsRegistered() {
-        #expect(Self.expectedIDs.count == 42)
+        #expect(Self.expectedIDs.count == 44)
         #expect(Set(Self.registry.ids) == Self.expectedIDs)
     }
 
