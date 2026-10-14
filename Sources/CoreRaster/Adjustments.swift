@@ -173,6 +173,7 @@ extension PixelBuffer {
     /// value's square root, and read with linear interpolation there (two pows
     /// per value made it five times slower); values outside 0...1 are mapped
     /// exactly.
+    @inline(__always)
     private func mappingColor(_ encoding: ToneEncoding = .linear, _ transfer: (Float) -> Float) throws -> PixelBuffer {
         try withoutActuallyEscaping(transfer) { transfer in
             let channel: (Float) -> Float
@@ -203,9 +204,11 @@ extension PixelBuffer {
     /// One pass over the storage, without the per-pixel bounds checks of
     /// `pixel` / `setPixel` (issue #248); like `setPixel` it throws for a
     /// non-finite result.
+    @inline(__always)
     private func mappingPixels(_ transform: (RGBA) -> RGBA) throws -> PixelBuffer {
         let source = components
-        var storage = source
+        var storage = [Float]()
+        storage.reserveCapacity(source.count)
         let channels = Self.channels
         for i in stride(from: 0, to: source.count, by: channels) {
             let p = RGBA(r: source[i], g: source[i + 1], b: source[i + 2], a: source[i + 3])
@@ -214,21 +217,30 @@ extension PixelBuffer {
                 let n = i / channels
                 throw RasterError.invalid("pixel \(mapped) at (\(n % width), \(n / width)): components must be finite")
             }
-            storage[i] = mapped.r
-            storage[i + 1] = mapped.g
-            storage[i + 2] = mapped.b
-            storage[i + 3] = mapped.a
+            storage.append(mapped.r)
+            storage.append(mapped.g)
+            storage.append(mapped.b)
+            storage.append(mapped.a)
         }
         return PixelBuffer(checkedWidth: width, height: height, storage: storage)
     }
 }
 
 /// A piecewise cubic Hermite curve with Fritsch-Carlson tangents, so it is
-/// monotone wherever its control points are. Computed in Double.
+/// monotone wherever its control points are. Computed in Double. Each
+/// segment's cubic is expanded once into a table of power-basis coefficients
+/// in t, so `value` is one segment lookup and a Horner evaluation (issue #255).
 struct MonotoneCurve {
+    /// One segment from `x0` to the next point: with t = (x - x0) / h, the
+    /// value is y0 + t * (c1 + t * (c2 + t * c3)).
+    private struct Segment {
+        var x0, h, y0, c1, c2, c3: Double
+    }
+
     private let xs: [Double]
     private let ys: [Double]
     private let tangents: [Double]
+    private let segments: [Segment]
 
     init(_ points: [CurvePoint]) throws {
         guard points.count >= 2 else {
@@ -271,6 +283,11 @@ struct MonotoneCurve {
         self.xs = xs
         self.ys = ys
         tangents = m
+        segments = (0..<(xs.count - 1)).map { k in
+            let h = xs[k + 1] - xs[k]
+            let rise = ys[k + 1] - ys[k], m0 = h * m[k], m1 = h * m[k + 1]
+            return Segment(x0: xs[k], h: h, y0: ys[k], c1: m0, c2: 3 * rise - 2 * m0 - m1, c3: m0 + m1 - 2 * rise)
+        }
     }
 
     /// The curve's value at `v`.
@@ -285,11 +302,8 @@ struct MonotoneCurve {
             let mid = (lo + hi) / 2
             if xs[mid] <= x { lo = mid } else { hi = mid }
         }
-        let h = xs[hi] - xs[lo]
-        let t = (x - xs[lo]) / h
-        let t2 = t * t, t3 = t2 * t
-        let h00 = 2 * t3 - 3 * t2 + 1, h10 = t3 - 2 * t2 + t
-        let h01 = -2 * t3 + 3 * t2, h11 = t3 - t2
-        return Float(h00 * ys[lo] + h10 * h * tangents[lo] + h01 * ys[hi] + h11 * h * tangents[hi])
+        let s = segments[lo]
+        let t = (x - s.x0) / s.h
+        return Float(s.y0 + t * (s.c1 + t * (s.c2 + t * s.c3)))
     }
 }

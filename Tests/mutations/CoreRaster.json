@@ -203,6 +203,13 @@
     "filter": "DevelopAdjustmentTests"
   },
   {
+    "note": "the tabulated curve segment drops a tangent from its t squared coefficient",
+    "file": "Sources/CoreRaster/Adjustments.swift",
+    "anchor": "c2: 3 * rise - 2 * m0 - m1",
+    "replacement": "c2: 3 * rise - 2 * m0",
+    "filter": "ContrastSpeedTests|DevelopAdjustmentTests|AdjustmentsTests"
+  },
+  {
     "note": "straightenCrop leaves no margin for the kernel, so pixels near its corners read past the image",
     "file": "Sources/CoreRaster/Rotate.swift",
     "anchor": "let margin = turn.quarters == nil ? 2 * ResampleFilter.lanczos3.radius - 1 : 0",
