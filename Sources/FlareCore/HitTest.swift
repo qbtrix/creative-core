@@ -52,12 +52,16 @@ extension Path {
     /// Whether `point` is within `reach` of the outline flattened to
     /// `flatness`, open subpaths included. Shared by `Shape.hits` and
     /// `RenderList.hit`; a path that can't be flattened is never within reach.
+    /// Segments are checked as they are flattened and the walk stops at the
+    /// first one in reach, so memory stays constant on a huge outline.
     func isWithin(_ reach: Double, of point: Point, flatness: Double) -> Bool {
-        guard let lines = try? flattened(tolerance: flatness) else { return false }
-        for line in lines {
-            for (a, b) in zip(line, line.dropFirst()) where distance(point, a, b) <= reach { return true }
+        var previous: Point?
+        let found = try? forEachFlattenedPoint(tolerance: flatness) { next, startsPolyline in
+            defer { previous = next }
+            guard !startsPolyline, let a = previous else { return false }
+            return distance(point, a, next) <= reach
         }
-        return false
+        return found ?? false
     }
 }
 

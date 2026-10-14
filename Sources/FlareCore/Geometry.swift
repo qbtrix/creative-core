@@ -23,7 +23,9 @@ import Musl
 import Darwin
 #endif
 
+/// Errors from geometry: matrix inversion, flattening and the path builders.
 public enum GeometryError: Error, Equatable, Sendable {
+    /// A matrix with zero or non-finite determinant, e.g. a zero scale, that has no inverse.
     case singularMatrix
     /// A flattening tolerance that is zero, negative or not finite.
     case invalidTolerance

@@ -61,5 +61,12 @@
     "anchor": "guard let inverse = try? item.matrix.inverted() else { continue }",
     "replacement": "guard let inverse = try? item.matrix.inverted() else { return nil }",
     "filter": "HitQueryTests"
+  },
+  {
+    "note": "hit query near test lets a negative stroke width cut the tolerance reach",
+    "file": "Sources/FlareCore/HitQuery.swift",
+    "anchor": "if let width = stroke?.width, width.isFinite, width > 0 {",
+    "replacement": "if let width = stroke?.width, width.isFinite {",
+    "filter": "HitQueryTests"
   }
 ]

@@ -53,6 +53,13 @@ import Testing
         #expect(Matrix.scale(x: 3, y: -4).maxAxisScale == 4)
     }
 
+    @Test func negativeStrokeWidthIsNoStroke() {
+        // A negative width paints nothing, so it must not shrink the box.
+        let path = Self.rectPath(10, 10)
+        Self.expectClose(Self.item(path, stroke: Stroke(width: -20)).worldBounds,
+                         Rect(minX: 0, minY: 0, maxX: 10, maxY: 10))
+    }
+
     @Test func cubicBoundsAreTightNotControlBox() {
         let path = Path(elements: [
             .move(to: Point(x: 0, y: 0)),

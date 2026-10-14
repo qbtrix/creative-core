@@ -13,6 +13,9 @@ import FoundationEssentials
 import Foundation
 #endif
 
+/// Closed paths for the stage's shape tools (rectangle, ellipse, polygon, star),
+/// built from a rect in scene space, y down; a reversed rect is accepted.
+/// Throws `GeometryError`.
 public enum PathBuilders {
     /// Handle length of a cubic quarter circle of radius 1.
     static let kappa = 0.5522847498

@@ -43,6 +43,17 @@ import Testing
         #expect(list.hit(Point(x: 50, y: 4.1), tolerance: 1) == nil)
     }
 
+    @Test func negativeStrokeWidthIsNoStroke() {
+        var square = Self.square(at: 0)
+        square.stroke = Stroke(width: -20)
+        let list = Self.list([Layer(id: "l", name: "L", shapes: [square])])
+        // The inside still hits: the prefilter box is not inverted.
+        #expect(list.hit(Point(x: 5, y: 5)) != nil)
+        // The tolerance reach is not cut by a negative half stroke.
+        #expect(list.hit(Point(x: 12, y: 5), tolerance: 3)?.layerID == "l")
+        #expect(list.hit(Point(x: 13.1, y: 5), tolerance: 3) == nil)
+    }
+
     @Test func evenOddRuleIsForwarded() {
         let star = Self.list([Layer(id: "star", name: "Star", shapes: [HitTestTests.star])])
         let centre = Point(x: 0, y: 0)

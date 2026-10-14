@@ -1,7 +1,9 @@
 // HitTestTests.swift: Shape.contains under even-odd and nonzero rules for a
 // square, a concave L, a self-intersecting star and a curved path; open shapes
 // contain nothing; points on vertices and edges and random points never crash.
-import FlareCore
+// Path.isWithin streams the flattened outline: it agrees with a check over
+// every segment of `flattened` and stops at the first segment in reach.
+@testable import FlareCore
 import Testing
 
 @Suite struct HitTestTests {
@@ -133,5 +135,59 @@ import Testing
         // A symbol that shows itself is cut off instead of recursing forever.
         let loop = Symbol(id: "sym", name: "Loop", layers: [Layer(id: "l", name: "L", instances: [Instance(symbolID: "sym")])])
         #expect(!host.hits(Point(x: 119, y: 69), at: 0, symbols: [loop], rule: .nonZero))
+    }
+
+    /// The reference isWithin: every segment of the fully flattened outline.
+    static func flattenAllIsWithin(_ path: Path, _ reach: Double, of p: Point, flatness: Double) -> Bool {
+        guard let lines = try? path.flattened(tolerance: flatness) else { return false }
+        for line in lines {
+            for (a, b) in zip(line, line.dropFirst()) {
+                let dx = b.x - a.x, dy = b.y - a.y, ls = dx * dx + dy * dy
+                let t = ls > 0 ? min(max(((p.x - a.x) * dx + (p.y - a.y) * dy) / ls, 0), 1) : 0
+                let ex = p.x - (a.x + t * dx), ey = p.y - (a.y + t * dy)
+                if (ex * ex + ey * ey).squareRoot() <= reach { return true }
+            }
+        }
+        return false
+    }
+
+    @Test func streamedIsWithinEqualsFlattenAll() {
+        var rng = SplitMix64(seed: 61)
+        func point() -> Point { Point(x: Double.random(in: -20...20, using: &rng), y: Double.random(in: -20...20, using: &rng)) }
+        for _ in 0..<300 {
+            var elements: [PathElement] = []
+            for _ in 0..<Int.random(in: 0...8, using: &rng) {
+                switch Int.random(in: 0..<5, using: &rng) {
+                case 0: elements.append(.move(to: point()))
+                case 1: elements.append(.line(to: point()))
+                case 2: elements.append(.quad(control: point(), to: point()))
+                case 3: elements.append(.cubic(control1: point(), control2: point(), to: point()))
+                default: elements.append(.close)
+                }
+            }
+            let path = Path(elements: elements)
+            let flatness = [0.01, 0.5, 4, 0, -1, .nan].randomElement(using: &rng) ?? 0.5
+            for _ in 0..<10 {
+                let p = point(), reach = Double.random(in: 0...6, using: &rng)
+                #expect(path.isWithin(reach, of: p, flatness: flatness)
+                        == Self.flattenAllIsWithin(path, reach, of: p, flatness: flatness))
+            }
+        }
+    }
+
+    @Test func hugeOutlineHitNearFirstSegmentReturnsQuickly() {
+        // 20,000 huge cubics at flatness 1e-3 each flatten to 4,096 segments:
+        // 80 million points if the whole outline were built first.
+        var elements: [PathElement] = [.move(to: Point(x: 0, y: 0))]
+        for i in 0..<20_000 {
+            let s = Double(i % 2 == 0 ? 1 : -1) * 1e9
+            elements.append(.cubic(control1: Point(x: s, y: 0), control2: Point(x: s, y: s), to: Point(x: 0, y: s)))
+        }
+        let path = Path(elements: elements)
+        let clock = ContinuousClock()
+        var hit = false
+        let elapsed = clock.measure { hit = path.isWithin(1, of: Point(x: 0, y: 0.5), flatness: 1e-3) }
+        #expect(hit)
+        #expect(elapsed < .milliseconds(200))
     }
 }
