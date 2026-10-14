@@ -5,7 +5,7 @@
 // - a polygon has 3 to maxSides sides, a star 3 to maxSides points; any other
 //   count throws GeometryError.invalidSides
 // - a star's inner ratio is finite (else GeometryError.nonFinite) and in
-//   (0, 1] (else GeometryError.invalidSides)
+//   (0, 1] (else GeometryError.invalidRatio)
 // - the first vertex is the top centre of the rect; the rest run clockwise on
 //   screen, angle 2πk / n from the top
 // - a star's inner vertices sit at the inner ratio times the outer radii
@@ -51,15 +51,15 @@ extension PathBuilders {
     /// with `2 * points` sides.
     ///
     /// Throws `GeometryError.nonFinite` when an edge of `rect` or `innerRatio`
-    /// is NaN or infinite, and `GeometryError.invalidSides` when `points` is
-    /// below 3 or above `maxSides`, or when a finite `innerRatio` is outside
-    /// (0, 1]: such a ratio folds the inner vertices onto or through the
-    /// centre, or past the outer ones, so the star's shape is invalid.
+    /// is NaN or infinite, `GeometryError.invalidSides` when `points` is
+    /// below 3 or above `maxSides`, and `GeometryError.invalidRatio` when a
+    /// finite `innerRatio` is outside (0, 1]: such a ratio folds the inner
+    /// vertices onto or through the centre, or past the outer ones.
     public static func star(in rect: Rect, points: Int, innerRatio: Double) throws -> Path {
         let box = try BuilderBox(rect)
         guard innerRatio.isFinite else { throw GeometryError.nonFinite }
         guard points >= 3, points <= maxSides else { throw GeometryError.invalidSides }
-        guard innerRatio > 0, innerRatio <= 1 else { throw GeometryError.invalidSides }
+        guard innerRatio > 0, innerRatio <= 1 else { throw GeometryError.invalidRatio }
         let count = 2 * points
         let vertices = (0..<count).map { k in
             vertex(box, step: k, of: count, scale: k.isMultiple(of: 2) ? 1 : innerRatio)

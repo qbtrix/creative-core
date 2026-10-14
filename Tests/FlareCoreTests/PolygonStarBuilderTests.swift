@@ -97,8 +97,8 @@ import Testing
     }
 
     @Test(arguments: [0.0, -0.5, 1.5, 1.0000001])
-    func finiteRatioOutsideRangeThrowsInvalidSides(_ ratio: Double) {
-        #expect(throws: GeometryError.invalidSides) {
+    func finiteRatioOutsideRangeThrowsInvalidRatio(_ ratio: Double) {
+        #expect(throws: GeometryError.invalidRatio) {
             try PathBuilders.star(in: Self.rect, points: 5, innerRatio: ratio)
         }
     }

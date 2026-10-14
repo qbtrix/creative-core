@@ -9,8 +9,8 @@
   {
     "note": "star inner ratio range guard rejects a ratio of exactly 1",
     "file": "Sources/FlareCore/PathBuilders+Polygon.swift",
-    "anchor": "guard innerRatio > 0, innerRatio <= 1 else { throw GeometryError.invalidSides }",
-    "replacement": "guard innerRatio > 0, innerRatio < 1 else { throw GeometryError.invalidSides }",
+    "anchor": "guard innerRatio > 0, innerRatio <= 1 else { throw GeometryError.invalidRatio }",
+    "replacement": "guard innerRatio > 0, innerRatio < 1 else { throw GeometryError.invalidRatio }",
     "filter": "PolygonStarBuilderTests"
   },
   {
@@ -18,6 +18,13 @@
     "file": "Sources/FlareCore/PathBuilders+Polygon.swift",
     "anchor": "guard innerRatio.isFinite else { throw GeometryError.nonFinite }",
     "replacement": "",
+    "filter": "PolygonStarBuilderTests"
+  },
+  {
+    "note": "star inner ratio guard throws the side count error instead of invalidRatio",
+    "file": "Sources/FlareCore/PathBuilders+Polygon.swift",
+    "anchor": "guard innerRatio > 0, innerRatio <= 1 else { throw GeometryError.invalidRatio }",
+    "replacement": "guard innerRatio > 0, innerRatio <= 1 else { throw GeometryError.invalidSides }",
     "filter": "PolygonStarBuilderTests"
   }
 ]
