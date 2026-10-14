@@ -19,3 +19,6 @@ utc	stage	event	ref	note
 2026-10-14T16:46Z	3	stage-end	wave c	base for wave d 1817e03
 2026-10-14T16:46Z	3	stage-start	wave d	SG-8
 2026-10-14T16:50Z	4	gate-run	1817e03	pre-run: mutants 38/38; ci FAIL only on CoreRaster timing test under load, passes alone
+2026-10-14T16:51Z	3	stage-end	wave d	SG-8 hit budget fails; folded into round 1 fix
+2026-10-14T16:51Z	4	stage-start	round 1	panel on 1817e03; fix r1-b1 hit prefilter + SG-8
+2026-10-14T16:51Z	4	round-findings	round 1	QB-L5 hit budget miss (major)

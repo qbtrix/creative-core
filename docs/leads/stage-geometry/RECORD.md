@@ -2,9 +2,9 @@
 
 Issue: #267 · Packet: docs/blueprints/core/features/stage-geometry.md
 Run: act-1a13b145104-0zef · Session: session_01HWAU426RJRzBTT7hAE7fER · Started: 2026-10-14T15:43Z
-Stage: 3 wave d
+Stage: 4 round 1
 Base: 1817e035cbfd08ddeeb476b185547503577044fe (wave d; feature's first base 3339b904450d73eeae5dc404593972b82f24f46e)
-Next: wait for SG-8 to merge; then Anatomy round 1 on the new origin/dev (gate + mutation pre-run on 1817e03).
+Next: collect round 1 critic panel (wf_296177a2-dd2) and fix batch r1-b1 (wf_0d001519-43d: hit prefilter + SG-8 budgets); fix the confirmed findings; round 2 on the SHA after they merge.
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -16,13 +16,14 @@ Next: wait for SG-8 to merge; then Anatomy round 1 on the new origin/dev (gate +
 | SG-6 | b | PathBuilders rectangle, ellipse; GeometryError.nonFinite/.invalidSides | PathBuilders.swift, Geometry.swift | PathBuilderTests | FlarePathBuilders.json | #278 | merged 992ba1b |
 | SG-4 | c | RenderList.marquee in paint order (closes #214) | Marquee.swift | MarqueeTests | FlareMarquee.json | #280 | merged 8fa8cc6 |
 | SG-7 | c | PathBuilders polygon, star (closes #182) | PathBuilders+Polygon.swift | PolygonStarBuilderTests | FlarePolygonStar.json | #281 | merged 1817e03 |
-| SG-8 | d | QB-L5/L6 stage budgets (feature-done moved to the last PR) | StageBudgetTests.swift | StageBudgetTests | – | – | building |
+| SG-8 | d | QB-L5/L6 stage budgets (feature-done moved to the last PR) | StageBudgetTests.swift | StageBudgetTests | – | – | QB-L5 hit 16.6 ms > 10 ms under ci; folded into fix r1-b1 |
 
 Acceptance tests and quality bars: the packet's "Acceptance test per task" and "Quality tests" tables, unchanged.
 
 ## Rounds
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
 |---|---|---|---|---|---|---|---|---|
+| 1 | 1817e03 | FAIL only CoreRaster timing flake under load (passes alone) | 38/38 | – | clarity, contract, robustness, tests, design, compat | QB-L5 miss (major) + panel pending | r1-b1 | no |
 
 ## Decisions
 - Waves as the packet sets them: a SG-1; b SG-2, SG-3, SG-5, SG-6; c SG-4, SG-7; d SG-8.
@@ -30,6 +31,8 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 - `gh` has no valid token in this environment: builders open PRs and set labels through the GitHub MCP tools.
 - The Swift toolchain was missing; installed with scripts/cloud-setup.sh.
 - The GitHub MCP tool appends an attribution footer to PR bodies; the lane strips it from squash commits (checked 992ba1b). Builders are told to strip it; checked again in the critic round.
+- QB-L5: SG-8's builder measured hit at 7-9 ms alone, 16.6 ms under scripts/ci (budget 10 ms). Budget kept; fix is a world-bounds prefilter in HitQuery.swift, shipped in one PR with SG-8's tests (branch sg/sg8 95194fb).
+- Critic lenses fixed for every round: clarity, contract, robustness, tests, design, compat (no undo lens: the feature adds no commands).
 - SG-8 ships without `feature-done`: lead.md runs the Anatomy loop before finish, and a feature-done merge dispatches the closing CI. The label goes on the feature's last PR (last fix batch, or the packet status line if the rounds are clean).
 - Builder branches are `sg/<id>`: a ref `lead/stage-geometry` exists, so `lead/stage-geometry/<id>` cannot be created.
 - Baseline scripts/ci on 3339b90: CI: PASS (635 tests).
