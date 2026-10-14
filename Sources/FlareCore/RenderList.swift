@@ -39,11 +39,12 @@ public struct RenderList: Sendable, Hashable {
     /// plus, per node and item built there, one more than its nesting depth
     /// (the hosts its address carries). The owner's own layers are not
     /// charged, so this does not cap `items.count`: a layer with more shapes
-    /// than this lists them all. Four times `FlareFormat.maxTotalPoints`, so a
-    /// file at the format's point cap can still draw every stored point in
-    /// four instances, while a file whose symbols fan out stops after a few
-    /// million points (or about 16,000 leaves 40 deep) instead of billions.
-    public static let maxExpandedPoints = 4 * FlareFormat.maxTotalPoints
+    /// than this lists them all. Four times the file format's point cap (a
+    /// test pins the ratio; evaluation does not read the format layer), so a
+    /// file at that cap can still draw every stored point in four instances,
+    /// while a file whose symbols fan out stops after a few million points
+    /// (or about 16,000 leaves 40 deep) instead of billions.
+    public static let maxExpandedPoints = 4_000_000
 
     /// The tree, for exporters that keep groups: one node per visible layer.
     public var nodes: [RenderNode]
@@ -185,14 +186,7 @@ extension RenderList {
 
         init(_ shape: Shape) {
             path = shape.outline
-            points = path.elements.reduce(0) { sum, element in
-                switch element {
-                case .move, .line: sum + 1
-                case .quad: sum + 2
-                case .cubic: sum + 3
-                case .close: sum
-                }
-            }
+            points = path.elements.reduce(0) { $0 + $1.pointCount }
         }
     }
 

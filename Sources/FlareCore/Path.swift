@@ -176,6 +176,17 @@ extension PathElement {
         case .close: nil
         }
     }
+
+    /// Points stored in this element: what the format's size limit and the
+    /// render list's expansion budget both count.
+    var pointCount: Int {
+        switch self {
+        case .move, .line: 1
+        case .quad: 2
+        case .cubic: 3
+        case .close: 0
+        }
+    }
 }
 
 /// Length of the vector (x, y).

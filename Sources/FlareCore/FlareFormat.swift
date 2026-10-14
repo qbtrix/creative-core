@@ -272,14 +272,4 @@ extension PathElement {
         case .close: []
         }
     }
-
-    /// Points stored in this element, for the size limit.
-    var pointCount: Int {
-        switch self {
-        case .move, .line: 1
-        case .quad: 2
-        case .cubic: 3
-        case .close: 0
-        }
-    }
 }
