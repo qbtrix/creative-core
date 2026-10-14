@@ -1,0 +1,16 @@
+[
+  {
+    "note": "a keyframe drag on a symbol merges a scene drag step that has the same layer id property and frame",
+    "file": "Sources/FlareCore/Commands.swift",
+    "anchor": "guard (next.owner, next.layerID, next.property, next.from) == (owner, layerID, property, to)",
+    "replacement": "guard (next.layerID, next.property, next.from) == (layerID, property, to)",
+    "filter": "KeyframeOwnerTests"
+  },
+  {
+    "note": "a keyframe envelope with both sceneID and symbolID decodes as a scene owner",
+    "file": "Sources/FlareCore/LayerOwner.swift",
+    "anchor": "case (let id?, nil): self = .scene(id)",
+    "replacement": "case (let id?, _): self = .scene(id)",
+    "filter": "KeyframeOwnerTests"
+  }
+]
