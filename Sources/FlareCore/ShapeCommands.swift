@@ -96,7 +96,9 @@ public struct SetShapeFill: LayerParamsCommand {
 }
 
 /// Sets or, with nil, removes a shape's stroke. A negative or non-finite
-/// width or a non-finite color throws before anything changes.
+/// width or a non-finite color throws `ModelError.invalidStroke` from
+/// `execute` before anything changes; `CommandEngine.perform` reports it as
+/// `CommandError.invalidDocument`.
 public struct SetShapeStroke: LayerParamsCommand {
     public static let id = "shape.setStroke"
     public var label: String { "Set Stroke" }
@@ -140,15 +142,20 @@ public struct SetShapeStroke: LayerParamsCommand {
     }
 }
 
-/// Replaces a shape's curved path and its points together. A non-finite
-/// point in either throws invalidDocument before anything changes.
+/// Replaces a shape's curved path and its points together. `path` nil removes
+/// the curve, so the shape is drawn as a polyline through `points`; while
+/// `path` is set it wins over `points` and `closed` (see `Shape.outline`).
+/// `closed` is not changed. A non-finite point in either throws
+/// invalidDocument before anything changes.
 public struct SetShapePath: LayerParamsCommand {
     public static let id = "shape.setPath"
     public var label: String { "Edit Path" }
     public var owner: LayerOwner
     public var layerID: String
     public var index: Int
+    /// The new curve, or nil to remove it and draw the polyline through `points`.
     public var path: Path?
+    /// The new polyline points; kept but not drawn while `path` is set.
     public var points: [Point]
     var old: (path: Path?, points: [Point])?
 

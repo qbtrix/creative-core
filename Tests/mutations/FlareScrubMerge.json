@@ -12,5 +12,12 @@
     "anchor": "        keyframe = next.keyframe\n        return true",
     "replacement": "        keyframe = next.keyframe\n        previous = next.previous\n        return true",
     "filter": "ScrubMergeTests"
+  },
+  {
+    "note": "the undo property coalesces set keyframe drags so a merged run keeping the wrong previous key fails undo all",
+    "file": "Sources/FlareCore/Commands.swift",
+    "anchor": "        keyframe = next.keyframe\n        return true",
+    "replacement": "        keyframe = next.keyframe\n        previous = next.previous\n        return true",
+    "filter": "UndoPropertyTests"
   }
 ]
