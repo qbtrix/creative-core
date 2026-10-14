@@ -1,0 +1,171 @@
+{
+ "clean": false,
+ "confirmed": [
+  {
+   "severity": "major",
+   "where": "Sources/FlareCore/Export/SVGExporter.swift:24-26 (SVGExportError.unresolvedSymbol)",
+   "what": "Since the round-1 budget fix, the SVG exporter also throws `unresolvedSymbol(id)` when the render list stopped expanding instances because it reached `RenderList.maxRenderItems`. RenderList.swift:28 says so, and RenderListTests.swift:189 asserts it. The error case's own doc still says only \"An instance names a symbol that is missing, contains itself, or is nested deeper than `Instance.maxNestingDepth`\". So a valid but large document (for example symbols that fan out) fails to export with `unresolvedSymbol(\"S5\")`, naming a symbol that exists, has no cycle and is shallow. The payload and the doc both send the caller to look for a broken symbol.",
+   "why": "Lens: an error case or message has to say what went wrong and how to fix it. A caller who catches `unresolvedSymbol` and tells the user \"symbol S5 is missing or recursive\" gives wrong advice for a document that is only over the size budget. Nothing in the case lets the caller tell the two causes apart.",
+   "fix": "Add to the doc comment on `SVGExportError.unresolvedSymbol`: \"or the scene expands past `RenderList.maxRenderItems`, so the render list left this instance unexpanded (see `RenderNode.unresolved`)\". If a payload change is acceptable later, a separate `tooLarge` case would make the cause explicit.",
+   "files": [
+    "Sources/FlareCore/Export/SVGExporter.swift"
+   ],
+   "test": "Doc-only. A rubric check that compares the case's doc with its throw sites: the fan-out document in RenderListTests (~line 185) throws `.unresolvedSymbol`, and the current doc does not cover that cause.",
+   "lens": "clarity",
+   "refuted": false,
+   "reason": "The finding holds. At 70aeada1, SVGExporter.swift:24-26 still describes `unresolvedSymbol` as only \"missing, contains itself, or nested deeper than Instance.maxNestingDepth\". But RenderList.swift's comments (the header and the doc on the struct near line 28) say that once `maxRenderItems` (50,000) is reached, any further instance becomes `.unresolved`, \"which the SVG exporter rejects with `unresolvedSymbol`\". SVGExporter.swift:89 throws `unresolvedSymbol(symbolID)` for every `.unresolved` node and never says why. So a large but valid document gets an error case whose doc and payload point at a broken symbol, and the caller has no way to tell this apart from a real broken symbol. The fix is to update the doc comment, or better, add a separate case such as `tooManyItems`."
+  },
+  {
+   "severity": "minor",
+   "where": "Sources/FlareCore/RenderList.swift:30-33 (RenderList.maxRenderItems)",
+   "what": "The name reads as a cap on `items.count`, and it is not one. The walk counts nodes as well as items: 2 per shape or text, 1 per layer and 1 per instance. The budget only stops instance expansion, and a layer that is already being walked still lists all of its own leaves. So one layer with 60,000 shapes gives 60,000 items, above `maxRenderItems` (50,000), while a fan-out file stops well before 50,000 items. The doc says \"items plus nodes ... before it stops expanding instances\", but it never says that `items.count` can exceed the constant. The name says the opposite.",
+   "why": "Lens: a name that hides what it does or its unit. A stage caller may size buffers with `items.count <= maxRenderItems` or show a \"scene too large\" message from it, and both would be wrong. Because the constant is not in the packet's binding contract, it can be renamed.",
+   "fix": "Rename it to something like `instanceExpansionBudget`, or keep the name and add one line to its doc: \"It does not cap `items.count`: a layer's own shapes and texts are always listed. Only instance expansion stops.\"",
+   "files": [
+    "Sources/FlareCore/RenderList.swift"
+   ],
+   "test": "A test that builds one layer holding `maxRenderItems + 1` shapes and checks `items.count == maxRenderItems + 1`. That test documents the behavior a reader of the name would not expect.",
+   "lens": "clarity",
+   "refuted": false,
+   "reason": "The finding holds at 70aeada1, as a minor clarity issue. In Sources/FlareCore/RenderList.swift:33, `maxRenderItems = 50_000` only gates instance expansion: line 197 is `guard built < RenderList.maxRenderItems,` on the instance path, and `built` counts items and nodes together. Shapes and texts in a layer that is already being walked are never checked against it, and the format has no per-layer shape limit (only `maxLayersPerScene`), so one layer with 60,000 shapes gives more than 50,000 items. The file header (line 18) does say \"the layers being walked still list their own leaves\", but other text reads it as a cap on output. The doc comment at line 161 says the walk \"bounds total size by `maxRenderItems`\". The mutation note in Tests/mutations/FlareRenderList.json calls it \"the cap\". The test at Tests/FlareCoreTests/RenderListTests.swift:181 checks `items.count <= RenderList.maxRenderItems`, which encourages the wrong reading. The name and those comments suggest a guarantee about `items.count` that the code does not give. Renaming it (for example to `instanceExpansionBudget`) or stating that `items.count` can exceed it is warranted."
+  },
+  {
+   "severity": "minor",
+   "where": "Sources/FlareCore/PathBuilders.swift:16 (public enum PathBuilders); Sources/FlareCore/Geometry.swift:195-196 (GeometryError, singularMatrix)",
+   "what": "The new public namespace `PathBuilders` has no `///` doc comment. Its explanation (scene space, y down, built from a rect, which errors it throws) is only in the `//` file header, which Quick Help does not show. `GeometryError`, which this feature extends with `nonFinite` and `invalidSides`, also has no type-level doc. Its `singularMatrix` case is the only undocumented case, and `hit` and `worldBounds` now depend on it to skip items.",
+   "why": "Lens: a public symbol without a doc comment. Neither the type a new caller reaches first for the shape tools nor its error enum explains itself.",
+   "fix": "Add `/// Closed paths for the stage's shape tools (rectangle, ellipse, polygon, star), built from a rect in scene space, y down; a reversed rect is accepted. Throws GeometryError.` above `PathBuilders`. Add `/// Errors from geometry: matrix inversion, flattening and the path builders.` above `GeometryError`, and `/// A matrix with zero or non-finite determinant, e.g. a zero scale, that has no inverse.` above `singularMatrix`.",
+   "files": [
+    "Sources/FlareCore/PathBuilders.swift",
+    "Sources/FlareCore/Geometry.swift"
+   ],
+   "test": "Doc-only: a symbol-graph or doc-coverage check over the public FlareCore symbols.",
+   "lens": "clarity",
+   "refuted": false,
+   "reason": "The finding holds at 70aeada1. Sources/FlareCore/PathBuilders.swift:16 declares `public enum PathBuilders {` with no `///` doc comment above it. What it covers (closed paths built from a rect in scene space, y down, and the nonFinite throw) is only in the `//` file header on lines 1-9, which Quick Help does not show. In Sources/FlareCore/Geometry.swift:26-27, `public enum GeometryError` has no type-level doc, and `case singularMatrix` is its only case without a `///` comment. The feature added `nonFinite` and `invalidSides`, and both of those are documented. This is a minor doc gap on public symbols this feature introduces or extends."
+  },
+  {
+   "severity": "minor",
+   "where": "Sources/FlareCore/RenderList.swift:107-120 (RenderAddress.init)",
+   "what": "The public memberwise init added in round 1 accepts addresses that no walk can produce: both `shapeIndex` and `textIndex` set, both nil, or a negative index. The doc doesn't say that exactly one of the two must be non-nil. Such an address silently matches nothing: `worldBounds(of:)` returns nil, the same answer as a text-only selection, so the caller can't tell a malformed address from an empty result.",
+   "why": "Lens: a parameter whose meaning or constraint is hidden. A caller building an address from an edit-commands selection (layerID plus shapeIndex) has to guess that `textIndex` must be nil, and gets no signal when it guesses wrong.",
+   "fix": "Extend the init's doc: \"Exactly one of `shapeIndex` and `textIndex` is non-nil, as in the addresses `hit` and `marquee` return. Any other address matches no item.\"",
+   "files": [
+    "Sources/FlareCore/RenderList.swift"
+   ],
+   "test": "A test that `worldBounds(of: [RenderAddress(owner:, hosts: [], layerID: l, shapeIndex: 0, textIndex: 0)])` is nil while the same address with `textIndex: nil` gives a box. This pins down the documented rule.",
+   "lens": "clarity",
+   "refuted": false,
+   "reason": "The finding holds as a minor issue. It is confirmed at 70aeada, Sources/FlareCore/RenderList.swift:114-120. The public `RenderAddress.init(owner:hosts:layerID:shapeIndex:textIndex:)` does no checking. It accepts both indices set, both nil, or negative values. Its doc comment says only \"An address built from a selection the caller holds\" and never says that exactly one index must be non-nil. The field docs come close (\"nil for text\" and \"nil for shapes\"), but they never state the rule.\n\nThe silent miss is also confirmed. `RenderList.worldBounds(of:)` at Sources/FlareCore/WorldBounds.swift:46-55 matches items by `Set` membership on the whole address, so a malformed address matches no item and the function returns nil. That is the same answer as a text-only or empty selection. The init is public and was added in round 1 for edit-commands callers, so it is part of this feature.\n\nTwo things soften it. A stale but well-formed address also returns nil, so the lookup can't tell a bad address from an empty result in any case. And the per-field docs hint at the rule. The cheap fix still stands: state the exactly-one rule in the init doc, or offer separate `shape(...)` and `text(...)` factory methods."
+  },
+  {
+   "severity": "major",
+   "where": "Sources/FlareCore/RenderList.swift:33,186-201 (RenderList.maxRenderItems, Walker.walk budget guard)",
+   "what": "The fan-out budget added in round 1 also fires on ordinary valid documents, not only on fan-out bombs. `built` counts every top-level layer's leaves twice (`1 + 2 * (shapes + texts)`), so a scene whose first layer holds 25,000 plain shapes (100k points, far under `FlareFormat.maxTotalPoints` = 1,000,000) has spent the 50,000 budget before its next layer is walked. Any later instance, even one of a 1-shape symbol that exists, becomes `.unresolved(symbolID:)`. The same happens to a 300-shape symbol placed 100 times: about 83 instances expand and the rest come out unresolved. As a result the stage silently drops those instances, `hit` and `marquee` can't reach them, `hit` at tolerance 0 no longer agrees with `Layer.hits` (which has no budget), and `SVGExporter` throws `unresolvedSymbol(\"<id that exists>\")` for a file the pre-feature exporter wrote without error.",
+   "why": "Packet journey step 2 and SG-2 say the SVG exporter writes the same bytes as before it moved onto the list. The Screens table gives only one Error state for `renderList`: an instance whose symbol is missing or cyclic. SG-3 says hit agrees with `Layer.hits` at tolerance 0. A valid file that is large but not fan-out breaks all three, and the error it gets names a symbol that is present.",
+   "fix": "Make the budget far larger than any valid file can reach without fan-out. For example, base it on `FlareFormat.maxTotalPoints` (1,000,000 items), so a file under the format's own caps always expands fully. Also give an over-budget instance a cause that differs from a missing symbol: either a separate `RenderNode` case or flag that the exporter turns into a distinct error such as `SVGExportError.tooLarge`, or at least document the over-budget case in the Screens table and the `unresolvedSymbol` doc.",
+   "files": [
+    "Sources/FlareCore/RenderList.swift",
+    "Sources/FlareCore/Export/SVGExporter.swift",
+    "Tests/FlareCoreTests/RenderListTests.swift"
+   ],
+   "test": "RenderListTests.largeValidSceneExpandsEveryInstance: a scene with layer 0 holding 25,000 one-point shapes and layer 1 holding one `Instance(symbolID: \"s\")` of a symbol with one rectangle shape. Expect that `renderList(at: 0, symbols: [s]).items.count == 25_001`, that no node is `.unresolved`, and that `SVGExporter.export` does not throw. Today the instance is `.unresolved(index: 0, symbolID: \"s\")` and the export throws `unresolvedSymbol(\"s\")`.",
+   "lens": "contract",
+   "refuted": false,
+   "reason": "The finding holds at 70aeada1. In Sources/FlareCore/RenderList.swift, Walker.walk adds `1 + 2 * (shapes.count + texts.count)` to `built` for every layer, and adds 1 per instance. Each instance then has to pass `guard built < RenderList.maxRenderItems` (50,000) or it becomes `.unresolved(index:symbolID:)`. Nothing in the format stops a document from reaching that budget legitimately. FlareFormat.swift sets only three limits: maxFileBytes (64 MiB), maxLayersPerScene (10,000) and maxTotalPoints (1,000,000). There is no cap on shapes, so a layer of 25,000 four-point shapes (100k points) is a valid file. For that file `built` reaches 50,001 after the first layer, and every later instance comes out `.unresolved` even when its symbol exists. The budget also counts leaves from expanded symbols, so many instances of a large symbol use it up in the same way. The header says the SVG exporter rejects `.unresolved` with `unresolvedSymbol`, so such a file would throw with an error that names a symbol that is present. The same instances would be missing from the items that hit and marquee read, while `Layer.hits` has no budget, which breaks SG-3 at tolerance 0. The budget is meant to stop fan-out, but it measures the document's total size rather than fan-out. It therefore turns large valid documents into the packet's only Error state (missing or cyclic symbol) and contradicts SG-2's same-bytes promise. I confirmed this by reading the code and did not run a scratch test."
+  },
+  {
+   "severity": "minor",
+   "where": "docs/blueprints/core/features/stage-geometry.md:50-51 (Journey step 6) vs Sources/FlareCore/PathBuilders+Polygon.swift polygon/star",
+   "what": "Journey step 6 says the Rectangle, Ellipse, Polygon and Star builders all give paths 'with bounds equal to the box'. The polygon and star builders follow the packet's pseudocode and SG-7 instead: their vertices sit on the inscribed ellipse with the first at the top centre. So `polygon(in: r, sides: 5)` and a 5-point star do not reach the bottom edge, or the left and right edges, of `r`, and their bounds are smaller than the box. No test checks bounds for polygon or star, so the journey claim is unproven and, for odd counts, false.",
+   "why": "The packet's journey step contradicts its own pseudocode and its SG-7 acceptance test. A reader of the journey, such as the live-stage Polygon tool, would expect the drawn polygon to fill the drag rect.",
+   "fix": "In the feature-done PR, reword journey step 6: 'Rectangle and Ellipse give closed paths whose bounds equal the box (curves are cubics, QB-V1); Polygon and Star put their vertices on the ellipse inscribed in the box, the first at the top centre.'",
+   "files": [
+    "docs/blueprints/core/features/stage-geometry.md"
+   ],
+   "test": "This is a doc-only fix. A check that `PathBuilders.polygon(in: Rect(minX: 0, minY: 0, maxX: 100, maxY: 100), sides: 5).bounds` equals the rect fails today: maxY is about 90.45, not 100. That shows the journey wording is what is wrong.",
+   "lens": "contract",
+   "refuted": false,
+   "reason": "I could not refute it. At 70aeada1, Journey step 6 in stage-geometry.md says the Rectangle, Ellipse, Polygon and Star builders give paths \"with bounds equal to the box\". But in PathBuilders+Polygon.swift, `polygon` and `star` place vertices with `vertex()`, which puts them on the ellipse inscribed in the box, starting at the top centre and running at angle 2\u03c0k/n. Worked example for a 5-gon in a box of height h and width w: the lowest vertex is at cy + (h/2)\u00b7cos(36\u00b0) \u2248 cy + 0.809\u00b7(h/2), short of the bottom edge. The widest vertex is at (w/2)\u00b7sin(72\u00b0) \u2248 0.951\u00b7(w/2) from the centre, short of the left and right edges. The 5-point star's outer vertices are the same five points, so it falls short in the same way. Its bounds are smaller than the box, as the finding says. The code follows the packet's pseudocode and SG-7, so the contradiction is between the journey text and the code. It is a minor contract mismatch, and no bounds test exists for polygon or star."
+  },
+  {
+   "severity": "major",
+   "where": "Sources/FlareCore/RenderList.swift: RenderList.Walker.walk (`built += 1 + 2 * (layer.shapes.count + layer.texts.count)` and the `built < RenderList.maxRenderItems` guard)",
+   "what": "The round-1 fan-out fix counts items and nodes, but not how much each item carries, so it does not bound memory or work. Take a valid small file: symbols s0..s13, each with one layer holding two instances of the next symbol (2^14 leaves), and s14 holding one shape with about 900,000 `points` (under `FlareFormat.maxTotalPoints` = 1,000,000, which counts each stored shape once and ignores instancing). Each expansion of s14 adds only about 4 to `built`, so roughly 10,000 copies are expanded before the 50,000 budget runs out. For a points-based shape, `s.outline` is a new `Path(polyline:)` built per item (a fresh 900k-element array each time, so nothing is shared through copy-on-write). That is about 10,000 x 900k PathElements, hundreds of GB, and the process is killed. With a `path`-based shape the stored array is shared, but every `worldBounds`, `hit` and `marquee` call then runs `outline.transformed(by:)` plus `bounds` on all ~10,000 items (about 9e9 element maps, each allocating a 900k-element temporary). `SVGExporter.export` writes the whole path data for every expanded copy into `lines` (hundreds of GB of strings) before it returns.",
+   "why": "Never crash: an untrusted file must not cause unbounded allocation. The header says a fanning-out file 'cannot build 2^40 items', but the item budget lets one file make about maxRenderItems / 4 copies of the largest symbol, and nothing limits that symbol's size apart from the per-document point total, which instancing gets around. The fix for round-1's robustness finding (fan-out) does not hold for heavy symbols.",
+   "fix": "Weight the budget by geometry. Add each shape's stored point count to `built` (count `outline.elements.count`, or the `pointCount` that `FlareFormat` already uses, for each shape). Size the budget in points, e.g. `maxRenderPoints = FlareFormat.maxTotalPoints` or a few million, so expansion stops once the expanded geometry exceeds it. Also build the polyline outline once per Shape, not once per item, or document that the budget covers it. Add a mutation entry for the weighted increment in Tests/mutations/FlareRenderList.json.",
+   "files": [
+    "Sources/FlareCore/RenderList.swift",
+    "Tests/FlareCoreTests/RenderListTests.swift",
+    "Tests/mutations/FlareRenderList.json"
+   ],
+   "test": "RenderListTests.heavyFanOutIsBounded: 14 symbols, each with one layer holding two instances of the next, and a last symbol with one shape of 200,000 points. `scene.renderList(at: 0, symbols:)` must return a list whose total outline element count over items is at most the new point budget and that holds `.unresolved` nodes. `SVGExporter.export` on it must throw `SVGExportError.unresolvedSymbol`. Today the list builds about 12,000 items \u00d7 200k points (about 2.4e9 elements), so the test runs out of memory or times out.",
+   "lens": "robustness",
+   "refuted": false,
+   "reason": "I could not refute this finding. I read the code at 70aeada1 but did not write a scratch test, so the memory and time figures below are the critic's estimates, not measurements.\n\nThe code matches the critic's description:\n- In RenderList.swift, the walker adds `1 + 2*(shapes+texts)` to `built` (line 186) and checks it against `maxRenderItems = 50_000` (line 197). Nothing in that count depends on how many points a shape has.\n- `Shape.outline` (Path.swift:191) is `path ?? Path(polyline: points, closed: closed)`. For a shape stored as `points`, every expanded instance builds a new array of path elements, so the copies share no storage.\n- `FlareFormat.maxTotalPoints` counts each stored shape once and ignores instancing.\n\nSo a valid file can nest symbols two instances deep at each level and put about 900k points in the deepest one. The item budget then lets roughly 10k copies of that heavy shape expand, one 900k-element outline each, which is far more memory than any machine has. The per-shape item count limits fan-out but not the size of each item, so the round-1 fan-out fix does not hold for heavy symbols.\n\nA fix would charge the budget per point (or per path element) instead of per item."
+  },
+  {
+   "severity": "minor",
+   "where": "Sources/FlareCore/HitTest.swift: Path.isWithin(_:of:flatness:) (called by RenderItem.isNear in HitQuery.swift)",
+   "what": "`isWithin` turns the entire outline into `[[Point]]` with `flattened(tolerance:)` and only then checks distances. `Path.maxFlattenSegments` caps segments per element (4096), not per path. A file shape of about 333,000 cubics (within `maxTotalPoints`) with large coordinates, or placed by an instance or layer at a large scale, flattened at the hit query's small scene-space flatness (`max(tolerance / 8, 1e-3)`, applied after `transformed(by: matrix)`) reaches the cap on every element: 333k x 4096 points, about 1.4e9 Points or 22 GB, on a single pointer move once the point is inside the item's widened box.",
+   "why": "Never crash: unbounded allocation from file values. The new `RenderList.hit` tolerance path flattens in scene space, so a scale taken from the file directly multiplies the segment count. The per-element cap says it exists 'so a huge curve or a tiny tolerance cannot exhaust memory', but the total across elements is not bounded.",
+   "fix": "Make `isWithin` stream: flatten one element at a time, check each segment as it is produced, and return early, never building the whole polyline list. Or give `flattened` a total segment cap (e.g. `maxFlattenSegments * 64`) that throws `GeometryError.invalidTolerance` (or a new case) when exceeded, which `isWithin` already treats as a miss.",
+   "files": [
+    "Sources/FlareCore/HitTest.swift",
+    "Sources/FlareCore/Path.swift",
+    "Tests/FlareCoreTests/HitQueryTests.swift"
+   ],
+   "test": "HitQueryTests.hugeScaledOutlineHitStaysBounded: a shape of 300,000 cubics spanning 0...1e6, with a stroke, under a layer scale of 1,000. Call `list.hit(pointOnOutline, tolerance: 0.01)` and assert that it returns within a time and memory budget (for example under 2 s). Today `flattened` tries to allocate about 1.2e9 points and the process is killed.",
+   "lens": "robustness",
+   "refuted": false,
+   "reason": "I could not refute this finding; the code at 70aeada1 shows it as described. RenderItem.isNear in Sources/FlareCore/HitQuery.swift (line 47) calls `outline.transformed(by: matrix).isWithin(reach, of: point, flatness: max(tolerance / 8, 1e-3))`. That flattening runs in scene space, after the file's instance and layer transforms. Path.isWithin in Sources/FlareCore/HitTest.swift (lines 55-61) builds the full `[[Point]]` with `flattened(tolerance:)` before it checks any distance. Path.flattened in Path.swift caps only each element, through `segmentCount` and `maxFlattenSegments = 4096`, and has no limit across the whole path. Its result array grows by n points for every quad or cubic. The only file limit is FlareFormat.maxTotalPoints = 1_000_000 control points, which allows about 333k cubics. Each cubic reaches the 4096 cap once sqrt(0.75*m/1e-3) > 4096, that is once its second difference m in scene units is above about 22,000. Large coordinates or a large scale on the instance or layer give that. The flattened output is then about 1.36e9 Points (16 bytes each, about 22 GB). It is built on any hit query whose point falls inside the item's widened worldBounds, so a crafted file can exhaust memory, which breaks the \"never crash\" rule. The check-as-you-go version that would avoid this does not exist. isWithin keeps no running count and does not stream segments. This scene-space hit path is part of this feature (RenderList.hit's tolerance branch), so the finding is in scope. It also differs from round 1's fixes."
+  },
+  {
+   "severity": "minor",
+   "where": "Sources/FlareCore/RenderList.swift:205 (Walker.walk, `.instance(index: i, inst, symbolID: symbol.id, frame: local, children: inner)`)",
+   "what": "The public `frame` on `RenderNode.instance` is documented as the symbol frame, but no test checks it. I changed `frame: local` to `frame: frame` (the host frame) and the whole FlareCoreTests target still passed. The only assertion on it is in treeKeepsLayersInstancesAndUnresolved, `case .instance(0, _, \"outer\", 0, let inner)`, and there the host frame and the symbol frame are both 0. The walk into the children is checked separately: changing `walk(symbol.layers, frame: local` is caught by instanceDrawsSymbolLayersAtTheSymbolFrame.",
+   "why": "Lens: a test that still passes with the behavior removed. An exporter that keeps groups, which is what `nodes` is for, would read the wrong symbol frame from the node, and nothing would catch it. This field is also a new invariant with no Tests/mutations entry.",
+   "fix": "In RenderListTests, build the instanceDrawsSymbolLayersAtTheSymbolFrame setup: symbol with durationFrames 4, instance with firstFrame 1 and loop .playOnce, scene frame 1.5. Assert that the host layer's child matches `.instance(0, _, \"sym\", 2, _)`. Add a FlareRenderList.json entry that replaces `symbolID: symbol.id, frame: local, children: inner` with `symbolID: symbol.id, frame: frame, children: inner`, with the note \"render list instance node reports the host frame instead of the symbol frame\".",
+   "files": [
+    "Tests/FlareCoreTests/RenderListTests.swift",
+    "Tests/mutations/FlareRenderList.json"
+   ],
+   "test": "renderListInstanceNodeCarriesSymbolFrame: at scene frame 1.5, an instance with firstFrame 1 and playOnce of a 4-frame symbol gives a node whose frame is 2. It fails on the mutant (frame 1.5).",
+   "lens": "tests",
+   "refuted": false,
+   "reason": "I couldn't refute this; the finding holds at 70aeada1. At Sources/FlareCore/RenderList.swift:205, `.instance(..., frame: local, ...)` is checked by only one assertion: `case .instance(0, _, \"outer\", 0, let inner)` in Tests/FlareCoreTests/RenderListTests.swift:100. Both the host frame and the symbol frame are 0 there, so swapping `local` for `frame` would still pass. The other matches on `.instance` (lines 152, 162, 254) all ignore the frame with `_`. Tests/mutations/FlareRenderList.json has no entry about frame. I did not rerun the mutation myself, but the code and tests show this mutant would survive."
+  },
+  {
+   "severity": "minor",
+   "where": "Sources/FlareCore/WorldBounds.swift:33 (`Swift.max(width, 0)`); Sources/FlareCore/HitQuery.swift:44 (`width.isFinite, width > 0`)",
+   "what": "Both negative-stroke-width clamps are untested and have no mutation entry. I made two mutants: `Swift.max(width, 0) * matrix.maxAxisScale` became `width * matrix.maxAxisScale`, and `width.isFinite, width > 0` became `width.isFinite` in isNear. The whole FlareCoreTests target passed with each one. Without the first clamp, a stroke width of -20 on a 0...10 square gives an inverted box (minX 10, maxX 0). The hit prefilter then rejects (5, 5), though `Layer.hits` accepts it, and marquee never picks the square. Without the second clamp, a negative width cuts the tolerance reach.",
+   "why": "Lens: an invariant with no test and no Tests/mutations entry. RenderList is public over any in-memory Scene, not only validated documents. seededScenesNeverTrap already builds stroke width -3 but only asserts that nothing traps. The documented promise that the prefilter never changes the exact answer (HitQuery.swift header) breaks without the clamp.",
+   "fix": "In WorldBoundsTests, add `#expect(item(rectPath(10, 10), stroke: Stroke(width: -20)).worldBounds == Rect(minX: 0, minY: 0, maxX: 10, maxY: 10))`. In HitQueryTests, add a layer whose square has Stroke(width: -20), and assert `hit(Point(x: 5, y: 5)) != nil` and `hit(Point(x: 12, y: 5), tolerance: 3) != nil`. Add a FlareWorldBounds.json entry that drops `Swift.max(width, 0)`, and a FlareHitQuery.json entry that drops `, width > 0` in isNear.",
+   "files": [
+    "Tests/FlareCoreTests/WorldBoundsTests.swift",
+    "Tests/FlareCoreTests/HitQueryTests.swift",
+    "Tests/mutations/FlareWorldBounds.json",
+    "Tests/mutations/FlareHitQuery.json"
+   ],
+   "test": "negativeStrokeWidthIsNoStroke: a 10x10 square with Stroke(width: -20) has worldBounds equal to its outline, and hit at its centre returns it. Both fail under the mutants: the box comes out inverted and the hit is nil.",
+   "lens": "tests",
+   "refuted": false,
+   "reason": "The finding holds at 70aeada1. WorldBounds.swift:33 clamps with `Swift.max(width, 0)`, but the only FlareWorldBounds mutation entry targets the maxAxisScale factor, and it keeps the clamp in its replacement. HitQuery.swift:44 has `width > 0` in isNear, and FlareHitQuery.json has no entry that mentions width. No feature test builds a negative stroke width and then checks worldBounds, the hit prefilter or isNear. The only negative widths in Tests are in the stroke/color adversarial tests and StrokeTests, plus the trap-only seeded scene the critic named. So neither clamp is pinned by a test or a mutation entry. It is minor, and the fix is a test plus a mutation entry."
+  },
+  {
+   "severity": "minor",
+   "where": "Sources/FlareCore/RenderList.swift: RenderList.Walker.walk (`built += 1 + 2 * (layer.shapes.count + layer.texts.count)` and `guard built < RenderList.maxRenderItems, ...`); Sources/FlareCore/Export/SVGExporter.swift `case .unresolved`",
+   "what": "The fan-out budget counts every top-level layer, shape and text, not only what instance expansion builds. A scene's own content uses up the 50,000 budget, and after that every instance, even a direct one with no fan-out, becomes `.unresolved`. SVGExporter then throws `unresolvedSymbol(<id>)` for a symbol that exists. Example: a scene with one layer of 25,000 shapes, followed by one instance of a one-shape symbol, gives built = 1 + 50,000 before the instance. The file passes FlareFormat's limits (maxLayersPerScene 10,000, maxTotalPoints 1,000,000) and exported before this feature, because the old exporter resolved each instance directly. Now its export fails.",
+   "why": "Lens: format and export changes keep earlier files valid. A v1 file that loaded and exported at base 3339b904 now fails to export, and the error names a symbol that is present. The round-1 robustness fix (#288) was meant only to stop exponential instance fan-out, not to cap flat scenes that the format accepts.",
+   "fix": "Count only nodes and items built under instances toward the expansion budget. One way is to record `built` on entry to the top-level walk and test `built - topLevelBuilt < maxRenderItems`. Another is to keep a separate `expanded` counter that only increments inside the recursive `walk` started from an instance. Either way, flat scene content never turns an instance into `.unresolved`.",
+   "files": [
+    "Sources/FlareCore/RenderList.swift"
+   ],
+   "test": "RenderListTests (or SVGRenderListTests): a scene whose one layer holds 25,000 single-segment shapes followed by one instance of a symbol with one shape. Expect `scene.renderList(at: 0, symbols:)` to contain an `.instance` node, not `.unresolved`, and `SVGExporter` to export it without throwing `unresolvedSymbol`. This fails on 70aeada1.",
+   "lens": "compat",
+   "refuted": false,
+   "reason": "Confirmed from the code at 70aeada1. In RenderList.swift, the Walker adds `1 + 2*(shapes+texts)` to `built` for every layer, including the scene's top-level layers (line 186). It then checks `built < RenderList.maxRenderItems` (50_000) before expanding each instance (lines 196-199). When that check fails, the instance becomes `.unresolved`, and SVGExporter.swift:88-89 throws `unresolvedSymbol(symbolID)`. FlareFormat has only three limits (maxFileBytes 64MB, maxLayersPerScene 10_000, maxTotalPoints 1_000_000) and none of them caps shapes per layer. So the reported file is valid: one layer with 25,000 four-point shapes (100k points) plus a single instance of a one-shape symbol. For that file, built = 50,001 before the instance, the instance is marked unresolved, and export throws. At base 3339b904, SVGExporter.render resolved each instance directly with `instance.resolve` and had no item cap (lines 77-82), so the same file exported. This is a regression in a feature file, and the error names a symbol that exists."
+  }
+ ],
+ "refuted": 0
+}

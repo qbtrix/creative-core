@@ -4,7 +4,7 @@ Issue: #267 · Packet: docs/blueprints/core/features/stage-geometry.md
 Run: act-1a13b145104-0zef · Session: session_01HWAU426RJRzBTT7hAE7fER · Started: 2026-10-14T15:43Z
 Stage: 4 round 2
 Base: 70aeada1d70ab8b0a37028ef7f08c543a77ce21b (round 2; feature's first base 3339b904450d73eeae5dc404593972b82f24f46e)
-Next: collect round 2 panel (wf_31991e5b-233); clean -> round 3 on the same panel; findings -> fix batches.
+Next: wait for r2-b1 and r2-b2 (wf_c62bce05-41d) to merge; then round 3 on the new dev with the same six lenses (round 4 is the last allowed).
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -24,7 +24,7 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
 |---|---|---|---|---|---|---|---|---|
 | 1 | 1817e03 | FAIL only CoreRaster timing flake under load (passes alone) | 38/38 | – | clarity, contract, robustness, tests, design, compat | 18 confirmed (6 major: invalidSides doc, render-list fan-out unbounded, hit axis-scale and rule untested, hit scale and stroke-reach duplicated) + QB-L5 miss; full list rounds/round-1-panel.json | r1-b1 #284 (hit prefilter + SG-8: hit 2.3 ms alone, 3.4 ms under ci), r1-b2 (render list), r1-b3 (geometry/builders/marquee), r1-b4 (world-bounds test, layer docs); hit findings 1,7,8,13,14 r1-b5 #287; merged #284 #287 #288 #289 #290 | no |
-| 2 | 70aeada | PASS (733 tests) | 91/91 | – | clarity, contract, robustness, tests, design, compat | panel running (wf_31991e5b-233) | – | – |
+| 2 | 70aeada | PASS (733 tests) | 91/91 | – | clarity, contract, robustness, tests, design, compat | 11 confirmed (3 major: fan-out budget fires on valid large scenes, is not geometry-weighted, and reports a present symbol as unresolved); full list rounds/round-2-panel.json | r2-b1 (budget redesign, render list + SVG), r2-b2 (docs, streaming isWithin, negative-stroke tests) | no |
 
 ## Decisions
 - Waves as the packet sets them: a SG-1; b SG-2, SG-3, SG-5, SG-6; c SG-4, SG-7; d SG-8.
@@ -34,6 +34,9 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 - The GitHub MCP tool appends an attribution footer to PR bodies; the lane strips it from squash commits (checked 992ba1b). Builders are told to strip it; checked again in the critic round.
 - QB-L5: SG-8's builder measured hit at 7-9 ms alone, 16.6 ms under scripts/ci (budget 10 ms). Budget kept; fix is a world-bounds prefilter in HitQuery.swift, shipped in one PR with SG-8's tests (branch sg/sg8 95194fb).
 - Critic lenses fixed for every round: clarity, contract, robustness, tests, design, compat (no undo lens: the feature adds no commands).
+- Round 2 budget redesign (lead decision): the expansion budget counts only instance-expanded content, weighted by stored points; RenderList gains an isTruncated flag and SVG export throws a distinct error for a truncated list, so unresolvedSymbol keeps meaning a missing/cyclic/too-deep symbol.
+- Packet journey step 6 says polygon and star bounds equal the box; they sit on the inscribed ellipse per SG-7. Reword in the feature-done PR.
+- The lead record lives in its own worktree (scratchpad/lead): agents twice left the main checkout detached.
 - SG-8 ships without `feature-done`: lead.md runs the Anatomy loop before finish, and a feature-done merge dispatches the closing CI. The label goes on the feature's last PR (last fix batch, or the packet status line if the rounds are clean).
 - Builder branches are `sg/<id>`: a ref `lead/stage-geometry` exists, so `lead/stage-geometry/<id>` cannot be created.
 - Baseline scripts/ci on 3339b90: CI: PASS (635 tests).
