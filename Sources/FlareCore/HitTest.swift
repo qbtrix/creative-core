@@ -43,9 +43,17 @@ extension Shape {
     /// Whether `point` lies in the fill under `rule` or on the stroke.
     public func hits(_ point: Point, rule: FillRule) -> Bool {
         if contains(point, rule: rule) { return true }
-        guard let stroke, stroke.width > 0, stroke.width.isFinite,
-              let lines = try? outline.flattened(tolerance: max(stroke.width / 8, 1e-3)) else { return false }
-        let reach = stroke.width / 2
+        guard let stroke, stroke.width > 0, stroke.width.isFinite else { return false }
+        return outline.isWithin(stroke.width / 2, of: point, flatness: max(stroke.width / 8, 1e-3))
+    }
+}
+
+extension Path {
+    /// Whether `point` is within `reach` of the outline flattened to
+    /// `flatness`, open subpaths included. Shared by `Shape.hits` and
+    /// `RenderList.hit`; a path that can't be flattened is never within reach.
+    func isWithin(_ reach: Double, of point: Point, flatness: Double) -> Bool {
+        guard let lines = try? flattened(tolerance: flatness) else { return false }
         for line in lines {
             for (a, b) in zip(line, line.dropFirst()) where distance(point, a, b) <= reach { return true }
         }
@@ -76,8 +84,8 @@ extension Layer {
     }
 }
 
-/// Distance from `p` to the segment from `a` to `b`. Shared with `RenderList.hit`.
-func distance(_ p: Point, _ a: Point, _ b: Point) -> Double {
+/// Distance from `p` to the segment from `a` to `b`.
+private func distance(_ p: Point, _ a: Point, _ b: Point) -> Double {
     let dx = b.x - a.x, dy = b.y - a.y
     let lengthSquared = dx * dx + dy * dy
     let t = lengthSquared > 0 ? min(max(((p.x - a.x) * dx + (p.y - a.y) * dy) / lengthSquared, 0), 1) : 0
