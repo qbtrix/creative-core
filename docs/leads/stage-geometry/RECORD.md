@@ -4,7 +4,7 @@ Issue: #267 · Packet: docs/blueprints/core/features/stage-geometry.md
 Run: act-1a13b145104-0zef · Session: session_01HWAU426RJRzBTT7hAE7fER · Started: 2026-10-14T15:43Z
 Stage: 4 round 1
 Base: 1817e035cbfd08ddeeb476b185547503577044fe (wave d; feature's first base 3339b904450d73eeae5dc404593972b82f24f46e)
-Next: once #284 (r1-b1) merges, run r1-b5 (hit-query findings 1, 7, 8, 13, 14 and the HitQuery mutation entries in rounds/round-1-panel.json) on the new dev; wait for r1-b2..b4 (wf_3a1f1967-58a) to merge; then round 2.
+Next: wait for r1-b2..b4 (wf_3a1f1967-58a) and r1-b5 (wf_6fc3d441-c0f, base 478aa93) to merge; then round 2 on the new origin/dev with the same six lenses.
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -16,7 +16,7 @@ Next: once #284 (r1-b1) merges, run r1-b5 (hit-query findings 1, 7, 8, 13, 14 an
 | SG-6 | b | PathBuilders rectangle, ellipse; GeometryError.nonFinite/.invalidSides | PathBuilders.swift, Geometry.swift | PathBuilderTests | FlarePathBuilders.json | #278 | merged 992ba1b |
 | SG-4 | c | RenderList.marquee in paint order (closes #214) | Marquee.swift | MarqueeTests | FlareMarquee.json | #280 | merged 8fa8cc6 |
 | SG-7 | c | PathBuilders polygon, star (closes #182) | PathBuilders+Polygon.swift | PolygonStarBuilderTests | FlarePolygonStar.json | #281 | merged 1817e03 |
-| SG-8 | d | QB-L5/L6 stage budgets (feature-done moved to the last PR) | StageBudgetTests.swift | StageBudgetTests | – | – | #284 | lands with r1-b1 (hit prefilter) |
+| SG-8 | d | QB-L5/L6 stage budgets (feature-done moved to the last PR) | StageBudgetTests.swift | StageBudgetTests | – | – | #284 | merged 478aa93 |
 
 Acceptance tests and quality bars: the packet's "Acceptance test per task" and "Quality tests" tables, unchanged.
 
