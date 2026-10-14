@@ -1,6 +1,6 @@
 // CommandRegistryTests.swift: every built-in command round-trips through the
 // {"id", "params"} envelope and behaves the same after decoding (the ids are
-// checked against a hand-written list of all 36), and encode only their
+// checked against a hand-written list of all 37), and encode only their
 // params, so a command decoded after execute is fresh; unknown ids
 // and malformed envelopes throw a CommandError, never crash (seeded fuzz).
 import FlareCore
@@ -17,7 +17,7 @@ import Testing
         "keyframe.move", "keyframe.remove", "keyframe.set", "keyframe.setEasing", "keyframe.shift",
         "guide.add", "guide.move", "guide.remove",
         "label.remove", "label.set",
-        "layer.add", "layer.remove", "layer.rename", "layer.reorder", "layer.setFlags",
+        "layer.add", "layer.duplicate", "layer.remove", "layer.rename", "layer.reorder", "layer.setFlags",
         "scene.add", "scene.remove", "scene.timing",
         "shape.add", "shape.remove", "shape.setFill", "shape.setPath", "shape.setStroke", "shape.translate",
         "swatch.add", "swatch.remove", "swatch.rename", "swatch.setColor",
@@ -67,6 +67,7 @@ import Testing
                      shape: Shape(points: [Point(x: 1, y: 2), Point(x: 3, y: 4)], closed: false)),
             ReorderLayer(owner: .scene(s), layerID: "bg", toIndex: 1),
             SetLayerFlags(owner: .scene(s), layerID: "ball", isVisible: false, isLocked: true),
+            DuplicateLayer(owner: .scene(s), layerID: "ball"),
             RemoveShape(owner: .scene(s), layerID: "ball", index: 0),
             SetShapeFill(owner: .scene(s), layerID: "ball", index: 0, fill: .solid(Color(r: 0, g: 0, b: 1))),
             SetShapeStroke(owner: .scene(s), layerID: "ball", index: 0, stroke: Stroke(width: 2, cap: .round)),
@@ -86,11 +87,12 @@ import Testing
             RenameLayer(owner: sym, layerID: "core", name: "Heart"),
             ReorderLayer(owner: sym, layerID: "glow", toIndex: 1),
             SetLayerFlags(owner: sym, layerID: "core", isLocked: true),
+            DuplicateLayer(owner: sym, layerID: "core"),
         ] + ShapeTextOwnerTests.edits(sym, layerID: "core")
     }
 
     @Test func everyBuiltInCommandIsRegistered() {
-        #expect(Self.expectedIDs.count == 36)
+        #expect(Self.expectedIDs.count == 37)
         #expect(Set(Self.registry.ids) == Self.expectedIDs)
     }
 

@@ -1,0 +1,23 @@
+[
+  {
+    "note": "duplicate layer fresh id checks only once, so a third copy reuses an existing id",
+    "file": "Sources/FlareCore/LayerCommands.swift",
+    "anchor": "        while used.contains(candidate) {\n",
+    "replacement": "        if used.contains(candidate) {\n",
+    "filter": "DuplicateLayerTests"
+  },
+  {
+    "note": "duplicate layer inserts the copy below the layer instead of at index + 1",
+    "file": "Sources/FlareCore/LayerCommands.swift",
+    "anchor": "            layers.insert(copy, at: i + 1)\n",
+    "replacement": "            layers.insert(copy, at: i)\n",
+    "filter": "DuplicateLayerTests"
+  },
+  {
+    "note": "duplicate layer undo skips its id check and removes whatever sits at index + 1",
+    "file": "Sources/FlareCore/LayerCommands.swift",
+    "anchor": "guard layers.indices.contains(inserted.index), layers[inserted.index].id == inserted.id else {",
+    "replacement": "guard layers.indices.contains(inserted.index) else {",
+    "filter": "DuplicateLayerTests"
+  }
+]

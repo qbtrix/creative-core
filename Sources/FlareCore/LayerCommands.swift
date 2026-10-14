@@ -1,4 +1,4 @@
-// LayerCommands.swift: layer state and order beyond add/remove/rename. Each
+// LayerCommands.swift: layer state, order and duplication beyond add/remove/rename. Each
 // command validates its params, throws a CommandError instead of crashing, and
 // records just enough in execute() for undo() to restore the document exactly.
 #if canImport(FoundationEssentials)
@@ -7,9 +7,9 @@ import FoundationEssentials
 import Foundation
 #endif
 
-/// The layer flag and order commands.
+/// The layer flag, order and duplicate commands.
 public enum LayerCommands {
-    public static let all: [any Command.Type] = [SetLayerFlags.self, ReorderLayer.self]
+    public static let all: [any Command.Type] = [SetLayerFlags.self, ReorderLayer.self, DuplicateLayer.self]
 }
 
 /// Sets a layer's visibility and lock flags. A nil flag is left unchanged.
@@ -113,5 +113,61 @@ public struct ReorderLayer: LayerCommand {
             layers.insert(layers.remove(at: i), at: to)
             return i
         }
+    }
+}
+
+/// Inserts a copy of a layer just above it (at its index + 1). The copy equals
+/// the layer except its id, the first of "<id>-copy", "<id>-copy-2", ... that no
+/// layer of the owner uses, and its name, "<name> copy". Undo removes the copy
+/// only if it still sits at index + 1. A LayerCommand for `layerID`, though it
+/// inserts the copy: the scoped check validates that layer, which the copy
+/// equals but for its fresh id, and checks the limits because the list grew.
+public struct DuplicateLayer: LayerCommand {
+    public static let id = "layer.duplicate"
+    public var label: String { "Duplicate Layer" }
+    public var owner: LayerOwner
+    public var layerID: String
+    var inserted: (index: Int, id: String)?
+
+    public init(owner: LayerOwner, layerID: String) {
+        self.owner = owner
+        self.layerID = layerID
+    }
+
+    public init(from decoder: any Decoder) throws { (owner, layerID) = try Self.decodeAddress(from: decoder) }
+    public func encode(to encoder: any Encoder) throws { try encodeAddress(to: encoder) }
+
+    public mutating func execute(_ document: inout Document) throws {
+        let id = layerID
+        inserted = try document.withLayers(owner) { layers in
+            guard let i = layers.firstIndex(where: { $0.id == id }) else { throw CommandError.layerNotFound(id) }
+            var copy = layers[i]
+            copy.id = Self.freshID(for: id, in: layers)
+            copy.name += " copy"
+            layers.insert(copy, at: i + 1)
+            return (i + 1, copy.id)
+        }
+    }
+
+    public func undo(_ document: inout Document) throws {
+        guard let inserted else { throw CommandError.notExecuted }
+        try document.withLayers(owner) { layers in
+            guard layers.indices.contains(inserted.index), layers[inserted.index].id == inserted.id else {
+                throw CommandError.layerNotFound(inserted.id)
+            }
+            layers.remove(at: inserted.index)
+        }
+    }
+
+    /// "<id>-copy", then "<id>-copy-2", "-copy-3", ...: the first no layer uses.
+    /// At most `layers.count + 1` candidates, so the suffix cannot overflow.
+    static func freshID(for id: String, in layers: [Layer]) -> String {
+        let used = Set(layers.map(\.id))
+        var candidate = "\(id)-copy", n = 1
+        while used.contains(candidate) {
+            n += 1
+            candidate = "\(id)-copy-\(n)"
+        }
+        return candidate
     }
 }
