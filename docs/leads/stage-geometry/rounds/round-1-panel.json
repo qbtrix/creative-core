@@ -1,0 +1,278 @@
+{
+ "clean": false,
+ "confirmed": [
+  {
+   "severity": "major",
+   "where": "Sources/FlareCore/Geometry.swift:32 (GeometryError.invalidSides); Sources/FlareCore/PathBuilders+Polygon.swift:427,448-449",
+   "what": "The doc comment on `GeometryError.invalidSides` says \"A polygon or star with fewer than 3 sides or points\". The builders also throw it when the count is above `PathBuilders.maxSides` (1,000) and when `star`'s finite `innerRatio` is outside (0, 1]. So `star(in:points: 5, innerRatio: 1.5)` throws a case whose name and doc both blame the side count.",
+   "why": "Lens: an error case must say what went wrong and how to fix it. A caller that catches `.invalidSides` and tells the user \"use at least 3 sides\" gives the wrong advice for a 1,001-point star or a ratio of 0 or 1.5. The packet's Screens table also lists `invalidSides` only for \"a polygon with fewer than 3 sides\".",
+   "fix": "Change the `invalidSides` doc comment to: \"A polygon side count or star point count outside 3...PathBuilders.maxSides, or a star innerRatio outside (0, 1].\" Optionally rename the case to `invalidShapeParameter` later, but keep the contract name for now.",
+   "files": [
+    "Sources/FlareCore/Geometry.swift"
+   ],
+   "test": "This is doc-only, so no behavioral test fails. A rubric or doc check would compare each case's doc with its throw sites: `star(in: r, points: 5, innerRatio: 1.5)` and `polygon(in: r, sides: 1001)` both throw `.invalidSides`, which the current doc does not cover.",
+   "lens": "clarity",
+   "refuted": false,
+   "reason": "Confirmed at 1817e035. In Sources/FlareCore/Geometry.swift, the doc comment on GeometryError.invalidSides reads \"A polygon or star with fewer than 3 sides or points.\" In PathBuilders+Polygon.swift, line 39 throws .invalidSides when sides > maxSides (1,000), line 60 throws it when points > maxSides, and line 61 throws it when a finite innerRatio is outside (0, 1]. So star(points: 5, innerRatio: 1.5) throws a case whose name and doc point at the count. The builder doc comments (lines 34-35, 52-55) do describe the extra cases, but the error type's own doc does not. A caller that handles only the enum gets misleading guidance. The fix is to widen the doc comment, or to add a separate invalidRatio case."
+  },
+  {
+   "severity": "minor",
+   "where": "Sources/FlareCore/HitQuery.swift:164-168 (RenderList.hit)",
+   "what": "`tolerance` has no unit. It is in scene units (it is compared with distances after `outline.transformed(by: matrix)`), not screen points, so a caller at 400% zoom has to pass slop / zoom. The doc says neither. The `rule` parameter is not documented either: a new caller can't tell which rule to pass, given that shapes carry no fill rule of their own.",
+   "why": "Lens: a name that hides its unit. The packet calls this a \"zoom tolerance\", and a reader will likely pass a fixed 4 pt screen slop that grows or shrinks with zoom.",
+   "fix": "Extend the doc comment: \"`tolerance` is in scene units: pass the pointer slop in screen points divided by the zoom. `rule` is the fill rule used for the inside test (the exporters fill with nonzero).\"",
+   "files": [
+    "Sources/FlareCore/HitQuery.swift"
+   ],
+   "test": "Doc-only: a doc-coverage or rubric check of `hit`'s parameters. No runtime test changes.",
+   "lens": "clarity",
+   "refuted": false,
+   "reason": "The finding holds, but the line numbers are wrong. At 1817e035 the code is Sources/FlareCore/HitQuery.swift:16-20, not 164-168. The doc says `point` is in scene space. It never says `tolerance` is too, but it is: `isNear` adds it to the scaled half stroke and compares against `outline.transformed(by: matrix)` in scene space. The file header at line 7 calls it \"the zoom slop of a pointer\", which invites passing a fixed screen-point slop rather than slop / zoom. The `rule: FillRule = .nonZero` parameter has no doc at all, though shapes carry no fill rule of their own. This is a minor documentation gap in the feature's own file."
+  },
+  {
+   "severity": "minor",
+   "where": "Sources/FlareCore/RenderList.swift:21,29-33,51-75",
+   "what": "Several new public symbols have no `///` doc comment. These are the `RenderList`, `RenderNode`, `RenderItem` and `RenderAddress` types themselves, `RenderNode.layer` and `.text`, every stored property of `RenderLayer` and `InstanceHost`, and `RenderItem.isText`. The properties of `RenderItem` and `RenderAddress` use trailing `//` comments, which do not show in Quick Help or generated docs. `RenderNode`'s `index:` associated values also don't say which array they index (`layer.shapes`, `layer.texts` or `layer.instances`).",
+   "why": "Lens: a public symbol without a doc comment. These are the types Flare's live-stage reads first, and a caller can't tell what `shapeIndex` or `.instance(index:)` points into without reading the walker.",
+   "fix": "Turn the trailing `//` comments into `///` lines above each property. Add a one-line `///` to each type and to the `.layer` and `.text` cases, and say on each `index:` that it is the position in the layer's `shapes`, `texts` or `instances`.",
+   "files": [
+    "Sources/FlareCore/RenderList.swift"
+   ],
+   "test": "Doc-only: a symbol-graph or doc-coverage check over the public FlareCore symbols.",
+   "lens": "clarity",
+   "refuted": false,
+   "reason": "I confirmed this at 1817e035, Sources/FlareCore/RenderList.swift. RenderList (line 21), RenderNode (29) and RenderItem (51) have no `///` comment, and the file's header block is a `//` comment, so it does not count. RenderNode.layer (30) and .text (33) are undocumented. None of the stored properties of RenderLayer (43-48) or InstanceHost (73-74) has a doc comment. RenderItem.isText (59) has no comment at all. The properties of RenderItem and RenderAddress (52-58, 64-68) use trailing `//` comments, which Quick Help does not show. The `index:` associated values on shape, text, instance and unresolved don't say which array they index. RenderAddress and InstanceHost do have type-level `///`, so they are the only accurate exceptions to the list. The finding stands as minor."
+  },
+  {
+   "severity": "minor",
+   "where": "Sources/FlareCore/RenderList.swift:51,63,72 (RenderItem, RenderAddress, InstanceHost)",
+   "what": "These public structs have only the implicit internal memberwise init, and `RenderAddress` is not `Codable`. Outside the module, a caller can get an address only from `hit` or `marquee` on the current list. It can't build one from a selection it holds, such as the edit-commands' layerID and shapeIndex, to call `worldBounds(of:)`, and it can't save one. `WorldBoundsTests` builds `RenderAddress(owner:hosts:layerID:shapeIndex:textIndex:)` only because it uses `@testable import`.",
+   "why": "Lens: the public API as a new caller would use it. The packet example `worldBounds(of addresses: [RenderAddress])` can't be fed a hand-built address from the app repo, where it won't compile.",
+   "fix": "Add `public init(owner:hosts:layerID:shapeIndex:textIndex:)` to `RenderAddress` and `public init(layerID:instanceIndex:)` to `InstanceHost`.",
+   "files": [
+    "Sources/FlareCore/RenderList.swift"
+   ],
+   "test": "A test without `@testable` (plain `import FlareCore`) that builds `RenderAddress(owner: .scene(\"s\"), hosts: [], layerID: \"l\", shapeIndex: 0, textIndex: nil)` and passes it to `worldBounds(of:)` does not compile before the fix.",
+   "lens": "clarity",
+   "refuted": false,
+   "reason": "I confirmed this at 1817e035. In Sources/FlareCore/RenderList.swift, RenderItem (line 51), RenderAddress (line 63) and InstanceHost (line 72) are public structs that conform only to Sendable and Hashable. They have no explicit public init, and no extension anywhere under Sources declares one. Swift's memberwise init is internal, so code outside the module can't build a RenderAddress or an InstanceHost. It can only get an address from hit or marquee on the current list. RenderAddress is also not Codable. The public init(owner:...) inits that grep turns up all belong to commands, not to these types. This is a real gap in the public API, and it is minor."
+  },
+  {
+   "severity": "minor",
+   "where": "Tests/FlareCoreTests/RenderListTests.swift:290 seededScenesNeverTrap",
+   "what": "The packet's never-crash quality test checks less than it claims. The Quality tests table says '1,000 seeded random scenes (random NaN transforms, missing symbols, cycles) build a list, hit and bound without trapping', with `RenderListTests.seededScenesNeverTrap` as the named test. That test only builds the lists and compares item and leaf counts. It never calls `hit`, `marquee`, `worldBounds` or `worldBounds(of:)` on the NaN, infinite or zero-scale lists. Its random shapes are also single-point outlines, so the flattening and stroke-distance paths in `HitQuery.isNear` never run on non-finite matrices.",
+   "why": "Quality row 'Never crash' in docs/blueprints/core/features/stage-geometry.md: hit and bounds on untrusted (NaN or cyclic) scenes are never exercised, so a later trap in `Matrix.inverted`, `Path.flattened` or the stroke reach on a NaN matrix would not be caught by the test the packet names.",
+   "fix": "Inside the 1,000-scene loop in seededScenesNeverTrap, also call `list.hit(p, tolerance: t)` for a few seeded points and tolerances (0, 4 and a weird value), `list.marquee(rect)` for a seeded rect, `list.worldBounds(of: list.items.map(\\.address))` and each `item.worldBounds`. Give some shapes multi-point or cubic outlines with a stroke, so `isNear` flattens real geometry under NaN or infinite matrices.",
+   "files": [
+    "Tests/FlareCoreTests/RenderListTests.swift"
+   ],
+   "test": "Extend seededScenesNeverTrap as described and make each query feed an #expect that always holds, for example that every returned address is in `list.items`. Planting a `.first!` or a forced unwrap on the flattened lines in `RenderItem.isNear` should then trap the extended test, while the current test passes.",
+   "lens": "contract",
+   "refuted": false,
+   "reason": "The finding holds at 1817e035. In Tests/FlareCoreTests/RenderListTests.swift, `seededScenesNeverTrap` (lines 142-188) only calls `renderList` and checks `items.count == leaves(nodes)`. It never calls `hit`, `marquee`, `worldBounds` or `worldBounds(of:)`. Every random shape is `Shape(points: [one point])`, so it never builds a multi-segment outline to flatten or stroke. The packet (docs/blueprints/core/features/stage-geometry.md:252) names this test for \"build a list, hit and bound without trapping\", so the test checks less than the packet claims. Other tests only partly cover the gap. WorldBoundsTests.nonFiniteItemsAreLeftOut runs bounds on a NaN-matrix item. HitQueryTests covers a NaN tolerance and a zero-scale item. MarqueeTests covers NaN rects. HitTestTests covers NaN points and points in a shape. None of them runs `hit` or `marquee` on an item whose matrix is NaN or infinite, or on lists built from random cyclic or NaN scenes. The Matrix.inverted, flattening and stroke-reach paths in HitQuery are never tested on non-finite matrices. Minor test gap, but real."
+  },
+  {
+   "severity": "minor",
+   "where": "docs/engineering.md:20-23 (Evaluation layer list)",
+   "what": "SG-1 owns 'the evaluation list in docs/engineering.md', and the contract slice puts every new query in the evaluation layer ('all in the evaluation layer (reads the model, never changes it)'). The list on dev adds only `RenderList.swift`. `HitQuery.swift`, `Marquee.swift`, `WorldBounds.swift` and `PathBuilders*.swift` are missing. SG-1 pre-registered those same files in C4 with a glob, but the engineering.md list was not updated to match, and no later task owns that file.",
+   "why": "Packet task SG-1 ('the evaluation list in docs/engineering.md') and the contract slice's layer assignment. As written, the layering doc does not place the feature's new files in any layer, so a reviewer applying the layer rules cannot tell where they belong.",
+   "fix": "Add `HitQuery.swift`, `Marquee.swift`, `WorldBounds.swift` and `PathBuilders*.swift` to the Evaluation bullet in docs/engineering.md, next to `RenderList.swift`.",
+   "files": [
+    "docs/engineering.md"
+   ],
+   "test": "Doc-only change, so no Swift test applies. Check by hand that every Sources/FlareCore file this feature added is named in one of the four layer bullets of docs/engineering.md. Today HitQuery.swift, Marquee.swift, WorldBounds.swift and PathBuilders*.swift are in none of them.",
+   "lens": "contract",
+   "refuted": false,
+   "reason": "I could not refute it. At 1817e035, the Evaluation list in docs/engineering.md (lines 20-23) names Easing, Timeline, Sampling, ShapeBounds, HitTest and RenderList. Five files from this feature exist at that SHA but appear in no layer list: Sources/FlareCore/HitQuery.swift, Marquee.swift, WorldBounds.swift, PathBuilders.swift and PathBuilders+Polygon.swift. Line 68 of the packet places all of the new API in the evaluation layer. Packet task SG-1 (line 218) owns \"the evaluation list in docs/engineering.md\", so the doc is out of step with the feature. This is minor and only affects the docs."
+  },
+  {
+   "severity": "major",
+   "where": "Sources/FlareCore/RenderList.swift:132-141 (RenderList.Walker.walk)",
+   "what": "Nothing bounds the total size of the render list. `Instance.resolve` only limits depth (`maxNestingDepth` = 64) and rejects cycles. It does not limit fan-out. Take a small, valid .flare file with a chain of symbols S0..S30 where each Si has one layer holding two instances of S(i+1) and S30 holds one shape. `FlareFormat` validation only checks bytes, layers per owner, total points and that symbol ids exist, so this file passes. `scene.renderList(at:symbols:)` then eagerly builds 2^31 RenderItems, plus the same number of RenderNodes, each copying its outline Path and a growing `hosts` array. The process runs out of memory or hangs. The header says \"building never throws or traps\", and this list is now built for every stage frame, every hit, marquee and worldBounds call, and SVG export. Before this change the SVG exporter emitted recursively. Now it materializes the whole tree and every item before it writes a single line.",
+   "why": "Never crash: an untrusted file must not cause unbounded allocation. CLAUDE.md calls out unbounded allocation from file values, and the existing caps (`maxTotalPoints`, `maxLayersPerScene`, `Path.maxFlattenSegments`, `PathBuilders.maxSides`) all exist to stop this kind of blowup. The seeded never-crash test in RenderListTests covers NaN transforms, missing symbols and cycles, but not fan-out, so nothing catches it.",
+   "fix": "Give the Walker a running budget, for example `static let maxRenderItems = 1_000_000` (or `FlareFormat.maxTotalPoints`), and count items and nodes as they are appended. Once the budget is spent, add each further instance as `.unresolved(index:symbolID:)` and do not recurse into it. The SVG exporter already throws `unresolvedSymbol` for those nodes, so an over-budget export fails with a typed error. Document the limit in the header invariants and add a mutation entry in Tests/mutations/FlareRenderList.json for the budget guard.",
+   "files": [
+    "Sources/FlareCore/RenderList.swift",
+    "Tests/FlareCoreTests/RenderListTests.swift",
+    "Tests/mutations/FlareRenderList.json"
+   ],
+   "test": "RenderListTests.fanOutIsBounded: build 40 symbols where symbol i has one layer with two `Instance(symbolID: \"s\\(i+1)\")` and the last has one rectangle shape, plus a scene with one instance of s0. Assert that `scene.renderList(at: 0, symbols:)` returns with `items.count <= RenderList.maxRenderItems` and holds at least one `.unresolved` node, and that `SVGExporter` throws `SVGExportError.unresolvedSymbol` and does not exhaust memory. Before the fix the test never finishes, because it tries to allocate 2^40 items.",
+   "lens": "robustness",
+   "refuted": false,
+   "reason": "I confirmed this at 1817e035 by reading the code. I did not write a scratch test. In Sources/FlareCore/RenderList.swift:101-147, Walker.walk recurses into every resolved instance and appends one RenderItem for each shape. Each item carries a copied outline and a hosts array that grows with depth. Instance.resolve only enforces maxNestingDepth (64) and rejects cycles, and the comment at line 100 states that depth is the only limit. In FlareFormat, validation checks headers, layers, symbol ids and cycles (checkSymbolCycles). Nothing in Sources limits expansion: a search for fan-out, expansion, maxItems or maxInstances finds nothing relevant. A chain of 31 symbols, each with two instances of the next, passes validation and makes renderList build about 2^31 items before anything else runs. The pre-feature SVG exporter was also exponential, but it streamed. The new code builds everything eagerly and runs on every stage, hit, marquee and worldBounds call. This is in the feature's files and is not the known QB-L5 or SG-8 items."
+  },
+  {
+   "severity": "major",
+   "where": "Sources/FlareCore/HitQuery.swift: scale(of:) (bottom of file)",
+   "what": "Nothing tests that the hit query's stroke reach uses the larger axis scale. The only scaled test (toleranceAddsOnceToAZeroWidthStroke) uses a uniform scale of 2, where max and min are the same. I applied the mutant `max(` -> `min(` in scale(of:) and the full suite still passed (697 tests). There is no Tests/mutations entry for it either.",
+   "why": "HitQuery's doc says 'the larger axis scale of m, so a scaled stroke reach is never short'. With a non-uniform scale, a click on the painted stroke on the stretched axis would miss, and no test sees it.",
+   "fix": "In HitQueryTests, add a horizontal line with Stroke(width: 2) under scaleX 1, scaleY 3, and assert `hit(Point(x: 50, y: 3.9), tolerance: 1) != nil` and `hit(Point(x: 50, y: 4.1), tolerance: 1) == nil`. Add a FlareHitQuery.json entry with anchor `max(m.a * m.a + m.b * m.b, m.c * m.c + m.d * m.d).squareRoot()` and replacement `min(...)`.",
+   "files": [
+    "Sources/FlareCore/HitQuery.swift",
+    "Tests/FlareCoreTests/HitQueryTests.swift",
+    "Tests/mutations/FlareHitQuery.json"
+   ],
+   "test": "HitQueryTests.nonUniformScaleWidensStrokeByLargerAxis: on a stroked line scaled (1, 3), y 3.9 at tolerance 1 hits. It fails under the min mutant.",
+   "lens": "tests",
+   "refuted": false,
+   "reason": "The finding holds. At 1817e035, scale(of:) in Sources/FlareCore/HitQuery.swift returns max(a\u00b2+b\u00b2, c\u00b2+d\u00b2).squareRoot(). The only scaled hit-query test, the helper at HitQueryTests.swift:18, sets scaleX and scaleY to the same value s. With equal scales, max and min give the same result, so swapping max for min would survive. Tests/mutations has no hit-query entry anchored on this max. It is a real gap in test and mutation coverage for an invariant in a feature file."
+  },
+  {
+   "severity": "major",
+   "where": "Sources/FlareCore/HitQuery.swift: RenderList.hit(_:tolerance:rule:)",
+   "what": "The public `rule:` parameter is never exercised. No test calls hit with `.evenOdd`. I replaced `shape.hits(inverse.apply(point), rule: rule)` with `rule: .nonZero` and the full suite passed.",
+   "why": "This is a public contract: hit must honor the fill rule, the same way Layer.hits does. A dropped forward of the rule is invisible to the tests.",
+   "fix": "Add a test with a self-overlapping outline (the five-point star from HitTestTests, or two nested same-direction squares). Assert that `hit(centre)` is non-nil and `hit(centre, rule: .evenOdd) == nil`. Add a mutation entry with replacement `rule: .nonZero`.",
+   "files": [
+    "Tests/FlareCoreTests/HitQueryTests.swift",
+    "Tests/mutations/FlareHitQuery.json"
+   ],
+   "test": "HitQueryTests.evenOddRuleIsForwarded: the centre of a star hits under .nonZero and misses under .evenOdd. It fails when the rule is hardcoded.",
+   "lens": "tests",
+   "refuted": false,
+   "reason": "At 1817e035, Sources/FlareCore/HitQuery.swift:20/25 passes `rule` through to shape.hits. No test calls RenderList.hit with `rule: .evenOdd`. The only `.evenOdd` tests are Shape.contains tests in HitTestTests.swift. So if the forward were changed to always use `.nonZero`, no test would catch it. The finding stands."
+  },
+  {
+   "severity": "minor",
+   "where": "Sources/FlareCore/PathBuilders.swift: BuilderBox.init (min/max ordering)",
+   "what": "No test passes a reversed rect (minX > maxX or minY > maxY) to rectangle, ellipse, polygon or star. The fuzz test only checks that points are finite. I mutated the ordering to `minX = rect.minX; maxX = rect.maxX` and the full suite passed. A reversed rect then gives a negative halfWidth, which turns off the corner radius and flips the polygon to counter-clockwise.",
+   "why": "BuilderBox says it has 'ordered, finite edges', and the shape tools draw rects in any drag direction. The ordering is an invariant with no assertion and no mutation entry.",
+   "fix": "Assert that `PathBuilders.rectangle(in: Rect(minX: 100, minY: 40, maxX: 0, maxY: 0), cornerRadius: 10) == PathBuilders.rectangle(in: wide, cornerRadius: 10)`, and the same for ellipse and polygon. Add a FlarePathBuilders.json entry that drops the min/max on the X edges.",
+   "files": [
+    "Tests/FlareCoreTests/PathBuilderTests.swift",
+    "Tests/FlareCoreTests/PolygonStarBuilderTests.swift",
+    "Tests/mutations/FlarePathBuilders.json"
+   ],
+   "test": "PathBuilderTests.reversedRectBuildsTheSamePath: rectangle, ellipse and polygon of a reversed rect equal the same builders on the ordered rect.",
+   "lens": "tests",
+   "refuted": false,
+   "reason": "The finding stands. At 1817e035, Sources/FlareCore/PathBuilders.swift:83-86 has BuilderBox.init sort the edges with Swift.min/Swift.max. Rect's init (Geometry.swift:136) stores its edges unchanged, so a reversed drag rect reaches the builders as-is and BuilderBox's ordering is the only normalization. No FlareCoreTests case passes a reversed rect: a grep for reversed/flipped rect tests found nothing. FlarePathBuilders.json's only entry anchors on the corner-radius clamp, not on the ordering. Swapping the ordering for direct assignment gives a negative halfWidth and halfHeight, which changes the clamp and the polygon winding, and nothing would catch it. The gap is minor but real: add a reversed-rect test and a mutation entry."
+  },
+  {
+   "severity": "minor",
+   "where": "Sources/FlareCore/WorldBounds.swift: `guard half.isFinite else { return nil }`",
+   "what": "No test reaches the overflow guard. nonFiniteItemsAreLeftOut uses an infinite width, which the earlier `width.isFinite` guard rejects first. I removed the guard and the full suite passed. With it gone, a finite but huge stroke times the scale gives an infinite box where the doc says there is none.",
+   "why": "The WorldBounds header says a non-finite result gives no box 'rather than a NaN or infinite one'. The guard that enforces this for finite inputs is untested.",
+   "fix": "Add `#expect(item(rectPath(10, 10), matrix: .scale(x: 4, y: 4), stroke: Stroke(width: 1e308)).worldBounds == nil)` and a FlareWorldBounds.json entry that drops the guard.",
+   "files": [
+    "Tests/FlareCoreTests/WorldBoundsTests.swift",
+    "Tests/mutations/FlareWorldBounds.json"
+   ],
+   "test": "WorldBoundsTests.overflowingStrokeHasNoBox: a 1e308-wide stroke under scale 4 gives nil.",
+   "lens": "tests",
+   "refuted": false,
+   "reason": "The finding holds; I checked the code at 1817e035. In Sources/FlareCore/WorldBounds.swift, line 32 rejects any non-finite stroke `width`. Line 34, `guard half.isFinite`, is the only thing that catches a finite width whose product `width * matrix.maxAxisScale / 2` overflows (for example, width 1e308 with scale 10). The only test that covers this area is WorldBoundsTests.nonFiniteItemsAreLeftOut. It uses a NaN translation and `Stroke(width: .infinity)`, and both are caught earlier, by `matrix.isFinite` and by line 32. No test uses a finite but huge width or scale, so nothing reaches line 34. Without that guard, the box grows by an infinite amount. That breaks the header's promise that such items get no box rather than an infinite one. I did not run the mutation myself, but from reading the test file the critic's result that the suite passes without the guard is consistent. The issue is minor and limited to tests."
+  },
+  {
+   "severity": "minor",
+   "where": "Sources/FlareCore/RenderList.swift: `RenderLayer(... isLocked: layer.isLocked ...)`",
+   "what": "RenderLayer.isLocked is documented as the layer's own lock flag, not the inherited one. The only assertion (`host.isLocked` in treeKeepsLayersInstancesAndUnresolved) is on a top-level layer, where own and inherited are equal. I mutated it to `isLocked: lk` and the full suite passed. The opacity counterpart is pinned by the nested SVG golden, but the lock flag is not.",
+   "why": "A layer panel that reads the tree would show every nested layer under a locked host as locked itself, and no test notices.",
+   "fix": "In treeKeepsLayersInstancesAndUnresolved, descend into the `outer` instance's children and assert that the nested `outerLayer` RenderLayer has `isLocked == false` (and `opacity == 0.5`) while host is locked.",
+   "files": [
+    "Tests/FlareCoreTests/RenderListTests.swift",
+    "Tests/mutations/FlareRenderList.json"
+   ],
+   "test": "RenderListTests.treeKeepsLayersInstancesAndUnresolved extended: the nested outerLayer node is not locked under a locked host.",
+   "lens": "tests",
+   "refuted": false,
+   "reason": "I could not refute this one. At 1817e035, Sources/FlareCore/RenderList.swift sets the node flag with `isLocked: layer.isLocked` (line 143), while the inherited value `lk` is used only for items (lines 116 and 121). The doc comment at line 40 says the node holds the layer's \"own lock\". The only test that reads a node's isLocked is the `host.isLocked` check in treeKeepsLayersInstancesAndUnresolved (RenderListTests.swift:100), and that is a top-level layer whose own and inherited flags are equal. No test checks a nested layer's flag under the locked host (for example in `inner`). I searched every test and every mutation file for isLocked: HitQuery covers only item lock, and no mutation entry covers the node flag. So changing it to `lk` would survive the suite, as the critic says. I did not rerun the mutated suite myself; this rests on reading the tests. The gap is in a feature file (RenderList.swift) and is minor."
+  },
+  {
+   "severity": "minor",
+   "where": "Tests/mutations/FlareHitQuery.json, FlareRenderList.json, FlareMarquee.json, FlarePolygonStar.json",
+   "what": "Some invariants have a catching test but no mutation entry, so a later refactor can drop the test unnoticed. These are: the HitQuery singular-matrix skip (`else { continue }`, caught by zeroScaleItemIsSkipped if changed to `return nil`); RenderList matrix composition order (`parent * t.matrix`, `m * inst.transform.matrix`); the Marquee closed-edge test (`minX <= other.maxX` -> `<`); the star innerRatio range guard (`innerRatio > 0, innerRatio <= 1`) and non-finite ratio guard (FlarePolygonStar has one entry, for polygon sides only); and BuilderBox's halve-before-subtract overflow rule (`maxX / 2 - minX / 2`).",
+   "why": "CLAUDE.md: 'New logic with an invariant (a guard, a limit, a formula, an undo path) adds one entry to Tests/mutations/<module>.json in the same PR.'",
+   "fix": "Add one entry per invariant: `continue` -> `return nil`; `parent * t.matrix` -> `t.matrix * parent`; `minX <= other.maxX` -> `minX < other.maxX`; `innerRatio <= 1` -> `innerRatio < 1`; `maxX / 2 - minX / 2` -> `(maxX - minX) / 2`. Confirm each is caught with `scripts/mutate --run --only`.",
+   "files": [
+    "Tests/mutations/FlareHitQuery.json",
+    "Tests/mutations/FlareRenderList.json",
+    "Tests/mutations/FlareMarquee.json",
+    "Tests/mutations/FlarePolygonStar.json",
+    "Tests/mutations/FlarePathBuilders.json"
+   ],
+   "test": "scripts/mutate --run --only for each new note reports it caught. The existing tests (zeroScaleItemIsSkipped, nestedLeafMultipliesOpacityAndMatrices, rectAroundTwoOfThreeReturnsThemInPaintOrder, sideCountCapIsAccepted / finiteRatioOutsideRangeThrowsInvalidSides, zeroSizeAndHugeRectsGiveFinitePoints) should catch them.",
+   "lens": "tests",
+   "refuted": false,
+   "reason": "The finding holds at 1817e035. Every invariant it names is in the feature code: HitQuery.swift:23 (singular-matrix `else { continue }`), RenderList.swift:114 and 139 (composition order `parent * t.matrix` and `m * inst.transform.matrix`), Marquee.swift:36 (closed-edge `<=`), PathBuilders+Polygon.swift:61 (innerRatio range guard) and PathBuilders.swift:89 (halve-before-subtract). No entry in Tests/mutations/Flare{HitQuery,RenderList,Marquee,PolygonStar,PathBuilders}.json targets any of them. FlarePolygonStar.json has only the polygon sides guard. CLAUDE.md requires one mutation entry for each guard, limit or formula, so this is a real but minor gap."
+  },
+  {
+   "severity": "major",
+   "where": "Sources/FlareCore/HitQuery.swift:51 scale(of:)",
+   "what": "The private `scale(of:)` at the end of HitQuery.swift is the same formula, line for line, as `Matrix.maxAxisScale` in WorldBounds.swift:17: `max(a*a + b*b, c*c + d*d).squareRoot()`. The feature defines the larger-axis stroke scale twice, so hit reach and world bounds can drift apart.",
+   "why": "engineering.md 'Reuse before you write' (search for the helper first; if it is private elsewhere, make it internal and call it) and rubric 2 'No near-copy that jscpd misses ... of a function in another file'.",
+   "fix": "Delete `scale(of:)` from HitQuery.swift and use `matrix.maxAxisScale` in `RenderItem.isNear`. `maxAxisScale` is already internal. It would fit better in Geometry.swift next to `Matrix`, but it can stay where it is.",
+   "files": [
+    "Sources/FlareCore/HitQuery.swift",
+    "Sources/FlareCore/WorldBounds.swift"
+   ],
+   "test": "This is a no-behavior refactor, so no test fails before it. After it, `grep -c 'c \\* c + d \\* d' Sources/FlareCore/*.swift` returns exactly one match, and HitQueryTests and WorldBoundsTests stay green.",
+   "lens": "design",
+   "refuted": false,
+   "reason": "The finding holds at 1817e035. HitQuery.swift:51-53 defines a private `scale(of m: Matrix)` that returns `max(m.a*m.a + m.b*m.b, m.c*m.c + m.d*m.d).squareRoot()`, and line 37 uses it to scale the stroke half-width. WorldBounds.swift already declares the same formula as an internal (non-private) extension property, `Matrix.maxAxisScale`, documented as \"a stroke of width w paints at most w * maxAxisScale wide\". Both are in the FlareCore module, so HitQuery can call `matrix.maxAxisScale` and drop its private copy. As written, the larger-axis stroke scale is defined twice, which goes against engineering.md \"Reuse before you write\" and rubric 2."
+  },
+  {
+   "severity": "major",
+   "where": "Sources/FlareCore/HitQuery.swift:35-47 RenderItem.isNear",
+   "what": "`isNear` near-copies the stroke-reach loop of `Shape.hits` in HitTest.swift:44-50. It flattens the outline with tolerance `max(x / 8, 1e-3)`, then runs `for line in lines { for (a, b) in zip(line, line.dropFirst()) where distance(point, a, b) <= reach { return true } }`. Only the variable names and the space it runs in differ. The PR made `distance` internal so it could copy this loop, when it could have shared the loop itself.",
+   "why": "engineering.md 'Reuse before you write' (path flattening and its consumers are named as the usual repeats) and rubric 2 'No near-copy that jscpd misses (same logic, renamed variables)'.",
+   "fix": "In HitTest.swift, extract `func isWithin(_ reach: Double, of point: Point, flatness: Double) -> Bool` on `Path` (internal), holding the flatten, zip and distance loop. Call it from `Shape.hits` with (width/2, local point) and from `isNear` with (tolerance + halfStroke, scene point) on `outline.transformed(by: matrix)`. `distance` can then go back to private.",
+   "files": [
+    "Sources/FlareCore/HitQuery.swift",
+    "Sources/FlareCore/HitTest.swift"
+   ],
+   "test": "This is a no-behavior refactor. HitTestTests, HitQueryTests and HitQueryTests' seeded 200-point agreement with `Layer.hits` stay green, and the FlareHitQuery mutation entries are repointed and still caught.",
+   "lens": "design",
+   "refuted": false,
+   "reason": "Confirmed at 1817e035. In Sources/FlareCore/HitQuery.swift, lines 35-47, RenderItem.isNear runs `flattened(tolerance: max(x / 8, 1e-3))` followed by `for line in lines { for (a, b) in zip(line, line.dropFirst()) where distance(point, a, b) <= reach { return true } }`. That is the same flatten-and-segment-distance loop as Shape.hits in Sources/FlareCore/HitTest.swift, lines 44-50. Only the reach value and the space it runs in (the outline transformed to scene space) differ. One shared helper such as `Path.isWithin(_ reach:, of point:, flatness:)` could serve both callers. This is the kind of near-copy engineering.md \"Reuse before you write\" and rubric 2 rule out. The finding stands; the critic's \"major\" severity is arguable, since this is a duplication of about 6 lines rather than a correctness bug."
+  },
+  {
+   "severity": "minor",
+   "where": "Sources/FlareCore/Marquee.swift:19-21; Sources/FlareCore/PathBuilders.swift:80-87 BuilderBox.init",
+   "what": "Marquee and BuilderBox repeat the same logic for normalising a Rect: check that all four edges are finite, then order them with min and max on each axis. Marquee builds its own `area` Rect, and PathBuilders builds `BuilderBox`. The feature now has two copies of the same 'finite, ordered rect' boundary check.",
+   "why": "engineering.md 'Reuse before you write' and rubric 2 'No near-copy ... of a function in another file'.",
+   "fix": "Add one internal `Rect.normalized: Rect?` to Geometry.swift, returning nil when an edge is not finite and otherwise the rect with edges ordered. Use it in `marquee` (nil gives []) and in `BuilderBox.init` (nil throws `GeometryError.nonFinite`).",
+   "files": [
+    "Sources/FlareCore/Marquee.swift",
+    "Sources/FlareCore/PathBuilders.swift",
+    "Sources/FlareCore/Geometry.swift"
+   ],
+   "test": "This is a no-behavior refactor. MarqueeTests (reversed rect, NaN edge) and PathBuilderTests (reversed and non-finite rect) stay green.",
+   "lens": "design",
+   "refuted": false,
+   "reason": "The duplicate is real at 1817e035. Marquee.swift:19-21 checks that all four edges are finite with `[minX,minY,maxX,maxY].allSatisfy(\\.isFinite)` and then builds an ordered Rect with min and max on each axis. PathBuilders.swift BuilderBox.init (lines 80-87) does the same finite check on the same four edges and the same min/max ordering. The two differ only in what they do on failure: Marquee returns [] and BuilderBox throws GeometryError.nonFinite. One shared helper would cover both, for example a `Rect.normalizedIfFinite() -> Rect?` in Geometry.swift, with Marquee mapping nil to [] and BuilderBox mapping it to the throw. Geometry.swift has no such helper today. This is a near-copy across files in the feature (rubric 2), and minor."
+  },
+  {
+   "severity": "minor",
+   "where": "docs/engineering.md:20-23 (Layers list)",
+   "what": "The layer list adds only RenderList.swift to Evaluation. The other five new source files in this feature are in no layer: HitQuery.swift, Marquee.swift, WorldBounds.swift, PathBuilders.swift and PathBuilders+Polygon.swift. The packet says all of them are evaluation. But PathBuilders throws `GeometryError`, which engineering.md assigns to the model layer, so as written the builders either have no layer or throw another layer's error.",
+   "why": "engineering.md 'Layers': each file sits in a layer, and 'One error type per layer, and errors don't cross layers'. Rubric 1: 'Each changed file stays in its layer'.",
+   "fix": "In the engineering.md layer list, add HitQuery.swift, Marquee.swift and WorldBounds.swift to Evaluation. Add PathBuilders.swift and PathBuilders+Polygon.swift to Model, since they are pure geometry constructors that throw GeometryError and name no command or format type. If they go to Model, also add them to the file list in `ModelErrorTests.modelFilesNameNoUpperLayerType`.",
+   "files": [
+    "docs/engineering.md",
+    "Tests/FlareCoreTests/ModelErrorTests.swift"
+   ],
+   "test": "Once listed as model files, `ModelErrorTests.modelFilesNameNoUpperLayerType` covers PathBuilders*.swift and fails if a builder ever names CommandError or FormatError.",
+   "lens": "design",
+   "refuted": false,
+   "reason": "At 1817e035, the Layers list in docs/engineering.md (lines 17-26) names only RenderList.swift among the new files. HitQuery.swift, Marquee.swift, WorldBounds.swift, PathBuilders.swift and PathBuilders+Polygon.swift are in no layer. PathBuilders.swift (line 28) and PathBuilders+Polygon.swift (line 39) throw GeometryError, which the same doc assigns to the model layer. So the doc either leaves the builders without a layer or, if they are evaluation as the packet says, has them throwing another layer's error. The simplest fix is a doc change: the builders are pure constructors on the model type Path, so list them under Model, and list HitQuery, Marquee and WorldBounds under Evaluation. The finding holds and is minor."
+  },
+  {
+   "severity": "minor",
+   "where": "Sources/FlareCore/Geometry.swift GeometryError.invalidSides; Sources/FlareCore/PathBuilders+Polygon.swift:39,60-61",
+   "what": "The doc comment on `GeometryError.invalidSides` says \"A polygon or star with fewer than 3 sides or points\". The case is also thrown for a count above `maxSides`, and for a finite star `innerRatio` outside (0, 1], which is not a side count at all. A caller that catches `invalidSides` and shows 'too few sides' is wrong for those cases.",
+   "why": "engineering.md 'One error type per layer': add a case before you add an enum, and do not reuse an ill-fitting case to save one. Rubric 1: 'Names match the ones already used for the same idea'.",
+   "fix": "Add `case invalidRatio` to GeometryError and throw it for an innerRatio outside (0, 1]. Correct the `invalidSides` comment to \"a side or point count below 3 or above `PathBuilders.maxSides`\".",
+   "files": [
+    "Sources/FlareCore/Geometry.swift",
+    "Sources/FlareCore/PathBuilders+Polygon.swift",
+    "Tests/FlareCoreTests/PolygonStarBuilderTests.swift"
+   ],
+   "test": "In PolygonStarBuilderTests, `#expect(throws: GeometryError.invalidRatio) { try PathBuilders.star(in: box, points: 5, innerRatio: 1.5) }`. It fails today because `.invalidSides` is thrown.",
+   "lens": "design",
+   "refuted": false,
+   "reason": "I confirmed this at 1817e035. In Geometry.swift:32, the doc comment on `GeometryError.invalidSides` says \"A polygon or star with fewer than 3 sides or points.\" But PathBuilders+Polygon.swift throws `invalidSides` in three cases. It throws for `sides` > `maxSides` (1000) at line 39 and for `points` > `maxSides` at line 60, which are too many, not too few. At line 61 it throws for a finite star `innerRatio` outside (0, 1], which is a ratio and not a count. The builders' own doc comments list these cases, but the error case's doc comment does not. The innerRatio case also reuses a count error for a ratio. engineering.md's \"One error type per layer\" rule says not to reuse a case that does not fit. Minor, but real."
+  }
+ ],
+ "refuted": 1
+}

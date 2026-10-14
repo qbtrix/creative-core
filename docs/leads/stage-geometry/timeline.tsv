@@ -22,3 +22,4 @@ utc	stage	event	ref	note
 2026-10-14T16:51Z	3	stage-end	wave d	SG-8 hit budget fails; folded into round 1 fix
 2026-10-14T16:51Z	4	stage-start	round 1	panel on 1817e03; fix r1-b1 hit prefilter + SG-8
 2026-10-14T16:51Z	4	round-findings	round 1	QB-L5 hit budget miss (major)
+2026-10-14T16:58Z	4	round-findings	round 1	18 confirmed, 1 refuted; fix batches r1-b2 r1-b3 r1-b4 launched; r1-b5 waits on r1-b1
