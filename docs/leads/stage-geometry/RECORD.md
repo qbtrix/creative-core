@@ -36,4 +36,5 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 - Added `in-progress` to #213, #214, #215, #182 (waves.md housekeeping).
 
 ## Open
+- Pre-run on 1817e03 (box loaded by the SG-8 builder): mutation 38/38 caught, validate OK (122 anchors); scripts/ci failed only on CoreRaster RetouchBoundsTests.smallDabOn12MegapixelsIsFast (2.24 s vs 1.5 s budget), which passes alone. Outside this feature; rerun the gate on a quiet box for round 1.
 - Lead record went quiet 15:44-16:25 because the container restarted; Belt nudged once.
