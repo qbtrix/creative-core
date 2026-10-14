@@ -89,5 +89,19 @@
     "anchor": "symbolID: target.id, frame: local, children: inner",
     "replacement": "symbolID: target.id, frame: frame, children: inner",
     "filter": "RenderListTests"
+  },
+  {
+    "note": "render list paints a layer's texts before its shapes",
+    "file": "Sources/FlareCore/RenderList.swift",
+    "anchor": "                for (i, s) in layer.shapes.enumerated() {\n                    children.append(.shape(index: i, s))\n                    if let outline = shared?[i] {\n                        expanded += outline.points\n                        items.append(item(outline.path, s.fill, s.stroke, shape: i, text: nil))\n                    } else {\n                        items.append(item(s.outline, s.fill, s.stroke, shape: i, text: nil))\n                    }\n                }\n                for (i, x) in layer.texts.enumerated() {\n                    children.append(.text(index: i, x))\n                    items.append(item(Path(), nil, nil, shape: nil, text: i))\n                }\n",
+    "replacement": "                for (i, x) in layer.texts.enumerated() {\n                    children.append(.text(index: i, x))\n                    items.append(item(Path(), nil, nil, shape: nil, text: i))\n                }\n                for (i, s) in layer.shapes.enumerated() {\n                    children.append(.shape(index: i, s))\n                    if let outline = shared?[i] {\n                        expanded += outline.points\n                        items.append(item(outline.path, s.fill, s.stroke, shape: i, text: nil))\n                    } else {\n                        items.append(item(s.outline, s.fill, s.stroke, shape: i, text: nil))\n                    }\n                }\n",
+    "filter": "RenderListTests"
+  },
+  {
+    "note": "shared path element point count charges a cubic two points instead of three",
+    "file": "Sources/FlareCore/Path.swift",
+    "anchor": "case .cubic: 3",
+    "replacement": "case .cubic: 2",
+    "filter": "RenderListTests"
   }
 ]

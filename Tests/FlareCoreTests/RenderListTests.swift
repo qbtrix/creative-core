@@ -4,11 +4,14 @@
 // marks missing or cyclic symbols unresolved; Path.transformed keeps cubics;
 // instance expansion stops at RenderList.maxExpandedPoints (fan-out and
 // heavy fan-out) while large valid scenes and reused symbols expand fully;
+// a layer paints shapes before texts; the budget is four format point caps,
+// charges a cubic its three points and no evaluation file names the format;
 // an instance node carries the symbol frame; a caller outside the module
 // builds an address; 1,000 seeded broken scenes build a list,
 // hit, marquee and bound without trapping. The import is not @testable, so
 // the public inits are what these tests compile against.
 import FlareCore
+import Foundation
 import Testing
 
 /// The nested scene the stage-geometry tests share. Scene "s": "main" (two
@@ -76,6 +79,14 @@ enum NestedScene {
         let shape = list.items[1]
         #expect(!shape.isText && shape.outline == NestedScene.curve.outline)
         #expect(shape.fill == NestedScene.curve.fill && shape.stroke == NestedScene.curve.stroke)
+    }
+
+    /// Within one layer, shapes paint before texts whatever the scene order.
+    @Test func layerPaintsShapesBeforeTexts() {
+        let text = TextShape(string: "Hi", fontFamily: "Serif", fontSize: 12, position: Point(x: 1, y: 2))
+        let layer = Layer(id: "L", name: "L", shapes: [NestedScene.square], texts: [text])
+        let list = Scene(id: "s", name: "S", layers: [layer]).renderList(at: 0, symbols: [])
+        #expect(list.items.map { Self.key($0.address) } == ["scene s||L|s0", "scene s||L|t0"])
     }
 
     @Test func nestedLeafMultipliesOpacityAndMatrices() throws {
@@ -237,6 +248,43 @@ enum NestedScene {
         let (truncated, count, elements) = (list.isTruncated, list.items.count, Self.outlineElements(list))
         #expect(elements > RenderList.maxExpandedPoints)
         #expect(!truncated && count == shapes.count + 1)
+    }
+
+    /// The budget is four times the format's point cap, and evaluation does
+    /// not name the format, command or their errors in code.
+    @Test func budgetIsFourFormatCapsWithoutNamingTheFormat() throws {
+        #expect(RenderList.maxExpandedPoints == 4 * FlareFormat.maxTotalPoints)
+        let sources = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Sources/FlareCore")
+        let evaluation = ["Easing", "Timeline", "Sampling", "ShapeBounds", "HitTest", "RenderList",
+                          "HitQuery", "Marquee", "WorldBounds"]
+        for name in evaluation {
+            let text = try String(contentsOf: sources.appendingPathComponent("\(name).swift"), encoding: .utf8)
+            let code = text.split(separator: "\n")
+                .filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("//") }.joined(separator: "\n")
+            for word in ["FlareFormat", "FormatError", "CommandError"] {
+                #expect(!code.contains(word), "\(name).swift names \(word)")
+            }
+            let words = code.split(whereSeparator: { !$0.isLetter && !$0.isNumber && $0 != "_" })
+            #expect(!words.contains("Command"), "\(name).swift names Command")
+        }
+    }
+
+    /// A cubic charges its three stored points: expansions of a symbol whose
+    /// shape is a move and 1,000 cubics stop exactly when the budget is spent.
+    @Test func budgetCountsCubicPoints() {
+        let cubic = PathElement.cubic(control1: Point(x: 1, y: 0), control2: Point(x: 1, y: 1), to: Point(x: 0, y: 1))
+        let path = Path(elements: [.move(to: Point(x: 0, y: 0))] + Array(repeating: cubic, count: 1_000))
+        let symbol = Symbol(id: "c", name: "C", layers: [
+            Layer(id: "cl", name: "C", shapes: [Shape(points: [], path: path)]),
+        ])
+        // Per expansion: the layer node and one item at weight 2, plus 3,001 points.
+        let cost = 2 * (1 + 2) + 1 + 3 * 1_000
+        let expected = (RenderList.maxExpandedPoints + cost - 1) / cost
+        let layer = Layer(id: "l", name: "L", instances: Array(repeating: Instance(symbolID: "c"), count: expected + 50))
+        let list = Scene(id: "s", name: "S", layers: [layer]).renderList(at: 0, symbols: [symbol])
+        #expect(list.isTruncated && list.items.count == expected)
     }
 
     /// A 300-shape symbol placed 100 times expands every instance.
