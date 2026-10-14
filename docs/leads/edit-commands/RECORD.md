@@ -2,9 +2,9 @@
 
 Issue: #268 · Packet: docs/blueprints/core/features/edit-commands.md
 Run: act-1a13b1450f1-6p7n · Session: claude/edit-commands-lead-rsmd3t · Started: 2026-10-14T15:00Z
-Stage: 5 finish
-Base: e9a0f7eb202f7b5ed1e3950128d2aa95b34ac679
-Next: wait for CI run 38629317426 on dev (98be31a, dispatched by the #299 merge); green -> contact sheet on #268, red -> file gap issues (round budget spent)
+Stage: done
+Base: 98be31a9f71bc8cde10a517028d0b63a8806ee09
+Next: nothing; the feature is done (contact sheet on #268, CI run 38629317426 green, main promoted)
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |

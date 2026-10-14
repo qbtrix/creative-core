@@ -61,3 +61,6 @@ utc	stage	event	ref	note
 2026-10-14T20:00Z	5	stage-start	finish	r4-b1 carries feature-done
 2026-10-14T20:07Z	5	pr-merged	#299	r4-b1, feature-done
 2026-10-14T20:07Z	5	ci-run	38629317426	dispatched on 98be31a, queued
+2026-10-14T20:10Z	5	ci-run	38629317426	green: Linux, macOS, Mutation, Promote
+2026-10-14T20:10Z	5	stage-end	finish	Belt-Contact-Sheet posted on #268
+2026-10-14T20:10Z	done	stopped	-	feature done
