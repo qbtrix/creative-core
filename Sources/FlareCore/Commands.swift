@@ -178,6 +178,21 @@ public struct SetKeyframe: LayerParamsCommand {
     }
 }
 
+extension SetKeyframe {
+    /// An inspector scrub step on the same key: the merged command keeps the
+    /// key that was there before the first step (`previous`) and takes the
+    /// last step's value, so one undo restores the first old key. Decides on
+    /// params only, never on `executed`. Another owner, layer, property or
+    /// frame never merges.
+    public mutating func merge(_ next: SetKeyframe) -> Bool {
+        guard (next.owner, next.layerID, next.property, next.keyframe.frame)
+            == (owner, layerID, property, keyframe.frame)
+        else { return false }
+        keyframe = next.keyframe
+        return true
+    }
+}
+
 public struct MoveKeyframe: LayerParamsCommand {
     public static let id = "keyframe.move"
     public var label: String { "Move Keyframe" }

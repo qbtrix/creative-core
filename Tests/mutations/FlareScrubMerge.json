@@ -1,0 +1,16 @@
+[
+  {
+    "note": "a scrub merges set keyframe steps for another owner layer property or frame",
+    "file": "Sources/FlareCore/Commands.swift",
+    "anchor": "        guard (next.owner, next.layerID, next.property, next.keyframe.frame)\n            == (owner, layerID, property, keyframe.frame)",
+    "replacement": "        guard (next.owner, next.layerID, next.property) == (owner, layerID, property)",
+    "filter": "ScrubMergeTests"
+  },
+  {
+    "note": "a merged scrub takes the last step's previous key instead of keeping the first",
+    "file": "Sources/FlareCore/Commands.swift",
+    "anchor": "        keyframe = next.keyframe\n        return true",
+    "replacement": "        keyframe = next.keyframe\n        previous = next.previous\n        return true",
+    "filter": "ScrubMergeTests"
+  }
+]
