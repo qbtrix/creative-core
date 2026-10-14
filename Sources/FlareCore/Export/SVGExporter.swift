@@ -1,11 +1,12 @@
 // SVGExporter.swift: one frame of a scene as an SVG document.
 //
-// Layers render bottom to top (the first layer is drawn first). Each visible
-// layer is a <g> carrying its sampled transform as a matrix and its opacity;
-// each shape is a <path> built from `Shape.outline`, so curves stay curves,
+// The exporter walks the scene's render list (`Scene.renderList`), so it draws
+// what the stage draws. Layers render bottom to top (the first layer is drawn
+// first). Each visible layer is a <g> carrying its sampled transform as a
+// matrix and its opacity; each shape is a <path> built from `Shape.outline`, so curves stay curves,
 // with its stroke as stroke attributes. After its shapes, each instance on a
 // layer is a nested <g> with the instance transform holding the symbol's
-// layers sampled at the symbol frame (`Instance.resolve`).
+// layers sampled at the symbol frame.
 // Coordinates are written as-is: scene space maps straight to SVG user space.
 // A gradient fill is written as a gradient element (in user space) just before
 // its path, which refers to it by id ("g0", "g1", ... in document order).
@@ -37,31 +38,35 @@ public enum SVGExporter {
             "<rect width=\"\(w)\" height=\"\(h)\"\(try fill(scene.background))/>",
         ]
         var gradients = 0
-        for layer in scene.layers {
-            try render(layer, frame: frame, symbols: symbols, path: [], into: &lines, gradients: &gradients)
+        for node in scene.renderList(at: frame, symbols: symbols).nodes {
+            try emit(node, inSymbol: false, into: &lines, gradients: &gradients)
         }
         lines.append("</svg>")
         return lines.joined(separator: "\n") + "\n"
     }
 
-    /// Appends a visible layer as a <g> holding its shapes, then one nested
-    /// <g> per instance holding the symbol's layers at the symbol frame.
-    /// `path` is the ids of the symbols being drawn around this layer.
-    static func render(
-        _ layer: Layer, frame: Double, symbols: [Symbol], path: [String],
-        into lines: inout [String], gradients: inout Int
-    ) throws {
-        guard layer.isVisible else { return }
-        guard layer.texts.isEmpty else { throw SVGExportError.unsupported("text") }
-        let (transform, opacity) = layer.placement(at: frame)
-        let opacityAttr = opacity == 1 ? "" : " opacity=\"\(try number(opacity))\""
-        // Symbol layers repeat once per instance, so only scene layers get an id.
-        let idName = path.isEmpty ? "id" : "data-id"
-        let ids = " \(idName)=\"\(escape(layer.id))\" data-name=\"\(escape(layer.name))\""
-        lines.append("<g\(ids)\(try matrix(transform))\(opacityAttr)>")
-        for shape in layer.shapes {
+    /// Appends one render node: a layer as a <g> holding its children, a shape
+    /// as a <path>, an instance as a nested <g> with the instance transform.
+    /// `inSymbol` is true below an instance, where layers repeat once per
+    /// instance, so only scene layers get an id.
+    static func emit(_ node: RenderNode, inSymbol: Bool, into lines: inout [String], gradients: inout Int) throws {
+        switch node {
+        case .layer(let layer):
+            // Text throws before anything in its layer is written or checked.
+            for child in layer.children {
+                if case .text = child { throw SVGExportError.unsupported("text") }
+            }
+            let opacityAttr = layer.opacity == 1 ? "" : " opacity=\"\(try number(layer.opacity))\""
+            let idName = inSymbol ? "data-id" : "id"
+            let ids = " \(idName)=\"\(escape(layer.id))\" data-name=\"\(escape(layer.name))\""
+            lines.append("<g\(ids)\(try matrix(layer.transform))\(opacityAttr)>")
+            for child in layer.children {
+                try emit(child, inSymbol: inSymbol, into: &lines, gradients: &gradients)
+            }
+            lines.append("</g>")
+        case .shape(_, let shape):
             let d = try pathData(shape.outline)
-            if d.isEmpty { continue }
+            if d.isEmpty { return }
             let attr: String
             if case .solid(let color) = shape.fill {
                 attr = try fill(color)
@@ -72,19 +77,17 @@ public enum SVGExporter {
                 attr = " fill=\"url(#\(id))\""
             }
             lines.append("<path d=\"\(d)\"\(attr)\(try stroke(shape.stroke))/>")
-        }
-        for instance in layer.instances {
-            guard let (symbol, local) = instance.resolve(in: symbols, frame: frame, path: path) else {
-                throw SVGExportError.unresolvedSymbol(instance.symbolID)
-            }
-            lines.append("<g data-symbol=\"\(escape(symbol.id))\"\(try matrix(instance.transform))>")
-            for inner in symbol.layers {
-                try render(inner, frame: local, symbols: symbols, path: path + [symbol.id],
-                           into: &lines, gradients: &gradients)
+        case .text:
+            throw SVGExportError.unsupported("text")
+        case .instance(_, let instance, let symbolID, _, let children):
+            lines.append("<g data-symbol=\"\(escape(symbolID))\"\(try matrix(instance.transform))>")
+            for child in children {
+                try emit(child, inSymbol: true, into: &lines, gradients: &gradients)
             }
             lines.append("</g>")
+        case .unresolved(_, let symbolID):
+            throw SVGExportError.unresolvedSymbol(symbolID)
         }
-        lines.append("</g>")
     }
 
     /// ` transform="matrix(a b c d tx ty)"`.
