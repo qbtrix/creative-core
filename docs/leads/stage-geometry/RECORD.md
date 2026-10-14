@@ -2,9 +2,9 @@
 
 Issue: #267 · Packet: docs/blueprints/core/features/stage-geometry.md
 Run: act-1a13b145104-0zef · Session: session_01HWAU426RJRzBTT7hAE7fER · Started: 2026-10-14T15:43Z
-Stage: 4 round 2
-Base: 70aeada1d70ab8b0a37028ef7f08c543a77ce21b (round 2; feature's first base 3339b904450d73eeae5dc404593972b82f24f46e)
-Next: wait for #297 (r2-b1) to merge (#295 r2-b2 merged d0f4081); then round 3 on the new dev with the same six lenses.
+Stage: 4 round 3
+Base: cb1f3f8af96cd3c77ffbd3029c12ad6b32c32000 (round 3; feature's first base 3339b904450d73eeae5dc404593972b82f24f46e)
+Next: round 3 on cb1f3f8: gate + mutation (scratchpad round-3), then the critic panel with the same six lenses. Round 4 is the last allowed.
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -24,7 +24,7 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
 |---|---|---|---|---|---|---|---|---|
 | 1 | 1817e03 | FAIL only CoreRaster timing flake under load (passes alone) | 38/38 | – | clarity, contract, robustness, tests, design, compat | 18 confirmed (6 major: invalidSides doc, render-list fan-out unbounded, hit axis-scale and rule untested, hit scale and stroke-reach duplicated) + QB-L5 miss; full list rounds/round-1-panel.json | r1-b1 #284 (hit prefilter + SG-8: hit 2.3 ms alone, 3.4 ms under ci), r1-b2 (render list), r1-b3 (geometry/builders/marquee), r1-b4 (world-bounds test, layer docs); hit findings 1,7,8,13,14 r1-b5 #287; merged #284 #287 #288 #289 #290 | no |
-| 2 | 70aeada | PASS (733 tests) | 91/91 | – | clarity, contract, robustness, tests, design, compat | 11 confirmed (3 major: fan-out budget fires on valid large scenes, is not geometry-weighted, and reports a present symbol as unresolved); full list rounds/round-2-panel.json | r2-b1 (budget redesign, render list + SVG), r2-b2 (docs, streaming isWithin, negative-stroke tests) | no |
+| 2 | 70aeada | PASS (733 tests) | 91/91 | – | clarity, contract, robustness, tests, design, compat | 11 confirmed (3 major: fan-out budget fires on valid large scenes, is not geometry-weighted, and reports a present symbol as unresolved); full list rounds/round-2-panel.json | r2-b1 #297, r2-b2 #295 | no |
 
 ## Decisions
 - Waves as the packet sets them: a SG-1; b SG-2, SG-3, SG-5, SG-6; c SG-4, SG-7; d SG-8.

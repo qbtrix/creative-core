@@ -38,3 +38,6 @@ utc	stage	event	ref	note
 2026-10-14T18:00Z	4	heartbeat	round 2	r2-b1 r2-b2 fixing (wf_c62bce05-41d)
 2026-10-14T18:02Z	4	pr-merged	#295	r2-b2 streamed isWithin + negative stroke tests, d0f4081
 2026-10-14T18:02Z	4	pr-opened	#297	r2-b1 budget redesign (maxExpandedPoints, isTruncated, sceneTooLarge)
+2026-10-14T18:02Z	4	pr-merged	#297	r2-b1 budget redesign, cb1f3f8
+2026-10-14T18:02Z	4	stage-end	round 2	all fixes merged
+2026-10-14T18:02Z	4	stage-start	round 3	cb1f3f8
