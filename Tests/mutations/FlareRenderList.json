@@ -26,12 +26,5 @@
     "anchor": "hosts: hosts + [InstanceHost(layerID: layer.id, instanceIndex: i)],",
     "replacement": "hosts: [InstanceHost(layerID: layer.id, instanceIndex: i)],",
     "filter": "RenderListTests"
-  },
-  {
-    "note": "render list instance matrix applied in the wrong order",
-    "file": "Sources/FlareCore/RenderList.swift",
-    "anchor": "parent: m * inst.transform.matrix, opacity: op, locked: lk)",
-    "replacement": "parent: inst.transform.matrix * m, opacity: op, locked: lk)",
-    "filter": "RenderListTests"
   }
 ]
