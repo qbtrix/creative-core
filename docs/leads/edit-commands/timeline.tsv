@@ -54,3 +54,5 @@ utc	stage	event	ref	note
 2026-10-14T19:22Z	4	heartbeat	-	waiting on agents or the lane
 2026-10-14T19:36Z	4	heartbeat	r3-b1	fixer hit a session limit mid-batch; resuming from its worktree
 2026-10-14T19:43Z	4	pr-opened	#298	r3-b1 fixes (1 major, 5 minor)
+2026-10-14T19:43Z	4	pr-merged	#298	r3-b1
+2026-10-14T19:43Z	4	stage-start	round-4	e9a0f7e
