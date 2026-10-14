@@ -1,0 +1,23 @@
+[
+  {
+    "note": "set stroke command skips its width guard, so a bad width reaches the shape",
+    "file": "Sources/FlareCore/ShapeCommands.swift",
+    "anchor": "        try stroke?.validate()\n",
+    "replacement": "",
+    "filter": "StrokePathCommandTests"
+  },
+  {
+    "note": "set path undo restores the path but not the points",
+    "file": "Sources/FlareCore/ShapeCommands.swift",
+    "anchor": "            layer.shapes[index].points = old.points\n",
+    "replacement": "",
+    "filter": "StrokePathCommandTests"
+  },
+  {
+    "note": "set path skips its finite point guard",
+    "file": "Sources/FlareCore/ShapeCommands.swift",
+    "anchor": "guard all.allSatisfy(\\.isFinite) else {",
+    "replacement": "guard true else {",
+    "filter": "StrokePathCommandTests"
+  }
+]

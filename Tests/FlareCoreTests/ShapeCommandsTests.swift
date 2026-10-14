@@ -1,4 +1,5 @@
-// ShapeCommandsTests.swift: RemoveShape, SetShapeFill and TranslateShape. Each
+// ShapeCommandsTests.swift: RemoveShape, SetShapeFill and TranslateShape (and
+// steps for SetShapeStroke and SetShapePath, tested in StrokePathCommandTests). Each
 // undoes exactly; a bad index or locked layer throws and leaves the document as is.
 import FlareCore
 import Testing
@@ -98,6 +99,8 @@ import Testing
         [
             RemoveShape(owner: .scene(s), layerID: "ball", index: index),
             SetShapeFill(owner: .scene(s), layerID: "ball", index: index, fill: .solid(.white)),
+            SetShapeStroke(owner: .scene(s), layerID: "ball", index: index, stroke: Stroke()),
+            SetShapePath(owner: .scene(s), layerID: "ball", index: index, path: nil, points: []),
             TranslateShape(owner: .scene(s), layerID: "ball", index: index, dx: 1, dy: 1),
         ]
     }
@@ -135,6 +138,12 @@ import Testing
         return Int.random(in: -1...count, using: &rng)
     }
 
+    /// Index 0 half the time, else `anyIndex`: keeps the newer steps mostly
+    /// valid so EngineStressTests' share of successful commands stays high.
+    static func editIndex(_ e: CommandEngine, _ owner: LayerOwner, _ layer: String, _ rng: inout SplitMix64) -> Int {
+        Bool.random(using: &rng) ? 0 : anyIndex(e, owner, layer, &rng)
+    }
+
     /// Random shape edit steps, valid and invalid, for assertUndoRestoresDocument.
     static let undoSteps: [UndoStep] = [
         { e, rng, _ in
@@ -156,6 +165,24 @@ import Testing
                                          dx: UndoPropertyTests.anyNumber(in: -50...50, &rng),
                                          dy: UndoPropertyTests.anyNumber(in: -50...50, &rng)),
                           coalesceKey: Bool.random(using: &rng) ? "drag" : nil)
+        },
+        { e, rng, _ in
+            let (owner, layer) = UndoPropertyTests.anyTarget(e, &rng)
+            let width = UndoPropertyTests.anyNumber(in: 0...20, &rng)
+            let stroke = Bool.random(using: &rng) ? nil : Stroke(width: width, join: .round)
+            try e.perform(SetShapeStroke(owner: owner, layerID: layer,
+                                         index: editIndex(e, owner, layer, &rng), stroke: stroke))
+        },
+        { e, rng, _ in
+            let (owner, layer) = UndoPropertyTests.anyTarget(e, &rng)
+            // One coordinate may be non-finite; the rest are plain, so most steps succeed.
+            let points = [Point(x: UndoPropertyTests.anyNumber(in: -50...50, &rng), y: 0)]
+                + (0..<Int.random(in: 0...3, using: &rng)).map { _ in
+                    Point(x: Double.random(in: -50...50, using: &rng), y: Double.random(in: -50...50, using: &rng))
+                }
+            let path = Bool.random(using: &rng) ? nil : Path(polyline: points, closed: Bool.random(using: &rng))
+            try e.perform(SetShapePath(owner: owner, layerID: layer, index: editIndex(e, owner, layer, &rng),
+                                       path: path, points: points))
         },
     ]
 

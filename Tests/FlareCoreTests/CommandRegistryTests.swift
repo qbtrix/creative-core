@@ -1,6 +1,6 @@
 // CommandRegistryTests.swift: every built-in command round-trips through the
 // {"id", "params"} envelope and behaves the same after decoding (the ids are
-// checked against a hand-written list of all 34), and encode only their
+// checked against a hand-written list of all 36), and encode only their
 // params, so a command decoded after execute is fresh; unknown ids
 // and malformed envelopes throw a CommandError, never crash (seeded fuzz).
 import FlareCore
@@ -19,7 +19,7 @@ import Testing
         "label.remove", "label.set",
         "layer.add", "layer.remove", "layer.rename", "layer.reorder", "layer.setFlags",
         "scene.add", "scene.remove", "scene.timing",
-        "shape.add", "shape.remove", "shape.setFill", "shape.translate",
+        "shape.add", "shape.remove", "shape.setFill", "shape.setPath", "shape.setStroke", "shape.translate",
         "swatch.add", "swatch.remove", "swatch.rename", "swatch.setColor",
         "symbol.add", "symbol.convert", "symbol.remove",
         "text.add", "text.remove", "text.setFont", "text.setString",
@@ -69,6 +69,9 @@ import Testing
             SetLayerFlags(owner: .scene(s), layerID: "ball", isVisible: false, isLocked: true),
             RemoveShape(owner: .scene(s), layerID: "ball", index: 0),
             SetShapeFill(owner: .scene(s), layerID: "ball", index: 0, fill: .solid(Color(r: 0, g: 0, b: 1))),
+            SetShapeStroke(owner: .scene(s), layerID: "ball", index: 0, stroke: Stroke(width: 2, cap: .round)),
+            SetShapePath(owner: .scene(s), layerID: "ball", index: 0, path: StrokePathCommandTests.cubic,
+                         points: StrokePathCommandTests.cubicPoints),
             TranslateShape(owner: .scene(s), layerID: "ball", index: 0, dx: 1, dy: 1),
         ]
     }
@@ -87,7 +90,7 @@ import Testing
     }
 
     @Test func everyBuiltInCommandIsRegistered() {
-        #expect(Self.expectedIDs.count == 34)
+        #expect(Self.expectedIDs.count == 36)
         #expect(Set(Self.registry.ids) == Self.expectedIDs)
     }
 
