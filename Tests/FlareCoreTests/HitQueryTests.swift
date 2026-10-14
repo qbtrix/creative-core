@@ -108,6 +108,33 @@ import Testing
         #expect(list.hit(Point(x: 0, y: 0), tolerance: 2)?.layerID == "a")
     }
 
+    @Test func overflowingStrokeIsStillHit() {
+        // 1e308 * 2 / 2 overflows, so the item has no finite box; the exact test still runs.
+        var square = Self.square(at: 0)
+        square.stroke = Stroke(width: 1e308)
+        let layer = Layer(id: "big", name: "Big", shapes: [square], tracks: Self.scaled(2))
+        let scene = Scene(id: "s", name: "S", layers: [layer])
+        let list = scene.renderList(at: 0, symbols: [])
+        #expect(list.items.first?.worldBounds == nil)
+        for p in [Point(x: 10, y: 10), Point(x: 3, y: 4)] {
+            #expect(scene.layers.contains { $0.hits(p, at: 0, symbols: [], rule: .nonZero) })
+            #expect(list.hit(p)?.layerID == "big", "\(p)")
+            #expect(list.hit(p, tolerance: 2)?.layerID == "big", "\(p)")
+        }
+    }
+
+    @Test func toleranceJustInsideScaledStrokeEdge() {
+        // Outline 0...10, stroke 2 under scale 2: the outline runs to 20 and the
+        // stroke reaches 2 more, tolerance 1 one more. The box and the reach agree.
+        var square = Self.square(at: 0)
+        square.stroke = Stroke(width: 2)
+        let list = Self.list([Layer(id: "l", name: "L", shapes: [square], tracks: Self.scaled(2))])
+        #expect(list.hit(Point(x: 22.9, y: 10), tolerance: 1)?.layerID == "l")
+        #expect(list.hit(Point(x: 23.1, y: 10), tolerance: 1) == nil)
+        #expect(list.hit(Point(x: 21.9, y: 10))?.layerID == "l")
+        #expect(list.hit(Point(x: 22.1, y: 10)) == nil)
+    }
+
     @Test func agreesWithLayerHitsAtToleranceZero() {
         var scene = NestedScene.scene()
         scene.layers[3].isLocked = false

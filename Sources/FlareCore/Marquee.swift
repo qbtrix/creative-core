@@ -4,7 +4,10 @@
 // are skipped; hidden layers are already absent from the list. An item counts
 // when its stroke-inclusive `worldBounds` meets the rect, edges included, so a
 // rect over only the outer half of a stroke still picks the item. A rect with
-// a non-finite edge or no area picks nothing.
+// a non-finite edge or no area picks nothing. An item with an outline but no
+// finite box (its stroke width, or that width scaled, is not finite) has a
+// stroke with no finite reach, so every rect that passes picks it: a nil box
+// never hides an item.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -21,7 +24,8 @@ extension RenderList {
         var seen: Set<RenderAddress> = []
         var picked: [RenderAddress] = []
         for item in items where !item.isLocked && !item.isText {
-            guard let box = item.worldBounds, box.meets(area) else { continue }
+            guard item.sceneOutlineBounds != nil else { continue }
+            if let box = item.worldBounds, !box.meets(area) { continue }
             if seen.insert(item.address).inserted { picked.append(item.address) }
         }
         return picked

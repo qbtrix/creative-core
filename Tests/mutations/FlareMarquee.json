@@ -9,8 +9,8 @@
   {
     "note": "marquee uses the bare outline instead of the stroke inclusive world bounds",
     "file": "Sources/FlareCore/Marquee.swift",
-    "anchor": "guard let box = item.worldBounds, box.meets(area) else { continue }",
-    "replacement": "guard let box = item.outline.transformed(by: item.matrix).bounds, box.meets(area) else { continue }",
+    "anchor": "if let box = item.worldBounds, !box.meets(area) { continue }",
+    "replacement": "if let box = item.sceneOutlineBounds, !box.meets(area) { continue }",
     "filter": "MarqueeTests"
   },
   {
@@ -32,6 +32,13 @@
     "file": "Sources/FlareCore/Marquee.swift",
     "anchor": "minX <= other.maxX && other.minX <= maxX",
     "replacement": "minX < other.maxX && other.minX <= maxX",
+    "filter": "MarqueeTests"
+  },
+  {
+    "note": "marquee hides an item with no finite box, so an overflowing stroke is never picked",
+    "file": "Sources/FlareCore/Marquee.swift",
+    "anchor": "if let box = item.worldBounds, !box.meets(area) { continue }",
+    "replacement": "guard let box = item.worldBounds, box.meets(area) else { continue }",
     "filter": "MarqueeTests"
   }
 ]

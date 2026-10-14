@@ -25,18 +25,35 @@ extension Matrix {
 
 extension RenderItem {
     /// The item's scene-space box, stroke included; nil for text, for an empty
-    /// outline, and for a non-finite matrix or stroke width.
+    /// outline, and for a non-finite matrix or stroke width. A nil box means
+    /// "no finite box", never "nothing to hit": callers must not skip on it.
     public var worldBounds: Rect? {
-        guard !isText, matrix.isFinite else { return nil }
-        let width = stroke?.width ?? 0
-        guard width.isFinite, var box = outline.transformed(by: matrix).bounds else { return nil }
-        let half = Swift.max(width, 0) * matrix.maxAxisScale / 2
-        guard half.isFinite else { return nil }
+        guard var box = sceneOutlineBounds, let half = sceneHalfStroke else { return nil }
         box.minX -= half
         box.minY -= half
         box.maxX += half
         box.maxY += half
         return box
+    }
+
+    /// The scene-space box of the outline alone, no stroke; nil for text, for
+    /// an empty outline and for a non-finite matrix.
+    var sceneOutlineBounds: Rect? {
+        guard !isText, matrix.isFinite else { return nil }
+        return outline.transformed(by: matrix).bounds
+    }
+
+    /// Half the stroke width in scene space: the width times the matrix's
+    /// larger axis scale, halved. 0 with no stroke or a negative width; nil
+    /// when the width or the result is not finite. `worldBounds` and the
+    /// tolerance reach of `RenderList.hit` both use it, so the hit prefilter
+    /// box always holds the reach the exact test measures.
+    var sceneHalfStroke: Double? {
+        let width = stroke?.width ?? 0
+        guard width.isFinite else { return nil }
+        let half = Swift.max(width, 0) * matrix.maxAxisScale / 2
+        guard half.isFinite else { return nil }
+        return half
     }
 }
 

@@ -59,6 +59,21 @@ import Testing
         #expect(bare.marquee(Rect(minX: 12, minY: 2, maxX: 14, maxY: 8)).isEmpty)
     }
 
+    @Test func overflowingStrokeIsPicked() {
+        // 1e308 * 2 / 2 overflows: no finite box, but the stroke paints everywhere.
+        let tracks = ["scaleX": [Keyframe(frame: 0, value: 2)], "scaleY": [Keyframe(frame: 0, value: 2)]]
+        let big = Layer(id: "big", name: "Big", shapes: [Self.square(at: 0, stroke: Stroke(width: 1e308))],
+                        tracks: tracks)
+        let list = Self.list([big, Layer(id: "a", name: "A", shapes: [Self.square(at: 0)])])
+        #expect(list.items.first?.worldBounds == nil)
+        #expect(Self.ids(list.marquee(Rect(minX: 2, minY: 2, maxX: 4, maxY: 4))) == ["big:0", "a:0"])
+        #expect(Self.ids(list.marquee(Rect(minX: 500, minY: 500, maxX: 600, maxY: 600))) == ["big:0"])
+        // An empty outline still has nothing to pick, and a bad rect still picks nothing.
+        let empty = Layer(id: "e", name: "E", shapes: [Shape(points: [], stroke: Stroke(width: 1e308))], tracks: tracks)
+        #expect(Self.list([empty]).marquee(Self.everything).isEmpty)
+        #expect(list.marquee(Rect(minX: 5, minY: 0, maxX: 5, maxY: 10)).isEmpty)
+    }
+
     @Test func zeroAreaOrNonFiniteRectIsEmpty() {
         let list = Self.list([Layer(id: "a", name: "A", shapes: [Self.square(at: 0)])])
         #expect(!list.marquee(Rect(minX: 0, minY: 0, maxX: 10, maxY: 10)).isEmpty)
