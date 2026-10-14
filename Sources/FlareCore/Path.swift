@@ -134,6 +134,22 @@ extension Path {
     }
 }
 
+extension Path {
+    /// The path with every point of every element mapped by `m`. An affine
+    /// map takes a curve to the same kind of curve, so cubics stay cubics.
+    public func transformed(by m: Matrix) -> Path {
+        Path(elements: elements.map { element in
+            switch element {
+            case .move(let to): .move(to: m.apply(to))
+            case .line(let to): .line(to: m.apply(to))
+            case .quad(let c, let to): .quad(control: m.apply(c), to: m.apply(to))
+            case .cubic(let c1, let c2, let to): .cubic(control1: m.apply(c1), control2: m.apply(c2), to: m.apply(to))
+            case .close: .close
+            }
+        })
+    }
+}
+
 extension PathElement {
     /// Where the element leaves the pen; nil for `close`.
     var endPoint: Point? {
