@@ -64,9 +64,23 @@
   },
   {
     "note": "hit query near test lets a negative stroke width cut the tolerance reach",
-    "file": "Sources/FlareCore/HitQuery.swift",
-    "anchor": "if let width = stroke?.width, width.isFinite, width > 0 {",
-    "replacement": "if let width = stroke?.width, width.isFinite {",
+    "file": "Sources/FlareCore/WorldBounds.swift",
+    "anchor": "Swift.max(width, 0)",
+    "replacement": "width",
     "filter": "HitQueryTests"
+  },
+  {
+    "note": "hit query prefilter skips an item with no finite box, so an overflowing stroke is never hit",
+    "file": "Sources/FlareCore/HitQuery.swift",
+    "anchor": "if let box = item.worldBounds, !box.contains(point, widenedBy: tolerance) { continue }",
+    "replacement": "guard let box = item.worldBounds, box.contains(point, widenedBy: tolerance) else { continue }",
+    "filter": "HitQueryTests"
+  },
+  {
+    "note": "isWithin bridges the gap between two subpaths",
+    "file": "Sources/FlareCore/HitTest.swift",
+    "anchor": "guard !startsPolyline, let a = previous else { return false }",
+    "replacement": "guard let a = previous else { return false }",
+    "filter": "HitTestTests"
   }
 ]

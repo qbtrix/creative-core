@@ -175,6 +175,15 @@ import Testing
         }
     }
 
+    @Test func isWithinNeverBridgesTwoSubpaths() {
+        // The gap from (10, 0) to (10, 10) is a move, not a segment.
+        let path = Path(elements: [.move(to: Point(x: 0, y: 0)), .line(to: Point(x: 10, y: 0)),
+                                   .move(to: Point(x: 10, y: 10)), .line(to: Point(x: 20, y: 10))])
+        #expect(!path.isWithin(0.5, of: Point(x: 10, y: 5), flatness: 0.1))
+        #expect(path.isWithin(0.5, of: Point(x: 5, y: 0.4), flatness: 0.1))
+        #expect(path.isWithin(0.5, of: Point(x: 15, y: 9.6), flatness: 0.1))
+    }
+
     @Test func hugeOutlineHitNearFirstSegmentReturnsQuickly() {
         // 20,000 huge cubics at flatness 1e-3 each flatten to 4,096 segments:
         // 80 million points if the whole outline were built first.

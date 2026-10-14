@@ -10,6 +10,8 @@
 // test, an item whose `worldBounds` widened by `tolerance` misses the point is
 // rejected; that box holds everything the exact test can accept, so the
 // result is the same, only cheaper for the many items far from the pointer.
+// An item with no finite box (a stroke whose scaled width overflows) is never
+// rejected by the prefilter; the exact test decides.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -26,7 +28,7 @@ extension RenderList {
     public func hit(_ point: Point, tolerance: Double = 0, rule: FillRule = .nonZero) -> RenderAddress? {
         guard tolerance.isFinite, tolerance >= 0 else { return nil }
         for item in items.reversed() where !item.isLocked && !item.isText {
-            guard let box = item.worldBounds, box.contains(point, widenedBy: tolerance) else { continue }
+            if let box = item.worldBounds, !box.contains(point, widenedBy: tolerance) { continue }
             guard let inverse = try? item.matrix.inverted() else { continue }
             let shape = Shape(points: [], path: item.outline, stroke: item.stroke)
             if shape.hits(inverse.apply(point), rule: rule) { return item.address }
@@ -40,8 +42,7 @@ extension RenderItem {
     /// Whether `point` is within `tolerance` plus the scaled half stroke of
     /// the outline drawn in scene space.
     fileprivate func isNear(_ point: Point, tolerance: Double) -> Bool {
-        var halfStroke = 0.0
-        if let width = stroke?.width, width.isFinite, width > 0 { halfStroke = width / 2 * matrix.maxAxisScale }
+        let halfStroke = sceneHalfStroke ?? 0
         let reach = tolerance + halfStroke
         guard reach.isFinite else { return false }
         return outline.transformed(by: matrix).isWithin(reach, of: point, flatness: max(tolerance / 8, 1e-3))
