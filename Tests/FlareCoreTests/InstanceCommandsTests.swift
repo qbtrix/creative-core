@@ -71,6 +71,12 @@ import Testing
             (RemoveInstance(owner: .scene(Self.s), layerID: "ball", index: 1), .invalidIndex(1)),
             (RemoveInstance(owner: .scene(Self.s), layerID: "ball", index: -1), .invalidIndex(-1)),
             (RemoveInstance(owner: .scene(Self.s), layerID: "nope", index: 0), .layerNotFound("nope")),
+            // "bg" has no instances, so even index 0 is out of range.
+            (RemoveInstance(owner: .scene(Self.s), layerID: "bg", index: 0), .invalidIndex(0)),
+            (SetInstanceTransform(owner: .scene(Self.s), layerID: "bg", index: 0, transform: Transform()),
+             .invalidIndex(0)),
+            (SetInstancePlayback(owner: .scene(Self.s), layerID: "bg", index: 0, firstFrame: 0, loop: .loop),
+             .invalidIndex(0)),
         ]
         for (command, error) in cases {
             #expect(throws: error) { try engine.perform(command) }
@@ -104,6 +110,22 @@ import Testing
         let emptiedBefore = emptied
         #expect(throws: error) { try cmd.undo(&emptied) }
         #expect(emptied == emptiedBefore)
+    }
+
+    @Test func undoBeforeExecuteThrows() {
+        var doc = Self.document()
+        doc.scenes[0].layers[0].instances = [Self.spark]
+        let before = doc
+        let commands: [any Command] = [
+            AddInstance(owner: .scene(Self.s), layerID: "bg", instance: Self.spark),
+            RemoveInstance(owner: .scene(Self.s), layerID: "bg", index: 0),
+            SetInstanceTransform(owner: .scene(Self.s), layerID: "bg", index: 0, transform: Transform(x: 3)),
+            SetInstancePlayback(owner: .scene(Self.s), layerID: "bg", index: 0, firstFrame: 2, loop: .playOnce),
+        ]
+        for command in commands {
+            #expect(throws: CommandError.notExecuted, "\(type(of: command).id)") { try command.undo(&doc) }
+            #expect(doc == before)
+        }
     }
 
     @Test func validateRejectsNonFiniteInstanceTransform() throws {

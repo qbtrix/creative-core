@@ -2,7 +2,7 @@
   {
     "note": "set stroke command skips its width guard, so a bad width reaches the shape",
     "file": "Sources/FlareCore/ShapeCommands.swift",
-    "anchor": "        try stroke?.validate()\n",
+    "anchor": "            try stroke?.validate()\n",
     "replacement": "",
     "filter": "StrokePathCommandTests"
   },
@@ -18,6 +18,13 @@
     "file": "Sources/FlareCore/ShapeCommands.swift",
     "anchor": "guard all.allSatisfy(\\.isFinite) else {",
     "replacement": "guard true else {",
+    "filter": "StrokePathCommandTests"
+  },
+  {
+    "note": "set stroke command drops the layer and shape address from its error",
+    "file": "Sources/FlareCore/ShapeCommands.swift",
+    "anchor": "throw CommandError.invalidDocument(\"layer \\(layerID) shape \\(index): \\(field)\")",
+    "replacement": "throw CommandError.invalidDocument(field)",
     "filter": "StrokePathCommandTests"
   }
 ]

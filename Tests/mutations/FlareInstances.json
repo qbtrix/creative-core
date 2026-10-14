@@ -33,5 +33,12 @@
     "anchor": "        [x, y, scaleX, scaleY, rotation].allSatisfy(\\.isFinite)",
     "replacement": "        [x, scaleX, scaleY, rotation].allSatisfy(\\.isFinite)",
     "filter": "InstanceCommandsTests|InstanceTransformPlaybackTests"
+  },
+  {
+    "note": "add instance undo before execute removes a matching instance it never added",
+    "file": "Sources/FlareCore/InstanceCommands.swift",
+    "anchor": "        guard executed else { throw CommandError.notExecuted }",
+    "replacement": "        guard executed || true else { throw CommandError.notExecuted }",
+    "filter": "InstanceCommandsTests"
   }
 ]

@@ -96,9 +96,10 @@ public struct SetShapeFill: LayerParamsCommand {
 }
 
 /// Sets or, with nil, removes a shape's stroke. A negative or non-finite
-/// width or a non-finite color throws `ModelError.invalidStroke` from
-/// `execute` before anything changes; `CommandEngine.perform` reports it as
-/// `CommandError.invalidDocument`.
+/// width or a non-finite color throws `CommandError.invalidDocument` from
+/// `execute` before anything changes, with a message that names the layer,
+/// the shape index and the stroke field, e.g.
+/// "layer ball shape 0: stroke color channels must be finite".
 public struct SetShapeStroke: LayerParamsCommand {
     public static let id = "shape.setStroke"
     public var label: String { "Set Stroke" }
@@ -123,7 +124,12 @@ public struct SetShapeStroke: LayerParamsCommand {
     }
 
     public mutating func execute(_ document: inout Document) throws {
-        try stroke?.validate()
+        do {
+            try stroke?.validate()
+        } catch ModelError.invalidStroke(let message) {
+            let field = message.hasPrefix("stroke ") ? message : "stroke " + message
+            throw CommandError.invalidDocument("layer \(layerID) shape \(index): \(field)")
+        }
         let (index, stroke) = (index, stroke)
         oldStroke = try document.withEditableLayer(owner, layer: layerID) { layer in
             try layer.checkShapeIndex(index)
