@@ -69,6 +69,37 @@ import Testing
         #expect(first.transform == Transform(x: 1))
     }
 
+    @Test func setInstanceTransformOnSameLayerIDOfAnotherOwnerDoesNotMerge() throws {
+        // Scene and "sym" each hold a layer "bg" with one spark at index 0, so
+        // only the owner tells the two steps apart.
+        var start = Self.document()
+        var shared = Layer(id: "bg", name: "BG")
+        shared.instances = [Self.spark]
+        start.symbols[0].layers.append(shared)
+        try FlareFormat.validate(start)
+
+        var first = SetInstanceTransform(owner: .scene(Self.s), layerID: "bg", index: 0, transform: Transform(x: 1))
+        let next = SetInstanceTransform(owner: .symbol("sym"), layerID: "bg", index: 0, transform: Transform(x: 2))
+        let merged = first.merge(next)
+        #expect(!merged)
+        #expect(first.transform == Transform(x: 1))
+
+        var engine = CommandEngine(document: start)
+        try engine.perform(first, coalesceKey: "drag")
+        try engine.perform(next, coalesceKey: "drag")
+        #expect(engine.undoStack.first?.commands.count == 2)
+        #expect(engine.document.scenes[0].layers[0].instances[0].transform == Transform(x: 1))
+        #expect(engine.document.symbols[0].layers[2].instances[0].transform == Transform(x: 2))
+        try engine.undo()
+        #expect(engine.document == start)
+    }
+
+    @Test func transformLabelSaysTransform() {
+        let command = SetInstanceTransform(owner: .scene(Self.s), layerID: "bg", index: 0,
+                                           transform: Transform(rotation: 90))
+        #expect(command.label == "Transform Instance")
+    }
+
     @Test func badParamsThrowBeforeAnyChange() throws {
         var engine = CommandEngine(document: Self.document())
         let before = engine.document

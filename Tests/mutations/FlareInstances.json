@@ -19,5 +19,12 @@
     "anchor": "        instances.insert(instance, at: index)",
     "replacement": "        instances.append(instance)",
     "filter": "InstanceCommandsTests"
+  },
+  {
+    "note": "add instance undo skips the still last guard and removes another instance",
+    "file": "Sources/FlareCore/InstanceCommands.swift",
+    "anchor": "            guard layer.instances.last == instance else {",
+    "replacement": "            guard layer.instances.last == instance || true else {",
+    "filter": "InstanceCommandsTests"
   }
 ]
