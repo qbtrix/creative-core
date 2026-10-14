@@ -52,6 +52,23 @@ public struct Mask: Equatable, Sendable {
         storage.reduce(0) { $0 + Double($1) }
     }
 
+    /// The smallest rectangle that holds every pixel with nonzero coverage,
+    /// or nil when no pixel has any. Every pixel outside it has coverage 0.
+    var coveredRect: TileRect? {
+        var minX = width, maxX = -1, minY = height, maxY = -1
+        for y in 0..<height {
+            let row = storage[(y * width)..<((y + 1) * width)]
+            guard let first = row.firstIndex(where: { $0 != 0 }),
+                  let last = row.lastIndex(where: { $0 != 0 }) else { continue }
+            minX = min(minX, first - row.startIndex)
+            maxX = max(maxX, last - row.startIndex)
+            if minY == height { minY = y }
+            maxY = y
+        }
+        guard maxY >= 0 else { return nil }
+        return TileRect(x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1)
+    }
+
     // MARK: Shapes
 
     /// A mask with the axis-aligned rectangle at (x, y), `w` x `h` pixels,
