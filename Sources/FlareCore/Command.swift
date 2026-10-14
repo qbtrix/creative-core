@@ -83,6 +83,8 @@ public enum CommandError: Error, Equatable, Sendable {
     case swatchNotFound(String)
     /// A swatch name is empty; swatch names are the palette's keys.
     case emptySwatchName
+    /// A name is empty where one is required, e.g. a scene name.
+    case emptyName
     /// A color channel is not finite or not in 0...1.
     case invalidColor(Color)
     /// An index outside the valid range, e.g. a layer position.
