@@ -76,8 +76,8 @@ extension Layer {
     }
 }
 
-/// Distance from `p` to the segment from `a` to `b`.
-private func distance(_ p: Point, _ a: Point, _ b: Point) -> Double {
+/// Distance from `p` to the segment from `a` to `b`. Shared with `RenderList.hit`.
+func distance(_ p: Point, _ a: Point, _ b: Point) -> Double {
     let dx = b.x - a.x, dy = b.y - a.y
     let lengthSquared = dx * dx + dy * dy
     let t = lengthSquared > 0 ? min(max(((p.x - a.x) * dx + (p.y - a.y) * dy) / lengthSquared, 0), 1) : 0
