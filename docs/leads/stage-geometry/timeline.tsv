@@ -7,3 +7,9 @@ utc	stage	event	ref	note
 2026-10-14T16:05Z	3	pr-merged	#271	SG-1 render list, 4cac701
 2026-10-14T16:27Z	3	stage-end	wave a	base for wave b 4cac701
 2026-10-14T16:27Z	3	stage-start	wave b	SG-2 SG-3 SG-5 SG-6
+2026-10-14T16:32Z	3	pr-merged	#274	SG-2 SVG walks render list, 04c749f
+2026-10-14T16:34Z	3	pr-merged	#275	SG-3 hit query, 911507a
+2026-10-14T16:37Z	3	pr-merged	#277	SG-5 world bounds, ae53f2e
+2026-10-14T16:39Z	3	pr-merged	#278	SG-6 rect/ellipse builders, 992ba1b
+2026-10-14T16:39Z	3	stage-end	wave b	base for wave c 992ba1b
+2026-10-14T16:39Z	3	stage-start	wave c	SG-4 SG-7
