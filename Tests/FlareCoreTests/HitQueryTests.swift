@@ -3,7 +3,8 @@
 // the address, refuses bad tolerances, and at tolerance 0 agrees with
 // Layer.hits on 200 seeded points. Stroke reach scales by the larger axis and
 // the fill rule is forwarded. The world-bounds prefilter never changes
-// the answer of a brute-force scan of the exact per-item test.
+// the answer of a brute-force scan of the exact per-item test, and an item
+// with no finite box (an overflowing scaled stroke) is still tested.
 import FlareCore
 import Testing
 

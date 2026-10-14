@@ -1,6 +1,7 @@
 // MarqueeTests.swift: RenderList.marquee returns the unlocked, non-text items
 // whose stroke-inclusive world bounds meet a rect, in paint order, each once;
-// a zero-area or non-finite rect picks nothing.
+// a zero-area or non-finite rect picks nothing, and an item whose scaled
+// stroke overflows (no finite box) is picked by every rect.
 import FlareCore
 import Testing
 
