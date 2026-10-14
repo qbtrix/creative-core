@@ -1,7 +1,8 @@
 // HitQueryTests.swift: RenderList.hit picks the topmost unlocked, non-text
 // item under a point, adds the tolerance once, keeps the instance chain in
 // the address, refuses bad tolerances, and at tolerance 0 agrees with
-// Layer.hits on 200 seeded points. The world-bounds prefilter never changes
+// Layer.hits on 200 seeded points. Stroke reach scales by the larger axis and
+// the fill rule is forwarded. The world-bounds prefilter never changes
 // the answer of a brute-force scan of the exact per-item test.
 import FlareCore
 import Testing
@@ -31,6 +32,22 @@ import Testing
         let scaled = Self.list([Layer(id: "w", name: "W", shapes: [wide], tracks: Self.scaled(2))])
         #expect(scaled.hit(Point(x: 50, y: 6), tolerance: 4)?.layerID == "w")
         #expect(scaled.hit(Point(x: 50, y: 6.1), tolerance: 4) == nil)
+    }
+
+    @Test func nonUniformScaleWidensStrokeByLargerAxis() {
+        // A 2-wide stroke under scaleY 3 is 3 deep each side; tolerance 1 makes the reach 4.
+        let line = Shape(points: [Point(x: 0, y: 0), Point(x: 100, y: 0)], closed: false, stroke: Stroke(width: 2))
+        let tracks = ["scaleX": [Keyframe(frame: 0, value: 1)], "scaleY": [Keyframe(frame: 0, value: 3)]]
+        let list = Self.list([Layer(id: "l", name: "L", shapes: [line], tracks: tracks)])
+        #expect(list.hit(Point(x: 50, y: 3.9), tolerance: 1)?.layerID == "l")
+        #expect(list.hit(Point(x: 50, y: 4.1), tolerance: 1) == nil)
+    }
+
+    @Test func evenOddRuleIsForwarded() {
+        let star = Self.list([Layer(id: "star", name: "Star", shapes: [HitTestTests.star])])
+        let centre = Point(x: 0, y: 0)
+        #expect(star.hit(centre)?.layerID == "star")
+        #expect(star.hit(centre, rule: .evenOdd) == nil)
     }
 
     @Test func laterOfTwoOverlappingSquaresWins() {

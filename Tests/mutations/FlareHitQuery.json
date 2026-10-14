@@ -40,5 +40,26 @@
     "anchor": "box.contains(point, widenedBy: tolerance)",
     "replacement": "box.contains(point, widenedBy: 0)",
     "filter": "HitQueryTests"
+  },
+  {
+    "note": "hit query stroke reach scales by the smaller axis instead of the larger",
+    "file": "Sources/FlareCore/WorldBounds.swift",
+    "anchor": "(Swift.max(a * a + b * b, c * c + d * d)).squareRoot()",
+    "replacement": "(Swift.min(a * a + b * b, c * c + d * d)).squareRoot()",
+    "filter": "HitQueryTests"
+  },
+  {
+    "note": "hit query ignores the fill rule and always tests nonzero",
+    "file": "Sources/FlareCore/HitQuery.swift",
+    "anchor": "shape.hits(inverse.apply(point), rule: rule)",
+    "replacement": "shape.hits(inverse.apply(point), rule: .nonZero)",
+    "filter": "HitQueryTests"
+  },
+  {
+    "note": "hit query stops at a singular matrix item instead of skipping it",
+    "file": "Sources/FlareCore/HitQuery.swift",
+    "anchor": "guard let inverse = try? item.matrix.inverted() else { continue }",
+    "replacement": "guard let inverse = try? item.matrix.inverted() else { return nil }",
+    "filter": "HitQueryTests"
   }
 ]
