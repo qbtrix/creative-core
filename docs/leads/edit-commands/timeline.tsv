@@ -56,3 +56,6 @@ utc	stage	event	ref	note
 2026-10-14T19:43Z	4	pr-opened	#298	r3-b1 fixes (1 major, 5 minor)
 2026-10-14T19:43Z	4	pr-merged	#298	r3-b1
 2026-10-14T19:43Z	4	stage-start	round-4	e9a0f7e
+2026-10-14T20:00Z	4	gate-run	e9a0f7e	CI: PASS 756 tests; mutate 112/112
+2026-10-14T20:00Z	4	round-clean	round-4	4 minor; budget reached (4 rounds)
+2026-10-14T20:00Z	5	stage-start	finish	r4-b1 carries feature-done
