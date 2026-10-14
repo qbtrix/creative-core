@@ -27,3 +27,6 @@ utc	stage	event	ref	note
 2026-10-14T17:15Z	3	heartbeat	-	waiting on builders or the lane
 2026-10-14T17:16Z	3	pr-merged	#291	EC-9 instance transform/playback (closes #173)
 2026-10-14T17:16Z	3	stage-start	wave-h	EC-10 on c54b4ee
+2026-10-14T17:20Z	3	pr-merged	#292	EC-10 drag-step budget
+2026-10-14T17:20Z	3	stage-end	build	all 10 tasks merged
+2026-10-14T17:20Z	4	stage-start	round-1	94d993b

@@ -2,9 +2,9 @@
 
 Issue: #268 · Packet: docs/blueprints/core/features/edit-commands.md
 Run: act-1a13b1450f1-6p7n · Session: claude/edit-commands-lead-rsmd3t · Started: 2026-10-14T15:00Z
-Stage: 3 wave h
-Base: c54b4ee79a6119670d3ab5e02476ce656d1cbd91
-Next: wait for EC-10 PR and the lane merge, then Anatomy round 1 on the new dev SHA
+Stage: 4 round 1
+Base: 94d993b003ff504723790277b37ded4251382fdb
+Next: round 1 on 94d993b003ff504723790277b37ded4251382fdb: gate, mutate, critic panel
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -19,7 +19,7 @@ Next: wait for EC-10 PR and the lane merge, then Anatomy round 1 on the new dev 
 | EC-7b | e | RenameScene, ReorderScene, CommandError.emptyName | SceneCommands.swift, Command.swift + tests | SceneEditCommandTests | FlareSceneEdit.json | #285 | merged |
 | EC-8 | f | AddInstance, RemoveInstance, invalidTransform, validate (finishes #178) | InstanceCommands.swift, Instance.swift, Command.swift, FlareFormat.swift, CommandRegistry.swift + tests | InstanceCommandsTests | FlareInstances.json | #286 | merged |
 | EC-9 | g | SetInstanceTransform (drag merge), SetInstancePlayback (replaces #178) | InstanceCommands.swift + tests | InstanceTransformPlaybackTests | FlareInstancePlayback.json | #291 | merged |
-| EC-10 | h | QB-L7 drag-step budget; feature-done | DragStepBudgetTests.swift | DragStepBudgetTests | – | – | todo |
+| EC-10 | h | QB-L7 drag-step budget; feature-done | DragStepBudgetTests.swift | DragStepBudgetTests | – | #292 | merged |
 
 Acceptance tests and quality bars: the packet's "Acceptance test per task" and "Quality tests" tables, verbatim.
 
