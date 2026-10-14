@@ -23,8 +23,15 @@
   {
     "note": "marquee accepts a non finite rect",
     "file": "Sources/FlareCore/Marquee.swift",
-    "anchor": "guard [rect.minX, rect.minY, rect.maxX, rect.maxY].allSatisfy(\\.isFinite) else { return [] }",
-    "replacement": "",
+    "anchor": "guard let area = rect.normalized else { return [] }",
+    "replacement": "let area = rect.normalized ?? rect",
+    "filter": "MarqueeTests"
+  },
+  {
+    "note": "marquee closed edge test excludes a rect touching the right edge",
+    "file": "Sources/FlareCore/Marquee.swift",
+    "anchor": "minX <= other.maxX && other.minX <= maxX",
+    "replacement": "minX < other.maxX && other.minX <= maxX",
     "filter": "MarqueeTests"
   }
 ]

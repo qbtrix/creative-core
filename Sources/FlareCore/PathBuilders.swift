@@ -78,12 +78,8 @@ struct BuilderBox {
 
     /// Throws `GeometryError.nonFinite` when an edge is NaN or infinite.
     init(_ rect: Rect) throws {
-        let edges = [rect.minX, rect.minY, rect.maxX, rect.maxY]
-        guard edges.allSatisfy(\.isFinite) else { throw GeometryError.nonFinite }
-        minX = Swift.min(rect.minX, rect.maxX)
-        maxX = Swift.max(rect.minX, rect.maxX)
-        minY = Swift.min(rect.minY, rect.maxY)
-        maxY = Swift.max(rect.minY, rect.maxY)
+        guard let ordered = rect.normalized else { throw GeometryError.nonFinite }
+        (minX, minY, maxX, maxY) = (ordered.minX, ordered.minY, ordered.maxX, ordered.maxY)
     }
 
     var halfWidth: Double { maxX / 2 - minX / 2 }

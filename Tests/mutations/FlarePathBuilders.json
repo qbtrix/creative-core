@@ -16,8 +16,22 @@
   {
     "note": "path builder non-finite rect guard dropped",
     "file": "Sources/FlareCore/PathBuilders.swift",
-    "anchor": "guard edges.allSatisfy(\\.isFinite) else { throw GeometryError.nonFinite }",
-    "replacement": "guard edges.allSatisfy({ !$0.isNaN }) else { throw GeometryError.nonFinite }",
+    "anchor": "guard let ordered = rect.normalized else { throw GeometryError.nonFinite }",
+    "replacement": "let ordered = rect.normalized ?? rect",
+    "filter": "PathBuilderTests"
+  },
+  {
+    "note": "path builder rect normalisation drops the min max ordering",
+    "file": "Sources/FlareCore/Geometry.swift",
+    "anchor": "        return Rect(minX: Swift.min(minX, maxX), minY: Swift.min(minY, maxY),\n                    maxX: Swift.max(minX, maxX), maxY: Swift.max(minY, maxY))",
+    "replacement": "        return self",
+    "filter": "PathBuilderTests"
+  },
+  {
+    "note": "path builder half width subtracts before halving",
+    "file": "Sources/FlareCore/PathBuilders.swift",
+    "anchor": "var halfWidth: Double { maxX / 2 - minX / 2 }",
+    "replacement": "var halfWidth: Double { (maxX - minX) / 2 }",
     "filter": "PathBuilderTests"
   }
 ]

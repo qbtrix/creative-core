@@ -5,5 +5,19 @@
     "anchor": "guard sides >= 3, sides <= maxSides else { throw GeometryError.invalidSides }",
     "replacement": "guard sides >= 2, sides <= maxSides else { throw GeometryError.invalidSides }",
     "filter": "PolygonStarBuilderTests"
+  },
+  {
+    "note": "star inner ratio range guard rejects a ratio of exactly 1",
+    "file": "Sources/FlareCore/PathBuilders+Polygon.swift",
+    "anchor": "guard innerRatio > 0, innerRatio <= 1 else { throw GeometryError.invalidSides }",
+    "replacement": "guard innerRatio > 0, innerRatio < 1 else { throw GeometryError.invalidSides }",
+    "filter": "PolygonStarBuilderTests"
+  },
+  {
+    "note": "star non finite inner ratio guard dropped",
+    "file": "Sources/FlareCore/PathBuilders+Polygon.swift",
+    "anchor": "guard innerRatio.isFinite else { throw GeometryError.nonFinite }",
+    "replacement": "",
+    "filter": "PolygonStarBuilderTests"
   }
 ]

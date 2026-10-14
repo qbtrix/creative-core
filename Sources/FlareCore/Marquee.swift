@@ -16,9 +16,7 @@ extension RenderList {
     /// `rect`, in paint order, each address once. A rect with a non-finite
     /// edge, or zero width or height once normalised, gives [].
     public func marquee(_ rect: Rect) -> [RenderAddress] {
-        guard [rect.minX, rect.minY, rect.maxX, rect.maxY].allSatisfy(\.isFinite) else { return [] }
-        let area = Rect(minX: Swift.min(rect.minX, rect.maxX), minY: Swift.min(rect.minY, rect.maxY),
-                        maxX: Swift.max(rect.minX, rect.maxX), maxY: Swift.max(rect.minY, rect.maxY))
+        guard let area = rect.normalized else { return [] }
         guard area.maxX - area.minX > 0, area.maxY - area.minY > 0 else { return [] }
         var seen: Set<RenderAddress> = []
         var picked: [RenderAddress] = []
