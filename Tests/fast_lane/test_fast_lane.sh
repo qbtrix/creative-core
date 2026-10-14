@@ -189,6 +189,8 @@ gh() {
       n="${2#*/pulls/}"; n="${n%%/*}"
       if [[ -e "$sw/files.$n.json" ]]; then jq -r "${!#}" "$sw/files.$n.json"
       else jq -rn '[{filename: "Sources/FlareCore/Timeline.swift", status: "modified"}]' | jq -r "${!#}"; fi ;;
+    "run list "*) cat "$sw/ci_head" 2>/dev/null || echo cihead ;;
+    "api "*"/compare/cihead...dev"*) cat "$sw/ci_ahead" 2>/dev/null || echo 0 ;;
     "api "*"/issues/"*"/comments "*) n="${2#*/issues/}"; cat "$sw/${n%%/*}.comments" 2>/dev/null || true ;;
     "pr comment "*) echo "$a" >>"$sw/calls"; printf '%s\n' "${!#}" >>"$sw/$3.comments" ;;
     "pr merge "*) echo "$a" >>"$sw/calls"; touch "$sw/$3.merged" ;;
@@ -199,6 +201,8 @@ gh() {
 sweep() {
   rm -rf "$sw"; mkdir -p "$sw"; : >"$sw/calls"
   local n
+  [[ -z "${SWEEP_AHEAD:-}" ]] || echo "$SWEEP_AHEAD" >"$sw/ci_ahead"
+  [[ -z "${SWEEP_CI_HEAD+x}" ]] || printf '%s' "$SWEEP_CI_HEAD" >"$sw/ci_head"
   for n in 4 5 6 7; do jq --argjson n "$n" '.number = $n' <<<"$BASE_PR" | jq "$MARKED" >"$sw/$n.json"; done
   jq '.baseRefName = "main"' "$sw/5.json" >"$sw/x" && mv "$sw/x" "$sw/5.json"
   jq '.mergeable = "CONFLICTING" | .mergeStateStatus = "DIRTY"' "$sw/6.json" >"$sw/x" && mv "$sw/x" "$sw/6.json"
@@ -217,6 +221,32 @@ expect "never merges the conflicting PR" "$(grep -c '^pr merge 6' "$sw/calls")" 
 expect "routine merges start no CI" "$(grep -c '^workflow run' "$sw/calls")" 0
 sweep 4 7
 expect "feature-done merges dispatch CI on dev once" "$(grep -c '^workflow run ci.yml .*--ref dev' "$sw/calls")" 1
+
+# dispatch_reason: feature-done first, then the 10-merge count. No UI rule in core.
+reason() {  # reason <name> <want> <feature> <since>
+  local got; got=$(dispatch_reason "$3" "$4")
+  if [[ "$got" == "$2" ]]; then echo "ok   dispatch: $1"; else echo "FAIL dispatch: $1: want '$2', got '$got'"; fail=1; fi
+}
+reason "feature-done" "merged a feature-done PR" 1 ""
+reason "feature-done outranks the count" "merged a feature-done PR" 1 12
+reason "10 merges since CI" "10 merged PRs since the last CI run" 0 10
+reason "more than 10 merges since CI" "14 merged PRs since the last CI run" 0 14
+reason "9 merges wait" "" 0 9
+reason "unknown count waits" "" 0 ""
+reason "garbage count waits" "" 0 "x10"
+SWEEP_AHEAD=9 sweep
+expect "9 merged PRs since the last CI run start no CI" "$(grep -c '^workflow run' "$sw/calls")" 0
+SWEEP_AHEAD=10 sweep
+expect "the 10th merged PR since the last CI run dispatches once" "$(grep -c '^workflow run ci.yml .*--ref dev' "$sw/calls")" 1
+SWEEP_CI_HEAD="" sweep
+expect "a base with no CI run yet dispatches once" "$(grep -c '^workflow run ci.yml .*--ref dev' "$sw/calls")" 1
+SWEEP_AHEAD=10 sweep 4 7
+expect "feature-done and the count at once still dispatch once" "$(grep -c '^workflow run' "$sw/calls")" 1
+# A run that merges nothing never dispatches, however far dev is past its last CI run.
+rm -rf "$sw"; mkdir -p "$sw"; : >"$sw/calls"; echo 50 >"$sw/ci_ahead"
+jq '.number = 6 | .mergeable = "CONFLICTING" | .mergeStateStatus = "DIRTY"' <<<"$BASE_PR" | jq "$MARKED" >"$sw/6.json"
+( main 6 ) >/dev/null 2>&1 || { echo "FAIL sweep: main exited non-zero"; fail=1; }
+expect "a run that merges nothing starts no CI" "$(grep -c '^workflow run' "$sw/calls")" 0
 # A rename away from a protected path is refused under its old name.
 rm -rf "$sw"; mkdir -p "$sw"; : >"$sw/calls"
 jq '.number = 4' <<<"$BASE_PR" | jq "$MARKED" >"$sw/4.json"

@@ -29,11 +29,13 @@
 # gets one comment per head and keeps its label for Belt's fixer.
 #
 # Every run sweeps all open fast-lane PRs, oldest first, and merges each
-# eligible one. A merge does not start CI; only merging a PR labelled
-# FEATURE_LABEL does: the lane then dispatches CI on BASE_BRANCH once per run.
+# eligible one. After its merges the lane dispatches CI on BASE_BRANCH at most
+# once per run (dispatch_reason), when it merged a PR labelled FEATURE_LABEL or
+# BASE_BRANCH holds DISPATCH_EVERY merged PRs since the last CI run's head.
+# Leads can't dispatch CI themselves (403), so the lane does it for them.
 # Trade-off: breakage only the full CI catches (the macOS build, mutation
-# testing) sits on dev until the next feature run, so the dev-red culprit range
-# can span several PRs.
+# testing) sits on dev until that run, so the dev-red culprit range can span
+# several PRs.
 #
 # `decide` is the pure decision function (no network). It reads a PR JSON file,
 # a file-list file (one path per line) and a check-rollup JSON file, logs each
@@ -93,7 +95,9 @@ HEAD_LINE="Head: "
 REPO="${GH_REPO:-qbtrix/creative-core}"
 DRY_RUN=0
 MERGED_ANY=0
-DISPATCH_BASE_CI=0  # set after merging a FEATURE_LABEL PR: CI on the base runs once at the end
+DISPATCH_FEATURE=0  # merged a FEATURE_LABEL PR this run
+MERGED_RUN=0        # PRs merged this run
+DISPATCH_EVERY=10   # dispatch once the base holds this many merged PRs since the last CI run
 # GitHub recomputes `mergeable` lazily after any push to the base branch and
 # reports UNKNOWN meanwhile. Re-read the PR this many times, 5s apart, before
 # calling it not ready; otherwise a PR checked right after another merge stalls.
@@ -326,9 +330,10 @@ evaluate() {
         log "merge failed; the next sweep looks again"; rm -rf "$tmp"; return
       fi
       MERGED_ANY=1
+      MERGED_RUN=$((MERGED_RUN + 1))
       # GITHUB_TOKEN merges fire no workflows; a finished feature gets its full CI run.
       if jq -e --arg l "$FEATURE_LABEL" '[.labels[]?.name] | index($l) != null' "$tmp/pr.json" >/dev/null; then
-        DISPATCH_BASE_CI=1
+        DISPATCH_FEATURE=1
       fi
       # GitHub does not auto-close linked issues when GITHUB_TOKEN merges, so close them here.
       local issue
@@ -343,6 +348,25 @@ evaluate() {
   rm -rf "$tmp"
 }
 
+# dispatch_reason <feature 0|1> <merged PRs since the last CI run, or empty when
+# unknown>: why CI on the base should run now, nothing when it shouldn't. Pure,
+# so the self-tests can call it.
+dispatch_reason() {
+  if (( $1 )); then echo "merged a $FEATURE_LABEL PR"; return; fi
+  if [[ "$2" =~ ^[0-9]+$ ]] && (( $2 >= DISPATCH_EVERY )); then echo "$2 merged PRs since the last CI run"; fi
+}
+
+# merges_since_ci: the merged PRs (squash subjects ending in `(#n)`) on the base
+# since the head of its latest CI run, any status. A base with no CI run counts
+# as DISPATCH_EVERY; an API failure prints nothing, so the count rule waits.
+merges_since_ci() {
+  local sha
+  sha=$(gh run list -R "$REPO" --workflow "$CI_FILE" --branch "$BASE_BRANCH" --limit 1 --json headSha --jq '.[0].headSha // ""') || return 0
+  if [[ -z "$sha" ]]; then echo "$DISPATCH_EVERY"; return; fi
+  gh api "repos/$REPO/compare/$sha...$BASE_BRANCH" \
+    --jq '[.commits[] | select(.commit.message | split("\n")[0] | test("\\(#[0-9]+\\)$"))] | length' || true
+}
+
 # Open fast-lane PRs on any base, oldest first (decide retargets main and skips the rest).
 open_prs() {
   gh pr list -R "$REPO" --state open --label "$LABEL" --limit 100 --json number --jq '.[].number' | sort -n
@@ -353,7 +377,7 @@ main() {
   while (( $# )); do
     case "$1" in
       --dry-run) DRY_RUN=1 ;;
-      -h|--help) sed -n '2,46p' "$0"; return 0 ;;
+      -h|--help) sed -n '2,48p' "$0"; return 0 ;;
       *) prs+=("$1") ;;
     esac
     shift
@@ -371,8 +395,13 @@ main() {
     MERGED_ANY=0
     while read -r n; do [[ -n "$n" ]] && evaluate "$n"; done < <(open_prs)
   done
-  # One dispatch per run, however many feature-done PRs it merged.
-  if (( DISPATCH_BASE_CI )); then
+  # At most one dispatch per run, and only after a run that merged something.
+  (( MERGED_RUN )) || return 0
+  local since="" why
+  (( DISPATCH_FEATURE )) || since=$(merges_since_ci)
+  why=$(dispatch_reason "$DISPATCH_FEATURE" "$since")
+  if [[ -n "$why" ]]; then
+    log "dispatching CI on $BASE_BRANCH: $why"
     write gh workflow run "$CI_FILE" -R "$REPO" --ref "$BASE_BRANCH" || log "could not dispatch CI on $BASE_BRANCH"
   fi
 }

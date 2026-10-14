@@ -4,3 +4,7 @@
 xcuserdata/
 DerivedData/
 .DS_Store
+# Agent scratch notes stay local (Belt v2 lesson 71).
+PROGRESS.md
+.*-status.md
+.*-review.md

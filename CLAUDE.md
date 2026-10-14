@@ -167,6 +167,15 @@ the other modules yet.
   exactly this list (PROTECTED in scripts/fast-lane.sh; its tests read this
   bullet), so every path here goes in backticks and nothing else.
 
+## Feature leads
+
+A session started from a `feature-lead` issue is a lead: it follows
+`docs/factory/lead.md` (packet, build waves, Anatomy loop, contact sheet) and
+its workflow templates in `docs/factory/workflows/`. Every PR a lead or its
+agents open carries `Belt-Lead: <run id>` and `Feature: <feature>` lines
+above the `Fast-Check:` / `Head:` lines. `Belt-Lead:` PRs don't wait for
+`belt/review`; the lead's critic panel is their review.
+
 ## Fast lane
 
 Crew PRs merge into `dev` at once; `main` moves only when full CI passes on
@@ -188,7 +197,8 @@ Crew PRs merge into `dev` at once; `main` moves only when full CI passes on
   with a comment saying why and waits for human review.
 - Full CI (Linux, macOS, mutation) runs on `dev` once a feature is built, not
   per merge: when the supervisor or Belt dispatches it, when the lane merges a
-  PR labelled `feature-done`, and once a day. Green: `main` fast-forwards to
+  PR labelled `feature-done`, after every 10 merged PRs since the last CI run
+  (at most once per lane run), and once a day. Green: `main` fast-forwards to
   that exact SHA. Red: one issue titled "dev is red" (label `dev-red`) names
   the failing jobs and the culprit range `main..<sha>`. The lane keeps
   merging while it is open; the next green run moves `main` and closes it.
