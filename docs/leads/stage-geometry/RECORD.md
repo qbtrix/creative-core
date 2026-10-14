@@ -4,7 +4,7 @@ Issue: #267 · Packet: docs/blueprints/core/features/stage-geometry.md
 Run: act-1a13b145104-0zef · Session: session_01HWAU426RJRzBTT7hAE7fER · Started: 2026-10-14T15:43Z
 Stage: 4 round 2
 Base: 70aeada1d70ab8b0a37028ef7f08c543a77ce21b (round 2; feature's first base 3339b904450d73eeae5dc404593972b82f24f46e)
-Next: wait for r2-b1 and r2-b2 (wf_c62bce05-41d) to merge; then round 3 on the new dev with the same six lenses (round 4 is the last allowed).
+Next: wait for #297 (r2-b1) to merge (#295 r2-b2 merged d0f4081); then round 3 on the new dev with the same six lenses.
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -37,6 +37,8 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 - Round 2 budget redesign (lead decision): the expansion budget counts only instance-expanded content, weighted by stored points; RenderList gains an isTruncated flag and SVG export throws a distinct error for a truncated list, so unresolvedSymbol keeps meaning a missing/cyclic/too-deep symbol.
 - Packet journey step 6 says polygon and star bounds equal the box; they sit on the inscribed ellipse per SG-7. Reword in the feature-done PR.
 - The lead record lives in its own worktree (scratchpad/lead): agents twice left the main checkout detached.
+- r2-b1 also charges each expanded node its nesting depth (addresses carry the host chain): the 40-deep doubling bomb stops in ~0.4 s instead of ~12 s. Budget: RenderList.maxExpandedPoints = 4 * FlareFormat.maxTotalPoints.
+- Packet Screens table should name SVGExportError.sceneTooLarge for a truncated list; update it in the feature-done PR.
 - SG-8 ships without `feature-done`: lead.md runs the Anatomy loop before finish, and a feature-done merge dispatches the closing CI. The label goes on the feature's last PR (last fix batch, or the packet status line if the rounds are clean).
 - Builder branches are `sg/<id>`: a ref `lead/stage-geometry` exists, so `lead/stage-geometry/<id>` cannot be created.
 - Baseline scripts/ci on 3339b90: CI: PASS (635 tests).

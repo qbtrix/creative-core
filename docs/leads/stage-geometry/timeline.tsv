@@ -36,3 +36,5 @@ utc	stage	event	ref	note
 2026-10-14T17:20Z	4	gate-run	70aeada	CI: PASS 733 tests; validate 148 anchors; mutants 91/91
 2026-10-14T17:29Z	4	round-findings	round 2	11 confirmed (3 major, all the round-1 fan-out budget), 0 refuted; r2-b1 r2-b2 launched
 2026-10-14T18:00Z	4	heartbeat	round 2	r2-b1 r2-b2 fixing (wf_c62bce05-41d)
+2026-10-14T18:02Z	4	pr-merged	#295	r2-b2 streamed isWithin + negative stroke tests, d0f4081
+2026-10-14T18:02Z	4	pr-opened	#297	r2-b1 budget redesign (maxExpandedPoints, isTruncated, sceneTooLarge)
