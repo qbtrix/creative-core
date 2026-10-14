@@ -243,5 +243,19 @@
     "anchor": "guard mask.width == width, mask.height == height else {",
     "replacement": "guard mask.width >= width, mask.height >= height else {",
     "filter": "RetouchTests"
+  },
+  {
+    "note": "clone's bounded loop drops the last row of the mask's covered rect",
+    "file": "Sources/CoreRaster/Retouch.swift",
+    "anchor": "let ys = (lo: max(rect.y, -dy), hi: min(rect.y + rect.height, height - dy))",
+    "replacement": "let ys = (lo: max(rect.y, -dy), hi: min(rect.y + rect.height - 1, height - dy))",
+    "filter": "RetouchBoundsTests"
+  },
+  {
+    "note": "the mask's covered rect misses its rightmost covered column",
+    "file": "Sources/CoreRaster/Mask.swift",
+    "anchor": "maxX = max(maxX, last - y * width)",
+    "replacement": "maxX = max(maxX, last - y * width - 1)",
+    "filter": "RetouchBoundsTests"
   }
 ]

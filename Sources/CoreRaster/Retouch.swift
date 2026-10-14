@@ -22,9 +22,17 @@ extension PixelBuffer {
         // Every source is off the buffer: nothing to copy. Past this guard
         // |dx| < width and |dy| < height, so the sums below cannot overflow.
         guard dx > -width, dx < width, dy > -height, dy < height else { return self }
+        // Coverage 0 keeps a pixel, so only the mask's covered rect can
+        // change: a dab costs its own area, not the buffer's.
+        // The rect may lie wholly where sources are off the buffer, so check
+        // each range is nonempty before forming it.
+        guard let rect = mask.coveredRect else { return self }
+        let ys = (lo: max(rect.y, -dy), hi: min(rect.y + rect.height, height - dy))
+        let xs = (lo: max(rect.x, -dx), hi: min(rect.x + rect.width, width - dx))
+        guard ys.lo < ys.hi, xs.lo < xs.hi else { return self }
         var result = self
-        for y in max(0, -dy)..<min(height, height - dy) {
-            for x in max(0, -dx)..<min(width, width - dx) {
+        for y in ys.lo..<ys.hi {
+            for x in xs.lo..<xs.hi {
                 let c = try mask.coverage(x: x, y: y)
                 let s = try pixel(x: x + dx, y: y + dy)
                 let b = try pixel(x: x, y: y)

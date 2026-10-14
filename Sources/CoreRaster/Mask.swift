@@ -47,6 +47,24 @@ public struct Mask: Equatable, Sendable {
         return storage[y * width + x]
     }
 
+    /// The smallest rect holding every pixel with nonzero coverage, or nil
+    /// when the mask covers nothing. Ops that only touch covered pixels loop
+    /// over this instead of the whole mask.
+    var coveredRect: TileRect? {
+        var minX = width, maxX = -1, minY = height, maxY = -1
+        for y in 0..<height {
+            let row = storage[(y * width)..<((y + 1) * width)]
+            guard let first = row.firstIndex(where: { $0 != 0 }),
+                  let last = row.lastIndex(where: { $0 != 0 }) else { continue }
+            minX = min(minX, first - y * width)
+            maxX = max(maxX, last - y * width)
+            if minY == height { minY = y }
+            maxY = y
+        }
+        guard maxY >= 0 else { return nil }
+        return TileRect(x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1)
+    }
+
     /// The sum of every pixel's coverage: the covered area in pixels.
     public var area: Double {
         storage.reduce(0) { $0 + Double($1) }
