@@ -37,7 +37,7 @@ The engine has no UI. Its journeys are the calls Flare's live types make
    instance of a symbol that itself holds an instance gives a render list
    whose items are in paint order, the hidden layer absent, the text listed
    with an empty outline, and the nested shape's opacity the product of every
-   layer and instance opacity on its way down.
+   layer opacity on its way down (instances have no opacity of their own).
 2. The SVG exporter writes the same bytes as before it moved onto the list.
 3. A point 4 pt off a 0-width stroke hits that shape at tolerance 4; the
    topmost of two overlapping shapes wins; a locked, hidden or text item is
@@ -58,7 +58,7 @@ crashing.
 | Query | Empty | Error | Loading |
 |---|---|---|---|
 | `renderList` | a scene or symbol with no layers: an empty list; a layer with no shapes still appears as a group node (the SVG exporter writes its `<g>`), with no items | an instance whose symbol is missing or cyclic: a `.unresolved(symbolID)` node in the tree, no items in `items`; nothing throws (the SVG exporter turns that node into its existing `unresolvedSymbol` error) | none: built per frame, inside QB-L6 |
-| `hit` | no item under the point: `nil` | a tolerance that is negative or not finite: `nil` (never a throw on a pointer move); an item whose matrix can't be inverted is skipped | – |
+| `hit` | no item under the point: `nil` | a tolerance that is negative or not finite: `nil` (never a throw on a pointer move); an item whose matrix can't be inverted (zero scale) is skipped | – |
 | `marquee` | a rect that touches nothing, or a zero-area rect: `[]` | a rect with a non-finite edge: `[]` | – |
 | `worldBounds` | no items, or only text items: `nil` | a non-finite matrix or stroke width: that item is left out | – |
 | `PathBuilders` | a zero-width or zero-height rect: a degenerate, finite path (no NaN) | a rect, radius, side count or ratio that is not finite, or a polygon with fewer than 3 sides: `GeometryError.nonFinite` / `GeometryError.invalidSides` | – |
@@ -172,10 +172,11 @@ SVGExporter.render(scene): for node in scene.renderList(at:symbols:).nodes: emit
 hit(point, tolerance, rule):                                       # SG-3
   guard tolerance.isFinite, tolerance >= 0 else nil
   for item in items.reversed() where !item.isLocked && !item.isText:
-    world = item.outline.transformed(by: item.matrix)   # affine maps a cubic to a cubic
-    if world contains point (rule) -> return item.address
-    reach = (item.stroke?.width ?? 0) * scale(item.matrix) / 2 + tolerance
-    if reach > 0 && distance(point, flattened(world)) <= reach -> return item.address
+    guard inv = item.matrix.inverted() else continue    # zero scale: skip
+    local = inv.apply(point)                             # same space as Layer.hits / Shape.hits
+    if item's Shape contains local (rule) or its stroke reach (width / 2) -> return item.address
+    if tolerance > 0: world = item.outline.transformed(by: item.matrix)   # affine maps a cubic to a cubic
+       if distance(point, flattened(world)) <= tolerance + (stroke width / 2) * scale(item.matrix) -> return item.address
   return nil
 
 marquee(rect): items.filter { !locked && !text && worldBounds?.intersects(rect) } .map(address)   # SG-4
@@ -233,8 +234,8 @@ LC-14 can extend it later.
 | id | test | fails when |
 |---|---|---|
 | SG-1 | `RenderListTests`: on a test-built scene (visible layer with two shapes, hidden layer, text layer, an instance of `outer` whose layer holds an instance of `inner`), `items` lists the visible shapes in paint order with exact addresses; the hidden layer's shapes are absent from `items` and from `nodes`; the text item has `isText`, an empty outline and its `textIndex`; a leaf in `inner` has opacity equal to the product of its three layer opacities (0.5 × 0.5 × 0.8 = 0.2 exactly) and its matrix equals the product of the chain within 1e-12; a locked host layer marks every item below it `isLocked`; an instance of a missing symbol gives one `.unresolved` node and no item; `Symbol.renderList` on `inner` lists only `inner`'s layers with owner `.symbol("inner")`; `Path.transformed(by:)` maps each cubic's three points | an item is missing or out of order, a hidden layer draws, opacity is added instead of multiplied, or the lock doesn't reach nested items |
-| SG-2 | `SVGRenderListTests`: for `Fixtures.document()`, `Fixtures.withSymbol()` and the SG-1 nested scene at frames 0, 12 and 23, the export equals the string literal recorded from the pre-change exporter (recorded in the test before the exporter changes); a text layer still throws `unsupported("text")`; a missing symbol still throws `unresolvedSymbol`; every existing `SVGExporterTests` passes unchanged | one byte of the SVG changes, or an error case is swallowed |
-| SG-3 | `HitQueryTests`: a 0-width stroked open line, hit 4 pt off at tolerance 4 returns its address, at tolerance 3.9 returns nil; two overlapping squares return the later one; a locked or text item over a shape returns the shape under it; a hidden layer is never hit; a point inside a nested instance's shape returns the full `hosts` chain; a negative or NaN tolerance returns nil; a seeded `SplitMix64` run of 200 points agrees with `Layer.hits` on whether anything is hit (tolerance 0, no locked layers) | tolerance is ignored or double counted, paint order is reversed, locked or text items are picked, or the address loses its chain |
+| SG-2 | `SVGRenderListTests`: for `Fixtures.document()`, `Fixtures.withSymbol()` and the SG-1 nested scene without its text layer and missing-symbol instance (those throw) at frames 0, 12 and 23, the export equals the string literal recorded from the pre-change exporter (recorded in the test before the exporter changes); a text layer still throws `unsupported("text")`; a missing symbol still throws `unresolvedSymbol`; every existing `SVGExporterTests` passes unchanged | one byte of the SVG changes, or an error case is swallowed |
+| SG-3 | `HitQueryTests`: a 0-width stroked open line, hit 4 pt off at tolerance 4 returns its address, at tolerance 3.9 returns nil; two overlapping squares return the later one; a locked or text item over a shape returns the shape under it; a hidden layer is never hit; a point inside a nested instance's shape returns the full `hosts` chain; a negative or NaN tolerance returns nil; a seeded `SplitMix64` run of 200 points agrees with `Layer.hits` on whether anything is hit (tolerance 0, no locked layers; at tolerance 0 both use `Shape.hits` in local space, so they agree exactly, strokes included) | tolerance is ignored or double counted, paint order is reversed, locked or text items are picked, or the address loses its chain |
 | SG-4 | `MarqueeTests`: a rect around two of three shapes returns those two in paint order; a rect over only a locked layer returns `[]`; a rect touching only a stroke's outer half (outside the outline, inside the stroke) picks it; a zero-area or NaN rect returns `[]` | the order changes, a locked or text item is picked, or the stroke is left out |
 | SG-5 | `WorldBoundsTests`: a 100 × 50 rectangle rotated 30° has bounds within 1e-9 of its four rotated corners; a 10-wide stroke widens each side by 5 (at scale 1) and by 10 (at scale 2); a cubic's world bounds are tight (not its control-point box) within 1e-9; `worldBounds(of: [])` and a text-only selection are nil; the union of two items equals the union of their boxes | rotation is ignored, the stroke is left out or scaled wrong, or the box uses control points |
 | SG-6 | `PathBuilderTests`: `ellipse(in: (10, 20)–(210, 120))` is one move, four cubics and a close; its `bounds` equal the rect within 1e-6; every point of `flattened(tolerance: 0.01)` satisfies ((x − cx)/rx)² + ((y − cy)/ry)² = 1 within 1e-3; `rectangle(cornerRadius: 999)` on a 100 × 40 rect clamps to 20 and stays inside the rect; radius 0 gives 4 lines; a NaN rect throws `nonFinite`; a zero-size rect gives finite points; a shape built from each survives `FlareFormat` encode and decode unchanged | a corner overshoots, a curve is flattened to lines, NaN leaks, or the clamp uses the long side |
@@ -249,7 +250,7 @@ LC-14 can extend it later.
 | QB-L5 hit per pointer move | ≤ 10 ms for one `hit` on the same scene's list, median of 50 runs at seeded points | `StageBudgetTests.hitWithinBudget` |
 | QB-V1 curves stay curves | each `cubic` in a shape's outline is a `cubic` in its `RenderItem.outline`; every builder curve is a `cubic` | `RenderListTests.cubicsKept`, `PathBuilderTests.ellipseIsFourCubics` |
 | Never crash | 1,000 seeded random scenes (random NaN transforms, missing symbols, cycles) build a list, hit and bound without trapping | `RenderListTests.seededScenesNeverTrap` |
-| Mutation | every entry in the feature's plan files is caught | `scripts/mutate --run --changed-since <first base>` |
+| Mutation | every entry in the feature's plan files is caught | `scripts/mutate --run --changed-since <first base>`, run by the lead: CI's Mutation job plants at most 15 entries changed since `main`, so the local run is the proof. Per-task plan files depart from `engineering.md`'s `<module>.json` wording on purpose (no two tasks append to one JSON list); `scripts/mutate` globs every `*.json`, `--validate` and `--changed-since` included |
 
 ## Done check
 

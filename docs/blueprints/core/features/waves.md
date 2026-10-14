@@ -16,9 +16,17 @@ Flare's "waits on" cells, mapped to the task that closes each issue:
 
 | Flare feature | waits on (creative-core) | closed by | ready when |
 |---|---|---|---|
-| `live-keys` | #171, #216, #219 | EC-2, EC-6, EC-3 | `edit-commands` build wave **c** has merged |
-| `live-scenes` | #217, #219 | EC-7, EC-3 | `edit-commands` build wave **d** has merged |
-| `live-stage` | #213, #214, #215, #182, #173, #216 | SG-2, SG-4, SG-5, SG-7, EC-9, EC-6 | both features done (its ST-1 to ST-6 can start as each issue closes; the live-stage packet says so) |
+| `live-keys` | #171, #216, #219 | EC-2, EC-6, EC-3 | `main` contains EC-2, EC-3 and EC-6 (`edit-commands` build wave **c**) |
+| `live-scenes` | #217, #219 | EC-7b, EC-3 | `main` contains EC-7b and EC-3 (build wave **e**) |
+| `live-stage` | #213, #214, #215, #182, #173, #216 | SG-2, SG-4, SG-5, SG-7, EC-9, EC-6 | `main` contains both features; its ST-6 needs only rectangle and ellipse, so it can start once SG-6 is on `main`, before SG-7 closes #182 |
+
+**Flare builds against creative-core `main`** (creative-apps `Package.swift`
+pins `branch: "main"`), and `main` moves only when full CI on `dev` is
+green. The lane dispatches that run after every 10 merged PRs, after a
+`feature-done` merge, and daily; the two features together open about 19
+PRs, so at least one mid-feature run is expected. A lead whose closing PRs
+for a Flare feature have merged tells the supervisor, which files that Flare
+feature issue once `main` holds them.
 
 ## Why this order
 
@@ -46,6 +54,15 @@ Flare's "waits on" cells, mapped to the task that closes each issue:
   replacing PR names the one it replaces, and the lead closes the old PR
   when the replacement merges. #163 (CoreRaster `TileDiff`) duplicates #164,
   which merged and closed #156; no packet touches it.
+
+## Issue housekeeping (each lead, stage 0)
+
+- Add `in-progress` to every issue its packet covers, so the Belt mandate
+  doesn't race the lead with a task worker on the same issue.
+- Edit the stale `Depends on:` lines: #216 ("#173") and #217 ("#216") now
+  depend on nothing open; their old order was registry-line stacking that
+  `dev`'s per-family command lists removed. Comment with a link to
+  `edit-commands.md`.
 
 ## Files across the features
 
