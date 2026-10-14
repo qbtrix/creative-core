@@ -8,7 +8,7 @@ import Testing
 @Suite struct StrokePathCommandTests {
     static let s = Fixtures.sceneID
     static let widthError = CommandError.invalidDocument("stroke width must be finite and >= 0")
-    static let pointError = CommandError.invalidDocument("shape has a non-finite point")
+    static let pointError = CommandError.invalidDocument("layer ball shape 0: path or points not finite")
 
     static func shape(_ e: CommandEngine, _ owner: LayerOwner = .scene(s), _ layer: String = "ball") -> Shape? {
         e.document.layers(of: owner)?.first { $0.id == layer }?.shapes.first

@@ -11,11 +11,11 @@ import Testing
     @Test func lookupsThrowModelError() throws {
         var doc = Fixtures.document()
         #expect(throws: ModelError.sceneNotFound("nope")) { try doc.sceneIndex("nope") }
-        #expect(throws: ModelError.sceneNotFound("nope")) { try doc.withLayer(scene: "nope", layer: "ball") { _ in } }
-        #expect(throws: ModelError.layerNotFound("ghost")) { try doc.withLayer(scene: Self.s, layer: "ghost") { _ in } }
+        #expect(throws: ModelError.sceneNotFound("nope")) { try doc.withLayer(.scene("nope"), layer: "ball") { _ in } }
+        #expect(throws: ModelError.layerNotFound("ghost")) { try doc.withLayer(.scene(Self.s), layer: "ghost") { _ in } }
         doc.scenes[0].layers[1].isLocked = true
         #expect(throws: ModelError.layerLocked("ball")) {
-            try doc.withEditableLayer(scene: Self.s, layer: "ball") { $0.name = "X" }
+            try doc.withEditableLayer(.scene(Self.s), layer: "ball") { $0.name = "X" }
         }
         #expect(doc.scenes[0].layers[1].name == "Ball")
         #expect(try doc.sceneIndex(Self.s) == 0)

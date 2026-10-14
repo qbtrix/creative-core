@@ -40,7 +40,7 @@ import Testing
             SceneCommandTests.rejects(SetSceneCanvas(sceneID: "s1", width: w, height: h, background: Self.navy),
                                       on: start, size)
         }
-        let color = CommandError.invalidDocument("background color channels must be finite")
+        let color = CommandError.invalidDocument("scene s1: background color channels must be finite")
         for bad in [Color(r: .nan, g: 0, b: 0), Color(r: 0, g: 0, b: 0, a: .infinity)] {
             SceneCommandTests.rejects(SetSceneCanvas(sceneID: "s1", width: 1920, height: 1080, background: bad),
                                       on: start, color)

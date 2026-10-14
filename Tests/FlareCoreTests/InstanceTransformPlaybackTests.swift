@@ -106,6 +106,8 @@ import Testing
         let cases: [(any Command, CommandError)] = [
             (SetInstanceTransform(owner: .scene(Self.s), layerID: "bg", index: 0, transform: Transform(x: .nan)),
              .invalidTransform),
+            (SetInstanceTransform(owner: .scene(Self.s), layerID: "bg", index: 0, transform: Transform(y: .nan)),
+             .invalidTransform),
             (SetInstanceTransform(owner: .symbol("sym"), layerID: "tail", index: 0,
                                   transform: Transform(scaleX: .infinity)), .invalidTransform),
             (SetInstanceTransform(owner: .scene(Self.s), layerID: "bg", index: 2, transform: Transform()),

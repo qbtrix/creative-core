@@ -9,8 +9,8 @@
   {
     "note": "a scene canvas set lets a non-finite background channel through",
     "file": "Sources/FlareCore/SceneCommands.swift",
-    "anchor": "guard background.isFinite else { throw CommandError.invalidDocument(",
-    "replacement": "guard background.isFinite || true else { throw CommandError.invalidDocument(",
+    "anchor": "guard background.isFinite else {",
+    "replacement": "guard background.isFinite || true else {",
     "filter": "SceneCanvasCommandTests"
   },
   {

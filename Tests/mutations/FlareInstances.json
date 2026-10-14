@@ -26,5 +26,12 @@
     "anchor": "            guard layer.instances.last == instance else {",
     "replacement": "            guard layer.instances.last == instance || true else {",
     "filter": "InstanceCommandsTests"
+  },
+  {
+    "note": "transform finite check skips the y component so a NaN instance y lands",
+    "file": "Sources/FlareCore/Instance.swift",
+    "anchor": "        [x, y, scaleX, scaleY, rotation].allSatisfy(\\.isFinite)",
+    "replacement": "        [x, scaleX, scaleY, rotation].allSatisfy(\\.isFinite)",
+    "filter": "InstanceCommandsTests|InstanceTransformPlaybackTests"
   }
 ]

@@ -461,15 +461,4 @@ extension Document {
             return try body(&l)
         }
     }
-
-    // Scene-only forms, kept until the keyframe family takes an owner (Q5c).
-    @discardableResult
-    mutating func withLayer<T>(scene: String, layer: String, _ body: (inout Layer) throws -> T) throws -> T {
-        try withLayer(.scene(scene), layer: layer, body)
-    }
-
-    @discardableResult
-    mutating func withEditableLayer<T>(scene: String, layer: String, _ body: (inout Layer) throws -> T) throws -> T {
-        try withEditableLayer(.scene(scene), layer: layer, body)
-    }
 }

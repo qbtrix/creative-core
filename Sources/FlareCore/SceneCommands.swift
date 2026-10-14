@@ -141,7 +141,9 @@ public struct SetSceneCanvas: Command {
         guard width.isFinite, width > 0, height.isFinite, height > 0 else {
             throw CommandError.invalidDocument("scene \(sceneID): canvas size must be finite and > 0")
         }
-        guard background.isFinite else { throw CommandError.invalidDocument("background color channels must be finite") }
+        guard background.isFinite else {
+            throw CommandError.invalidDocument("scene \(sceneID): background color channels must be finite")
+        }
         oldWidth = document.scenes[s].width
         oldHeight = document.scenes[s].height
         oldBackground = document.scenes[s].background

@@ -175,7 +175,9 @@ public struct SetShapePath: LayerParamsCommand {
 
     public mutating func execute(_ document: inout Document) throws {
         let all = points + (path?.elements.flatMap(\.points) ?? [])
-        guard all.allSatisfy(\.isFinite) else { throw CommandError.invalidDocument("shape has a non-finite point") }
+        guard all.allSatisfy(\.isFinite) else {
+            throw CommandError.invalidDocument("layer \(layerID) shape \(index): path or points not finite")
+        }
         let (index, path, points) = (index, path, points)
         old = try document.withEditableLayer(owner, layer: layerID) { layer in
             try layer.checkShapeIndex(index)
