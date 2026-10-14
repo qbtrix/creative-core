@@ -1,0 +1,23 @@
+[
+  {
+    "note": "world bounds stroke widening left unscaled by the matrix axis scale",
+    "file": "Sources/FlareCore/WorldBounds.swift",
+    "anchor": "let half = Swift.max(width, 0) * matrix.maxAxisScale / 2",
+    "replacement": "let half = Swift.max(width, 0) / 2",
+    "filter": "WorldBoundsTests"
+  },
+  {
+    "note": "world bounds scale uses the smaller axis instead of the larger",
+    "file": "Sources/FlareCore/WorldBounds.swift",
+    "anchor": "(Swift.max(a * a + b * b, c * c + d * d)).squareRoot()",
+    "replacement": "(Swift.min(a * a + b * b, c * c + d * d)).squareRoot()",
+    "filter": "WorldBoundsTests"
+  },
+  {
+    "note": "world bounds selection keeps only the last item box instead of the union",
+    "file": "Sources/FlareCore/WorldBounds.swift",
+    "anchor": "guard let box = item.worldBounds else { continue }",
+    "replacement": "guard let box = item.worldBounds else { continue }; corners.removeAll()",
+    "filter": "WorldBoundsTests"
+  }
+]
