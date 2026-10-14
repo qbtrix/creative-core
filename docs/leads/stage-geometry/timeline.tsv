@@ -41,3 +41,4 @@ utc	stage	event	ref	note
 2026-10-14T18:02Z	4	pr-merged	#297	r2-b1 budget redesign, cb1f3f8
 2026-10-14T18:02Z	4	stage-end	round 2	all fixes merged
 2026-10-14T18:02Z	4	stage-start	round 3	cb1f3f8
+2026-10-14T22:08Z	4	heartbeat	round 3	resumed after plan-usage pause; round 3 gate on cb1f3f8 next
