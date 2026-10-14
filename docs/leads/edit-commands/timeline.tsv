@@ -34,3 +34,6 @@ utc	stage	event	ref	note
 2026-10-14T17:27Z	4	round-findings	round-1	9 confirmed (1 major, 8 minor), fix batches r1-b1 r1-b2
 2026-10-14T17:30Z	4	gate-run	94d993b	mutate --changed-since base: 94/94 caught
 2026-10-14T17:30Z	4	heartbeat	-	waiting on builders or the lane
+2026-10-14T17:36Z	4	pr-merged	#293	r1-b1 instance fixes
+2026-10-14T17:36Z	4	pr-merged	#294	r1-b2 docs and scrub undo step
+2026-10-14T17:36Z	4	stage-start	round-2	923c083

@@ -2,9 +2,9 @@
 
 Issue: #268 · Packet: docs/blueprints/core/features/edit-commands.md
 Run: act-1a13b1450f1-6p7n · Session: claude/edit-commands-lead-rsmd3t · Started: 2026-10-14T15:00Z
-Stage: 4 round 1
-Base: 94d993b003ff504723790277b37ded4251382fdb
-Next: wait for r1-b1, r1-b2 fix PRs and the lane, then round 2 with the same five lenses
+Stage: 4 round 2
+Base: 923c083d9a79c802455584fe891c9eb594a96a5a
+Next: round 2 on 923c083: gate, mutate, same five-lens panel (wf_8a57d344-3f2)
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -26,7 +26,7 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 ## Rounds
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
 |---|---|---|---|---|---|---|---|---|
-| 1 | 94d993b | PASS (740 tests) | 94/94 (validate: 151 anchors) | - | clarity, contract, undo, robustness, tests | 9 (1 major: SetInstanceTransform merge owner guard untested; 8 minor: docs/labels/errors, SetKeyframe coalesce step, AddInstance undo guard untested) | r1-b1, r1-b2 (fix-batch wf_081512f1-eea) | no |
+| 1 | 94d993b | PASS (740 tests) | 94/94 (validate: 151 anchors) | - | clarity, contract, undo, robustness, tests | 9 (1 major: SetInstanceTransform merge owner guard untested; 8 minor: docs/labels/errors, SetKeyframe coalesce step, AddInstance undo guard untested) | #293, #294 (merged) | no |
 
 ## Decisions
 - Waves follow the packet (a EC-1+EC-4; b EC-2, EC-3, EC-5; c EC-6; d EC-7a; e EC-7b; f EC-8; g EC-9; h EC-10): the shared-test-file chain forces the sequence.
