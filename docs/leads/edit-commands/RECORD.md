@@ -2,9 +2,9 @@
 
 Issue: #268 · Packet: docs/blueprints/core/features/edit-commands.md
 Run: act-1a13b1450f1-6p7n · Session: claude/edit-commands-lead-rsmd3t · Started: 2026-10-14T15:00Z
-Stage: 2 plan
+Stage: 3 wave a
 Base: 3339b904450d73eeae5dc404593972b82f24f46e
-Next: build wave a (EC-1, EC-4) from the base above
+Next: wait for wave a PRs (EC-1, EC-4; workflow wf_e2d3ed52-859) and the lane merge, then wave b
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |

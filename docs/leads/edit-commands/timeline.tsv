@@ -1,3 +1,5 @@
 utc	stage	event	ref	note
 2026-10-14T15:43Z	0	stage-start	3339b90	base verified, fresh lead
 2026-10-14T15:43Z	1	stage-end	packet	packet read, tasks copied
+2026-10-14T15:45Z	2	stage-end	plan	waves a-h per packet
+2026-10-14T15:45Z	3	stage-start	wave-a	EC-1, EC-4 builders started
