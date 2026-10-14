@@ -1,7 +1,8 @@
 // GuideCommands.swift: commands that add, move and remove a scene's ruler
 // guides. Guides are addressed by their index in `Scene.guides`; AddGuide
 // appends. Positions must be finite. Each command records what it replaced in
-// execute() so undo() restores the guide list exactly, order included.
+// execute() so undo() restores the guide list exactly, order included. The
+// MoveGuide steps of one drag merge, keeping the first old position.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -75,6 +76,17 @@ public struct MoveGuide: Command {
         let s = try document.sceneIndex(sceneID)
         guard document.scenes[s].guides.indices.contains(index) else { throw CommandError.invalidIndex(index) }
         document.scenes[s].guides[index].position = oldPosition
+    }
+}
+
+extension MoveGuide {
+    /// A drag step on the same guide: the merged command keeps the first
+    /// recorded old position and takes `next.position`, so one undo puts the
+    /// guide back where the drag began. Decides on params only.
+    public mutating func merge(_ next: MoveGuide) -> Bool {
+        guard (next.sceneID, next.index) == (sceneID, index) else { return false }
+        position = next.position
+        return true
     }
 }
 
