@@ -250,5 +250,12 @@
     "anchor": "guard mask.width == width, mask.height == height else {",
     "replacement": "guard mask.width >= width, mask.height >= height else {",
     "filter": "RetouchTests"
+  },
+  {
+    "note": "clone's covered rect drops the last covered column",
+    "file": "Sources/CoreRaster/Mask.swift",
+    "anchor": "return TileRect(x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1)",
+    "replacement": "return TileRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY + 1)",
+    "filter": "RetouchBoundsTests|RetouchTests"
   }
 ]

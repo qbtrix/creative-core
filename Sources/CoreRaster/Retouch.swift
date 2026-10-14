@@ -6,7 +6,8 @@
 // Invariants a reader must keep: the source is always read from `self`, the
 // input, never from the partly written result, so overlapping source and
 // destination don't smear; a pixel whose source falls outside the buffer is
-// left as it is; offsets are bounded before `x + dx` so it cannot overflow.
+// left as it is; offsets are bounded before `x + dx` so it cannot overflow;
+// the loop visits only the mask's covered rect, since coverage 0 keeps a pixel.
 
 extension PixelBuffer {
     /// The buffer with each pixel replaced by the one at (x + dx, y + dy),
@@ -21,10 +22,17 @@ extension PixelBuffer {
         let (dx, dy) = offset
         // Every source is off the buffer: nothing to copy. Past this guard
         // |dx| < width and |dy| < height, so the sums below cannot overflow.
-        guard dx > -width, dx < width, dy > -height, dy < height else { return self }
+        guard dx > -width, dx < width, dy > -height, dy < height,
+              let covered = mask.coveredRect else { return self }
+        // Only pixels inside `covered` can change (issue #257), and only those
+        // whose source is on the buffer. The ends are checked before the ranges
+        // are formed, so an empty overlap returns instead of trapping.
+        let (y0, y1) = (max(0, -dy, covered.y), min(height, height - dy, covered.y + covered.height))
+        let (x0, x1) = (max(0, -dx, covered.x), min(width, width - dx, covered.x + covered.width))
+        guard y0 < y1, x0 < x1 else { return self }
         var result = self
-        for y in max(0, -dy)..<min(height, height - dy) {
-            for x in max(0, -dx)..<min(width, width - dx) {
+        for y in y0..<y1 {
+            for x in x0..<x1 {
                 let c = try mask.coverage(x: x, y: y)
                 let s = try pixel(x: x + dx, y: y + dy)
                 let b = try pixel(x: x, y: y)
