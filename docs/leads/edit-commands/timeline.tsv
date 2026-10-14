@@ -5,3 +5,6 @@ utc	stage	event	ref	note
 2026-10-14T15:45Z	3	stage-start	wave-a	EC-1, EC-4 builders started
 2026-10-14T16:00Z	3	heartbeat	-	waiting on builders or the lane
 2026-10-14T16:15Z	3	heartbeat	-	waiting on builders or the lane
+2026-10-14T16:26Z	3	pr-merged	#272	EC-1 keyframe owner
+2026-10-14T16:26Z	3	pr-merged	#270	EC-4 guide merge
+2026-10-14T16:26Z	3	stage-start	wave-b	EC-2, EC-3, EC-5 on 4cac701

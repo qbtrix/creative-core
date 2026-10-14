@@ -2,15 +2,15 @@
 
 Issue: #268 · Packet: docs/blueprints/core/features/edit-commands.md
 Run: act-1a13b1450f1-6p7n · Session: claude/edit-commands-lead-rsmd3t · Started: 2026-10-14T15:00Z
-Stage: 3 wave a
-Base: 3339b904450d73eeae5dc404593972b82f24f46e
-Next: wait for wave a PRs (EC-1, EC-4; workflow wf_e2d3ed52-859) and the lane merge, then wave b
+Stage: 3 wave b
+Base: 4cac701f50d6c434e6726917d6230db01e5167e5
+Next: wait for wave b PRs (EC-2, EC-3, EC-5) and the lane merge, then wave c (EC-6)
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
 |---|---|---|---|---|---|---|---|
-| EC-1 | a | 5 keyframe commands take `owner:`; MoveKeyframe.merge compares it; SceneLayerCommand deleted (finishes #176) | packet EC-1 row | existing suites + anyTarget symbol layers | FlareCore.json 10, 11 repointed, 15 re-anchored | – | todo |
-| EC-4 | a | MoveGuide.merge | GuideCommands.swift, GuideMergeTests.swift, FlareGuideMerge.json | GuideMergeTests | FlareGuideMerge.json | – | todo |
+| EC-1 | a | 5 keyframe commands take `owner:`; MoveKeyframe.merge compares it; SceneLayerCommand deleted (finishes #176) | packet EC-1 row | existing suites + anyTarget symbol layers | FlareCore.json 10, 11 repointed, 15 re-anchored | #272 | merged |
+| EC-4 | a | MoveGuide.merge | GuideCommands.swift, GuideMergeTests.swift, FlareGuideMerge.json | GuideMergeTests | FlareGuideMerge.json | #270 | merged |
 | EC-2 | b | KeyframeOwnerTests (replaces #176) | KeyframeOwnerTests.swift, FlareKeyframeOwner.json | KeyframeOwnerTests | FlareKeyframeOwner.json | – | todo |
 | EC-3 | b | SetKeyframe.merge for scrubs | Commands.swift, ScrubMergeTests.swift, FlareScrubMerge.json | ScrubMergeTests.twoHundredStepsAreOneCommand | FlareScrubMerge.json | – | todo |
 | EC-5 | b | SetShapeStroke, SetShapePath | ShapeCommands.swift + tests | StrokePathCommandTests | FlareStrokePath.json | – | todo |
@@ -32,4 +32,4 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 - gh CLI is not authenticated in this environment; PRs and labels go through the GitHub MCP tools.
 
 ## Open
-- none
+- Builder branches are lead/edit-commands-<task> (a nested lead/edit-commands/<task> cannot coexist with the lead branch).
