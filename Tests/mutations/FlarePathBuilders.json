@@ -1,0 +1,23 @@
+[
+  {
+    "note": "path builder corner radius clamps to the long side instead of the short side",
+    "file": "Sources/FlareCore/PathBuilders.swift",
+    "anchor": "Swift.min(box.halfWidth, box.halfHeight))",
+    "replacement": "Swift.max(box.halfWidth, box.halfHeight))",
+    "filter": "PathBuilderTests"
+  },
+  {
+    "note": "path builder kappa constant rounded to 0.55",
+    "file": "Sources/FlareCore/PathBuilders.swift",
+    "anchor": "static let kappa = 0.5522847498",
+    "replacement": "static let kappa = 0.55",
+    "filter": "PathBuilderTests"
+  },
+  {
+    "note": "path builder non-finite rect guard dropped",
+    "file": "Sources/FlareCore/PathBuilders.swift",
+    "anchor": "guard edges.allSatisfy(\\.isFinite) else { throw GeometryError.nonFinite }",
+    "replacement": "guard edges.allSatisfy({ !$0.isNaN }) else { throw GeometryError.nonFinite }",
+    "filter": "PathBuilderTests"
+  }
+]
