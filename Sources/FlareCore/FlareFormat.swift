@@ -216,6 +216,9 @@ public enum FlareFormat {
                 guard instance.firstFrame >= 0 else {
                     throw FormatError.invalid("layer \(layer.id): instance firstFrame must be >= 0")
                 }
+                guard instance.transform.isFinite else {
+                    throw FormatError.invalid("layer \(layer.id): instance transform must be finite")
+                }
             }
         }
     }

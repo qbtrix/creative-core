@@ -1,0 +1,23 @@
+[
+  {
+    "note": "add instance skips the finite transform guard so a NaN instance transform lands",
+    "file": "Sources/FlareCore/InstanceCommands.swift",
+    "anchor": "        guard instance.transform.isFinite else { throw CommandError.invalidTransform }",
+    "replacement": "",
+    "filter": "InstanceCommandsTests"
+  },
+  {
+    "note": "validate accepts a non-finite instance transform",
+    "file": "Sources/FlareCore/FlareFormat.swift",
+    "anchor": "                guard instance.transform.isFinite else {",
+    "replacement": "                guard instance.transform.isFinite || true else {",
+    "filter": "InstanceCommandsTests"
+  },
+  {
+    "note": "remove instance undo puts the instance back at the end instead of its index",
+    "file": "Sources/FlareCore/InstanceCommands.swift",
+    "anchor": "        instances.insert(instance, at: index)",
+    "replacement": "        instances.append(instance)",
+    "filter": "InstanceCommandsTests"
+  }
+]
