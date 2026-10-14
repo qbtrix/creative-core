@@ -1,0 +1,6 @@
+utc	stage	event	ref	note
+2026-10-14T15:45Z	0	stage-start	#267	base 3339b90, fresh lead branch
+2026-10-14T15:50Z	0	stage-end	#267	depends on nothing open; in-progress on #213 #214 #215 #182
+2026-10-14T15:52Z	1	stage-end	packet	tasks SG-1..SG-8 copied
+2026-10-14T15:53Z	2	stage-end	plan	waves a/b/c/d per packet
+2026-10-14T15:54Z	3	stage-start	wave a	SG-1
