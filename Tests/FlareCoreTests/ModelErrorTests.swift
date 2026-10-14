@@ -55,7 +55,7 @@ import Testing
             .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("Sources/FlareCore")
         let modelFiles = ["Document", "Fill", "Path", "Geometry", "Symbols", "Instance", "StateMachine",
-                          "MachineInputs", "ModelError", "LayerOwner"]
+                          "MachineInputs", "ModelError", "LayerOwner", "PathBuilders", "PathBuilders+Polygon"]
         let forbidden = ["CommandError", "FormatError", "FlareFormat"]
         for name in modelFiles {
             let text = try String(contentsOf: sources.appendingPathComponent("\(name).swift"), encoding: .utf8)
