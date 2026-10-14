@@ -1,0 +1,9 @@
+[
+  {
+    "note": "polygon sides guard lets a two-sided polygon through",
+    "file": "Sources/FlareCore/PathBuilders+Polygon.swift",
+    "anchor": "guard sides >= 3, sides <= maxSides else { throw GeometryError.invalidSides }",
+    "replacement": "guard sides >= 2, sides <= maxSides else { throw GeometryError.invalidSides }",
+    "filter": "PolygonStarBuilderTests"
+  }
+]
