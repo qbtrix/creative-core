@@ -30,3 +30,6 @@ utc	stage	event	ref	note
 2026-10-14T17:13Z	4	pr-merged	#288	r1-b2 render list fan-out cap + docs, d37928e
 2026-10-14T17:13Z	4	pr-merged	#289	r1-b3 Rect.normalized + builder invariants, 553dc87
 2026-10-14T17:13Z	4	pr-opened	#290	r1-b4 world-bounds overflow test + layer docs
+2026-10-14T17:13Z	4	pr-merged	#290	r1-b4 world-bounds test + layer docs, 70aeada
+2026-10-14T17:13Z	4	stage-end	round 1	all fixes merged
+2026-10-14T17:13Z	4	stage-start	round 2	70aeada
