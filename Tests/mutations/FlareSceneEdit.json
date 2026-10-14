@@ -1,0 +1,23 @@
+[
+  {
+    "note": "a scene rename lets an empty name through",
+    "file": "Sources/FlareCore/SceneCommands.swift",
+    "anchor": "guard !name.isEmpty else { throw CommandError.emptyName }",
+    "replacement": "guard !name.isEmpty || true else { throw CommandError.emptyName }",
+    "filter": "SceneEditCommandTests"
+  },
+  {
+    "note": "a scene reorder lets an index past the end through",
+    "file": "Sources/FlareCore/SceneCommands.swift",
+    "anchor": "guard document.scenes.indices.contains(to) else { throw CommandError.invalidIndex(to) }",
+    "replacement": "guard to >= 0 else { throw CommandError.invalidIndex(to) }",
+    "filter": "SceneEditCommandTests"
+  },
+  {
+    "note": "undoing a scene reorder leaves the scene at its new index",
+    "file": "Sources/FlareCore/SceneCommands.swift",
+    "anchor": "_ = try Self.move(&document, sceneID, fromIndex)",
+    "replacement": "_ = try Self.move(&document, sceneID, toIndex)",
+    "filter": "SceneEditCommandTests"
+  }
+]

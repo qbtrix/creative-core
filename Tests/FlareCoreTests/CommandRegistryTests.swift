@@ -18,7 +18,7 @@ import Testing
         "guide.add", "guide.move", "guide.remove",
         "label.remove", "label.set",
         "layer.add", "layer.duplicate", "layer.remove", "layer.rename", "layer.reorder", "layer.setFlags",
-        "scene.add", "scene.remove", "scene.setCanvas", "scene.timing",
+        "scene.add", "scene.remove", "scene.rename", "scene.reorder", "scene.setCanvas", "scene.timing",
         "shape.add", "shape.remove", "shape.setFill", "shape.setPath", "shape.setStroke", "shape.translate",
         "swatch.add", "swatch.remove", "swatch.rename", "swatch.setColor",
         "symbol.add", "symbol.convert", "symbol.remove",
@@ -39,10 +39,11 @@ import Testing
             + SwatchCommandsTests.registrySamples()
     }
 
-    /// The text fixture plus one unused symbol, one guide and one swatch, so
-    /// every sample is valid on it.
+    /// The text fixture plus a second, empty scene, one unused symbol, one guide
+    /// and one swatch, so every sample is valid on it.
     static func sampleDocument() -> Document {
         var doc = TextCommandsTests.withText()
+        doc.scenes.append(Scene(id: "outro", name: "Outro"))
         doc.symbols = [Symbol(id: "spark", name: "Spark", durationFrames: 6,
                               layers: [Layer(id: "glow", name: "Glow"), Layer(id: "core", name: "Core")])]
         doc.symbols[0].layers[1].shapes = doc.scenes[0].layers[1].shapes
@@ -92,7 +93,7 @@ import Testing
     }
 
     @Test func everyBuiltInCommandIsRegistered() {
-        #expect(Self.expectedIDs.count == 38)
+        #expect(Self.expectedIDs.count == 40)
         #expect(Set(Self.registry.ids) == Self.expectedIDs)
     }
 

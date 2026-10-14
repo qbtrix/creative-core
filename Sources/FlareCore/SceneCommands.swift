@@ -1,6 +1,6 @@
-// SceneCommands.swift: commands that add, remove, retime and resize scenes. Same shape
-// as Commands.swift: params first, undo state as optional vars last. Undo
-// restores the document exactly, including scene order.
+// SceneCommands.swift: commands that add, remove, retime, resize, rename and
+// reorder scenes. Same shape as Commands.swift: params first, undo state as
+// optional vars last. Undo restores the document exactly, including scene order.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -11,6 +11,7 @@ import Foundation
 public enum SceneCommands {
     public static let all: [any Command.Type] = [
         AddScene.self, RemoveScene.self, SetSceneTiming.self, SetSceneCanvas.self,
+        RenameScene.self, ReorderScene.self,
     ]
 }
 
@@ -149,5 +150,69 @@ public struct SetSceneCanvas: Command {
         document.scenes[s].width = oldWidth
         document.scenes[s].height = oldHeight
         document.scenes[s].background = oldBackground
+    }
+}
+
+/// Renames a scene. An empty name throws `emptyName` before any change.
+public struct RenameScene: Command {
+    public static let id = "scene.rename"
+    public var label: String { "Rename Scene" }
+    public var sceneID: String
+    public var name: String
+    var oldName: String?
+
+    private enum CodingKeys: String, CodingKey { case sceneID, name }
+
+    public init(sceneID: String, name: String) {
+        self.sceneID = sceneID
+        self.name = name
+    }
+
+    public mutating func execute(_ document: inout Document) throws {
+        let s = try document.sceneIndex(sceneID)
+        guard !name.isEmpty else { throw CommandError.emptyName }
+        oldName = document.scenes[s].name
+        document.scenes[s].name = name
+    }
+
+    public func undo(_ document: inout Document) throws {
+        guard let oldName else { throw CommandError.notExecuted }
+        let s = try document.sceneIndex(sceneID)
+        document.scenes[s].name = oldName
+    }
+}
+
+/// Moves a scene to `toIndex` in the scene list. An index outside the list
+/// throws `invalidIndex` before any change; undo moves it back exactly.
+public struct ReorderScene: Command {
+    public static let id = "scene.reorder"
+    public var label: String { "Reorder Scene" }
+    public var sceneID: String
+    public var toIndex: Int
+    var fromIndex: Int?
+
+    private enum CodingKeys: String, CodingKey { case sceneID, toIndex }
+
+    public init(sceneID: String, toIndex: Int) {
+        self.sceneID = sceneID
+        self.toIndex = toIndex
+    }
+
+    public mutating func execute(_ document: inout Document) throws {
+        fromIndex = try Self.move(&document, sceneID, toIndex)
+    }
+
+    public func undo(_ document: inout Document) throws {
+        guard let fromIndex else { throw CommandError.notExecuted }
+        _ = try Self.move(&document, sceneID, fromIndex)
+    }
+
+    /// Moves the scene and returns its index before the move.
+    private static func move(_ document: inout Document, _ sceneID: String, _ to: Int) throws -> Int {
+        let from = try document.sceneIndex(sceneID)
+        guard document.scenes.indices.contains(to) else { throw CommandError.invalidIndex(to) }
+        let scene = document.scenes.remove(at: from)
+        document.scenes.insert(scene, at: to)
+        return from
     }
 }
