@@ -203,6 +203,13 @@
     "filter": "DevelopAdjustmentTests"
   },
   {
+    "note": "contrast table read drops the interpolation between entries",
+    "file": "Sources/CoreRaster/Adjustments.swift",
+    "anchor": "return Float(low + (Double(table[i + 1]) - low) * Double(f - Float(i)))",
+    "replacement": "return Float(low)",
+    "filter": "DevelopAdjustmentTests"
+  },
+  {
     "note": "straightenCrop leaves no margin for the kernel, so pixels near its corners read past the image",
     "file": "Sources/CoreRaster/Rotate.swift",
     "anchor": "let margin = turn.quarters == nil ? 2 * ResampleFilter.lanczos3.radius - 1 : 0",

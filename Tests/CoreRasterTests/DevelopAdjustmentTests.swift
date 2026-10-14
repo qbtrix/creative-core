@@ -92,7 +92,9 @@ private func randomBuffer(seed: UInt64) throws -> PixelBuffer {
 }
 
 @Test func contrastInsideZeroToOneIsTheSCurve() throws {
-    let ramp = try grayRow((0...100).map { Float($0) / 100 })
+    // Contrast reads a table of the curve (issue #255): within 1e-6 of it,
+    // including between the table's entries, and exact at 0 and 1.
+    let ramp = try grayRow((0...2003).map { Float($0) / 2003 })
     for amount in [Float(-100), -35, 60, 100] {
         let push = amount / 200
         let curve = try ramp.curves(points: [
@@ -102,7 +104,11 @@ private func randomBuffer(seed: UInt64) throws -> PixelBuffer {
             CurvePoint(x: 0.59, y: 0.59 + 0.41 * push),
             CurvePoint(x: 1, y: 1),
         ])
-        #expect(try ramp.contrast(amount) == curve, "contrast \(amount)")
+        let got = try grays(ramp.contrast(amount))
+        for (x, want) in try grays(curve).enumerated() {
+            #expect(abs(got[x] - want) <= 1e-6, "contrast \(amount) at \(x)")
+        }
+        #expect(got.first == 0 && got.last == 1, "contrast \(amount)")
     }
 }
 

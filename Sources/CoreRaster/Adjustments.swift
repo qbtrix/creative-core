@@ -126,12 +126,30 @@ extension PixelBuffer {
             CurvePoint(x: 1, y: 1),
         ])
         let outerSlope = 1 + push
-        return try mappingColor { value in
+        // Tabulated once over 0...1 and read with linear interpolation:
+        // evaluating the curve for every channel of every pixel took 24 MP
+        // over 1 s (issue #255). Every control point's x is a table entry, so
+        // each step lies inside one cubic piece and stays within 1e-6 of it.
+        let steps = Self.contrastTableSteps
+        let table = (0...steps).map { curve.value(Float($0) / Float(steps)) }
+        // A local function rather than `mappingColor`'s closure, so the
+        // compiler can inline the table read into the pixel loop.
+        func channel(_ value: Float) -> Float {
             if value > 1 { return 1 + outerSlope * (value - 1) }
-            if value < 0 { return outerSlope * value }
-            return curve.value(value)
+            // A NaN fails this test too, so it maps to NaN and throws.
+            guard value >= 0 else { return outerSlope * value }
+            let f = value * Float(steps)
+            let i = min(Int(f), steps - 1)
+            let low = Double(table[i])
+            // Interpolated in Double so it never rounds past the next entry.
+            return Float(low + (Double(table[i + 1]) - low) * Double(f - Float(i)))
         }
+        return try mappingPixels { RGBA(r: channel($0.r), g: channel($0.g), b: channel($0.b), a: $0.a) }
     }
+
+    /// Steps in contrast's curve table: a multiple of 100, so its control
+    /// points at 0.09, 0.18 and 0.59 fall on entries.
+    static let contrastTableSteps = 4000
 
     /// Highlights and shadows: an exposure change of up to one stop at 100,
     /// weighted per pixel by its Rec. 709 luminance with a smoothstep falloff.
@@ -201,23 +219,29 @@ extension PixelBuffer {
 
     /// Maps each straight pixel through `transform`, which must keep alpha.
     /// One pass over the storage, without the per-pixel bounds checks of
-    /// `pixel` / `setPixel` (issue #248); like `setPixel` it throws for a
+    /// `pixel` / `setPixel` (issue #248), writing each result once into new
+    /// storage rather than into a copy of the input (issue #255: the copy cost
+    /// as much as the mapping on 24 MP); like `setPixel` it throws for a
     /// non-finite result.
+    @inline(__always)
     private func mappingPixels(_ transform: (RGBA) -> RGBA) throws -> PixelBuffer {
         let source = components
-        var storage = source
         let channels = Self.channels
-        for i in stride(from: 0, to: source.count, by: channels) {
-            let p = RGBA(r: source[i], g: source[i + 1], b: source[i + 2], a: source[i + 3])
-            let mapped = transform(p.unpremultiplied()).premultiplied()
-            guard mapped.isFinite else {
-                let n = i / channels
-                throw RasterError.invalid("pixel \(mapped) at (\(n % width), \(n / width)): components must be finite")
+        let storage = try [Float](unsafeUninitializedCapacity: source.count) { output, initialized in
+            for i in stride(from: 0, to: source.count, by: channels) {
+                let p = RGBA(r: source[i], g: source[i + 1], b: source[i + 2], a: source[i + 3])
+                let mapped = transform(p.unpremultiplied()).premultiplied()
+                guard mapped.isFinite else {
+                    let n = i / channels
+                    throw RasterError.invalid("pixel \(mapped) at (\(n % width), \(n / width)): components must be finite")
+                }
+                output[i] = mapped.r
+                output[i + 1] = mapped.g
+                output[i + 2] = mapped.b
+                output[i + 3] = mapped.a
+                // Counted per pixel, so a throw leaves no uninitialized element counted.
+                initialized = i + channels
             }
-            storage[i] = mapped.r
-            storage[i + 1] = mapped.g
-            storage[i + 2] = mapped.b
-            storage[i + 3] = mapped.a
         }
         return PixelBuffer(checkedWidth: width, height: height, storage: storage)
     }
