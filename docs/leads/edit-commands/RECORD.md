@@ -31,6 +31,8 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 - Waves follow the packet (a EC-1+EC-4; b EC-2, EC-3, EC-5; c EC-6; d EC-7a; e EC-7b; f EC-8; g EC-9; h EC-10): the shared-test-file chain forces the sequence.
 - gh CLI is not authenticated in this environment; PRs and labels go through the GitHub MCP tools.
 
+- EC-10 (drag-step budget) ships without `feature-done`: the Anatomy loop runs after it, and the feature-done label goes on the last PR (a final fix or the packet status line), so the CI run it dispatches covers every fix.
+
 ## Open
 - #176 closed as replaced by #272 + #276.
 - Builder gates flake on timing-budget tests (RetouchBounds, EngineStress budget) under 4-CPU load; reruns pass. Watch in the Anatomy gate.
