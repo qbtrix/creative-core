@@ -2,9 +2,9 @@
 
 Issue: #268 · Packet: docs/blueprints/core/features/edit-commands.md
 Run: act-1a13b1450f1-6p7n · Session: claude/edit-commands-lead-rsmd3t · Started: 2026-10-14T15:00Z
-Stage: 3 wave b
-Base: 4cac701f50d6c434e6726917d6230db01e5167e5
-Next: wait for wave b PRs (EC-2, EC-3, EC-5) and the lane merge, then wave c (EC-6)
+Stage: 3 wave c
+Base: 8cb7c28ee4196d19b937b055aacc314ee809eece
+Next: wait for wave c PR (EC-6) and the lane merge, then wave d (EC-7a)
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -13,7 +13,7 @@ Next: wait for wave b PRs (EC-2, EC-3, EC-5) and the lane merge, then wave c (EC
 | EC-4 | a | MoveGuide.merge | GuideCommands.swift, GuideMergeTests.swift, FlareGuideMerge.json | GuideMergeTests | FlareGuideMerge.json | #270 | merged |
 | EC-2 | b | KeyframeOwnerTests (replaces #176) | KeyframeOwnerTests.swift, FlareKeyframeOwner.json | KeyframeOwnerTests | FlareKeyframeOwner.json | #276 | merged |
 | EC-3 | b | SetKeyframe.merge for scrubs | Commands.swift, ScrubMergeTests.swift, FlareScrubMerge.json | ScrubMergeTests.twoHundredStepsAreOneCommand | FlareScrubMerge.json | #273 | merged |
-| EC-5 | b | SetShapeStroke, SetShapePath | ShapeCommands.swift + tests | StrokePathCommandTests | FlareStrokePath.json | #279 | open |
+| EC-5 | b | SetShapeStroke, SetShapePath | ShapeCommands.swift + tests | StrokePathCommandTests | FlareStrokePath.json | #279 | merged |
 | EC-6 | c | DuplicateLayer | LayerCommands.swift + tests | DuplicateLayerTests | FlareDuplicateLayer.json | – | todo |
 | EC-7a | d | SetSceneCanvas | SceneCommands.swift + tests | SceneCanvasCommandTests | FlareSceneCanvas.json | – | todo |
 | EC-7b | e | RenameScene, ReorderScene, CommandError.emptyName | SceneCommands.swift, Command.swift + tests | SceneEditCommandTests | FlareSceneEdit.json | – | todo |
