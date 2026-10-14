@@ -1,0 +1,3 @@
+utc	stage	event	ref	note
+2026-10-14T15:43Z	0	stage-start	3339b90	base verified, fresh lead
+2026-10-14T15:43Z	1	stage-end	packet	packet read, tasks copied
