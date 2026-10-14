@@ -79,6 +79,8 @@ public enum CommandError: Error, Equatable, Sendable {
     case symbolInUse(String)
     /// A guide position that is NaN or infinite.
     case invalidGuidePosition
+    /// An instance transform with a NaN or infinite component.
+    case invalidTransform
     /// The document palette has no swatch with this name.
     case swatchNotFound(String)
     /// A swatch name is empty; swatch names are the palette's keys.

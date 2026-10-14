@@ -5,6 +5,7 @@
 // Invariants (checked by the format layer on load):
 // - symbolID names a symbol in Document.symbols
 // - firstFrame >= 0
+// - every transform component is finite
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -33,5 +34,12 @@ public struct Instance: Codable, Sendable, Hashable {
         self.transform = transform
         self.firstFrame = firstFrame
         self.loop = loop
+    }
+}
+
+extension Transform {
+    /// True if every component is finite (no NaN or infinity).
+    var isFinite: Bool {
+        [x, y, scaleX, scaleY, rotation].allSatisfy(\.isFinite)
     }
 }
