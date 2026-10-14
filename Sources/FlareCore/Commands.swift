@@ -134,6 +134,8 @@ public struct RenameLayer: LayerCommand {
     }
 }
 
+/// Sets the key at `keyframe.frame` on `property` of `owner`'s layer, replacing
+/// any key there; undo restores the old key or removes the new one.
 public struct SetKeyframe: LayerParamsCommand {
     public static let id = "keyframe.set"
     public var label: String { "Set Keyframe" }
@@ -193,6 +195,9 @@ extension SetKeyframe {
     }
 }
 
+/// Moves the key at frame `from` to frame `to` on `property` of `owner`'s
+/// layer. Throws keyframeNotFound when `from` has no key and frameOccupied
+/// when `to` already holds one.
 public struct MoveKeyframe: LayerParamsCommand {
     public static let id = "keyframe.move"
     public var label: String { "Move Keyframe" }
@@ -256,6 +261,8 @@ public struct MoveKeyframe: LayerParamsCommand {
     }
 }
 
+/// Removes the key at `frame` on `property` of `owner`'s layer; throws
+/// keyframeNotFound if there is none. Undo puts the removed key back.
 public struct RemoveKeyframe: LayerParamsCommand {
     public static let id = "keyframe.remove"
     public var label: String { "Delete Keyframe" }

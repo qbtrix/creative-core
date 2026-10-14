@@ -86,7 +86,21 @@ import Testing
             let easing: Easing = Bool.random(using: &rng) ? .linear : .easeInOut
             let k = Keyframe(frame: Int.random(in: -1...30, using: &rng),
                              value: anyNumber(in: -100...100, &rng), easing: easing)
-            try e.perform(SetKeyframe(owner: owner, layerID: layer, property: prop, keyframe: k))
+            try e.perform(SetKeyframe(owner: owner, layerID: layer, property: prop, keyframe: k),
+                          coalesceKey: Bool.random(using: &rng) ? "drag" : nil)
+        },
+        { e, rng, _ in
+            // A scrub: 2-4 coalesced SetKeyframe steps on one key, so SetKeyframe.merge
+            // runs. A rejected (non-finite) step partway leaves the run as it was.
+            let (owner, layer) = anyTarget(e, &rng), prop = anyProp(&rng)
+            let frame = Int.random(in: -1...30, using: &rng)
+            func scrub(_ e: inout CommandEngine, _ rng: inout SplitMix64) throws {
+                let k = Keyframe(frame: frame, value: anyNumber(in: -100...100, &rng))
+                try e.perform(SetKeyframe(owner: owner, layerID: layer, property: prop, keyframe: k),
+                              coalesceKey: "scrub")
+            }
+            try scrub(&e, &rng)
+            for _ in 1..<Int.random(in: 2...4, using: &rng) { try? scrub(&e, &rng) }
         },
         { e, rng, _ in
             let (owner, layer) = anyTarget(e, &rng), prop = anyProp(&rng)

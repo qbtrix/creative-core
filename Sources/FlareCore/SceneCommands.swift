@@ -108,14 +108,20 @@ public struct SetSceneTiming: Command {
     }
 }
 
-/// Sets a scene's canvas size and background color. A bad size throws the
-/// message `FlareFormat.validate` gives; every check runs before any change.
+/// Sets a scene's canvas size and background color. `width` and `height` are
+/// the canvas size in points, as `Scene.width`. All three of width, height and
+/// background are replaced, so pass the current background to change only the
+/// size. A bad size throws the message `FlareFormat.validate` gives; every
+/// check runs before any change.
 public struct SetSceneCanvas: Command {
     public static let id = "scene.setCanvas"
     public var label: String { "Set Scene Canvas" }
     public var sceneID: String
+    /// The new canvas width in points, finite and > 0.
     public var width: Double
+    /// The new canvas height in points, finite and > 0.
     public var height: Double
+    /// The new background color; always replaces the old one.
     public var background: Color
     var oldWidth: Double?
     var oldHeight: Double?
