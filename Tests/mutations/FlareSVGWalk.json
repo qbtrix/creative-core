@@ -5,5 +5,12 @@
     "anchor": "try emit(child, inSymbol: true, into: &lines, gradients: &gradients)",
     "replacement": "_ = child",
     "filter": "SVGRenderListTests"
+  },
+  {
+    "note": "svg export of a truncated render list writes it instead of throwing sceneTooLarge",
+    "file": "Sources/FlareCore/Export/SVGExporter.swift",
+    "anchor": "if list.isTruncated { throw SVGExportError.sceneTooLarge }",
+    "replacement": "_ = list.isTruncated",
+    "filter": "SVGRenderListTests"
   }
 ]

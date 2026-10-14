@@ -2,8 +2,10 @@
 // items in paint order with exact addresses, multiplies opacity and matrices
 // down the tree, inherits locks from host layers, skips hidden layers and
 // marks missing or cyclic symbols unresolved; Path.transformed keeps cubics;
-// a fan-out of symbols stops at RenderList.maxRenderItems; a caller outside
-// the module builds an address; 1,000 seeded broken scenes build a list,
+// instance expansion stops at RenderList.maxExpandedPoints (fan-out and
+// heavy fan-out) while large valid scenes and reused symbols expand fully;
+// an instance node carries the symbol frame; a caller outside the module
+// builds an address; 1,000 seeded broken scenes build a list,
 // hit, marquee and bound without trapping. The import is not @testable, so
 // the public inits are what these tests compile against.
 import FlareCore
@@ -166,28 +168,108 @@ enum NestedScene {
         }
     }
 
-    /// 40 symbols, each holding two instances of the next: 2^40 leaves
-    /// unbounded. The walk stops expanding at the budget instead.
-    @Test func fanOutIsBounded() throws {
-        let rect = Shape(points: [], path: try PathBuilders.rectangle(in: Rect(minX: 0, minY: 0, maxX: 4, maxY: 4)))
-        let symbols = (0..<40).map { i in
-            let layer = i == 39
-                ? Layer(id: "l\(i)", name: "L", shapes: [rect])
+    /// Every outline element in the list's items.
+    static func outlineElements(_ list: RenderList) -> Int {
+        list.items.reduce(0) { $0 + $1.outline.elements.count }
+    }
+
+    /// `depth` symbols, each holding two instances of the next; the last
+    /// holds `leaf`: 2^depth copies of it unbounded.
+    static func fanOut(depth: Int, leaf: Shape) -> (Scene, [Symbol]) {
+        let symbols = (0...depth).map { i in
+            let layer = i == depth
+                ? Layer(id: "l\(i)", name: "L", shapes: [leaf])
                 : Layer(id: "l\(i)", name: "L", instances: [Instance(symbolID: "s\(i + 1)"), Instance(symbolID: "s\(i + 1)")])
             return Symbol(id: "s\(i)", name: "S", layers: [layer])
         }
         let scene = Scene(id: "fan", name: "Fan", layers: [Layer(id: "top", name: "Top", instances: [Instance(symbolID: "s0")])])
+        return (scene, symbols)
+    }
+
+    /// 2^40 small leaves unbounded. The walk stops expanding at the budget
+    /// and marks the list truncated; each leaf, 40 deep, costs about 250.
+    @Test func fanOutIsBounded() throws {
+        let rect = Shape(points: [], path: try PathBuilders.rectangle(in: Rect(minX: 0, minY: 0, maxX: 4, maxY: 4)))
+        let (scene, symbols) = Self.fanOut(depth: 39, leaf: rect)
         let list = scene.renderList(at: 0, symbols: symbols)
-        #expect(list.items.count <= RenderList.maxRenderItems && !list.items.isEmpty)
-        // Items plus nodes stay within the budget, give or take one chain.
-        #expect(list.items.count + Self.nodeCount(list.nodes) < RenderList.maxRenderItems + 100)
-        #expect(Self.hasUnresolved(list.nodes))
-        do {
-            _ = try SVGExporter.export(scene: scene, frame: 0, symbols: symbols)
-            Issue.record("an over-budget export must throw")
-        } catch let error as SVGExportError {
-            guard case .unresolvedSymbol = error else { Issue.record("wrong error \(error)"); return }
+        let (truncated, unresolved, count) = (list.isTruncated, Self.hasUnresolved(list.nodes), list.items.count)
+        #expect(truncated && unresolved && count > 0)
+        #expect(count < RenderList.maxExpandedPoints / 200)
+    }
+
+    /// 2^14 copies of a 200,000-point shape unbounded (billions of points):
+    /// the budget counts points, so only about twenty copies expand.
+    @Test func heavyFanOutIsBounded() {
+        let heavy = Shape(points: (0..<200_000).map { Point(x: Double($0 % 7), y: Double($0 % 5)) })
+        let (scene, symbols) = Self.fanOut(depth: 14, leaf: heavy)
+        let list = scene.renderList(at: 0, symbols: symbols)
+        let (truncated, count, elements) = (list.isTruncated, list.items.count, Self.outlineElements(list))
+        #expect(truncated && count > 0)
+        // At most one symbol's own content past the budget.
+        #expect(elements <= RenderList.maxExpandedPoints + 200_001)
+    }
+
+    /// A valid v1-sized scene: one layer of 30,000 shapes, then an instance
+    /// of a small symbol. The owner's own layers cost nothing, so the
+    /// instance expands and the scene exports.
+    @Test func largeValidSceneExpandsEveryInstance() throws {
+        let square = NestedScene.square
+        let big = Layer(id: "big", name: "Big", shapes: Array(repeating: square, count: 30_000))
+        let host = Layer(id: "host", name: "Host", instances: [Instance(symbolID: "outer")])
+        let scene = Scene(id: "s", name: "S", width: 100, height: 100, layers: [big, host])
+        let list = scene.renderList(at: 0, symbols: NestedScene.symbols)
+        let (truncated, unresolved, count) = (list.isTruncated, Self.hasUnresolved(list.nodes), list.items.count)
+        #expect(!truncated && !unresolved && count == 30_002)
+        let lastLayer = list.items.last?.address.layerID
+        #expect(lastLayer == "innerLayer")
+        _ = try SVGExporter.export(scene: scene, frame: 0, symbols: NestedScene.symbols)
+    }
+
+    /// The owner's own layers list fully however much they hold, and do not
+    /// spend the budget: a layer with more points than the budget lists every
+    /// shape and a later instance still expands.
+    @Test func ownLayersAreNotCharged() {
+        let path = Path(elements: Array(repeating: .line(to: Point(x: 1, y: 1)), count: 100_000))
+        let shapes = Array(repeating: Shape(points: [], path: path), count: RenderList.maxExpandedPoints / 100_000 + 2)
+        let heavy = Layer(id: "heavy", name: "Heavy", shapes: shapes)
+        let host = Layer(id: "host", name: "Host", instances: [Instance(symbolID: "inner")])
+        let list = Scene(id: "s", name: "S", layers: [heavy, host]).renderList(at: 0, symbols: NestedScene.symbols)
+        let (truncated, count, elements) = (list.isTruncated, list.items.count, Self.outlineElements(list))
+        #expect(elements > RenderList.maxExpandedPoints)
+        #expect(!truncated && count == shapes.count + 1)
+    }
+
+    /// A 300-shape symbol placed 100 times expands every instance.
+    @Test func repeatedSymbolExpandsFully() {
+        let symbol = Symbol(id: "many", name: "Many", layers: [
+            Layer(id: "m", name: "M", shapes: Array(repeating: NestedScene.square, count: 300)),
+        ])
+        let layer = Layer(id: "l", name: "L", instances: Array(repeating: Instance(symbolID: "many"), count: 100))
+        let list = Scene(id: "s", name: "S", layers: [layer]).renderList(at: 0, symbols: [symbol])
+        let (truncated, unresolved, count) = (list.isTruncated, Self.hasUnresolved(list.nodes), list.items.count)
+        #expect(!truncated && !unresolved && count == 30_000)
+    }
+
+    /// The instance node carries the symbol frame, not the host frame: host
+    /// frame 1.5 rounds down to 1, and playOnce from 1 gives symbol frame 2.
+    @Test func renderListInstanceNodeCarriesSymbolFrame() {
+        let inner = Layer(id: "in", name: "In", shapes: [NestedScene.square])
+        let symbol = Symbol(id: "sym", name: "Sym", durationFrames: 4, layers: [inner])
+        let host = Layer(id: "h", name: "H", instances: [Instance(symbolID: "sym", firstFrame: 1, loop: .playOnce)])
+        let list = Scene(id: "s", name: "S", layers: [host]).renderList(at: 1.5, symbols: [symbol])
+        guard case .layer(let layer)? = list.nodes.first, case .instance(0, _, "sym", 2, _)? = layer.children.first else {
+            Issue.record("instance node frame wrong: \(list.nodes)"); return
         }
+    }
+
+    /// An address with both indices set matches nothing; with only the shape
+    /// index it is the shape.
+    @Test func addressNeedsExactlyOneIndex() {
+        let both = RenderAddress(owner: .scene("s"), hosts: [], layerID: "main", shapeIndex: 0, textIndex: 0)
+        #expect(NestedScene.list.worldBounds(of: [both]) == nil)
+        var shape = both
+        shape.textIndex = nil
+        #expect(NestedScene.list.worldBounds(of: [shape]) == Rect(minX: 0, minY: 0, maxX: 10, maxY: 10))
     }
 
     /// A caller outside the module builds an address from a selection it holds.

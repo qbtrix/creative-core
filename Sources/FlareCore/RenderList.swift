@@ -12,10 +12,17 @@
 // - an item is locked when its layer or any host layer above it is locked
 // - an instance whose symbol is missing, cyclic or nested too deep is an
 //   `.unresolved` node and adds no items; building never throws or traps
-// - once the walk has built `RenderList.maxRenderItems` items and nodes, every
-//   further instance is an `.unresolved` node and is not expanded, so a small
-//   file whose symbols fan out (two instances per symbol, 40 deep) cannot
-//   build 2^40 items; the layers being walked still list their own leaves
+// - the owner's own layers always list fully; only what instance expansion
+//   builds is charged to `RenderList.maxExpandedPoints`: the outline points of
+//   each expanded shape, plus one more than its nesting depth per expanded
+//   node and item (each carries its chain of hosts). Once it is spent,
+//   every further instance is an `.unresolved` node, not expanded, and
+//   `isTruncated` is true, so a small file whose symbols fan out (two
+//   instances per symbol, 40 deep, or 14 deep over a huge shape) cannot build
+//   2^40 items or billions of points; a symbol already being walked still
+//   lists its own leaves
+// - each symbol shape's outline is built once per walk and shared by every
+//   item that expands it
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -23,20 +30,30 @@ import Foundation
 #endif
 
 /// What one frame of a scene or symbol draws: its layer and instance tree
-/// and the tree's leaves in paint order. Instance expansion stops once
-/// `maxRenderItems` items and nodes are built; later instances are
-/// `.unresolved`, which the SVG exporter rejects with `unresolvedSymbol`.
+/// and the tree's leaves in paint order. Instance expansion stops once it
+/// has spent `maxExpandedPoints`; later instances are `.unresolved` and
+/// `isTruncated` is true, which the SVG exporter rejects with `sceneTooLarge`.
 public struct RenderList: Sendable, Hashable {
-    /// The budget of items plus nodes one walk builds before it stops
-    /// expanding instances: far above a real scene, small enough that a file
-    /// whose symbols fan out cannot exhaust memory.
-    public static let maxRenderItems = 50_000
+    /// The budget one walk spends on instance expansion before it stops
+    /// expanding: the outline points of every shape built under an instance,
+    /// plus, per node and item built there, one more than its nesting depth
+    /// (the hosts its address carries). The owner's own layers are not
+    /// charged, so this does not cap `items.count`: a layer with more shapes
+    /// than this lists them all. Four times `FlareFormat.maxTotalPoints`, so a
+    /// file at the format's point cap can still draw every stored point in
+    /// four instances, while a file whose symbols fan out stops after a few
+    /// million points (or about 16,000 leaves 40 deep) instead of billions.
+    public static let maxExpandedPoints = 4 * FlareFormat.maxTotalPoints
 
     /// The tree, for exporters that keep groups: one node per visible layer.
     public var nodes: [RenderNode]
     /// The leaves in paint order, matrices and opacity already multiplied
     /// down the tree: what the stage draws and hit testing reads.
     public var items: [RenderItem]
+    /// True when instance expansion stopped at `maxExpandedPoints`: the
+    /// instances past the budget are `.unresolved` nodes with no items, even
+    /// though their symbols exist.
+    public var isTruncated = false
 }
 
 /// One node of a render list's tree. Each `index` is the position in the
@@ -53,7 +70,8 @@ public indirect enum RenderNode: Sendable, Hashable {
     /// is its position in the layer's `instances`.
     case instance(index: Int, Instance, symbolID: String, frame: Double, children: [RenderNode])
     /// An instance whose symbol is missing, cyclic or nested too deep, or that
-    /// came after the walk spent `RenderList.maxRenderItems`; `index` is its
+    /// came after the walk spent `RenderList.maxExpandedPoints` (then the
+    /// list's `isTruncated` is true); `index` is its
     /// position in the layer's `instances`.
     case unresolved(index: Int, symbolID: String)
 }
@@ -110,7 +128,9 @@ public struct RenderAddress: Sendable, Hashable {
     public var textIndex: Int?
 
     /// An address built from a selection the caller holds, e.g. for
-    /// `RenderList.worldBounds(of:)`.
+    /// `RenderList.worldBounds(of:)`. Exactly one of `shapeIndex` and
+    /// `textIndex` is non-nil, as in the addresses `hit` and `marquee`
+    /// return; any other address matches no item.
     public init(owner: LayerOwner, hosts: [InstanceHost], layerID: String, shapeIndex: Int?, textIndex: Int?) {
         self.owner = owner
         self.hosts = hosts
@@ -152,26 +172,60 @@ extension Symbol {
 extension RenderList {
     init(layers: [Layer], owner: LayerOwner, frame: Double, symbols: [Symbol], path: [String]) {
         var walker = Walker(owner: owner, symbols: symbols)
-        nodes = walker.walk(layers, frame: frame, path: path, hosts: [], parent: .identity, opacity: 1, locked: false)
+        nodes = walker.walk(layers, symbol: nil, frame: frame, path: path, hosts: [],
+                            parent: .identity, opacity: 1, locked: false)
         items = walker.items
+        isTruncated = walker.isTruncated
+    }
+
+    /// A shape's outline and the points it stores, built once per walk.
+    private struct Outline {
+        var path: Path
+        var points: Int
+
+        init(_ shape: Shape) {
+            path = shape.outline
+            points = path.elements.reduce(0) { sum, element in
+                switch element {
+                case .move, .line: sum + 1
+                case .quad: sum + 2
+                case .cubic: sum + 3
+                case .close: sum
+                }
+            }
+        }
     }
 
     /// Collects `items` while it builds the tree, so both come from one walk.
     /// Depth is bounded by `Instance.resolve` (`Instance.maxNestingDepth`),
-    /// total size by `maxRenderItems`: `built` counts items and nodes.
+    /// total size by `maxExpandedPoints`: `expanded` charges what is built
+    /// under an instance (outline points, plus `1 + nesting depth` per node
+    /// and item).
     private struct Walker {
         let owner: LayerOwner
         let symbols: [Symbol]
         var items: [RenderItem] = []
-        var built = 0
+        var expanded = 0
+        var isTruncated = false
+        /// Per symbol id, each layer's shape outlines.
+        var outlines: [String: [[Outline]]] = [:]
 
+        /// `symbol` is the id of the symbol whose layers these are, nil for
+        /// the owner's own layers, which are not charged to the budget.
         mutating func walk(
-            _ layers: [Layer], frame: Double, path: [String], hosts: [InstanceHost],
+            _ layers: [Layer], symbol: String?, frame: Double, path: [String], hosts: [InstanceHost],
             parent: Matrix, opacity: Double, locked: Bool
         ) -> [RenderNode] {
             var nodes: [RenderNode] = []
             let owner = self.owner
-            for layer in layers where layer.isVisible {
+            // What one node or item costs here: it carries its host chain.
+            let weight = symbol == nil ? 0 : 1 + hosts.count
+            var cached: [[Outline]]?
+            if let symbol {
+                cached = outlines[symbol] ?? layers.map { $0.shapes.map(Outline.init) }
+                outlines[symbol] = cached
+            }
+            for (li, layer) in layers.enumerated() where layer.isVisible {
                 let (t, o) = layer.placement(at: frame)
                 let m = parent * t.matrix
                 let op = opacity * o
@@ -183,26 +237,36 @@ extension RenderList {
                                       matrix: m, opacity: op, isLocked: lk, isText: text != nil)
                 }
                 var children: [RenderNode] = []
-                built += 1 + 2 * (layer.shapes.count + layer.texts.count)
+                let shared = cached?[li]
+                expanded += weight * (1 + 2 * (layer.shapes.count + layer.texts.count))
                 for (i, s) in layer.shapes.enumerated() {
                     children.append(.shape(index: i, s))
-                    items.append(item(s.outline, s.fill, s.stroke, shape: i, text: nil))
+                    if let outline = shared?[i] {
+                        expanded += outline.points
+                        items.append(item(outline.path, s.fill, s.stroke, shape: i, text: nil))
+                    } else {
+                        items.append(item(s.outline, s.fill, s.stroke, shape: i, text: nil))
+                    }
                 }
                 for (i, x) in layer.texts.enumerated() {
                     children.append(.text(index: i, x))
                     items.append(item(Path(), nil, nil, shape: nil, text: i))
                 }
                 for (i, inst) in layer.instances.enumerated() {
-                    built += 1
-                    guard built < RenderList.maxRenderItems,
-                          let (symbol, local) = inst.resolve(in: symbols, frame: frame, path: path) else {
+                    expanded += weight
+                    guard let (target, local) = inst.resolve(in: symbols, frame: frame, path: path) else {
                         children.append(.unresolved(index: i, symbolID: inst.symbolID))
                         continue
                     }
-                    let inner = walk(symbol.layers, frame: local, path: path + [symbol.id],
+                    guard expanded < RenderList.maxExpandedPoints else {
+                        isTruncated = true
+                        children.append(.unresolved(index: i, symbolID: inst.symbolID))
+                        continue
+                    }
+                    let inner = walk(target.layers, symbol: target.id, frame: local, path: path + [target.id],
                                      hosts: hosts + [InstanceHost(layerID: layer.id, instanceIndex: i)],
                                      parent: m * inst.transform.matrix, opacity: op, locked: lk)
-                    children.append(.instance(index: i, inst, symbolID: symbol.id, frame: local, children: inner))
+                    children.append(.instance(index: i, inst, symbolID: target.id, frame: local, children: inner))
                 }
                 nodes.append(.layer(RenderLayer(id: layer.id, name: layer.name, transform: t, opacity: o,
                                                 isLocked: layer.isLocked, children: children)))

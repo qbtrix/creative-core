@@ -16,8 +16,8 @@
   {
     "note": "render list hidden-layer skip dropped, so hidden layers draw",
     "file": "Sources/FlareCore/RenderList.swift",
-    "anchor": "for layer in layers where layer.isVisible {",
-    "replacement": "for layer in layers {",
+    "anchor": "for (li, layer) in layers.enumerated() where layer.isVisible {",
+    "replacement": "for (li, layer) in layers.enumerated() {",
     "filter": "RenderListTests"
   },
   {
@@ -28,10 +28,10 @@
     "filter": "RenderListTests"
   },
   {
-    "note": "render list size budget raised past maxRenderItems, so a symbol fan-out builds more items than the cap",
+    "note": "render list expansion budget raised past maxExpandedPoints, so a symbol fan-out builds more than the cap",
     "file": "Sources/FlareCore/RenderList.swift",
-    "anchor": "guard built < RenderList.maxRenderItems,",
-    "replacement": "guard built < RenderList.maxRenderItems * 2,",
+    "anchor": "guard expanded < RenderList.maxExpandedPoints else {",
+    "replacement": "guard expanded < RenderList.maxExpandedPoints * 2 else {",
     "filter": "RenderListTests"
   },
   {
@@ -53,6 +53,41 @@
     "file": "Sources/FlareCore/RenderList.swift",
     "anchor": "parent: m * inst.transform.matrix,",
     "replacement": "parent: inst.transform.matrix * m,",
+    "filter": "RenderListTests"
+  },
+  {
+    "note": "render list charges the owner's own top-level layers to the expansion budget, so a large valid scene drops its instances",
+    "file": "Sources/FlareCore/RenderList.swift",
+    "anchor": "nodes = walker.walk(layers, symbol: nil,",
+    "replacement": "nodes = walker.walk(layers, symbol: \"\",",
+    "filter": "RenderListTests"
+  },
+  {
+    "note": "render list expansion budget ignores outline points, so a fan-out over a heavy shape expands billions of points",
+    "file": "Sources/FlareCore/RenderList.swift",
+    "anchor": "expanded += outline.points",
+    "replacement": "_ = outline.points",
+    "filter": "RenderListTests"
+  },
+  {
+    "note": "render list expansion budget ignores nesting depth, so a deep fan-out builds hundreds of thousands of items",
+    "file": "Sources/FlareCore/RenderList.swift",
+    "anchor": "let weight = symbol == nil ? 0 : 1 + hosts.count",
+    "replacement": "let weight = symbol == nil ? 0 : 1",
+    "filter": "RenderListTests"
+  },
+  {
+    "note": "render list truncation flag never set when instance expansion stops at the budget",
+    "file": "Sources/FlareCore/RenderList.swift",
+    "anchor": "isTruncated = true",
+    "replacement": "isTruncated = false",
+    "filter": "RenderListTests"
+  },
+  {
+    "note": "render list instance node reports the host frame instead of the symbol frame",
+    "file": "Sources/FlareCore/RenderList.swift",
+    "anchor": "symbolID: target.id, frame: local, children: inner",
+    "replacement": "symbolID: target.id, frame: frame, children: inner",
     "filter": "RenderListTests"
   }
 ]
