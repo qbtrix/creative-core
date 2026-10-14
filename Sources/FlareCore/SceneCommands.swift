@@ -1,4 +1,4 @@
-// SceneCommands.swift: commands that add, remove and retime scenes. Same shape
+// SceneCommands.swift: commands that add, remove, retime and resize scenes. Same shape
 // as Commands.swift: params first, undo state as optional vars last. Undo
 // restores the document exactly, including scene order.
 #if canImport(FoundationEssentials)
@@ -9,7 +9,9 @@ import Foundation
 
 /// The scene commands, registered in `CommandRegistry.builtIn`.
 public enum SceneCommands {
-    public static let all: [any Command.Type] = [AddScene.self, RemoveScene.self, SetSceneTiming.self]
+    public static let all: [any Command.Type] = [
+        AddScene.self, RemoveScene.self, SetSceneTiming.self, SetSceneCanvas.self,
+    ]
 }
 
 public struct AddScene: Command {
@@ -102,5 +104,50 @@ public struct SetSceneTiming: Command {
         let s = try document.sceneIndex(sceneID)
         document.scenes[s].fps = oldFPS
         document.scenes[s].durationFrames = oldDurationFrames
+    }
+}
+
+/// Sets a scene's canvas size and background color. A bad size throws the
+/// message `FlareFormat.validate` gives; every check runs before any change.
+public struct SetSceneCanvas: Command {
+    public static let id = "scene.setCanvas"
+    public var label: String { "Set Scene Canvas" }
+    public var sceneID: String
+    public var width: Double
+    public var height: Double
+    public var background: Color
+    var oldWidth: Double?
+    var oldHeight: Double?
+    var oldBackground: Color?
+
+    private enum CodingKeys: String, CodingKey { case sceneID, width, height, background }
+
+    public init(sceneID: String, width: Double, height: Double, background: Color) {
+        self.sceneID = sceneID
+        self.width = width
+        self.height = height
+        self.background = background
+    }
+
+    public mutating func execute(_ document: inout Document) throws {
+        let s = try document.sceneIndex(sceneID)
+        guard width.isFinite, width > 0, height.isFinite, height > 0 else {
+            throw CommandError.invalidDocument("scene \(sceneID): canvas size must be finite and > 0")
+        }
+        guard background.isFinite else { throw CommandError.invalidDocument("background color channels must be finite") }
+        oldWidth = document.scenes[s].width
+        oldHeight = document.scenes[s].height
+        oldBackground = document.scenes[s].background
+        document.scenes[s].width = width
+        document.scenes[s].height = height
+        document.scenes[s].background = background
+    }
+
+    public func undo(_ document: inout Document) throws {
+        guard let oldWidth, let oldHeight, let oldBackground else { throw CommandError.notExecuted }
+        let s = try document.sceneIndex(sceneID)
+        document.scenes[s].width = oldWidth
+        document.scenes[s].height = oldHeight
+        document.scenes[s].background = oldBackground
     }
 }
