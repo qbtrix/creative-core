@@ -79,10 +79,14 @@ import Testing
         }
         let dragged = engine.document
         #expect(dragged.symbols[0].layers[2].tracks["x"]?.map(\.frame) == [0, 34])
-        // Same key, layer id, property and frame: only the owner differs. A
-        // wrong merge would move the symbol's key on to 35 and skip the scene.
+        // Same key, layer id, property and frame: only the owner differs.
+        // perform runs the scene step before it tries to merge, so the scene
+        // key moves either way. An owner-blind merge would instead record one
+        // symbol move 24->35 in a single command, which the undo below cannot
+        // reverse; the command count pins that no merge happened.
         try engine.perform(MoveKeyframe(owner: .scene(Fixtures.sceneID), layerID: "ball", property: "x",
                                         from: 34, to: 35), coalesceKey: "drag")
+        #expect(engine.undoStack.last?.commands.count == 2)
         #expect(engine.document.scenes[0].layers[1].tracks["x"]?.map(\.frame) == [0, 24, 35])
         #expect(engine.document.symbols == dragged.symbols)
         try engine.undo()

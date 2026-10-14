@@ -122,6 +122,17 @@ import Testing
             #expect(engine.document == before)
         }
         #expect(!engine.canUndo)
+
+        var locked = engine
+        try locked.perform(SetLayerFlags(owner: .scene(Self.s), layerID: "bg", isVisible: true, isLocked: true))
+        let lockedDoc = locked.document
+        for command in [
+            SetInstanceTransform(owner: .scene(Self.s), layerID: "bg", index: 0, transform: Transform(x: 3)) as any Command,
+            SetInstancePlayback(owner: .scene(Self.s), layerID: "bg", index: 0, firstFrame: 2, loop: .playOnce),
+        ] {
+            #expect(throws: CommandError.layerLocked("bg")) { try locked.perform(command) }
+            #expect(locked.document == lockedDoc)
+        }
     }
 
     @Test(arguments: [(LayerOwner.scene(Fixtures.sceneID), "bg"), (.symbol("sym"), "tail")])

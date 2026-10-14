@@ -7,7 +7,7 @@ import Testing
 
 @Suite struct StrokePathCommandTests {
     static let s = Fixtures.sceneID
-    static let widthError = CommandError.invalidDocument("stroke width must be finite and >= 0")
+    static let widthError = CommandError.invalidDocument("layer ball shape 0: stroke width must be finite and >= 0")
     static let pointError = CommandError.invalidDocument("layer ball shape 0: path or points not finite")
 
     static func shape(_ e: CommandEngine, _ owner: LayerOwner = .scene(s), _ layer: String = "ball") -> Shape? {
@@ -48,8 +48,20 @@ import Testing
         #expect(!engine.canUndo)
         var command = edit
         var doc = original
-        #expect(throws: ModelError.invalidStroke("stroke width must be finite and >= 0")) { try command.execute(&doc) }
+        #expect(throws: Self.widthError) { try command.execute(&doc) }
         #expect(doc == original)
+    }
+
+    @Test func badStrokeColorErrorNamesLayerShapeAndStroke() throws {
+        var engine = CommandEngine(document: Fixtures.document())
+        let original = engine.document
+        let edit = SetShapeStroke(owner: .scene(Self.s), layerID: "ball", index: 0,
+                                  stroke: Stroke(color: Color(r: .nan, g: 0, b: 0), width: 1))
+        #expect(throws: CommandError.invalidDocument("layer ball shape 0: stroke color channels must be finite")) {
+            try engine.perform(edit)
+        }
+        #expect(engine.document == original)
+        #expect(!engine.canUndo)
     }
 
     @Test func pathSetsCubicAndPointsUndoRestoresBoth() throws {

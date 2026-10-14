@@ -89,7 +89,13 @@ public enum CommandError: Error, Equatable, Sendable {
     case emptyName
     /// A color channel is not finite or not in 0...1.
     case invalidColor(Color)
-    /// An index outside the valid range, e.g. a layer position.
+    /// An index outside the valid range. The number is one of: a layer
+    /// position (ReorderLayer), a scene position (ReorderScene), an instance
+    /// index within a layer (RemoveInstance, SetInstanceTransform,
+    /// SetInstancePlayback, and RemoveInstance undo), a guide
+    /// index (MoveGuide, RemoveGuide, AddGuide undo), a swatch position (RemoveSwatch undo),
+    /// or 0 for an empty layer list (ConvertToSymbol). A shape index missing
+    /// from a layer throws `shapeNotFound` instead.
     case invalidIndex(Int)
     /// `undo` was called on a command that never executed.
     case notExecuted

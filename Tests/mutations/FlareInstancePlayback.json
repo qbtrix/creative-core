@@ -26,5 +26,19 @@
     "anchor": "        guard firstFrame >= 0 else { throw CommandError.invalidFrame(firstFrame) }",
     "replacement": "",
     "filter": "InstanceTransformPlaybackTests"
+  },
+  {
+    "note": "set instance transform ignores the layer lock",
+    "file": "Sources/FlareCore/InstanceCommands.swift",
+    "anchor": "oldTransform = try document.withEditableLayer(",
+    "replacement": "oldTransform = try document.withLayer(",
+    "filter": "InstanceTransformPlaybackTests"
+  },
+  {
+    "note": "set instance playback ignores the layer lock",
+    "file": "Sources/FlareCore/InstanceCommands.swift",
+    "anchor": "        old = try document.withEditableLayer(",
+    "replacement": "        old = try document.withLayer(",
+    "filter": "InstanceTransformPlaybackTests"
   }
 ]
