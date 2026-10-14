@@ -1,0 +1,16 @@
+[
+  {
+    "note": "a guide drag merges steps for another guide index or another scene",
+    "file": "Sources/FlareCore/GuideCommands.swift",
+    "anchor": "guard (next.sceneID, next.index) == (sceneID, index) else { return false }",
+    "replacement": "guard next.sceneID == sceneID || next.index == index else { return false }",
+    "filter": "GuideMergeTests"
+  },
+  {
+    "note": "a merged guide drag takes the last step's old position instead of keeping the first",
+    "file": "Sources/FlareCore/GuideCommands.swift",
+    "anchor": "        position = next.position\n        return true",
+    "replacement": "        position = next.position\n        oldPosition = next.oldPosition\n        return true",
+    "filter": "GuideMergeTests"
+  }
+]
