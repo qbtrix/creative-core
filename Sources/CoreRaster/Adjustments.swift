@@ -126,11 +126,22 @@ extension PixelBuffer {
             CurvePoint(x: 1, y: 1),
         ])
         let outerSlope = 1 + push
-        return try mappingColor { value in
+        // The four pieces as plain values, so the loop reads no arrays.
+        let pieces = curve.pieces
+        guard pieces.count == 4 else {
+            throw RasterError.invalid("contrast curve has \(pieces.count) pieces: expected 4")
+        }
+        let (p0, p1, p2, p3) = (pieces[0], pieces[1], pieces[2], pieces[3])
+        @inline(__always) func channel(_ value: Float) -> Float {
             if value > 1 { return 1 + outerSlope * (value - 1) }
             if value < 0 { return outerSlope * value }
-            return curve.value(value)
+            let x = Double(value)
+            if x < p1.x0 { return Float(p0.value(x)) }
+            if x < p2.x0 { return Float(p1.value(x)) }
+            if x < p3.x0 { return Float(p2.value(x)) }
+            return Float(p3.value(x))
         }
+        return try mappingPixels { RGBA(r: channel($0.r), g: channel($0.g), b: channel($0.b), a: $0.a) }
     }
 
     /// Highlights and shadows: an exposure change of up to one stop at 100,
@@ -142,11 +153,12 @@ extension PixelBuffer {
         try Self.checkSlider("shadows", shadows)
         if highlights == 0, shadows == 0 { return self }
         let w = Histogram.luminanceWeights
+        let h = highlights / 100, s = shadows / 100
         return try mappingPixels { p in
             let luma = w.r * p.r + w.g * p.g + w.b * p.b
-            let stops = highlights / 100 * Self.smoothstep(0.18, 1, luma)
-                + shadows / 100 * (1 - Self.smoothstep(0, 0.5, luma))
-            let gain = Float(pow(2, Double(stops)))
+            let stops = h * Self.smoothstep(0.18, 1, luma)
+                + s * (1 - Self.smoothstep(0, 0.5, luma))
+            let gain = exp2(stops)
             return RGBA(r: p.r * gain, g: p.g * gain, b: p.b * gain, a: p.a)
         }
     }
@@ -202,22 +214,28 @@ extension PixelBuffer {
     /// Maps each straight pixel through `transform`, which must keep alpha.
     /// One pass over the storage, without the per-pixel bounds checks of
     /// `pixel` / `setPixel` (issue #248); like `setPixel` it throws for a
-    /// non-finite result.
+    /// non-finite result. Inlined, and reading and writing through buffer
+    /// pointers, so each slider's kernel compiles into the loop (issue #255).
+    @inline(__always)
     private func mappingPixels(_ transform: (RGBA) -> RGBA) throws -> PixelBuffer {
-        let source = components
-        var storage = source
         let channels = Self.channels
-        for i in stride(from: 0, to: source.count, by: channels) {
-            let p = RGBA(r: source[i], g: source[i + 1], b: source[i + 2], a: source[i + 3])
-            let mapped = transform(p.unpremultiplied()).premultiplied()
-            guard mapped.isFinite else {
-                let n = i / channels
-                throw RasterError.invalid("pixel \(mapped) at (\(n % width), \(n / width)): components must be finite")
+        let count = components.count
+        let storage = try components.withUnsafeBufferPointer { source in
+            try [Float](unsafeUninitializedCapacity: count) { result, initialized in
+                for i in stride(from: 0, to: count, by: channels) {
+                    let p = RGBA(r: source[i], g: source[i + 1], b: source[i + 2], a: source[i + 3])
+                    let mapped = transform(p.unpremultiplied()).premultiplied()
+                    guard mapped.isFinite else {
+                        let n = i / channels
+                        throw RasterError.invalid("pixel \(mapped) at (\(n % width), \(n / width)): components must be finite")
+                    }
+                    result[i] = mapped.r
+                    result[i + 1] = mapped.g
+                    result[i + 2] = mapped.b
+                    result[i + 3] = mapped.a
+                }
+                initialized = count
             }
-            storage[i] = mapped.r
-            storage[i + 1] = mapped.g
-            storage[i + 2] = mapped.b
-            storage[i + 3] = mapped.a
         }
         return PixelBuffer(checkedWidth: width, height: height, storage: storage)
     }
@@ -271,6 +289,30 @@ struct MonotoneCurve {
         self.xs = xs
         self.ys = ys
         tangents = m
+    }
+
+    /// One segment of a curve as a cubic in `x - x0`, for loops that
+    /// evaluate a fixed curve many times without the segment search.
+    struct Piece {
+        let x0: Double
+        let c0, c1, c2, c3: Double
+
+        @inline(__always)
+        func value(_ x: Double) -> Double {
+            let u = x - x0
+            return c0 + u * (c1 + u * (c2 + u * c3))
+        }
+    }
+
+    /// The Hermite segments between control points, in power form.
+    var pieces: [Piece] {
+        (0..<(xs.count - 1)).map { k in
+            let h = xs[k + 1] - xs[k]
+            let d = (ys[k + 1] - ys[k]) / h
+            let m0 = tangents[k], m1 = tangents[k + 1]
+            return Piece(x0: xs[k], c0: ys[k], c1: m0,
+                         c2: (3 * d - 2 * m0 - m1) / h, c3: (m0 + m1 - 2 * d) / (h * h))
+        }
     }
 
     /// The curve's value at `v`.

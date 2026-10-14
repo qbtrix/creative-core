@@ -184,8 +184,8 @@
   {
     "note": "shadows weight is not inverted so shadows moves the bright end",
     "file": "Sources/CoreRaster/Adjustments.swift",
-    "anchor": "+ shadows / 100 * (1 - Self.smoothstep(0, 0.5, luma))",
-    "replacement": "+ shadows / 100 * Self.smoothstep(0, 0.5, luma)",
+    "anchor": "+ s * (1 - Self.smoothstep(0, 0.5, luma))",
+    "replacement": "+ s * Self.smoothstep(0, 0.5, luma)",
     "filter": "DevelopAdjustmentTests"
   },
   {
@@ -194,6 +194,13 @@
     "anchor": "CurvePoint(x: 0.18, y: 0.18),",
     "replacement": "CurvePoint(x: 0.18, y: 0.18 + push * 0.05),",
     "filter": "DevelopAdjustmentTests"
+  },
+  {
+    "note": "contrast evaluates the piece below mid grey past its end, up to 0.59",
+    "file": "Sources/CoreRaster/Adjustments.swift",
+    "anchor": "if x < p2.x0 { return Float(p1.value(x)) }",
+    "replacement": "if x < p3.x0 { return Float(p1.value(x)) }",
+    "filter": "DevelopSpeedTests"
   },
   {
     "note": "contrast outer slope flips so values outside 0...1 move the wrong way",
