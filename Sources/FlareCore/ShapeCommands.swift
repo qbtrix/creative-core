@@ -10,7 +10,9 @@ import Foundation
 
 /// The shape edit commands.
 public enum ShapeCommands {
-    public static let all: [any Command.Type] = [RemoveShape.self, SetShapeFill.self, TranslateShape.self]
+    public static let all: [any Command.Type] = [
+        RemoveShape.self, SetShapeFill.self, SetShapeStroke.self, SetShapePath.self, TranslateShape.self,
+    ]
 }
 
 extension Layer {
@@ -89,6 +91,101 @@ public struct SetShapeFill: LayerParamsCommand {
         try document.withLayer(owner, layer: layerID) { layer in
             try layer.checkShapeIndex(index)
             layer.shapes[index].fill = oldFill
+        }
+    }
+}
+
+/// Sets or, with nil, removes a shape's stroke. A negative or non-finite
+/// width or a non-finite color throws before anything changes.
+public struct SetShapeStroke: LayerParamsCommand {
+    public static let id = "shape.setStroke"
+    public var label: String { "Set Stroke" }
+    public var owner: LayerOwner
+    public var layerID: String
+    public var index: Int
+    public var stroke: Stroke?
+    /// The stroke before execute; the outer optional is nil until it runs.
+    var oldStroke: Stroke??
+
+    public init(owner: LayerOwner, layerID: String, index: Int, stroke: Stroke?) {
+        self.owner = owner
+        self.layerID = layerID
+        self.index = index
+        self.stroke = stroke
+    }
+
+    struct Params: Codable { var index: Int; var stroke: Stroke? }
+    var params: Params { Params(index: index, stroke: stroke) }
+    init(owner: LayerOwner, layerID: String, params: Params) {
+        self.init(owner: owner, layerID: layerID, index: params.index, stroke: params.stroke)
+    }
+
+    public mutating func execute(_ document: inout Document) throws {
+        try stroke?.validate()
+        let (index, stroke) = (index, stroke)
+        oldStroke = try document.withEditableLayer(owner, layer: layerID) { layer in
+            try layer.checkShapeIndex(index)
+            defer { layer.shapes[index].stroke = stroke }
+            return .some(layer.shapes[index].stroke)
+        }
+    }
+
+    public func undo(_ document: inout Document) throws {
+        guard let oldStroke else { throw CommandError.notExecuted }
+        let index = index
+        try document.withLayer(owner, layer: layerID) { layer in
+            try layer.checkShapeIndex(index)
+            layer.shapes[index].stroke = oldStroke
+        }
+    }
+}
+
+/// Replaces a shape's curved path and its points together. A non-finite
+/// point in either throws invalidDocument before anything changes.
+public struct SetShapePath: LayerParamsCommand {
+    public static let id = "shape.setPath"
+    public var label: String { "Edit Path" }
+    public var owner: LayerOwner
+    public var layerID: String
+    public var index: Int
+    public var path: Path?
+    public var points: [Point]
+    var old: (path: Path?, points: [Point])?
+
+    public init(owner: LayerOwner, layerID: String, index: Int, path: Path?, points: [Point]) {
+        self.owner = owner
+        self.layerID = layerID
+        self.index = index
+        self.path = path
+        self.points = points
+    }
+
+    struct Params: Codable { var index: Int; var path: Path?; var points: [Point] }
+    var params: Params { Params(index: index, path: path, points: points) }
+    init(owner: LayerOwner, layerID: String, params: Params) {
+        self.init(owner: owner, layerID: layerID, index: params.index, path: params.path, points: params.points)
+    }
+
+    public mutating func execute(_ document: inout Document) throws {
+        let all = points + (path?.elements.flatMap(\.points) ?? [])
+        guard all.allSatisfy(\.isFinite) else { throw CommandError.invalidDocument("shape has a non-finite point") }
+        let (index, path, points) = (index, path, points)
+        old = try document.withEditableLayer(owner, layer: layerID) { layer in
+            try layer.checkShapeIndex(index)
+            let shape = layer.shapes[index]
+            layer.shapes[index].path = path
+            layer.shapes[index].points = points
+            return (shape.path, shape.points)
+        }
+    }
+
+    public func undo(_ document: inout Document) throws {
+        guard let old else { throw CommandError.notExecuted }
+        let index = index
+        try document.withLayer(owner, layer: layerID) { layer in
+            try layer.checkShapeIndex(index)
+            layer.shapes[index].path = old.path
+            layer.shapes[index].points = old.points
         }
     }
 }
