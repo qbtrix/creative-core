@@ -257,5 +257,12 @@
     "anchor": "return TileRect(x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1)",
     "replacement": "return TileRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY + 1)",
     "filter": "RetouchBoundsTests|RetouchTests"
+  },
+  {
+    "note": "highlights shadows gain uses base e instead of base 2",
+    "file": "Sources/CoreRaster/Adjustments.swift",
+    "anchor": "let gain = Float(pow(2, Double(stops)))",
+    "replacement": "let gain = Float(exp(Double(stops)))",
+    "filter": "SameBitsAsBefore"
   }
 ]
