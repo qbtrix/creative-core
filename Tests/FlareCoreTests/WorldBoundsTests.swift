@@ -96,4 +96,11 @@ import Testing
         let all = [nanMatrix.address, infStroke.address, good.address]
         #expect(list.worldBounds(of: all) == good.worldBounds)
     }
+
+    /// A finite stroke width can still overflow once the matrix scales it:
+    /// 1e308 * 4 is infinite, so the item has no box rather than an infinite one.
+    @Test func overflowingStrokeHasNoBox() {
+        let item = Self.item(Self.rectPath(10, 10), matrix: .scale(x: 4, y: 4), stroke: Stroke(width: 1e308))
+        #expect(item.worldBounds == nil)
+    }
 }

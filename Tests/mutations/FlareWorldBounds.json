@@ -19,5 +19,12 @@
     "anchor": "guard let box = item.worldBounds else { continue }",
     "replacement": "guard let box = item.worldBounds else { continue }; corners.removeAll()",
     "filter": "WorldBoundsTests"
+  },
+  {
+    "note": "world bounds overflow guard dropped so a huge scaled stroke gives an infinite box",
+    "file": "Sources/FlareCore/WorldBounds.swift",
+    "anchor": "guard half.isFinite else { return nil }",
+    "replacement": "",
+    "filter": "WorldBoundsTests"
   }
 ]
