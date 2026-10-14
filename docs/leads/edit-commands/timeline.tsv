@@ -65,3 +65,4 @@ utc	stage	event	ref	note
 2026-10-14T20:10Z	5	stage-end	finish	Belt-Contact-Sheet posted on #268
 2026-10-14T20:10Z	done	stopped	-	feature done
 2026-10-14T22:08Z	done	heartbeat	-	resumed after the usage-limit pause; record says done, verifying
+2026-10-14T22:08Z	done	stopped	-	verified after resume: #299 merged with feature-done, CI run 38629317426 green, main holds 98be31a, contact sheet on #268, no open dev-red
