@@ -33,3 +33,4 @@ utc	stage	event	ref	note
 2026-10-14T17:13Z	4	pr-merged	#290	r1-b4 world-bounds test + layer docs, 70aeada
 2026-10-14T17:13Z	4	stage-end	round 1	all fixes merged
 2026-10-14T17:13Z	4	stage-start	round 2	70aeada
+2026-10-14T17:20Z	4	gate-run	70aeada	CI: PASS 733 tests; validate 148 anchors; mutants 91/91

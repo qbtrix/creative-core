@@ -4,7 +4,7 @@ Issue: #267 · Packet: docs/blueprints/core/features/stage-geometry.md
 Run: act-1a13b145104-0zef · Session: session_01HWAU426RJRzBTT7hAE7fER · Started: 2026-10-14T15:43Z
 Stage: 4 round 2
 Base: 70aeada1d70ab8b0a37028ef7f08c543a77ce21b (round 2; feature's first base 3339b904450d73eeae5dc404593972b82f24f46e)
-Next: round 2 on 70aeada: gate + mutation (scratchpad round-2), then the critic panel with the same six lenses.
+Next: collect round 2 panel (wf_31991e5b-233); clean -> round 3 on the same panel; findings -> fix batches.
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -24,6 +24,7 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
 |---|---|---|---|---|---|---|---|---|
 | 1 | 1817e03 | FAIL only CoreRaster timing flake under load (passes alone) | 38/38 | – | clarity, contract, robustness, tests, design, compat | 18 confirmed (6 major: invalidSides doc, render-list fan-out unbounded, hit axis-scale and rule untested, hit scale and stroke-reach duplicated) + QB-L5 miss; full list rounds/round-1-panel.json | r1-b1 #284 (hit prefilter + SG-8: hit 2.3 ms alone, 3.4 ms under ci), r1-b2 (render list), r1-b3 (geometry/builders/marquee), r1-b4 (world-bounds test, layer docs); hit findings 1,7,8,13,14 r1-b5 #287; merged #284 #287 #288 #289 #290 | no |
+| 2 | 70aeada | PASS (733 tests) | 91/91 | – | clarity, contract, robustness, tests, design, compat | panel running (wf_31991e5b-233) | – | – |
 
 ## Decisions
 - Waves as the packet sets them: a SG-1; b SG-2, SG-3, SG-5, SG-6; c SG-4, SG-7; d SG-8.
