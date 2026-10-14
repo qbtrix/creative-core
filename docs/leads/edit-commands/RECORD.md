@@ -2,9 +2,9 @@
 
 Issue: #268 · Packet: docs/blueprints/core/features/edit-commands.md
 Run: act-1a13b1450f1-6p7n · Session: claude/edit-commands-lead-rsmd3t · Started: 2026-10-14T15:00Z
-Stage: 3 wave g
-Base: a0717b2db2a6d151c9eb5b431cedf2c367ebee64
-Next: wait for wave g PR (EC-9) and the lane merge, close #178, then the Anatomy loop (EC-10 is the feature-done PR at the end)
+Stage: 3 wave h
+Base: c54b4ee79a6119670d3ab5e02476ce656d1cbd91
+Next: wait for EC-10 PR and the lane merge, then Anatomy round 1 on the new dev SHA
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -18,7 +18,7 @@ Next: wait for wave g PR (EC-9) and the lane merge, close #178, then the Anatomy
 | EC-7a | d | SetSceneCanvas | SceneCommands.swift + tests | SceneCanvasCommandTests | FlareSceneCanvas.json | #283 | merged |
 | EC-7b | e | RenameScene, ReorderScene, CommandError.emptyName | SceneCommands.swift, Command.swift + tests | SceneEditCommandTests | FlareSceneEdit.json | #285 | merged |
 | EC-8 | f | AddInstance, RemoveInstance, invalidTransform, validate (finishes #178) | InstanceCommands.swift, Instance.swift, Command.swift, FlareFormat.swift, CommandRegistry.swift + tests | InstanceCommandsTests | FlareInstances.json | #286 | merged |
-| EC-9 | g | SetInstanceTransform (drag merge), SetInstancePlayback (replaces #178) | InstanceCommands.swift + tests | InstanceTransformPlaybackTests | FlareInstancePlayback.json | – | todo |
+| EC-9 | g | SetInstanceTransform (drag merge), SetInstancePlayback (replaces #178) | InstanceCommands.swift + tests | InstanceTransformPlaybackTests | FlareInstancePlayback.json | #291 | merged |
 | EC-10 | h | QB-L7 drag-step budget; feature-done | DragStepBudgetTests.swift | DragStepBudgetTests | – | – | todo |
 
 Acceptance tests and quality bars: the packet's "Acceptance test per task" and "Quality tests" tables, verbatim.
@@ -34,6 +34,6 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 - EC-10 (drag-step budget) ships without `feature-done`: the Anatomy loop runs after it, and the feature-done label goes on the last PR (a final fix or the packet status line), so the CI run it dispatches covers every fix.
 
 ## Open
-- #176 closed as replaced by #272 + #276.
+- #176 closed as replaced by #272 + #276; #178 closed as replaced by #286 + #291.
 - Builder gates flake on timing-budget tests (RetouchBounds, EngineStress budget) under 4-CPU load; reruns pass. Watch in the Anatomy gate.
 - Builder branches are lead/edit-commands-<task> (a nested lead/edit-commands/<task> cannot coexist with the lead branch).
