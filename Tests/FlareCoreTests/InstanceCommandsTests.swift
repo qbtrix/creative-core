@@ -87,6 +87,25 @@ import Testing
         }
     }
 
+    @Test func addInstanceUndoThrowsRatherThanRemoveAnotherInstance() throws {
+        var doc = Self.document()
+        var cmd = AddInstance(owner: .scene(Self.s), layerID: "bg", instance: Self.spark)
+        try cmd.execute(&doc)
+        let error = CommandError.invalidDocument("layer bg: the added instance of spark is no longer last")
+
+        var moved = doc
+        moved.scenes[0].layers[0].instances.append(Instance(symbolID: "spark", transform: Transform(x: 9)))
+        let movedBefore = moved
+        #expect(throws: error) { try cmd.undo(&moved) }
+        #expect(moved == movedBefore)
+
+        var emptied = doc
+        emptied.scenes[0].layers[0].instances = []
+        let emptiedBefore = emptied
+        #expect(throws: error) { try cmd.undo(&emptied) }
+        #expect(emptied == emptiedBefore)
+    }
+
     @Test func validateRejectsNonFiniteInstanceTransform() throws {
         var doc = Self.document()
         doc.symbols[0].layers[0].instances = [Instance(symbolID: "spark", transform: Transform(scaleY: .nan))]

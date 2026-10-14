@@ -8,6 +8,7 @@
 //   An instance that would make a symbol contain itself passes here and fails
 //   `perform`'s validation
 // - undo restores exactly: AddInstance removes the instance it appended,
+//   (it throws invalidDocument once that instance is no longer last),
 //   RemoveInstance puts the removed one back at its index, SetInstanceTransform
 //   and SetInstancePlayback put back the old transform or (firstFrame, loop)
 // - a SetInstanceTransform drag merges only steps on the same owner, layer and
@@ -25,7 +26,9 @@ public enum InstanceCommands {
     ]
 }
 
-/// Appends an instance to the end of the layer's instances.
+/// Appends an instance to the end of the layer's instances. Undo removes it
+/// only while it is still last; once it has been moved or removed, undo throws
+/// `invalidDocument` and changes nothing.
 public struct AddInstance: LayerParamsCommand {
     public static let id = "instance.add"
     public var label: String { "Add Instance" }
@@ -60,7 +63,8 @@ public struct AddInstance: LayerParamsCommand {
         guard executed else { throw CommandError.notExecuted }
         try document.withLayer(owner, layer: layerID) { layer in
             guard layer.instances.last == instance else {
-                throw CommandError.invalidIndex(layer.instances.count - 1)
+                throw CommandError.invalidDocument(
+                    "layer \(layerID): the added instance of \(instance.symbolID) is no longer last")
             }
             layer.instances.removeLast()
         }
@@ -114,7 +118,7 @@ public struct RemoveInstance: LayerItemCommand {
 /// Sets the transform of the instance at `index`. Steps of one drag merge.
 public struct SetInstanceTransform: LayerParamsCommand {
     public static let id = "instance.setTransform"
-    public var label: String { "Move Instance" }
+    public var label: String { "Transform Instance" }
     public var owner: LayerOwner
     public var layerID: String
     public var index: Int

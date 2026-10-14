@@ -7,6 +7,13 @@
     "filter": "InstanceTransformPlaybackTests"
   },
   {
+    "note": "set instance transform merge ignores the owner so a same-id layer of another owner merges",
+    "file": "Sources/FlareCore/InstanceCommands.swift",
+    "anchor": "        guard (next.owner, next.layerID, next.index) == (owner, layerID, index) else { return false }",
+    "replacement": "        guard (next.layerID, next.index) == (layerID, index) else { return false }",
+    "filter": "InstanceTransformPlaybackTests"
+  },
+  {
     "note": "set instance transform merge takes the later old transform instead of keeping the first",
     "file": "Sources/FlareCore/InstanceCommands.swift",
     "anchor": "        transform = next.transform",
