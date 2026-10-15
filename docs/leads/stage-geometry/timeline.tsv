@@ -55,3 +55,4 @@ utc	stage	event	ref	note
 2026-10-15T02:09Z	4	pr-merged	#302	r3-b2 render budget out of format layer, shared pointCount, 9348bad
 2026-10-15T02:09Z	4	pr-merged	#303	r3-b3 nil box never skips, d5c240b
 2026-10-15T02:09Z	4	stage-start	round 4	d5c240b (last round)
+2026-10-15T02:21Z	4	gate-run	d5c240b	CI: PASS 764 tests; validate 175 anchors; mutants 120/120

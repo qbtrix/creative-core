@@ -4,7 +4,7 @@ Issue: #267 · Packet: docs/blueprints/core/features/stage-geometry.md
 Run: act-1a13b145104-0zef · Session: session_01HWAU426RJRzBTT7hAE7fER · Started: 2026-10-14T15:43Z
 Stage: 4 round 4
 Base: d5c240b (round 4; feature first base 3339b904450d73eeae5dc404593972b82f24f46e)
-Next: round 4 (last) on d5c240b: gate + mutation in scratchpad round-4, then the same six-lens panel; then the feature-done PR.
+Next: round 4 panel running (wf_76d41c53-13d) on d5c240b (gate PASS 764, mutants 120/120); then feature-done PR, or file remaining findings as gap issues and finish.
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
