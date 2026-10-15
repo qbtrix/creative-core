@@ -1,0 +1,10 @@
+{
+  "id": "corecatalog",
+  "name": "CoreCatalog library",
+  "description": "Shared catalog module (Sources/CoreCatalog): photo and metadata catalog over SQLite, used by Library and the shared asset library. Linux-safe; depends only on GRDB.",
+  "technology": "Swift 6, SwiftPM, GRDB",
+  "tags": [
+    "internal"
+  ],
+  "order": 50
+}

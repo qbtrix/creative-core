@@ -1,0 +1,22 @@
+{
+  "id": "symbols",
+  "name": "Symbols",
+  "description": "Reusable symbol definitions and their instances on layers: how an instance maps the host timeline onto the symbol's own timeline, the add/remove/convert-to-symbol commands, the instance add, remove, move and playback commands, and the check that rejects symbols that contain themselves.",
+  "technology": "Swift 6, Foundation",
+  "paths": [
+    "Sources/FlareCore/Symbols.swift",
+    "Sources/FlareCore/Instance.swift",
+    "Sources/FlareCore/SymbolCommands.swift",
+    "Sources/FlareCore/SymbolCycles.swift",
+    "Sources/FlareCore/InstanceCommands.swift"
+  ],
+  "order": 50,
+  "relationships": [
+    {
+      "source": "symbols",
+      "target": "document-commands",
+      "description": "symbols hold layers and change the document through commands",
+      "style": "sync"
+    }
+  ]
+}

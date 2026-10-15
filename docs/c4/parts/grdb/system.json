@@ -1,0 +1,9 @@
+{
+  "id": "grdb",
+  "name": "GRDB.swift",
+  "description": "External: SQLite toolkit for Swift (groue/GRDB.swift), pinned exact in Package.swift. Links the system SQLite; on Linux that needs libsqlite3-dev. Approved for CoreCatalog only.",
+  "tags": [
+    "external"
+  ],
+  "order": 20
+}

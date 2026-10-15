@@ -69,7 +69,7 @@ ${t.mutation ? `Invariant it brings: ${t.mutation}. Add one entry to Tests/mutat
 Read CLAUDE.md, docs/engineering.md, the packet section for this task and the code it touches.
 Write the Swift Testing test first. Any document change is a Command with an exact undo and a step in
 UndoPropertyTests. Untrusted input throws the module's error type; a parser gets a seeded fuzz test.
-A new model field decodes from files that lack it. A new Sources/ file gets its C4 owner in docs/c4/model.json.
+A new model field decodes from files that lack it. A new Sources/ file gets its C4 owner in its component's part in docs/c4/parts/ (a new component is a new part); never edit the generated docs/c4/model.json.
 Run scripts/ci until it prints CI: PASS. Then git fetch origin && git rebase origin/dev,
 rerun scripts/ci (CI: PASS again), push, and open ONE PR. Check docs/review-rubric.md before you open it.
 
@@ -81,7 +81,7 @@ Return the PR number, the head sha the gate passed on, and whether it passed.`
 function checkPrompt(t, b) {
   return `Read PR #${b.pr} (task ${t.id} of ${a.feature}) and check it against the contract. Do not edit, push or merge.
 ${contract}
-Also check: it touches only ${(t.files || []).join(', ')} plus their tests, Tests/mutations/*.json and docs/c4/model.json;
+Also check: it touches only ${(t.files || []).join(', ')} plus their tests, Tests/mutations/*.json and C4 parts in docs/c4/parts/ (never docs/c4/model.json);
 the Head: line equals the PR's current head; it adds a test; a new Sources/ file has a C4 owner;
 a new command is a step in UndoPropertyTests${t.mutation ? '; it adds a mutation entry' : ''}. Report every miss.`
 }

@@ -1,0 +1,11 @@
+{
+  "id": "compositing",
+  "name": "Compositing",
+  "description": "W3C blend modes and source-over compositing with opacity on premultiplied pixels.",
+  "technology": "Swift 6, Foundation",
+  "paths": [
+    "Sources/CoreRaster/BlendMode.swift",
+    "Sources/CoreRaster/Composite.swift"
+  ],
+  "order": 20
+}

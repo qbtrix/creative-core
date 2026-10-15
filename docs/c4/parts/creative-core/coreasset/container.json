@@ -1,0 +1,10 @@
+{
+  "id": "coreasset",
+  "name": "CoreAsset library",
+  "description": "Shared asset module (Sources/CoreAsset): the Asset and AssetRef model every app imports and exports, and its manifest.json codec. Linux-safe, Foundation only, no dependencies.",
+  "technology": "Swift 6, SwiftPM",
+  "tags": [
+    "internal"
+  ],
+  "order": 40
+}

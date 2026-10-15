@@ -1,0 +1,9 @@
+{
+  "id": "creative-core",
+  "name": "creative-core",
+  "description": "The pure-Swift engines of a Mac-native creative suite: the FlareCore animation engine plus the shared CoreColor, CoreRaster, CoreAsset and CoreCatalog modules. Linux-safe, Foundation only, except CoreCatalog, which uses GRDB over the system SQLite. The Mac apps live in other repos.",
+  "tags": [
+    "internal"
+  ],
+  "order": 10
+}

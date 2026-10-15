@@ -1,0 +1,19 @@
+{
+  "id": "catalog-store",
+  "name": "Catalog Store",
+  "description": "The catalog schema and its migrations, record types and queries (smart collection rules compiled to SQL) over a GRDB database; CatalogError, which GRDB's errors map to.",
+  "technology": "Swift 6, GRDB, SQLite",
+  "paths": [
+    "Sources/CoreCatalog/"
+  ],
+  "order": 10,
+  "relationships": [
+    {
+      "source": "catalog-store",
+      "target": "grdb",
+      "description": "opens databases, runs migrations and queries through GRDB",
+      "technology": "SwiftPM dependency",
+      "style": "sync"
+    }
+  ]
+}

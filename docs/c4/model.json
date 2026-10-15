@@ -249,18 +249,6 @@
         "style": "sync"
       },
       {
-        "source": "symbols",
-        "target": "document-commands",
-        "description": "symbols hold layers and change the document through commands",
-        "style": "sync"
-      },
-      {
-        "source": "statemachine",
-        "target": "document-commands",
-        "description": "states play frame ranges of a document's scenes; validated by FlareFormat",
-        "style": "sync"
-      },
-      {
         "source": "export",
         "target": "timeline",
         "description": "samples layer properties at a frame",
@@ -276,6 +264,18 @@
         "source": "export",
         "target": "document-commands",
         "description": "reads scenes, layers, shapes and fills",
+        "style": "sync"
+      },
+      {
+        "source": "symbols",
+        "target": "document-commands",
+        "description": "symbols hold layers and change the document through commands",
+        "style": "sync"
+      },
+      {
+        "source": "statemachine",
+        "target": "document-commands",
+        "description": "states play frame ranges of a document's scenes; validated by FlareFormat",
         "style": "sync"
       },
       {

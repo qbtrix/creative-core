@@ -68,7 +68,7 @@ so Belt never reads a quiet lead as a stall.
 ### 1. Read the packet
 
 Read the packet `docs/blueprints/core/features/<feature>.md`,
-`docs/engineering.md`, `docs/review-rubric.md`, `docs/c4/model.json`, the
+`docs/engineering.md`, `docs/review-rubric.md`, the C4 model (`docs/c4/model.json`, generated from `docs/c4/parts/`), the
 `docs/gaps.md` entries it names and the code the tasks touch. Copy the
 packet's tasks, acceptance tests and quality bars into RECORD.md. A task that
 needs a new module or dependency, or edits a protected path, needs an issue

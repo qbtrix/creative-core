@@ -1,0 +1,10 @@
+{
+  "id": "color-spaces",
+  "name": "Color Spaces",
+  "description": "Color3 and conversions between sRGB, linear sRGB, Display P3, XYZ D65 and OKLab through one shared transfer curve (public as TransferCurve, which CoreRaster's sRGB tone encoding uses); ColorError.",
+  "technology": "Swift 6, Foundation",
+  "paths": [
+    "Sources/CoreColor/"
+  ],
+  "order": 10
+}
