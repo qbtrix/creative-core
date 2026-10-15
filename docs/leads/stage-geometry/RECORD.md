@@ -4,7 +4,7 @@ Issue: #267 · Packet: docs/blueprints/core/features/stage-geometry.md
 Run: act-1a13b145104-0zef · Session: session_01HWAU426RJRzBTT7hAE7fER · Started: 2026-10-14T15:43Z
 Stage: 5 finish
 Base: d5c240b (round 4; feature first base 3339b904450d73eeae5dc404593972b82f24f46e)
-Next: #306 (feature-done, head d6fd469) waits for the lane; after merge read the dev CI run it dispatches; green: Belt-Contact-Sheet comment on #267.
+Next: #306 merged (c608d4b); read the ci.yml run on dev the lane dispatched; green: Belt-Contact-Sheet comment on #267.
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -17,6 +17,7 @@ Next: #306 (feature-done, head d6fd469) waits for the lane; after merge read the
 | SG-4 | c | RenderList.marquee in paint order (closes #214) | Marquee.swift | MarqueeTests | FlareMarquee.json | #280 | merged 8fa8cc6 |
 | SG-7 | c | PathBuilders polygon, star (closes #182) | PathBuilders+Polygon.swift | PolygonStarBuilderTests | FlarePolygonStar.json | #281 | merged 1817e03 |
 | SG-8 | d | QB-L5/L6 stage budgets (feature-done moved to the last PR) | StageBudgetTests.swift | StageBudgetTests | – | – | #284 | merged 478aa93 |
+| done | 5 | packet + marquee/worldBounds docs (feature-done) | stage-geometry.md, Marquee.swift, WorldBounds.swift | – | – | #306 | merged c608d4b |
 
 Acceptance tests and quality bars: the packet's "Acceptance test per task" and "Quality tests" tables, unchanged.
 
