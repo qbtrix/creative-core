@@ -1,0 +1,10 @@
+{
+  "id": "flarecore",
+  "name": "FlareCore library",
+  "description": "The FlareCore Swift package (Sources/FlareCore). Value types only, Codable and Sendable, and nothing crashes on untrusted input.",
+  "technology": "Swift 6, SwiftPM",
+  "tags": [
+    "internal"
+  ],
+  "order": 10
+}

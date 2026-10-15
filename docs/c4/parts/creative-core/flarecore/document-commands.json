@@ -1,0 +1,41 @@
+{
+  "id": "document-commands",
+  "name": "Document and Command Engine",
+  "description": "The document model (Document > Scene > Layer > Shape, keyframe tracks, fills, text shapes, ruler guides, the swatch palette, metadata, frame labels) and its ModelError; LayerOwner, which addresses a scene's or a symbol's layer list; the Command protocol and CommandEngine with exact undo/redo, groups, coalescing, an undo depth limit and layer-scoped validation for single-layer commands; the CommandRegistry that decodes any command from a JSON envelope; the built-in command families (scene, layer, shape, text, keyframe, label, guide, swatch, metadata), with the stroke, path and duplicate-layer commands, scene canvas, rename and reorder; and the .flare v1 file format with validation. Every document change goes through a Command.",
+  "technology": "Swift 6, Foundation",
+  "paths": [
+    "Sources/FlareCore/Document.swift",
+    "Sources/FlareCore/Fill.swift",
+    "Sources/FlareCore/Command.swift",
+    "Sources/FlareCore/CommandRegistry.swift",
+    "Sources/FlareCore/Commands.swift",
+    "Sources/FlareCore/KeyframeCommands.swift",
+    "Sources/FlareCore/LabelCommands.swift",
+    "Sources/FlareCore/LayerCommands.swift",
+    "Sources/FlareCore/MetadataCommands.swift",
+    "Sources/FlareCore/SceneCommands.swift",
+    "Sources/FlareCore/ShapeCommands.swift",
+    "Sources/FlareCore/FlareFormat.swift",
+    "Sources/FlareCore/ModelError.swift",
+    "Sources/FlareCore/LayerOwner.swift",
+    "Sources/FlareCore/LayerCommand.swift",
+    "Sources/FlareCore/GuideCommands.swift",
+    "Sources/FlareCore/SwatchCommands.swift",
+    "Sources/FlareCore/TextCommands.swift"
+  ],
+  "order": 10,
+  "relationships": [
+    {
+      "source": "document-commands",
+      "target": "geometry",
+      "description": "shapes and layers are placed with Transform and Path",
+      "style": "sync"
+    },
+    {
+      "source": "document-commands",
+      "target": "timeline",
+      "description": "keyframe tracks carry easing; commands keep keyframes sorted",
+      "style": "sync"
+    }
+  ]
+}

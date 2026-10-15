@@ -1,0 +1,10 @@
+{
+  "id": "asset-model",
+  "name": "Asset Model",
+  "description": "Asset (id, kind, name, tags, version, source app, payload ref), AssetRef (id, version) and the manifest codec with size limits; AssetError.",
+  "technology": "Swift 6, Foundation",
+  "paths": [
+    "Sources/CoreAsset/"
+  ],
+  "order": 10
+}

@@ -1,0 +1,18 @@
+{
+  "id": "coreraster",
+  "name": "CoreRaster library",
+  "description": "Shared raster module (Sources/CoreRaster): pixel buffers, compositing and image operations for Photo, Library and Halo. Linux-safe, Foundation only.",
+  "technology": "Swift 6, SwiftPM",
+  "tags": [
+    "internal"
+  ],
+  "order": 30,
+  "relationships": [
+    {
+      "source": "coreraster",
+      "target": "corecolor",
+      "description": "pixels carry colors in CoreColor's spaces",
+      "style": "sync"
+    }
+  ]
+}

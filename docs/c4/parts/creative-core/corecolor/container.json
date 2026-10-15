@@ -1,0 +1,10 @@
+{
+  "id": "corecolor",
+  "name": "CoreColor library",
+  "description": "Shared color module (Sources/CoreColor): color spaces and conversions for every app. Linux-safe, Foundation only, no dependencies.",
+  "technology": "Swift 6, SwiftPM",
+  "tags": [
+    "internal"
+  ],
+  "order": 20
+}
