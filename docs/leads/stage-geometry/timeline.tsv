@@ -63,3 +63,6 @@ utc	stage	event	ref	note
 2026-10-15T02:31Z	5	pr-opened	#306	feature-done: packet + marquee/worldBounds docs, head d6fd469
 2026-10-15T02:32Z	5	pr-merged	#306	feature-done, c608d4b; waiting for the dev CI run
 2026-10-15T02:39Z	4	heartbeat	round 4	gate, mutation or panel running on d5c240b
+2026-10-15T02:40Z	5	ci-run	38671528592	run 335 on c608d4b green (Linux, macOS, Mutation); main promoted
+2026-10-15T02:40Z	5	stage-end	finish	Belt-Contact-Sheet posted on #267 (comment 6183164502)
+2026-10-15T02:40Z	done	stopped	#267	feature done

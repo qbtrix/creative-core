@@ -2,9 +2,9 @@
 
 Issue: #267 · Packet: docs/blueprints/core/features/stage-geometry.md
 Run: act-1a13b145104-0zef · Session: session_01HWAU426RJRzBTT7hAE7fER · Started: 2026-10-14T15:43Z
-Stage: 5 finish
-Base: d5c240b (round 4; feature first base 3339b904450d73eeae5dc404593972b82f24f46e)
-Next: #306 merged (c608d4b); read the ci.yml run on dev the lane dispatched; green: Belt-Contact-Sheet comment on #267.
+Stage: done
+Base: c608d4b (#306 feature-done merge; feature first base 3339b904450d73eeae5dc404593972b82f24f46e)
+Next: nothing. Done: #306 merged, dev CI run 335 green (main fast-forwarded to c608d4b), Belt-Contact-Sheet posted on #267.
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
