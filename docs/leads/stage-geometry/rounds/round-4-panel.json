@@ -1,0 +1,163 @@
+{
+  "clean": true,
+  "confirmed": [
+    {
+      "severity": "minor",
+      "where": "Sources/FlareCore/Marquee.swift:18-21 (RenderList.marquee doc comment)",
+      "what": "The public doc says marquee returns items \"whose world bounds (with stroke) intersect `rect`\". The code does two other things. It picks any item whose `worldBounds` is nil but whose outline box is finite, for every valid rect, even one far away (`if let box = item.worldBounds, !box.meets(area) { continue }`). For example, stroke width 1e308 under scale 2: the scaled half stroke overflows, so `worldBounds` is nil. It also never picks an item with a non-finite matrix (`guard item.sceneOutlineBounds != nil`). Only the file header comment explains this, and callers do not see it.",
+      "why": "First-use clarity. A caller reads `worldBounds == nil` as \"no box\" and, going by the public doc, expects that item never to be picked. Instead it shows up in every marquee selection.",
+      "fix": "Add a sentence to the `marquee(_:)` doc comment: \"An item with a finite outline but no finite world box (its scaled stroke overflows) is picked by every valid rect; an item with a non-finite matrix is never picked.\"",
+      "files": [
+        "Sources/FlareCore/Marquee.swift"
+      ],
+      "test": "This is a doc-only change. The existing MarqueeTests case for an overflowing stroke, if there is one, already pins the behavior. A review check that the doc names the nil-box case is enough.",
+      "lens": "clarity",
+      "refuted": false,
+      "reason": "I confirmed this in the code at d5c240b, Sources/FlareCore/Marquee.swift. The public doc comment on `RenderList.marquee` (lines 18-20) says it returns items \"whose world bounds (with stroke) intersect `rect`\" and only mentions the empty and non-finite rect cases. The loop does two things that comment does not say. First, `guard item.sceneOutlineBounds != nil else { continue }` drops any item with no finite outline box, such as one with a non-finite matrix. Second, `if let box = item.worldBounds, !box.meets(area) { continue }` lets an item with nil `worldBounds` through for every valid rect, however far away. Only the file header comment (lines 7-10), which callers do not see, explains the nil-box rule. A caller who reads the public doc would expect an item with nil `worldBounds` never to be picked, but it is picked by every marquee. This is a real but minor first-use clarity gap."
+    },
+    {
+      "severity": "minor",
+      "where": "Sources/FlareCore/WorldBounds.swift:26-30 (RenderItem.worldBounds doc) vs WorldBounds.swift:63 (RenderList.worldBounds(of:))",
+      "what": "The `RenderItem.worldBounds` doc says nil is returned \"for text, for an empty outline, and for a non-finite matrix or stroke width\". It then says \"A nil box means 'no finite box', never 'nothing to hit': callers must not skip on it.\" That rule is wrong for text and empty outlines, where nil really does mean nothing to hit. The module's own public `worldBounds(of:)` also skips nil boxes (`guard let box = item.worldBounds else { continue }`), which breaks the instruction it gives callers.",
+      "why": "First-use clarity. A new caller can't tell from the doc when to skip a nil box and when not to, and the library's own union does the opposite of what the doc tells callers to do.",
+      "fix": "Narrow the sentence: \"nil for text or an empty outline means nothing is drawn; nil for a non-finite stroke width or overflowing scaled stroke means the item paints but has no finite box, so a hit or selection test must not reject it on that basis. `worldBounds(of:)` leaves such items out of the union.\" Also add that last point to the `worldBounds(of:)` doc.",
+      "files": [
+        "Sources/FlareCore/WorldBounds.swift"
+      ],
+      "test": "This is a doc-only change with no failing unit test. A review check that both doc comments describe the same nil semantics is enough.",
+      "lens": "clarity",
+      "refuted": false,
+      "reason": "I read the code at r4 (d5c240b) and the finding holds. I did not write a scratch test; reading the code was enough.\n\nIn Sources/FlareCore/WorldBounds.swift, the RenderItem.worldBounds doc (lines 27-29) says the box is nil for text, for an empty outline and for a non-finite matrix or stroke width. It then says \"A nil box means 'no finite box', never 'nothing to hit': callers must not skip on it.\"\n\nFor text, and for an empty outline whose transformed bounds are nil, nil really does mean there is nothing to hit by bounds. So the \"never\" in that rule is wrong for two of the three cases it lists.\n\nThe module's own public RenderList.worldBounds(of:) does what the doc forbids: it runs `guard let box = item.worldBounds else { continue }` and skips every nil, including the non-finite case. Its own doc only mentions text and missing addresses, so it never says that non-finite items are dropped from the union.\n\nThe result is that a caller reading the doc can't tell when skipping a nil box is safe, and the library contradicts the rule it gives callers. This is a real, minor clarity defect in this feature's code."
+    },
+    {
+      "severity": "minor",
+      "where": "Sources/FlareCore/RenderList.swift:47 (RenderList.maxExpandedPoints)",
+      "what": "The name says this budget counts points, but the walk charges more than outline points. Each node and item built under an instance also costs `1 + hosts.count`, and so does every instance considered (`expanded += weight * (1 + 2 * (shapes + texts))`). So 4_000_000 is not a point count. A deep fan-out with no points at all still uses up the budget and sets `isTruncated` (see the doc's \"about 16,000 leaves 40 deep\").",
+      "why": "First-use clarity: a name should not hide its unit. A caller or the app's error UI that reads `sceneTooLarge` as \"more than 4 million points\" gets it wrong for a small file whose symbols nest deep, which is the main case that trips this limit.",
+      "fix": "Rename it to something unit-neutral, such as `maxExpansionCost` or `expansionBudget`. Update the doc to say it counts outline points plus one more than the nesting depth per expanded node and item. Update the references in SVGExportError.sceneTooLarge's doc, the RenderList header, the tests and the FlareRenderList.json mutation anchor.",
+      "files": [
+        "Sources/FlareCore/RenderList.swift",
+        "Sources/FlareCore/Export/SVGExporter.swift",
+        "Tests/FlareCoreTests/RenderListTests.swift",
+        "Tests/mutations/FlareRenderList.json"
+      ],
+      "test": "This is a rename, with no behavior change. RenderListTests' fan-out test (line ~208) compiles against the new name, and `scripts/mutate --validate` resolves the repointed anchor.",
+      "lens": "clarity",
+      "refuted": false,
+      "reason": "I could not refute this. The claim holds at d5c240b. In Sources/FlareCore/RenderList.swift, line 235 charges `weight * (1 + 2 * (shapes + texts))` for every instance layer, and line 250 charges `weight` for each node and item. Only line 239 adds `outline.points`. So the 4_000_000 at line 47 is a mixed unit of cost, not a count of points, and a deep fan-out with no points can still set `isTruncated`.\n\nThe doc comment on lines 37-46 does describe what is charged, including \"about 16,000 leaves 40 deep\". The `sceneTooLarge` doc in SVGExporter.swift:29-33 also names deep nesting as the usual cause. So the docs mitigate it, but the public name `maxExpandedPoints` still names the wrong unit. It is the same at lines 34, 54 and 74, and in the `sceneTooLarge` doc.\n\nThis is a minor naming issue that can be shown. A name such as `maxExpansionBudget` or `maxExpansionCost` would match the code."
+    },
+    {
+      "severity": "minor",
+      "where": "Sources/FlareCore/Marquee.swift:27-28 (RenderList.marquee, `if let box = item.worldBounds, !box.meets(area) { continue }`)",
+      "what": "`marquee` now picks every unlocked, non-text item that has an outline but no finite world box, whatever the rect. That covers a scaled stroke that overflows (1e308 x 2), but also a stroke whose width is NaN or infinite: `sceneHalfStroke` returns nil for any non-finite width. So a shape with `Stroke(width: .nan)`, which paints no stroke, is returned by a marquee drawn anywhere on the canvas, even 1,000 units away. The packet says the opposite. The SG-4 pseudocode is `items.filter { !locked && !text && worldBounds?.intersects(rect) }`, so a nil box is not picked. The Screens row for worldBounds says that for 'a non-finite matrix or stroke width: that item is left out'. The contract doc comment says marquee returns items 'whose world bounds (with stroke) intersect `rect`'. MarqueeTests.overflowingStrokeIsPicked asserts the new behaviour, so the test locks in the departure from the packet. This came from the round-3 fix #303 and is not among the packet wording updates already planned for the feature-done PR.",
+      "why": "The SG-4 behaviour and the worldBounds Error state in the packet's Screens table exclude items with no finite box. The code picks them for every rect, and for a non-finite width that means a marquee anywhere selects a shape it does not touch.",
+      "fix": "Either record the change as an approved deviation in docs/blueprints/core/features/stage-geometry.md (SG-4 pseudocode, plus a marquee Error-column entry saying 'an item whose finite stroke overflows once scaled is picked by every rect'), or narrow the code to that overflow case. For the narrow fix, pick an item with a nil box only when `stroke?.width` is finite and its scaled half overflows, and leave out items whose stroke width is NaN or infinite, as the Screens row says.",
+      "files": [
+        "Sources/FlareCore/Marquee.swift",
+        "Tests/FlareCoreTests/MarqueeTests.swift",
+        "docs/blueprints/core/features/stage-geometry.md"
+      ],
+      "test": "MarqueeTests: a layer holding `square(at: 0, stroke: Stroke(width: .nan))` (and the same with `.infinity`) at scale 1. Expect `list.marquee(Rect(minX: 500, minY: 500, maxX: 600, maxY: 600))` to be `[]`, as the packet's 'that item is left out' requires. Today it returns that item's address.",
+      "lens": "contract",
+      "refuted": false,
+      "reason": "I could not refute this; it holds at d5c240b. In Sources/FlareCore/Marquee.swift:27-28, `marquee` skips an item only when its `sceneOutlineBounds` is nil or when it has a box that misses the rect. When `worldBounds` is nil, the `if let` is skipped and the item is picked, whatever the rect. `sceneHalfStroke` (Sources/FlareCore/WorldBounds.swift:51-57) returns nil for a non-finite width, and also when the half-width overflows after scaling. So a shape with `Stroke(width: .nan)` and a finite matrix is picked by any marquee rect that passes the guards. That goes against the SG-4 pseudocode (`worldBounds?.intersects(rect)`, where nil is not picked), the Screens row (\"that item is left out\") and the public doc comment (\"whose world bounds ... intersect rect\"). The file header admits the departure (\"a nil box never hides an item\"), and MarqueeTests.overflowingStrokeIsPicked locks it in. One thing makes it less severe: `Stroke.validate` (Document.swift:405) rejects non-finite widths when a file loads, so a NaN or infinite width only reaches `marquee` through a Document built in memory with the public `Stroke` init. The overflow case (finite width times a huge scale) is reachable from valid files. Either way, the code and the packet disagree, and the packet updates already planned for the feature-done PR do not cover it. So it stays a minor contract finding: either change the code to leave out items with a nil box, or update the packet and the doc comment to describe the new rule."
+    },
+    {
+      "severity": "minor",
+      "where": "Sources/FlareCore/Marquee.swift:27 (RenderList.marquee, `guard item.sceneOutlineBounds != nil else { continue }`)",
+      "what": "#303 added a new guard to marquee: an item with no outline box (an empty outline, or a non-finite matrix) is never picked, even when its world box is nil because the stroke overflows. No entry in Tests/mutations anchors this line. FlareMarquee.json has two new or repointed entries, and both target the `if let box = item.worldBounds` line below it. If the guard is deleted, an empty-outline shape with `Stroke(width: 1e308)` under scale 2 gets picked by every rect, because worldBounds is nil and the item falls through. The only thing that would show this is the last part of MarqueeTests.overflowingStrokeIsPicked (`Self.list([empty]).marquee(Self.everything).isEmpty`), and no planted bug proves that assertion actually catches it.",
+      "why": "CLAUDE.md, 'Invariants get a mutation entry': new logic with a guard adds one entry, and `scripts/mutate --run --only` must report it caught. The 120/120 score says nothing about this guard because no mutation touches it.",
+      "fix": "Add an entry to Tests/mutations/FlareMarquee.json: file Sources/FlareCore/Marquee.swift, anchor `guard item.sceneOutlineBounds != nil else { continue }`, replacement empty, note 'marquee picks an empty outline whose stroke overflows', filter MarqueeTests. Then run `scripts/mutate --run --only \"empty outline whose stroke overflows\"`.",
+      "files": [
+        "Tests/mutations/FlareMarquee.json",
+        "Sources/FlareCore/Marquee.swift",
+        "Tests/FlareCoreTests/MarqueeTests.swift"
+      ],
+      "test": "MarqueeTests.overflowingStrokeIsPicked: with the guard deleted, `#expect(Self.list([empty]).marquee(Self.everything).isEmpty)` fails because the result is [\"e:0\"]. The new mutation entry has to report this test as the one that caught it.",
+      "lens": "tests",
+      "refuted": false,
+      "reason": "The finding holds. At d5c240b, Sources/FlareCore/Marquee.swift:27 has `guard item.sceneOutlineBounds != nil else { continue }`. Tests/mutations/FlareMarquee.json has 6 entries, and none of them anchors this line or removes it. The two new or repointed entries both anchor the `if let box = item.worldBounds` line. So the 120/120 score says nothing about this guard. CLAUDE.md says a new guard needs a mutation entry, so a minor gap remains. The fix is to add an entry that deletes the guard (filter MarqueeTests) and check that `scripts/mutate --run --only` reports it caught."
+    },
+    {
+      "severity": "minor",
+      "where": "Sources/FlareCore/RenderList.swift:245-264 (Walker.walk: texts loop, then instances loop)",
+      "what": "The paint-order invariant is that a layer paints its shapes, then its texts, then its instances. #302 pinned shapes before texts, but nothing pins texts before instances. In every test fixture, a layer that has texts has no instances: NestedScene 'label', the 'text' layers in HitQueryTests and MarqueeTests, and the new 'L' layer in layerPaintsShapesBeforeTexts. If the instances loop moved above the texts loop, itemsAreVisibleLeavesInPaintOrder and every other test would still pass, and no FlareRenderList.json entry plants that bug. The missing assertion is item keys for a single layer that holds both a text and an instance.",
+      "why": "The stage draws `items` in this order, so a text could end up under its layer's symbol instances and no test would fail. CLAUDE.md, 'Invariants get a mutation entry'.",
+      "fix": "In RenderListTests, build a layer with `texts: [t]` and `instances: [Instance(symbolID: \"c\")]`, where symbol c has one shape. Assert the keys are [\"scene s||L|t0\", \"scene s|L:0|cl|s0\"]. Add a FlareRenderList.json entry that moves the texts loop below the instances loop, with filter RenderListTests.",
+      "files": [
+        "Tests/FlareCoreTests/RenderListTests.swift",
+        "Tests/mutations/FlareRenderList.json"
+      ],
+      "test": "A layer with a text and an instance of a one-shape symbol must give item keys [\"scene s||L|t0\", \"scene s|L:0|cl|s0\"]. With the instances loop run before the texts loop, the order is reversed and the test fails.",
+      "lens": "tests",
+      "refuted": false,
+      "reason": "The finding holds. In Sources/FlareCore/RenderList.swift at d5c240b, Walker.walk adds both `children` and `items` by running the texts loop (lines 245-248) and then the instances loop (249-263). Swapping the two loops changes the tree order and the item order in the same way, so any test that compares items against the tree's leaf order would still pass. No test fixture has a layer that holds both a text and an instance whose item order gets checked:\n- NestedScene 'label' has only texts.\n- layerPaintsShapesBeforeTexts uses layer 'L', which has only shapes and texts.\n- The seeded property test in RenderListTests (layers() around line 365) makes shapes and instances but never texts.\n- SVGRenderListTests:106-107 builds a layer with both a text and an instance, but it only checks the error SVG export throws (`unsupported(\"text\")`). That check happens before any item order matters.\nIn Tests/mutations/FlareRenderList.json, the only paint-order entry is \"paints a layer's texts before its shapes\" (line 94). No entry swaps texts with instances. So moving the instances loop above the texts loop would put a layer's text under its symbol instances and no test or mutation would catch it. I found this by reading the code and searching the tests and the mutation file; I did not run a scratch mutation."
+    },
+    {
+      "severity": "minor",
+      "where": "Sources/FlareCore/LayerCommands.swift:127 (DuplicateLayer: LayerCommand)",
+      "what": "DuplicateLayer conforms to LayerCommand with `layerID` set to the source layer, but `execute` never changes that layer. It inserts a different layer, the copy at index + 1, whose id is only known after execute. `CommandEngine.perform` then runs `FlareFormat.validate(doc, layer: layerID, ...)` on the source layer. That scoped check never looks at the copy. Its insert-clash test (`new[(i + 1)...].contains { $0.id == layerID }`) only looks for the source id, so the engine's backstop never checks the copy's id against the other layers. The copy is valid today only because `freshID` is correct. The code comment above the struct admits the mismatch.",
+      "why": "engineering.md, 'The document stays valid': \"A command that changes only one layer conforms to `LayerCommand`, naming it by a `LayerOwner` and a layer id, so the check is scoped to that layer.\" The protocol doc (Command.swift:57, \"The one layer `execute` may change\") and LayerCommand.swift's header (\"must never touch another layer\") say the same. The rubric also asks: does every changed command still pass `FlareFormat.validate`, with perform's guard as the backstop? Here the backstop is scoped to the wrong layer.",
+      "fix": "Drop the `LayerCommand` conformance so `perform` runs the full `FlareFormat.validate`. Encode owner and layerID through a small Codable params struct, as the scene commands do. Duplicating a layer is rare, so the full check costs little. The other option is to scope the check to the inserted copy, but the protocol cannot express that today.",
+      "files": [
+        "Sources/FlareCore/LayerCommands.swift",
+        "Tests/FlareCoreTests/DuplicateLayerTests.swift"
+      ],
+      "test": "In DuplicateLayerTests, add a check that the engine's own validation catches a bad copy id. Plant `while used.contains(candidate)` -> `while false` in `freshID`. Duplicate layer \"a\" in a scene that already has a layer \"a-copy\". Then `#expect(throws: CommandError.self) { try engine.perform(DuplicateLayer(owner: .scene(s), layerID: \"a\")) }`. Today perform commits a document with duplicate layer ids, because the scoped check validates only \"a\". With full validation it throws invalidDocument. Add this as a mutation entry in Tests/mutations/FlareDuplicateLayer.json.",
+      "lens": "design",
+      "refuted": false,
+      "reason": "The finding holds at d5c240b, and DuplicateLayer is new in this feature's diff. In Sources/FlareCore/LayerCommands.swift, DuplicateLayer.execute inserts a copy with id freshID(...) at index i+1. It conforms to LayerCommand with layerID set to the source layer. CommandEngine.perform (Command.swift:170) therefore calls FlareFormat.validate(doc, layer: scoped.layerID, ...). In FlareFormat.swift:119-126 that call validates only the source layer, and its clash test `new[(i + 1)...].contains { $0.id == layerID }` looks only for the source id. Nothing checks the copy's id against the owner's other layers. If freshID returned a clashing id, the scoped backstop would accept a document with a duplicate layer id that the full validate(_:) rejects. Mutation tests in Tests/mutations/FlareDuplicateLayer.json do catch a freshID regression, but only DuplicateLayerTests catch it, not the engine guard. That goes against the engineering.md rule and the LayerCommand contract (\"the one layer execute may change\"). The code comment above the struct admits the mismatch. Two facts keep it minor: the copy's content equals the source's, so content validation is effectively covered, and checkLimits still runs because `before` is nil on an insert."
+    },
+    {
+      "severity": "minor",
+      "where": "Sources/FlareCore/SceneCommands.swift:139-145 (SetSceneCanvas.execute)",
+      "what": "SetSceneCanvas copies the scene canvas checks from `FlareFormat.validateHeaders` (FlareFormat.swift:145-156) line for line. The conditions (`width.isFinite, width > 0, height.isFinite, height > 0` and `background.isFinite`) and both message strings are re-typed, with no shared helper. If the format's rule changes (for example, background channels must be in 0...1), the command keeps the old rule. For the same kind of rule, SetShapeStroke already calls the model's `Stroke.validate()`, which throws `ModelError` and is mapped by each layer.",
+      "why": "engineering.md, 'Reuse before you write' and rubric 2: \"No near-copy that jscpd misses (same logic, renamed variables) of a function in another file?\" Also 'Every invariant lives in FlareFormat.validate': a rule written out twice can drift into two different rules.",
+      "fix": "Add a model-level `Scene.validateCanvas()` in Document.swift that throws `ModelError` (a new `invalidScene(String)` case, mapped to `.invalidDocument` / `.invalid` in `CommandError.init(_:)` and `FormatError.init(_:)`). Call it from both `FlareFormat.validateHeaders` and `SetSceneCanvas.execute`. Delete the copied guards.",
+      "files": [
+        "Sources/FlareCore/SceneCommands.swift",
+        "Sources/FlareCore/FlareFormat.swift",
+        "Sources/FlareCore/Document.swift",
+        "Sources/FlareCore/ModelError.swift",
+        "Sources/FlareCore/Command.swift"
+      ],
+      "test": "Add a ModelErrorTests case: `#expect(throws: ModelError.invalidScene(\"canvas size must be finite and > 0\")) { try scene(width: 0).validateCanvas() }`. Add a SceneCanvasCommandTests case asserting that SetSceneCanvas and FlareFormat.validate reject the same set of seeded bad canvases (zero, negative, NaN, infinite sizes; NaN background). Neither the helper nor the shared-rule test exists today.",
+      "lens": "design",
+      "refuted": false,
+      "reason": "I couldn't refute this; the finding holds at d5c240b. SetSceneCanvas.execute (SceneCommands.swift:139-146) restates both scene canvas rules from FlareFormat.validateHeaders (FlareFormat.swift:~145-156) with no shared helper. The re-typed rules are `width.isFinite, width > 0, height.isFinite, height > 0` and `background.isFinite`, and both message strings are copied word for word. The only difference is that the command throws CommandError.invalidDocument where the format throws FormatError.invalid. This feature added the code: SceneCommands.swift has +125 lines in 3339b90..d5c240b. Because each rule is written out twice, a change to one copy would not reach the other. That breaks the rule that every invariant lives in the format's validation, and it differs from SetShapeStroke, which calls the model's Stroke.validate(). Minor, as the critic said. I did not write a scratch test, because the duplication shows directly in the source."
+    },
+    {
+      "severity": "minor",
+      "where": "Sources/FlareCore/ShapeCommands.swift:183-186 (SetShapePath.execute)",
+      "what": "SetShapePath re-implements the format's shape-point rule from FlareFormat.swift:186-188: `points + (path?.elements.flatMap(\\.points) ?? [])` followed by an all-finite check. Only the variable names and the message differ. The model has no `Shape` helper for this rule, so the command layer and the format layer each keep their own copy.",
+      "why": "engineering.md, 'Search for the helper first' / rubric 2: \"No near-copy that jscpd misses (same logic, renamed variables) of a function in another file?\" Also 'Every invariant lives in FlareFormat.validate': the format and the command should run one shared rule, not two copies of it.",
+      "fix": "Add `Shape.validatePoints()` (or `var hasFinitePoints: Bool`) to the model in Document.swift, beside Stroke.validate. Call it from `FlareFormat.validate(_:owner:symbols:)` and from `SetShapePath.execute`, which builds a candidate shape or passes points and path. Delete both inline copies.",
+      "files": [
+        "Sources/FlareCore/ShapeCommands.swift",
+        "Sources/FlareCore/FlareFormat.swift",
+        "Sources/FlareCore/Document.swift"
+      ],
+      "test": "Add a ModelErrorTests or StrokePathCommandTests case where a shape whose path holds a NaN control point fails the new model helper, and both `SetShapePath` and `FlareFormat.validate` reject it through that helper. Add a mutation entry on the helper's guard, filtered to StrokePathCommandTests|FlareFormatTests. One mutant must then fail both suites; today two separate guards would each need their own mutant.",
+      "lens": "design",
+      "refuted": false,
+      "reason": "The duplicate is real, and this feature added it. At d5c240b, `SetShapePath.execute` (Sources/FlareCore/ShapeCommands.swift:183-186) builds `points + (path?.elements.flatMap(\\.points) ?? [])` and checks every point is finite. FlareFormat.swift:186-188 does the same thing to `shape.points + shape.path...`: same concatenation, same all-finite guard, only the variable names and the error message differ. There is no shared `Shape` or `Path` helper (for example a `Shape.allPointsFinite`) that both could call. The command code came in with #279 (8cb7c28) and was reworded in #296 (3a1b50a). Neither commit is an ancestor of base 3339b90, and the lines appear as additions in the 3339b90..d5c240b diff, so the code is inside this feature. jscpd misses it because the block is short and the names differ. That is exactly the rubric 2 case of a near-copy in another file, and the same finiteness rule is now kept in two places. It is minor, as reported. I read the code; no scratch test was needed."
+    },
+    {
+      "severity": "minor",
+      "where": "Sources/FlareCore/WorldBounds.swift:21-23 (fileprivate Matrix.isFinite); Sources/FlareCore/Instance.swift:40-45 (Transform.isFinite)",
+      "what": "This change adds finiteness helpers for the Geometry.swift types in two other files. `Matrix.isFinite` is a fileprivate extension in the evaluation-layer WorldBounds.swift. `Matrix.inverted()` in Geometry.swift already runs the same check inline (`[inv.a, inv.b, inv.c, inv.d, inv.tx, inv.ty].allSatisfy(\\.isFinite)`). `Transform.isFinite` is declared in Instance.swift, away from `Transform` in Geometry.swift, yet SetInstanceTransform, AddInstance and FlareFormat all call it. A reader looking for Matrix or Transform helpers in Geometry.swift will not find them and may write a third copy.",
+      "why": "engineering.md, 'Search for the helper first': \"If the helper is `private` elsewhere, make it `internal` and call it.\" Rubric 2 bans near-copies. 'Reading cost' asks for one idea per file: a helper on a model type belongs beside the type.",
+      "fix": "Move `Matrix.isFinite` (internal) and `Transform.isFinite` into Geometry.swift, next to their types. Use `inv.isFinite` in `Matrix.inverted()` in place of the inline array check. Delete the fileprivate copy in WorldBounds.swift and the extension in Instance.swift.",
+      "files": [
+        "Sources/FlareCore/Geometry.swift",
+        "Sources/FlareCore/WorldBounds.swift",
+        "Sources/FlareCore/Instance.swift"
+      ],
+      "test": "No behavior changes, so no unit test fails before this fix. As a review check, `grep -n 'extension Transform\\|extension Matrix' Sources/FlareCore/Instance.swift Sources/FlareCore/WorldBounds.swift` should list no isFinite definitions. The existing `WorldBoundsTests` non-finite-matrix case and the `InstanceCommandsTests` invalidTransform case must still pass.",
+      "lens": "design",
+      "refuted": false,
+      "reason": "I could not refute this. The diff 3339b90..d5c240b adds both helpers. Sources/FlareCore/WorldBounds.swift:21-23 declares a fileprivate `Matrix.isFinite` ([a,b,c,d,tx,ty].allSatisfy(\\.isFinite)), and the guard at line 42 uses it. Sources/FlareCore/Instance.swift:42-43 declares `Transform.isFinite`, but `Transform` lives in Geometry.swift. Geometry.swift:105 (`Matrix.inverted`) runs the same allSatisfy finiteness check inline on the inverse's six values. That near-copy would go away if `Matrix.isFinite` were internal and sat in Geometry.swift. This is a real minor reuse and placement issue that the feature introduced."
+    }
+  ],
+  "refuted": 0
+}

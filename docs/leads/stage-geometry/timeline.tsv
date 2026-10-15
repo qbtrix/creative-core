@@ -57,3 +57,6 @@ utc	stage	event	ref	note
 2026-10-15T02:09Z	4	stage-start	round 4	d5c240b (last round)
 2026-10-15T02:21Z	4	gate-run	d5c240b	CI: PASS 764 tests; validate 175 anchors; mutants 120/120
 2026-10-15T02:24Z	4	heartbeat	round 4	gate, mutation or panel running on d5c240b
+2026-10-15T02:26Z	4	round-clean	round 4	10 minor, 0 major; budget spent; gaps #304 #305
+2026-10-15T02:26Z	4	stage-end	round 4	Anatomy loop done
+2026-10-15T02:26Z	5	stage-start	finish	r4-done feature-done PR building
