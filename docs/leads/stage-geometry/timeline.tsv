@@ -60,3 +60,4 @@ utc	stage	event	ref	note
 2026-10-15T02:26Z	4	round-clean	round 4	10 minor, 0 major; budget spent; gaps #304 #305
 2026-10-15T02:26Z	4	stage-end	round 4	Anatomy loop done
 2026-10-15T02:26Z	5	stage-start	finish	r4-done feature-done PR building
+2026-10-15T02:31Z	5	pr-opened	#306	feature-done: packet + marquee/worldBounds docs, head d6fd469

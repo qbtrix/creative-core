@@ -4,7 +4,7 @@ Issue: #267 · Packet: docs/blueprints/core/features/stage-geometry.md
 Run: act-1a13b145104-0zef · Session: session_01HWAU426RJRzBTT7hAE7fER · Started: 2026-10-14T15:43Z
 Stage: 5 finish
 Base: d5c240b (round 4; feature first base 3339b904450d73eeae5dc404593972b82f24f46e)
-Next: wait for the r4-done feature-done PR (wf_95a40659-4b0) to merge, then the CI run it dispatches on dev; green: Belt-Contact-Sheet comment on #267.
+Next: #306 (feature-done, head d6fd469) waits for the lane; after merge read the dev CI run it dispatches; green: Belt-Contact-Sheet comment on #267.
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
