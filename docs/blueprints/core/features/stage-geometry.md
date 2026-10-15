@@ -6,6 +6,10 @@ read; a topmost hit with an address and a zoom tolerance; a marquee; world
 bounds that include the stroke; and path builders for the Rectangle,
 Ellipse, Polygon and Star tools.
 **Line:** `line:core` · **Wave:** 1 (`waves.md`) · **Lead branch:** `lead/stage-geometry`
+**Status:** shipped. Merged PRs: #271, #274, #275, #277, #278, #280, #281,
+#284, #287, #288, #289, #290, #295, #297, #301, #302, #303, and this
+packet's closing `feature-done` PR. Where this packet and the code differ,
+the code and its doc comments win.
 
 **Covers:** #213 (LC-1, G45), #214 (LC-2), #215 (LC-3), #182 (LC-4). #213
 closes with SG-2, #214 with SG-4, #215 with SG-5, #182 with SG-7.
@@ -48,7 +52,9 @@ The engine has no UI. Its journeys are the calls Flare's live types make
 5. The world bounds of a rotated rectangle are within 1e-9 of the rotated
    corners; a stroke widens them by half its width.
 6. The Rectangle, Ellipse, Polygon and Star builders give closed paths whose
-   curves are cubics (QB-V1), with bounds equal to the box.
+   curves are cubics (QB-V1). Rectangle and ellipse bounds equal the box;
+   polygon and star vertices sit on the ellipse inscribed in the box (SG-7),
+   so their bounds lie inside it and touch it only where a vertex does.
 
 ## Screens and states
 
@@ -57,11 +63,11 @@ crashing.
 
 | Query | Empty | Error | Loading |
 |---|---|---|---|
-| `renderList` | a scene or symbol with no layers: an empty list; a layer with no shapes still appears as a group node (the SVG exporter writes its `<g>`), with no items | an instance whose symbol is missing or cyclic: a `.unresolved(symbolID)` node in the tree, no items in `items`; nothing throws (the SVG exporter turns that node into its existing `unresolvedSymbol` error) | none: built per frame, inside QB-L6 |
+| `renderList` | a scene or symbol with no layers: an empty list; a layer with no shapes still appears as a group node (the SVG exporter writes its `<g>`), with no items | an instance whose symbol is missing or cyclic: a `.unresolved(symbolID)` node in the tree, no items in `items`; nothing throws (the SVG exporter turns that node into its existing `unresolvedSymbol` error). Instance expansion spends at most `RenderList.maxExpandedPoints`; past it every further instance is `.unresolved` and `isTruncated` is true, because a small file whose symbols fan out would otherwise build billions of items. The SVG exporter rejects a truncated list with `SVGExportError.sceneTooLarge` (SG-2) | none: built per frame, inside QB-L6 |
 | `hit` | no item under the point: `nil` | a tolerance that is negative or not finite: `nil` (never a throw on a pointer move); an item whose matrix can't be inverted (zero scale) is skipped | – |
-| `marquee` | a rect that touches nothing, or a zero-area rect: `[]` | a rect with a non-finite edge: `[]` | – |
+| `marquee` | a rect that touches nothing, or a zero-area rect: `[]` | a rect with a non-finite edge: `[]`; an item with a finite outline but no finite world box is picked by every valid rect, an item with no finite outline box is never picked (approved deviation, SG-4) | – |
 | `worldBounds` | no items, or only text items: `nil` | a non-finite matrix or stroke width: that item is left out | – |
-| `PathBuilders` | a zero-width or zero-height rect: a degenerate, finite path (no NaN) | a rect, radius, side count or ratio that is not finite, or a polygon with fewer than 3 sides: `GeometryError.nonFinite` / `GeometryError.invalidSides` | – |
+| `PathBuilders` | a zero-width or zero-height rect: a degenerate, finite path (no NaN) | a rect, radius or ratio that is not finite: `GeometryError.nonFinite`; a polygon side count or star point count outside `3...PathBuilders.maxSides`: `GeometryError.invalidSides`; a finite star inner ratio outside (0, 1]: `GeometryError.invalidRatio` | – |
 
 ## Contract slice
 
@@ -133,8 +139,18 @@ public enum PathBuilders {
     public static func polygon(in rect: Rect, sides: Int) throws -> Path
     public static func star(in rect: Rect, points: Int, innerRatio: Double) throws -> Path
 }
-// Geometry.swift (SG-6): GeometryError gains `nonFinite` and `invalidSides`.
+// Geometry.swift (SG-6, SG-7): GeometryError gains `nonFinite`, `invalidSides`
+// and `invalidRatio`.
+// RenderList.swift: `static let maxExpandedPoints`, `var isTruncated`.
+// SVGExporter.swift (SG-2): SVGExportError gains `sceneTooLarge`.
 ```
+
+**Approved deviation (SG-4).** The marquee does not use the world box alone.
+An item with a finite outline but no finite world box (a non-finite stroke
+width, or a finite stroke that overflows once scaled) paints a stroke with no
+finite reach, so every valid rect picks it; a nil box never hides an item.
+An item with no finite outline box (an empty outline or a non-finite matrix)
+draws nothing and is never picked.
 
 **Why a tree and not only a flat list.** #213 asks for the SVG golden to stay
 byte-identical. The exporter writes one `<g>` per visible layer (empty ones

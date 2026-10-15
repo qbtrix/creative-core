@@ -17,7 +17,11 @@ import Foundation
 extension RenderList {
     /// Unlocked, non-text items whose world bounds (with stroke) intersect
     /// `rect`, in paint order, each address once. A rect with a non-finite
-    /// edge, or zero width or height once normalised, gives [].
+    /// edge, or zero width or height once normalised, gives []. An item with
+    /// a finite outline but a nil `worldBounds` (a non-finite stroke width, or
+    /// a stroke that overflows once scaled) is picked by every valid rect. An
+    /// item with no finite outline box (an empty outline or a non-finite
+    /// matrix) is never picked.
     public func marquee(_ rect: Rect) -> [RenderAddress] {
         guard let area = rect.normalized else { return [] }
         guard area.maxX - area.minX > 0, area.maxY - area.minY > 0 else { return [] }

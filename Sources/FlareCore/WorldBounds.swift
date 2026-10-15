@@ -25,8 +25,11 @@ extension Matrix {
 
 extension RenderItem {
     /// The item's scene-space box, stroke included; nil for text, for an empty
-    /// outline, and for a non-finite matrix or stroke width. A nil box means
-    /// "no finite box", never "nothing to hit": callers must not skip on it.
+    /// outline, and for a non-finite matrix or stroke width. Nil for text or an
+    /// empty outline means nothing is drawn. Nil for a non-finite stroke width,
+    /// or a stroke that overflows once scaled, means the item paints but has
+    /// no finite box: hit testing and selection must not reject it on that
+    /// basis.
     public var worldBounds: Rect? {
         guard var box = sceneOutlineBounds, let half = sceneHalfStroke else { return nil }
         box.minX -= half
@@ -60,6 +63,8 @@ extension RenderItem {
 extension RenderList {
     /// The union of the boxes of the items at `addresses`; nil when none of
     /// them has a box (an empty list, text only, or addresses not in the list).
+    /// Items whose `worldBounds` is nil, including ones that paint but have no
+    /// finite box, are left out of the union.
     public func worldBounds(of addresses: [RenderAddress]) -> Rect? {
         let wanted = Set(addresses)
         var corners: [Point] = []
