@@ -52,6 +52,11 @@ check "deny Package.swift" "not-eligible|touches protected paths: Package.swift"
   . $'Package.swift\nSources/FlareCore/Easing.swift' .
 check "deny gate scripts" "not-eligible|touches protected paths: scripts/ci, scripts/cloud-setup.sh" \
   . $'scripts/ci\nscripts/cloud-setup.sh' .
+check "deny the generated C4 model and its generator" \
+  "not-eligible|touches protected paths: docs/c4/model.json, scripts/c4-assemble" \
+  . $'docs/c4/model.json\nscripts/c4-assemble' .
+check "C4 parts stay eligible" "eligible|" \
+  . 'docs/c4/parts/creative-core/flarecore/document-commands.json' .
 check "deny agent rules, any case" "not-eligible|touches protected paths: docs/agents.md" \
   . 'docs/agents.md' .
 check "similar names are allowed" "eligible|150|2|5 checks green" \

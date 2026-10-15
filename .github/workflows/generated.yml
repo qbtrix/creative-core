@@ -1,0 +1,102 @@
+# Generated: the one writer of docs/c4/model.json, which scripts/c4-assemble
+# builds from docs/c4/parts/ (one file per component). Writers edit only their
+# own part, so parallel PRs never conflict on the shared model; PRs never edit
+# model.json itself (the lane's PROTECTED list).
+#
+# When dev's model.json and its parts differ, this commits the assembled model
+# to dev as github-actions[bot] (creative-apps' Generated workflow and its
+# audit-lower job push the same way): on a refused push (dev moved) it fetches
+# dev and assembles again on top, up to 3 retries. GITHUB_TOKEN pushes start no
+# workflow.
+#
+# Transition guard: the lane runs its script from main, which moves only on a
+# green dev, so for a while a PR that edits model.json directly can still
+# merge. Its edit is not overwritten: c4-assemble --absorb folds it into the
+# parts (a three-way merge per part against the newest commit where model.json
+# matched its parts) and both are committed. A part changed both in its file
+# and in model.json is left as is; the run fails and opens or updates one issue
+# naming it.
+#
+# Triggers: a push to dev that touches the parts or the assembler. The lane
+# squash-merges with GITHUB_TOKEN, which fires no push event, so a schedule
+# sweeps too (a no-op run when nothing changed; free on a public repo).
+name: Generated
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - docs/c4/**
+      - scripts/c4-assemble
+  schedule:
+    - cron: '3-59/10 * * * *'  # every 10 minutes; schedule runs on the default branch (dev)
+  workflow_dispatch:
+
+permissions:
+  contents: write  # push the generated model to dev
+  issues: write    # report a direct edit it would not overwrite
+
+concurrency:
+  group: generated
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    name: Generate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0  # --absorb reads the history of the model
+      - name: Assemble and commit docs/c4/model.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          title="chore(generated): assemble docs/c4/model.json from its parts"
+          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          report=""
+          # GitHub runs this with bash -e: each status is caught with ||.
+          for attempt in 1 2 3 4; do
+            report=""
+            if python3 scripts/c4-assemble --check >/dev/null; then
+              echo "Generated: docs/c4/model.json matches its parts." >>"$GITHUB_STEP_SUMMARY"
+              break
+            fi
+            status=0; out=$(python3 scripts/c4-assemble --absorb) || status=$?
+            echo "$out"
+            if [[ $status -eq 2 ]]; then report="$out"; elif [[ $status -ne 0 ]]; then exit 1; fi
+            git add docs/c4/model.json docs/c4/parts
+            if git diff --cached --quiet; then
+              break
+            fi
+            files=$(git diff --cached --name-only)
+            git commit -q -m "$title" -m "Written by $run_url from the parts on dev $(git rev-parse --short HEAD)." -m "$files"
+            if git push origin HEAD:refs/heads/dev; then
+              printf 'Generated: pushed %s to dev.\n\n%s\n' "$(git rev-parse --short HEAD)" "$files" >>"$GITHUB_STEP_SUMMARY"
+              break
+            fi
+            echo "Push $attempt refused (dev moved); assembling again on top of the new dev."
+            git fetch -q origin dev
+            git checkout -q --detach FETCH_HEAD
+            [[ $attempt -eq 4 ]] && { echo "::error::Could not push docs/c4/model.json to dev after 3 retries."; exit 1; }
+          done
+          [[ -z "$report" ]] && exit 0
+          # One open issue carries every report: comment on it, or open it.
+          issue_title="Generated files: a direct edit on dev needs a hand merge"
+          body=$(printf '%s\n\nThe Generated workflow left docs/c4/model.json and its parts as they are and failed (%s at %s). Move the change into its component part in docs/c4/parts/ in a supervisor-merged PR that also runs scripts/c4-assemble, so model.json matches its parts again; the next run then goes on. Never edit docs/c4/model.json directly.\n' \
+            "$report" "$run_url" "$(git rev-parse --short HEAD)")
+          n=$(gh issue list --state open --search "in:title \"$issue_title\"" --json number,title \
+            --jq "[.[] | select(.title == \"$issue_title\")][0].number // empty")
+          first=$(head -n 1 <<<"$report")
+          if [[ -z "$n" ]]; then gh issue create --title "$issue_title" --body "$body"
+          elif gh issue view "$n" --json body,comments --jq '[.body] + [.comments[].body] | join("\n")' | grep -qF "$first"; then
+            echo "Already reported on #$n."
+          else gh issue comment "$n" --body "$body"; fi
+          printf 'Generated: left a direct edit; see the issue.\n\n%s\n' "$report" >>"$GITHUB_STEP_SUMMARY"
+          echo "::error::docs/c4/model.json was edited directly in a way it could not absorb; it was left as is (see the issue)."
+          exit 1

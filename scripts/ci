@@ -7,10 +7,13 @@
 # The lint fails on crash-prone constructs in Sources/ (tests are exempt):
 #   try!  as!  fatalError(  preconditionFailure(  precondition(  unowned  .first!  .last!
 #
-# The C4 ownership check keeps docs/c4/model.json current for orientation:
-# every Sources/**/*.swift file must be owned by exactly one component's
-# `paths` entry (a file, a folder prefix or a glob). Tests/ is not scanned. It
-# needs jq and runs a self-test on a scratch tree first.
+# The C4 ownership check keeps the C4 model current for orientation: every
+# Sources/**/*.swift file must be owned by exactly one component's `paths`
+# entry (a file, a folder prefix or a glob). Tests/ is not scanned. It reads
+# the model scripts/c4-assemble builds from docs/c4/parts/ (a PR edits parts;
+# docs/c4/model.json is generated on dev), so it fails first when the parts
+# don't assemble, and Tests/c4_assemble tests the assembler. It needs jq and
+# python3 and runs a self-test on a scratch tree first.
 #
 # The duplicate check runs jscpd (pinned) over Sources/ and fails when duplicated
 # lines exceed JSCPD_THRESHOLD percent. Baseline on main: 3 clones, 27 lines,
@@ -33,15 +36,15 @@ if grep -rnE "$pattern" Sources/; then
 fi
 echo "ok"
 
-echo "== C4 ownership (Sources/ vs docs/c4/model.json)"
-# c4_unowned ROOT: "file: why" for each ROOT/Sources/**/*.swift file that is not
-# owned by exactly one component in ROOT/docs/c4/model.json; nothing when clean.
+echo "== C4 ownership (Sources/ vs the model assembled from docs/c4/parts/)"
+# c4_unowned ROOT MODEL: "file: why" for each ROOT/Sources/**/*.swift file that
+# is not owned by exactly one component in MODEL; nothing when clean.
 # A `paths` entry owns a file when it names it, is a folder prefix of it
 # (Sources/CoreColor/ or Sources/CoreColor), or is a glob matching it.
 c4_unowned() {
   local pairs f id p owners n
   pairs=$(jq -r '.. | objects | select(has("paths")) | .id as $id | .paths[] | "\($id)\t\(.)"' \
-    "$1/docs/c4/model.json") || { echo "docs/c4/model.json: not valid JSON"; return; }
+    "$2") || { echo "$2: not valid JSON"; return; }
   (cd "$1" && find Sources -name '*.swift' 2>/dev/null | sort) | while IFS= read -r f; do
     owners="" n=0
     while IFS=$'\t' read -r id p; do
@@ -54,6 +57,7 @@ c4_unowned() {
   done
 }
 command -v jq >/dev/null 2>&1 || fail "C4 ownership: jq not found; install jq"
+command -v python3 >/dev/null 2>&1 || fail "C4 ownership: python3 not found; install python3"
 # Self-test: a scratch tree whose model has every path form, and files it must flag.
 c4_got=$(
   t="$(mktemp -d)"
@@ -63,7 +67,7 @@ c4_got=$(
     {"id":"a","paths":["Sources/A/One.swift","Sources/B/"]},
     {"id":"b","paths":["Sources/C","Sources/B/Two.swift","Sources/G/*.swift"]}]}]}]}}' >"$t/docs/c4/model.json"
   for f in A/One A/Loose B/Two C/Three CC/Four G/Five; do : >"$t/Sources/$f.swift"; done
-  c4_unowned "$t"
+  c4_unowned "$t" "$t/docs/c4/model.json"
 )
 c4_want='Sources/A/Loose.swift: no C4 component owns it
 Sources/B/Two.swift: owned by 2 C4 components (a, b)
@@ -72,11 +76,18 @@ if [[ "$c4_got" != "$c4_want" ]]; then
   printf 'want:\n%s\ngot:\n%s\n' "$c4_want" "$c4_got"
   fail "C4 ownership self-test: fix c4_unowned in scripts/ci"
 fi
-found=$(c4_unowned .)
+c4_model="$(mktemp)"
+if ! python3 scripts/c4-assemble --out "$c4_model"; then
+  rm -f "$c4_model"
+  fail "C4 parts: docs/c4/parts/ must assemble (scripts/c4-assemble)"
+fi
+found=$(c4_unowned . "$c4_model")
+rm -f "$c4_model"
 if [[ -n "$found" ]]; then
   echo "$found"
-  fail "C4 ownership: give each file above exactly one owner in docs/c4/model.json (add it to a component's paths, or add a component)"
+  fail "C4 ownership: give each file above exactly one owner in docs/c4/parts/ (add it to a component part's paths, or add a component part)"
 fi
+bash Tests/c4_assemble/test_c4_assemble.sh || fail "C4 assemble: scripts/c4-assemble broke its tests"
 echo "ok"
 
 echo "== duplicate code (jscpd, Sources/)"

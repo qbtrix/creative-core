@@ -77,9 +77,12 @@ the other modules yet.
   `/groue/grdb.swift/v7.11.1`, the version `Package.swift` pins, and Swift is
   `/swiftlang/swift`).
 - **Every new source file has a C4 owner.** `scripts/ci` fails when a file
-  under `Sources/` is not in exactly one component's `paths` in
-  `docs/c4/model.json`. Add the file to the component it belongs to, or add a
-  component, in the same PR, and keep that component's description true.
+  under `Sources/` is not in exactly one component's `paths` in the C4 model.
+  The model is assembled from one file per component in `docs/c4/parts/`
+  (`<system>/<container>/<component>.json`) by `scripts/c4-assemble`: add the
+  file to its component's part, or add a part for a new component, in the
+  same PR, and keep that component's description true. Never edit the
+  generated `docs/c4/model.json`; the Generated workflow rewrites it on `dev`.
 - **Everything is a command.** Any change to a `Document` goes through a type
   that conforms to `Command` (see `Sources/FlareCore/Command.swift`), with
   `execute` and an exact `undo`. Add new commands to the random steps in
@@ -162,8 +165,10 @@ the other modules yet.
   your issue with the failing test name and stop.
 - **Never edit** `.github/`, `.claude/`, `CLAUDE.md`, `AGENTS.md`,
   `scripts/ci`, `scripts/cloud-setup.sh`, `scripts/fast-lane.sh`,
-  `scripts/mutate`, `Package.swift`, `Package.resolved` or `LICENSE` unless
-  your issue says to. Those PRs need human review. The fast lane refuses
+  `scripts/mutate`, `scripts/c4-assemble`, `Package.swift`, `Package.resolved`
+  or `LICENSE` unless your issue says to, and never the generated
+  `docs/c4/model.json` at all (edit its parts in docs/c4/parts/). Those PRs
+  need human review. The fast lane refuses
   exactly this list (PROTECTED in scripts/fast-lane.sh; its tests read this
   bullet), so every path here goes in backticks and nothing else.
 
@@ -208,6 +213,7 @@ Crew PRs merge into `dev` at once; `main` moves only when full CI passes on
 
 ```bash
 scripts/ci                                  # lint + C4 ownership + build + test: the gate
+scripts/c4-assemble --check                 # docs/c4/model.json matches docs/c4/parts/ (on dev)
 swift test --filter EasingTests             # one suite while iterating
 bash Tests/fast_lane/test_fast_lane.sh      # fast-lane decision tests (needs jq)
 scripts/mutate --validate                   # every mutation anchor resolves once

@@ -43,7 +43,7 @@ For each finding: write the Swift Testing test that fails before the fix, then t
 finding gets a seeded fuzz test (SplitMix64) that asserts it throws instead of crashing. A command finding gets a
 step in UndoPropertyTests. A new invariant gets one entry in Tests/mutations/<module>.json. A clarity finding
 renames or documents the API and updates every caller and doc that names it. Keep to the files above, their tests,
-Tests/mutations/*.json and docs/c4/model.json. Follow CLAUDE.md and docs/engineering.md.
+Tests/mutations/*.json and C4 parts in docs/c4/parts/ (never the generated docs/c4/model.json). Follow CLAUDE.md and docs/engineering.md.
 
 Full harness before you hand back: scripts/ci until CI: PASS and scripts/mutate --run --changed-since origin/dev
 with every planted bug caught; then git fetch origin && git rebase origin/dev, scripts/ci again until CI: PASS,

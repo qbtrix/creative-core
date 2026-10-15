@@ -75,8 +75,11 @@ SELF_CHECK="fast-lane"
 # bullet; Tests/fast_lane checks the two match. A path ending in / is that
 # folder at the root, a path with a / is that file, and a bare name is that
 # file in any folder (docs/AGENTS.md too). Matching ignores case.
+# docs/c4/model.json is generated on dev from docs/c4/parts/ by scripts/c4-assemble
+# (.github/workflows/generated.yml), so PRs never edit it, nor its generator.
 PROTECTED=(Package.swift Package.resolved .github/ .claude/ scripts/ci scripts/cloud-setup.sh
-  scripts/fast-lane.sh scripts/mutate CLAUDE.md AGENTS.md LICENSE)
+  scripts/fast-lane.sh scripts/mutate scripts/c4-assemble CLAUDE.md AGENTS.md LICENSE
+  docs/c4/model.json)
 deny_re() {
   local p re=""
   for p in "${PROTECTED[@]}"; do
