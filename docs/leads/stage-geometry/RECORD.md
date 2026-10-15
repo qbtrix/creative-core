@@ -2,9 +2,9 @@
 
 Issue: #267 · Packet: docs/blueprints/core/features/stage-geometry.md
 Run: act-1a13b145104-0zef · Session: session_01HWAU426RJRzBTT7hAE7fER · Started: 2026-10-14T15:43Z
-Stage: 4 round 3
-Base: cb1f3f8af96cd3c77ffbd3029c12ad6b32c32000 (round 3; feature's first base 3339b904450d73eeae5dc404593972b82f24f46e)
-Next: wait for r3-b1..b3 PRs (wf_74c50830-840) to merge, then round 4 (last) on the new dev SHA; feature-done PR carries packet rewording (journey step 6, Screens invalidSides/invalidRatio/sceneTooLarge, expansion budget row).
+Stage: 4 round 4
+Base: d5c240b (round 4; feature first base 3339b904450d73eeae5dc404593972b82f24f46e)
+Next: round 4 (last) on d5c240b: gate + mutation in scratchpad round-4, then the same six-lens panel; then the feature-done PR.
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |

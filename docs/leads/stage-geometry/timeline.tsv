@@ -51,3 +51,7 @@ utc	stage	event	ref	note
 2026-10-14T23:10Z	4	heartbeat	round 3	gate + mutation running on cb1f3f8
 2026-10-14T23:25Z	4	heartbeat	round 3	gate + mutation running on cb1f3f8
 2026-10-14T23:40Z	4	heartbeat	round 3	gate + mutation running on cb1f3f8
+2026-10-15T02:09Z	4	pr-merged	#301	r3-b1 invalidRatio + rotation doc, 73aebeb
+2026-10-15T02:09Z	4	pr-merged	#302	r3-b2 render budget out of format layer, shared pointCount, 9348bad
+2026-10-15T02:09Z	4	pr-merged	#303	r3-b3 nil box never skips, d5c240b
+2026-10-15T02:09Z	4	stage-start	round 4	d5c240b (last round)
