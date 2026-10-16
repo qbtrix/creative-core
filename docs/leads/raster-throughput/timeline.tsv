@@ -44,3 +44,4 @@ utc	stage	event	ref	note
 2026-10-16T05:49Z	4	heartbeat	round 3	gate+mutate running
 2026-10-16T05:50Z	4	gate-run	fe5bc53	CI PASS 816; budgets recorded; r3-b1 final fixer started
 2026-10-16T05:54Z	4	round-clean	round 3	CI PASS, 44/44 caught, panel 0 major
+2026-10-16T06:00Z	5	pr-opened	#331	r3-b1 feature-done
