@@ -5,3 +5,6 @@ utc	stage	event	ref	note
 2026-10-16T04:14Z	2	stage-end	plan	waves a RT-1 RT-3 RT-4, b RT-2, c RT-5
 2026-10-16T04:15Z	3	stage-start	wave a	base f05665f
 2026-10-16T03:18Z	3	heartbeat	wave a	RT-1 RT-3 RT-4 builders running
+2026-10-16T03:50Z	3	pr-opened	#318	RT-4 dab thread CPU time
+2026-10-16T03:50Z	3	pr-opened	#319	RT-1 DisplayTransfer
+2026-10-16T03:50Z	3	pr-opened	#320	RT-3 composite in place
