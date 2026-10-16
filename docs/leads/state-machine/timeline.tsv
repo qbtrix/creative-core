@@ -64,3 +64,7 @@ utc	stage	event	ref	note
 2026-10-16T18:05Z	4	gate-run	8c445c7	FAIL again on CoreRaster smallDab budget only (fixers compiling); re-gate when idle
 2026-10-16T18:05Z	4	stage-start	8c445c7	round 1 fix batches r1-b1 r1-b2 r1-b3; gap #339 filed
 2026-10-16T18:02Z	3	heartbeat	-	waiting on builders, lane or CI
+2026-10-16T18:18Z	4	pr-merged	#340	r1-b1 issues oracle and docs
+2026-10-16T18:18Z	4	pr-merged	#341	r1-b2 commands docs, record, clamp
+2026-10-16T18:18Z	4	pr-merged	#342	r1-b3 fuzz and undo coverage
+2026-10-16T18:19Z	4	stage-start	623aa2e	round 2 gate and mutation
