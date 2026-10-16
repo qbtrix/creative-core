@@ -4,7 +4,7 @@ Issue: #311 · Packet: docs/blueprints/core/features/raster-throughput.md (in PR
 Run: act-1a142b4b264-6dd2 · Session: claude/raster-throughput-lead-pyis7l · Started: 2026-10-16T03:05Z
 Stage: 4 round 1
 Base: f7b9bcfb2d91d5c151e289864008f76f75c64314 (round 1; first base f05665f5b54a461ab4a4e981ed7d7b01d7ab37ed)
-Next: round 1: gate + mutate running on f7b9bcf (scratchpad/r1), then the critic panel
+Next: round 1: critic panel running; then fix batch
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -21,6 +21,7 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 ## Rounds
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
 |---|---|---|---|---|---|---|---|---|
+| 1 | f7b9bcf | PASS (814 tests) | 39/39 (validate: 203 anchors) | – (not dispatched yet) | clarity, contract, robustness, tests, compat, performance | pending | – | – |
 
 ## Decisions
 - Packet not yet on dev (PR #310 open); builders read it from origin/docs/core-packets-wave2.
