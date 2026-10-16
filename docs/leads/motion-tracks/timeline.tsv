@@ -13,3 +13,6 @@ utc	stage	event	ref	note
 2026-10-16T04:32Z	3	heartbeat	-	waiting on builders or the lane
 2026-10-16T04:48Z	3	heartbeat	-	waiting on builders or the lane
 2026-10-16T05:03Z	3	heartbeat	-	waiting on builders or the lane
+2026-10-16T03:24Z	3	pr-merged	#315	MT-2 opacity and rotation tracks
+2026-10-16T03:32Z	3	pr-merged	#317	MT-1 onion frames (closes #218)
+2026-10-16T05:35Z	3	stage-start	f27f104	wave b MT-3 (resumed after container restart)
