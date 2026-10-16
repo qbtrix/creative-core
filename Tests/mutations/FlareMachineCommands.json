@@ -19,5 +19,33 @@
     "anchor": "document.stateMachines.insert(removed, at: removedIndex)",
     "replacement": "document.stateMachines.append(removed)",
     "filter": "MachineCommandTests"
+  },
+  {
+    "note": "machine edit undo restores over a different machine at the recorded index",
+    "file": "Sources/FlareCore/StateMachineCommands.swift",
+    "anchor": "guard stateMachines.indices.contains(index), stateMachines[index].id == old.id else {",
+    "replacement": "guard stateMachines.indices.contains(index) else {",
+    "filter": "MachineCommandTests"
+  },
+  {
+    "note": "remove state machine undo skips its index range check",
+    "file": "Sources/FlareCore/StateMachineCommands.swift",
+    "anchor": "guard (0...document.stateMachines.count).contains(removedIndex) else {",
+    "replacement": "guard removedIndex >= 0 else {",
+    "filter": "MachineCommandTests"
+  },
+  {
+    "note": "rename state machine accepts an empty name",
+    "file": "Sources/FlareCore/StateMachineCommands.swift",
+    "anchor": "            guard !name.isEmpty else { throw CommandError.emptyName }\n            machine.name = name",
+    "replacement": "            machine.name = name",
+    "filter": "MachineCommandTests"
+  },
+  {
+    "note": "add state machine skips the first state rule check",
+    "file": "Sources/FlareCore/StateMachineCommands.swift",
+    "anchor": "        try machine.requireNoErrors(in: document)\n        document.stateMachines.append(machine)",
+    "replacement": "        document.stateMachines.append(machine)",
+    "filter": "MachineCommandTests"
   }
 ]

@@ -36,9 +36,7 @@ public struct AddScene: Command {
         guard scene.background.isFinite else {
             throw CommandError.invalidDocument("background color channels must be finite")
         }
-        let count = document.scenes.count
-        let at = min(max(index ?? count, 0), count)
-        document.scenes.insert(scene, at: at)
+        document.scenes.insert(scene, at: document.scenes.clampedInsertIndex(index))
     }
 
     public func undo(_ document: inout Document) throws {

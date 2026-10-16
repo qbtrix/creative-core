@@ -2,8 +2,9 @@
 // machines and set a machine's initial state; params encoded, undo state not.
 // One rule set: a command edits a copy of the machine, runs `issues(in:)` (the
 // rules FlareFormat.validate checks) and throws the first error as
-// `CommandError.invalidMachine` before it touches the document. Later machine
-// commands reuse `editStateMachine` and `restoreStateMachine`.
+// `CommandError.invalidMachine` before it touches the document. Every machine
+// edit records its undo in a `MachineEditRecord`, built on `editStateMachine`
+// and `restoreStateMachine`.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -12,6 +13,7 @@ import Foundation
 
 /// The state machine commands, registered in `CommandRegistry.builtIn`.
 public enum StateMachineCommands {
+    /// Every state machine command type: machines, states, transitions, inputs.
     public static let all: [any Command.Type] = [
         AddStateMachine.self, RenameStateMachine.self, RemoveStateMachine.self, SetInitialState.self,
         AddMachineState.self, UpdateMachineState.self, RemoveMachineState.self,
@@ -64,6 +66,24 @@ extension Document {
     }
 }
 
+/// What a machine edit records for undo: the machine as it was and its index,
+/// from `editStateMachine`.
+struct MachineEditRecord: Sendable, Hashable {
+    var old: StateMachine?
+    var index: Int?
+
+    /// Runs `editStateMachine` on machine `id` and records its result.
+    mutating func edit(_ document: inout Document, _ id: String,
+                       _ change: (inout StateMachine) throws -> Void) throws {
+        (old, index) = try document.editStateMachine(id, change)
+    }
+
+    /// Puts the recorded machine back; `notExecuted` when nothing was recorded.
+    func undo(_ document: inout Document) throws {
+        try document.restoreStateMachine(old, at: index)
+    }
+}
+
 /// Appends a new state machine with one state, `firstState`, which becomes its
 /// initial state. Throws `duplicateID` if a machine already has `id`,
 /// `emptyName` for an empty name, and `invalidMachine` if `firstState` breaks
@@ -103,11 +123,11 @@ public struct AddStateMachine: Command {
 public struct RenameStateMachine: Command {
     public static let id = "machine.rename"
     public var label: String { "Rename State Machine" }
+    /// The id of the state machine to rename.
     public var machineID: String
     /// The new name; not empty.
     public var name: String
-    var old: StateMachine?
-    var index: Int?
+    var record = MachineEditRecord()
 
     private enum CodingKeys: String, CodingKey { case machineID, name }
 
@@ -118,14 +138,14 @@ public struct RenameStateMachine: Command {
 
     public mutating func execute(_ document: inout Document) throws {
         let name = name
-        (old, index) = try document.editStateMachine(machineID) { machine in
+        try record.edit(&document, machineID) { machine in
             guard !name.isEmpty else { throw CommandError.emptyName }
             machine.name = name
         }
     }
 
     public func undo(_ document: inout Document) throws {
-        try document.restoreStateMachine(old, at: index)
+        try record.undo(&document)
     }
 }
 
@@ -134,6 +154,7 @@ public struct RenameStateMachine: Command {
 public struct RemoveStateMachine: Command {
     public static let id = "machine.remove"
     public var label: String { "Delete State Machine" }
+    /// The id of the state machine to remove.
     public var machineID: String
     var removed: StateMachine?
     var removedIndex: Int?
@@ -164,11 +185,11 @@ public struct RemoveStateMachine: Command {
 public struct SetInitialState: Command {
     public static let id = "machine.setInitial"
     public var label: String { "Set Initial State" }
+    /// The id of the state machine to edit.
     public var machineID: String
     /// The state the machine starts in; one of its states.
     public var stateID: String
-    var old: StateMachine?
-    var index: Int?
+    var record = MachineEditRecord()
 
     private enum CodingKeys: String, CodingKey { case machineID, stateID }
 
@@ -179,10 +200,10 @@ public struct SetInitialState: Command {
 
     public mutating func execute(_ document: inout Document) throws {
         let stateID = stateID
-        (old, index) = try document.editStateMachine(machineID) { $0.initialState = stateID }
+        try record.edit(&document, machineID) { $0.initialState = stateID }
     }
 
     public func undo(_ document: inout Document) throws {
-        try document.restoreStateMachine(old, at: index)
+        try record.undo(&document)
     }
 }

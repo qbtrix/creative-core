@@ -23,7 +23,9 @@ extension StateMachine {
 public struct AddTransition: Command {
     public static let id = "machine.addTransition"
     public var label: String { "Add Transition" }
+    /// The id of the state machine to edit.
     public var machineID: String
+    /// The transition to insert; its states and inputs must exist.
     public var transition: Transition
     /// Insert position; nil appends. Out-of-range values are clamped.
     public var index: Int?
@@ -40,8 +42,7 @@ public struct AddTransition: Command {
     public mutating func execute(_ document: inout Document) throws {
         let transition = transition, index = index
         try record.edit(&document, machineID) { machine in
-            let count = machine.transitions.count
-            machine.transitions.insert(transition, at: min(max(index ?? count, 0), count))
+            machine.transitions.insert(transition, at: machine.transitions.clampedInsertIndex(index))
         }
     }
 
@@ -56,7 +57,9 @@ public struct AddTransition: Command {
 public struct UpdateTransition: Command {
     public static let id = "machine.updateTransition"
     public var label: String { "Edit Transition" }
+    /// The id of the state machine to edit.
     public var machineID: String
+    /// The position in `transitions`; must be in range, or `invalidIndex`.
     public var index: Int
     /// The transition's new values.
     public var transition: Transition
@@ -89,7 +92,9 @@ public struct UpdateTransition: Command {
 public struct RemoveTransition: Command {
     public static let id = "machine.removeTransition"
     public var label: String { "Delete Transition" }
+    /// The id of the state machine to edit.
     public var machineID: String
+    /// The position in `transitions`; must be in range, or `invalidIndex`.
     public var index: Int
     var record = MachineEditRecord()
 
