@@ -4,7 +4,7 @@ Issue: #312 · Packet: docs/blueprints/core/features/state-machine.md (on dev si
 Run: act-1a1448178f5-56p5 · Session: claude/state-machine-feature-lead-016ymp (resumed 2026-10-16T11:40Z; earlier ynzph3, 8z5qtw; earlier run act-1a142b4b29a-bnb2) · Started: 2026-10-16T03:16Z
 Stage: 4 round 2
 Base: 623aa2e (round 2; round 1 8c445c7; wave f 57b645c; wave e 6689fa1; wave d 5cb1494; wave c 670a6ed; wave b f27f104; wave a base 69c9f80 is the feature's first base)
-Next: round 2 gate + mutation on 623aa2e, then the same six-lens critic panel; then switch requireNoErrors to firstError if still open
+Next: round 2 critic panel (same six lenses) on 69c9f80..623aa2e; then fixes or round 3
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -23,6 +23,7 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 ## Rounds
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
 |---|---|---|---|---|---|---|---|---|
+| 2 | 623aa2e | 891/892: only CoreRaster smallDab CPU budget (2.3 s), which also fails on the pre-feature base 69c9f80 on this VM | 95/95; 233 anchors resolve | none yet holds the merges (6 since 5cb1494) | same six | running | – | – |
 | 1 | 8c445c7 | PASS on 57b645c (885); 8c445c7: 885/886, first run 885/886 (CoreRaster smallDab budget, cold VM memory after a container restart: 2.1 s, 0.9 s once memory was warmed); rerun under fixer load FAIL on the same test (2.17 s); re-gate when the machine is idle | 72/72 (changed since 69c9f80) | 38877588760 green (5cb1494, through SM-4) | clarity, contract, undo, robustness, tests, design | 16 (2 major: refusal wording undocumented; 500-machine agreement test has no independent oracle) | #340 (B1), #341 (B2), #342 (B3) merged | no |
 
 ## Decisions
@@ -35,6 +36,7 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 - Resumed again (run act-1a1448178f5-56p5): wave d had merged (#336 SM-5) by dev 6689fa1.
 - Container restarted mid wave e; #337 (SM-6) had merged by dev 57b645c. #101 told its last family landed.
 - Round 1 runs on 57b645c beside the SM-8 build: SM-8 adds only a test file, and builders never wait on critics.
+- This VM misses CoreRaster/EngineStress timing budgets even on the pre-feature base 69c9f80 (smallDab 1.93 s, thousandCommands 5.9 s): a gate whose only failures are those budgets counts as passing for the feature; the dev CI run (feature-done) is the authority.
 - Gate and mutation runs go through `flock /tmp/creative-core-ci.lock` so parallel fixers don't break timing budgets; after a container restart, warm 3 GB of memory before the gate.
 - PRs, labels and comments go through the GitHub MCP tools (no gh auth in cloud sessions).
 
