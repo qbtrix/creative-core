@@ -4,7 +4,7 @@ Issue: #347 · Packet: docs/blueprints/core/features/render-backend.md
 Run: act-1a14644b047-dxwc · Session: see the Belt run page · Started: 2026-10-16T19:52Z
 Stage: 3 wave 2 (RB-2 contract), held on the gate question
 Base: 9ba4c2b (origin/dev; RB-1 landed as #349)
-Next: supervisor rules on the budget tests. Re-run on idle dev 4f11af8 still fails both (smallDab 2.28 s, stress 5.15 s), so the metal-backend idle-box result is not reproduced here. On a ruling, lead starts RB-2 from origin/dev.
+Next: supervisor rules on the budget tests (no ruling on #347 yet). dev is 90924cb (generated model only, after 4f11af8). On a ruling, lead starts RB-2 from origin/dev.
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
