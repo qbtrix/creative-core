@@ -4,3 +4,4 @@ utc	stage	event	ref	note
 2026-10-16T20:01Z	0	gate-run	dev 6967968	scripts/ci: 2 timing budgets fail under parallel load on this 4-core sandbox (RetouchBoundsTests 12MP dab, EngineStressTests); swift test --no-parallel: 901/901 pass
 2026-10-16T20:01Z	3	stage-start		wave 1: RB-1 builder (protected PR, human merge)
 2026-10-16T20:08Z	3	pr-opened	#350	RB-1 targets (protected, human merge)
+2026-10-16T20:43Z	3	stopped	#347	gate budgets on dev 9ba4c2b, asked supervisor
