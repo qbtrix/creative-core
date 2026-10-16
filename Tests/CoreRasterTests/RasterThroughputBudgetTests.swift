@@ -5,7 +5,8 @@
 // Debug builds skip the suite (CoreRaster's loops are about 20 times slower
 // there); the equivalence tests in DisplayBytesFastPathTests and
 // CompositeInPlaceTests carry the debug gate. Inputs are built once per test,
-// outside the timed region. Each row prints its median as
+// outside the timed region, and each run's earlier result is released before
+// the clock starts, so no timed region pays to free it. Each row prints its median as
 // `budget <row>: <ms> ms (budget <ms> ms)` and gates on it; reported rows
 // print `(report only)`.
 import CoreRaster
@@ -20,7 +21,7 @@ private let optimized = true
 
 private let width = 4000, height = 3000
 private let bandCount = 4, bandHeight = 750
-/// Timed runs per row; the median is gated.
+/// Timed runs per row. The gate is the median of 5 runs (25 for the tile).
 private let runs = 5
 
 /// A seeded 12 MP layer: straight colors in 0...1 and alpha in `alpha`,
@@ -109,6 +110,7 @@ private func bandRuns<T>(_ work: @Sendable (Int) throws -> T) throws -> (times: 
     var times: [Duration] = []
     var last: [T] = []
     for _ in 0..<runs {
+        last = []  // free the previous run's results outside the clock
         let results = try inBands(work)
         times.append(results.map(\.time).max() ?? .zero)
         last = results.map(\.value)
@@ -126,11 +128,13 @@ struct RasterThroughputBudgetTests {
 
         var bytes: [UInt8] = []
         check("copy rgba8 12MP one core", try (0..<runs).map { _ in
-            try clock.measure { bytes = try layer.rgba8() }
+            bytes = []  // free the previous 48 MB result outside the clock
+            return try clock.measure { bytes = try layer.rgba8() }
         }, budget: .milliseconds(30))
         var pasted = layer
         check("paste init(rgba8:) 12MP one core", try (0..<runs).map { _ in
-            try clock.measure { pasted = try PixelBuffer(rgba8: bytes, width: width, height: height) }
+            pasted = layer  // free the previous 192 MB result outside the clock
+            return try clock.measure { pasted = try PixelBuffer(rgba8: bytes, width: width, height: height) }
         }, budget: .milliseconds(30))
 
         let encoded = try bandRuns { band in
@@ -160,6 +164,7 @@ struct RasterThroughputBudgetTests {
             var times: [Duration] = []
             var result = lower
             for _ in 0..<runs {
+                result = lower  // free the previous run's result outside the clock
                 // A full-size crop is a new, uniquely owned buffer, so the
                 // in-place composite never copies on its first write.
                 var backdrop = try lower.cropped(x: 0, y: 0, width: width, height: height)
@@ -190,6 +195,7 @@ struct RasterThroughputBudgetTests {
         var times: [Duration] = []
         var last: [PixelBuffer] = []
         for _ in 0..<runs {
+            last = []  // free the previous run's bands outside the clock
             // Fresh backdrops each run, moved into the band that owns them.
             let backdrops = Slots<PixelBuffer>(try (0..<bandCount).map { try band($0, of: lower) })
             let results = try inBands { i in
@@ -211,7 +217,8 @@ struct RasterThroughputBudgetTests {
         let x = 2048, y = 1536, side = 256
         var tile: [UInt8] = []
         let times = try (0..<25).map { _ in
-            try clock.measure { tile = try layer.rgba8(x: x, y: y, width: side, height: side) }
+            tile = []  // free the previous tile outside the clock
+            return try clock.measure { tile = try layer.rgba8(x: x, y: y, width: side, height: side) }
         }
         check("tile encode 256px of 12MP", times, budget: .microseconds(500))
         #expect(try tile == layer.cropped(x: x, y: y, width: side, height: side).rgba8())
