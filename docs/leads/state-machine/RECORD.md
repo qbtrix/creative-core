@@ -1,9 +1,9 @@
 # state-machine lead record
 
-Issue: #312 · Packet: docs/blueprints/core/features/state-machine.md (in PR #310, branch `docs/core-packets-wave2`, until it merges)
+Issue: #312 · Packet: docs/blueprints/core/features/state-machine.md (on dev since #310)
 Run: act-1a142b4b29a-bnb2 · Session: claude/state-machine-feature-lead-8z5qtw · Started: 2026-10-16T03:16Z
 Stage: 3 wave a
-Base: f05665f5b54a461ab4a4e981ed7d7b01d7ab37ed
+Base: 69c9f80df6d02f0cea518549e22133bef891efec (dev after #310 merged the packet; brief base f05665f verified first)
 Next: wait for the wave-a builders (SM-1, SM-2) to open their PRs, then for the lane to merge them
 
 ## Tasks
@@ -27,9 +27,9 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 ## Decisions
 - Waves follow the packet (a SM-1+SM-2; b SM-3+SM-7; c SM-4; d SM-5; e SM-6; f SM-8): the shared test files chain SM-2 to SM-6.
 - Builder branches are `lead/state-machine-<task>`: a nested `lead/state-machine/<task>` cannot coexist with the lead branch.
-- The packet is read from PR #310's branch until #310 merges; builders get its path on that branch.
+- #310 merged during setup; wave a starts from 69c9f80 (f05665f + the packet docs only).
 - The `feature-done` label goes on the last PR after the Anatomy loop (SM-8 if the loop is clean, else the last fix), so the CI run it triggers covers every fix.
 - PRs, labels and comments go through the GitHub MCP tools (no gh auth in cloud sessions).
 
 ## Open
-- The container lacked Swift; `scripts/cloud-setup.sh` installs it before the first gate.
+- The container lacked Swift; scripts/cloud-setup.sh installed 6.3.3. #220-#226 labelled in-progress.

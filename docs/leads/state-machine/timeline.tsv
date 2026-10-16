@@ -3,3 +3,4 @@ utc	stage	event	ref	note
 2026-10-16T03:20Z	1	stage-end	packet	packet read from #310 branch, tasks copied
 2026-10-16T03:20Z	2	stage-end	plan	waves a-f per packet
 2026-10-16T03:21Z	3	stage-start	wave-a	SM-1, SM-2 builders starting
+2026-10-16T03:35Z	3	stage-start	69c9f80	wave a builders running (build-wave wf_4a5fed9b-6cc)
