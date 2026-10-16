@@ -54,3 +54,6 @@ utc	stage	event	ref	note
 2026-10-16T06:10Z	5	ci-run	338	dev 670a6ed success; main fast-forwarded
 2026-10-16T06:21Z	5	heartbeat	finish	container restarted; rerunning round-4 mutate and budgets
 2026-10-16T06:25Z	5	heartbeat	finish	round-4 budgets recorded; mutate rerun on clean checkout
+2026-10-16T06:36Z	4	gate-run	670a6ed	mutate 67/67 caught
+2026-10-16T06:36Z	5	stage-end	finish	contact sheet on #311; API comment on #309
+2026-10-16T06:36Z	5	stopped	done	feature-done #331 merged, CI 338 green

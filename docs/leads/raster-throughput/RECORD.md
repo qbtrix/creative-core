@@ -1,10 +1,10 @@
 # raster-throughput lead record
 
 Issue: #311 · Packet: docs/blueprints/core/features/raster-throughput.md (in PR #310, read from branch docs/core-packets-wave2)
-Run: act-1a142b4b264-6dd2 · Session: claude/raster-throughput-lead-pyis7l · Started: 2026-10-16T03:05Z
-Stage: 4 round 4
+Run: act-1a142b4b264-6dd2 · Session: session_013cJujicZgNuuWWXi2U7Mbg · Started: 2026-10-16T03:05Z
+Stage: done
 Base: 670a6ed570159dd3ccfdb06c7912bac040ff1a9b (round 4, holds #331 feature-done; first base f05665f5b54a461ab4a4e981ed7d7b01d7ab37ed)
-Next: wait for CI run 338 on dev 670a6ed (in progress) and round-4 mutate/budgets; then the contact sheet on #311 and the API comment on #309
+Next: nothing; feature done. Open follow-ups: #332 (budgets, captain decision), #333 (minors). Contact sheet: #311 comment 6209639767
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -24,7 +24,7 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 | 1 | f7b9bcf | PASS (814 tests) | 39/39 (validate: 203 anchors) | run 337 on 16fa375 (RT-2): success | clarity, contract, robustness, tests, compat, performance | 4 major, 9 minor (scratchpad r1/findings.md) | #324 (r1-b1, merged), #325 (r1-b2, merged), #326 (r1-b3, merged) | no |
 | 2 | f27f104 | PASS (816 tests) | 43/43 (validate: 207 anchors) | – | same 6 | 1 major (opacity==1 half of the opaque-row guard untested, no mutation entry), 2 minor | #327 (r2-b1, merged) | no |
 | 3 | fe5bc53 | PASS (816 tests) | 44/44 (validate: 208 anchors) | – | same 6 | 0 blocker/major; 3 minor (C4 compositing description, band labels, region check duplicates cropped's) | #331 (r3-b1, feature-done) | yes |
-| 4 | 670a6ed | PASS (850 tests) | running (validate: 219 anchors) | run 338 on 670a6ed: success (Linux, macOS, Mutation, anchors); main promoted | same 6 | 0 blocker/major; 3 minor -> gap #333 | – | yes (2nd clean in a row: loop stops) |
+| 4 | 670a6ed | PASS (850 tests) | 67/67 (validate: 219 anchors) | run 338 on 670a6ed: success (Linux, macOS, Mutation, anchors); main promoted | same 6 | 0 blocker/major; 3 minor -> gap #333 | – | yes (2nd clean in a row: loop stops) |
 
 ## Decisions
 - Packet not yet on dev (PR #310 open); builders read it from origin/docs/core-packets-wave2.
