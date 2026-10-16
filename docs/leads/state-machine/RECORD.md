@@ -44,9 +44,9 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 - PRs, labels and comments go through the GitHub MCP tools (no gh auth in cloud sessions).
 
 ## Open
+- Two lead sessions ran at the end; both posted a contact sheet on #312 (comments 6223298471 and 6223326819, the second with the session link https://claude.ai/code/session_01LGSDtRfPyrshNNszipCEsM and no footer). Same facts; either can be kept.
 - The contact sheet comment (#312) carries a footer the posting tool appends and re-appends on edit; it could not be removed from this session.
 - Gap #344: round 3's eight minors (docs, four mutation entries, two tidy-ups); no behavior change.
 - Round 1 #7 (Onion.onionFrames allocates one Int per window frame; unbounded with huge durations) is motion-tracks code, filed as gap #339, not fixed here.
-- Round 1 #14 leaves `requireNoErrors` (StateMachineCommands.swift) on its own predicate until B1's `firstError(in:)` lands; round 2 switches it.
 - Builders' PR bodies got a server-appended attribution footer; the lane stripped it on merge (#314, #316). Templates now tell builders to PATCH it out.
 - The container lacked Swift; scripts/cloud-setup.sh installed 6.3.3. #220-#226 labelled in-progress.
