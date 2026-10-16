@@ -1,0 +1,9 @@
+[
+  {
+    "note": "update input lets the default change type without inputTypeChange",
+    "file": "Sources/FlareCore/MachineInputCommands.swift",
+    "anchor": "guard machine.inputs[j].defaultValue.sameType(as: input.defaultValue) else {",
+    "replacement": "guard true else {",
+    "filter": "MachineInputCommandTests"
+  }
+]

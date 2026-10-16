@@ -95,6 +95,12 @@ public enum CommandError: Error, Equatable, Sendable {
     /// The state machine has no state with this id (UpdateMachineState,
     /// RemoveMachineState).
     case stateNotFound(String)
+    /// The state machine has no input with this name (UpdateMachineInput,
+    /// RemoveMachineInput).
+    case inputNotFound(String)
+    /// An update would give the input with this name another type
+    /// (UpdateMachineInput); an input keeps the type of its default.
+    case inputTypeChange(String)
     /// A color channel is not finite or not in 0...1.
     case invalidColor(Color)
     /// An index outside the valid range. The number is one of: a layer
