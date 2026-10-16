@@ -14,3 +14,6 @@ utc	stage	event	ref	note
 2026-10-16T05:25Z	3	pr-merged	#314	SM-2 RenameSymbol
 2026-10-16T05:25Z	3	pr-merged	#316	SM-1 issues query
 2026-10-16T05:26Z	3	stage-start	f27f104	wave b: SM-3, SM-7 builders
+2026-10-16T07:10Z	3	pr-merged	#329	SM-7 MachinePlayer
+2026-10-16T07:10Z	3	pr-merged	#330	SM-3 machine commands
+2026-10-16T07:11Z	3	stage-start	670a6ed	wave c: SM-4 builder (resumed lead)

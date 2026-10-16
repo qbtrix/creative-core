@@ -1,19 +1,19 @@
 # state-machine lead record
 
 Issue: #312 · Packet: docs/blueprints/core/features/state-machine.md (on dev since #310)
-Run: act-1a142b4b29a-bnb2 · Session: claude/state-machine-feature-lead-8z5qtw · Started: 2026-10-16T03:16Z
-Stage: 3 wave b
-Base: f27f1042e2944c2c750dda91f2e3f24cdfdde08f (wave b; wave a base 69c9f80 is the feature's first base)
-Next: wait for the wave-b builders (SM-3, SM-7) to open their PRs, then for the lane to merge them
+Run: act-1a142b4b29a-bnb2 · Session: claude/state-machine-feature-lead-ynzph3 (resumed 2026-10-16T07:10Z; first 8z5qtw) · Started: 2026-10-16T03:16Z
+Stage: 3 wave c
+Base: 670a6ed570159dd3ccfdb06c7912bac040ff1a9b (wave c; wave b f27f104; wave a base 69c9f80 is the feature's first base)
+Next: wait for the wave-c builder (SM-4) PR, then for the lane to merge it; then wave d (SM-5)
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
 |---|---|---|---|---|---|---|---|
 | SM-1 | a | `MachineIssue`, `StateMachine.issues(in:)`; `validateStateMachines` over it, today's messages; C4 parts, engineering.md lists (closes #220) | StateMachineIssues.swift, StateMachineValidation.swift, StateMachineIssuesTests.swift, FlareMachineIssues.json, c4 parts statemachine + symbols, engineering.md | StateMachineIssuesTests (validateMessagesStayTheSame, 500 seeded machines agree) | FlareMachineIssues.json | #316 | merged |
 | SM-2 | a | `RenameSymbol` (closes #226) | SymbolCommands.swift, RenameSymbolTests.swift, SymbolCommandsTests.swift, CommandRegistryTests.swift, FlareRenameSymbol.json | RenameSymbolTests | FlareRenameSymbol.json | #314 | merged |
-| SM-3 | b | family + registry line; Add/Rename/Remove StateMachine, SetInitialState; CommandError.stateMachineNotFound, .invalidMachine; machine in sampleDocument (#221 part) | StateMachineCommands.swift, Command.swift, CommandRegistry.swift, MachineCommandTests.swift, CommandRegistryTests.swift, UndoPropertyTests.swift, FlareMachineCommands.json | MachineCommandTests | FlareMachineCommands.json | – | building |
-| SM-7 | b | `MachinePlayer`; TimelineError cases; shared internal `firing` (closes #225) | MachinePlayer.swift, StateMachine.swift, Timeline.swift, MachinePlayerTests.swift, FlareMachinePlayer.json | MachinePlayerTests | FlareMachinePlayer.json | – | building |
-| SM-4 | c | Add/Update/Remove MachineState; CommandError.stateNotFound; machines in fuzz document (closes #222, #221) | MachineStateCommands.swift, StateMachineCommands.swift, Command.swift, MachineStateCommandTests.swift, CommandRegistryTests.swift, UndoPropertyTests.swift, CommandFuzzTests.swift, FlareMachineStates.json | MachineStateCommandTests | FlareMachineStates.json | – | waits SM-3 |
+| SM-3 | b | family + registry line; Add/Rename/Remove StateMachine, SetInitialState; CommandError.stateMachineNotFound, .invalidMachine; machine in sampleDocument (#221 part) | StateMachineCommands.swift, Command.swift, CommandRegistry.swift, MachineCommandTests.swift, CommandRegistryTests.swift, UndoPropertyTests.swift, FlareMachineCommands.json | MachineCommandTests | FlareMachineCommands.json | #330 | merged |
+| SM-7 | b | `MachinePlayer`; TimelineError cases; shared internal `firing` (closes #225) | MachinePlayer.swift, StateMachine.swift, Timeline.swift, MachinePlayerTests.swift, FlareMachinePlayer.json | MachinePlayerTests | FlareMachinePlayer.json | #329 | merged |
+| SM-4 | c | Add/Update/Remove MachineState; CommandError.stateNotFound; machines in fuzz document (closes #222, #221) | MachineStateCommands.swift, StateMachineCommands.swift, Command.swift, MachineStateCommandTests.swift, CommandRegistryTests.swift, UndoPropertyTests.swift, CommandFuzzTests.swift, FlareMachineStates.json | MachineStateCommandTests | FlareMachineStates.json | – | building |
 | SM-5 | d | Add/Update/Remove Transition; invalidIndex doc line (closes #223) | TransitionCommands.swift, StateMachineCommands.swift, Command.swift (doc), TransitionCommandTests.swift, CommandRegistryTests.swift, UndoPropertyTests.swift, FlareTransitions.json | TransitionCommandTests | FlareTransitions.json | – | waits SM-4 |
 | SM-6 | e | Add/Update/Remove MachineInput; CommandError.inputNotFound, .inputTypeChange (closes #224) | MachineInputCommands.swift, StateMachineCommands.swift, Command.swift, MachineInputCommandTests.swift, CommandRegistryTests.swift, UndoPropertyTests.swift, FlareMachineInputs.json | MachineInputCommandTests | FlareMachineInputs.json | – | waits SM-5 |
 | SM-8 | f | MachineJourneyTests: six journey steps, one engine, one player | MachineJourneyTests.swift | MachineJourneyTests | – | – | waits SM-6, SM-7 |
@@ -29,6 +29,7 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 - Builder branches are `lead/state-machine-<task>`: a nested `lead/state-machine/<task>` cannot coexist with the lead branch.
 - #310 merged during setup; wave a starts from 69c9f80 (f05665f + the packet docs only).
 - The `feature-done` label goes on the last PR after the Anatomy loop (SM-8 if the loop is clean, else the last fix), so the CI run it triggers covers every fix.
+- Resumed after a stall: wave b had merged (#329 SM-7, #330 SM-3) by dev 670a6ed.
 - PRs, labels and comments go through the GitHub MCP tools (no gh auth in cloud sessions).
 
 ## Open
