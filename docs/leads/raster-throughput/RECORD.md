@@ -4,7 +4,7 @@ Issue: #311 · Packet: docs/blueprints/core/features/raster-throughput.md (in PR
 Run: act-1a142b4b264-6dd2 · Session: claude/raster-throughput-lead-pyis7l · Started: 2026-10-16T03:05Z
 Stage: 4 round 1
 Base: f7b9bcfb2d91d5c151e289864008f76f75c64314 (round 1; first base f05665f5b54a461ab4a4e981ed7d7b01d7ab37ed)
-Next: round 1 fix batches running (rt/r1-b1 composite, rt/r1-b2 display, rt/r1-b3 budget clock); open their PRs, then round 2
+Next: wait for the lane on #325 (r1-b2) and #326 (r1-b3); then round 2 on that dev SHA (same 6 lenses)
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -21,7 +21,7 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 ## Rounds
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
 |---|---|---|---|---|---|---|---|---|
-| 1 | f7b9bcf | PASS (814 tests) | 39/39 (validate: 203 anchors) | – (not dispatched yet) | clarity, contract, robustness, tests, compat, performance | 4 major, 9 minor (scratchpad r1/findings.md) | r1-b1, r1-b2, r1-b3 | no |
+| 1 | f7b9bcf | PASS (814 tests) | 39/39 (validate: 203 anchors) | – (not dispatched yet) | clarity, contract, robustness, tests, compat, performance | 4 major, 9 minor (scratchpad r1/findings.md) | #324 (r1-b1, merged), #325 (r1-b2), #326 (r1-b3) | no |
 
 ## Decisions
 - Packet not yet on dev (PR #310 open); builders read it from origin/docs/core-packets-wave2.
@@ -39,6 +39,8 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 - RT-2 starts from rt/rt-1 before #319 merges, and rebases on dev once it does.
 
 ## Open
+- Finding 6's Float alpha table not done: it moves a CoreRaster.json anchor ("decoding display bytes does not premultiply"); ~10% on decode. Candidate for round 2.
+- FlareCore EngineStressTests.thousandCommandsNearTheLayerLimitStayInBudget misses its 5 s wall budget under load 6-8 (6.1-6.9 s); not this feature's file.
 - RT-5 release medians (3 runs): rgba8 173-176 ms (30), init 109-113 (30), copy band 44-59 (10), paste band 36-38 (10), merge 120-124 (60), flatten 241-286 (120), merge band 40-49 (20), tile 0.61-0.78 (0.5); opaque row copy 75-81 report-only. All 8 gated rows FAIL; equality checks pass. Composite has no allocation floor: round-1 perf target.
 - Budgets: after RT-2b, 12 MP rgba8 175 ms sRGB / ~200 ms P3, init ~118 ms (budget 30), tile 0.72 ms (0.5), four bands 42 ms (10). Floor on this box: fresh 48 MB alloc 23-28 ms, 192 MB 85-94 ms (page faults). Raised with the supervisor on #311; gap issue to file at finish unless the captain re-baselines.
 - Under 4-builder load, FlareCore EngineStressTests.thousandCommandsNearTheLayerLimitStayInBudget and StageBudgetTests.hitWithinBudget miss their wall-clock budgets (not this feature's files); quiet reruns pass. Watch the dev CI run.
