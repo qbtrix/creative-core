@@ -17,6 +17,10 @@ import Testing
     /// document never has a symbol cycle but a fuzzed AddInstance can make one.
     static let symbolIDs = ["dot", "spark"]
     static let symbolLayerIDs = ["d", "ball", "bg"]
+    /// The machine and state ids the registry samples name, so fuzzed machine
+    /// commands hit real machines and states.
+    static let machineIDs = ["btn", "nav"]
+    static let stateIDs = ["idle", "hover", "off"]
 
     /// One params template per built-in id, from the registry samples.
     static func templates() throws -> [(id: String, params: [String: Any])] {
@@ -29,7 +33,8 @@ import Testing
 
     /// A random document: up to 3 scenes and up to 2 symbols, each with up to 3
     /// layers (some locked, some hidden) holding random tracks, shapes and
-    /// instances. Ids are unique per level.
+    /// instances, and up to 2 valid state machines on those scenes. Ids are
+    /// unique per level.
     static func randomDocument(_ rng: inout SplitMix64) -> Document {
         let symbolIDs = Self.symbolIDs.shuffled(using: &rng).prefix(Int.random(in: 0...2, using: &rng))
         let symbols = symbolIDs.map { id in
@@ -43,7 +48,33 @@ import Testing
                   durationFrames: Int.random(in: 0...120, using: &rng),
                   layers: randomLayers(layerIDs, placeable: Array(symbolIDs), &rng))
         }
-        return Document(scenes: Array(scenes), symbols: Array(symbols))
+        return Document(scenes: Array(scenes), symbols: Array(symbols),
+                        stateMachines: randomMachines(Array(scenes), &rng))
+    }
+
+    /// Up to 2 machines ("btn" first, as the samples name it) with 1-3 states
+    /// in range on `scenes` and 0-3 transitions between them, each passing
+    /// `issues(in:)`; none without scenes. Iterations are enough that machine
+    /// and instance commands get past their lookups.
+    static func randomMachines(_ scenes: [Scene], _ rng: inout SplitMix64) -> [StateMachine] {
+        guard !scenes.isEmpty else { return [] }
+        return machineIDs.prefix(Int.random(in: 0...2, using: &rng)).compactMap { id in
+            let states = stateIDs.shuffled(using: &rng).prefix(Int.random(in: 1...3, using: &rng)).compactMap { sid in
+                scenes.randomElement(using: &rng).map { scene in
+                    let start = Int.random(in: 0...scene.durationFrames, using: &rng)
+                    return MachineState(id: sid, name: sid, sceneID: scene.id, startFrame: start,
+                                        endFrame: Int.random(in: start...scene.durationFrames, using: &rng))
+                }
+            }
+            let ids = states.map(\.id)
+            let transitions = (0..<Int.random(in: 0...3, using: &rng)).compactMap { _ in
+                ids.randomElement(using: &rng).flatMap { from in
+                    ids.randomElement(using: &rng).map { Transition(from: from, to: $0, trigger: "hover") }
+                }
+            }
+            return ids.first.map { StateMachine(id: id, name: id, states: states, transitions: transitions,
+                                                initialState: $0) }
+        }
     }
 
     /// Up to 3 layers drawn from `ids`, with 0-3 instances of `placeable` symbols each.
@@ -144,7 +175,7 @@ import Testing
         var symbolOwnedKeyframeSets = 0
         let clock = ContinuousClock()
         let start = clock.now
-        for i in 0..<5000 {
+        for i in 0..<20000 {
             // Cycle through every id so each one gets its share of iterations.
             let template = templates[i % templates.count]
             var params = Int.random(in: 0..<6, using: &rng) == 0 ? template.params : Self.mutate(template.params, &rng)
@@ -196,7 +227,8 @@ import Testing
         // The fuzz must reach both the decoders and the commands, not just bounce off.
         #expect(decoded > 1000)
         #expect(performed > 300)
-        for id in ["instance.add", "instance.remove", "instance.setTransform", "instance.setPlayback"] {
+        for id in ["instance.add", "instance.remove", "instance.setTransform", "instance.setPlayback",
+                   "machine.addState", "machine.updateState", "machine.removeState"] {
             #expect(performedByID[id, default: 0] > 0, "\(id) never got past its lookups")
         }
         #expect(symbolOwnedKeyframeSets > 0)

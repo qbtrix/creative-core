@@ -110,8 +110,8 @@ import Testing
     }
 
     @Test func registeredSampledAndStepped() {
-        let ids = Set(StateMachineCommands.all.map { $0.id })
-        #expect(ids == ["machine.add", "machine.rename", "machine.remove", "machine.setInitial"])
+        let ids: Set<String> = ["machine.add", "machine.rename", "machine.remove", "machine.setInitial"]
+        #expect(ids.isSubset(of: Set(StateMachineCommands.all.map { $0.id })))
         #expect(ids.isSubset(of: Set(CommandRegistry.builtIn.ids)))
         #expect(Set(Self.registrySamples().map { type(of: $0).id }) == ids)
         #expect(Self.undoSteps.count == 4)

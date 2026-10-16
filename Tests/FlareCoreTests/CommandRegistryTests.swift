@@ -1,6 +1,6 @@
 // CommandRegistryTests.swift: every built-in command round-trips through the
 // {"id", "params"} envelope and behaves the same after decoding (the ids are
-// checked against a hand-written list of all 49), and encode only their
+// checked against a hand-written list of all 52), and encode only their
 // params, so a command decoded after execute is fresh; unknown ids
 // and malformed envelopes throw a CommandError, never crash (seeded fuzz).
 import FlareCore
@@ -19,6 +19,7 @@ import Testing
         "instance.add", "instance.remove", "instance.setPlayback", "instance.setTransform",
         "label.remove", "label.set",
         "machine.add", "machine.remove", "machine.rename", "machine.setInitial",
+        "machine.addState", "machine.removeState", "machine.updateState",
         "layer.add", "layer.duplicate", "layer.remove", "layer.rename", "layer.reorder", "layer.setFlags",
         "scene.add", "scene.remove", "scene.rename", "scene.reorder", "scene.setCanvas", "scene.timing",
         "shape.add", "shape.remove", "shape.setFill", "shape.setPath", "shape.setStroke", "shape.translate",
@@ -41,11 +42,13 @@ import Testing
             + SwatchCommandsTests.registrySamples()
             + InstanceCommandsTests.registrySamples()
             + MachineCommandTests.registrySamples()
+            + MachineStateCommandTests.registrySamples()
     }
 
     /// The text fixture plus a second, empty scene, unused symbol "spark",
     /// symbol "dot" (layer "d") placed on "bg", one guide, one swatch and
-    /// state machine "btn" on "outro", so every sample is valid on it.
+    /// state machine "btn" on "outro" with an extra unnamed state "off", so
+    /// every sample is valid on it.
     static func sampleDocument() -> Document {
         var doc = TextCommandsTests.withText()
         doc.scenes.append(Scene(id: "outro", name: "Outro"))
@@ -58,6 +61,8 @@ import Testing
         doc.scenes[0].guides = GuideCommandsTests.guided().scenes[0].guides
         doc.swatches = [Swatch(name: "Ink", color: .black)]
         doc.stateMachines = [MachineCommandTests.button(scene: "outro")]
+        doc.stateMachines[0].states.append(MachineState(id: "off", name: "Off", sceneID: "outro",
+                                                        startFrame: 41, endFrame: 48))
         return doc
     }
 
@@ -101,7 +106,7 @@ import Testing
     }
 
     @Test func everyBuiltInCommandIsRegistered() {
-        #expect(Self.expectedIDs.count == 49)
+        #expect(Self.expectedIDs.count == 52)
         #expect(Set(Self.registry.ids) == Self.expectedIDs)
     }
 

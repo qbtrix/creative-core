@@ -1,0 +1,16 @@
+[
+  {
+    "note": "remove machine state undo appends instead of restoring its index",
+    "file": "Sources/FlareCore/MachineStateCommands.swift",
+    "anchor": "document.stateMachines[i].states.insert(removed, at: removedIndex)",
+    "replacement": "document.stateMachines[i].states.append(removed)",
+    "filter": "MachineStateCommandTests"
+  },
+  {
+    "note": "remove machine state skips the rules check so a dangling transition lands",
+    "file": "Sources/FlareCore/MachineStateCommands.swift",
+    "anchor": "        _ = try document.editStateMachine(machineID) { machine in\n            let k = try machine.stateIndex(stateID)\n            state = machine.states.remove(at: k)\n            j = k\n        }",
+    "replacement": "        let i = try document.stateMachineIndex(machineID)\n        let k = try document.stateMachines[i].stateIndex(stateID)\n        state = document.stateMachines[i].states.remove(at: k)\n        j = k",
+    "filter": "MachineStateCommandTests"
+  }
+]
