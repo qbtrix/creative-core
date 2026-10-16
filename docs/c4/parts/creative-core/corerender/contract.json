@@ -1,0 +1,10 @@
+{
+  "id": "contract",
+  "name": "Render Contract",
+  "description": "The RenderBackend contract: ops, surfaces, errors and a recording fake. Today only the module marker; render-backend RB-2 adds the contract.",
+  "technology": "Swift 6, Foundation",
+  "paths": [
+    "Sources/CoreRender/CoreRender.swift"
+  ],
+  "order": 10
+}

@@ -1,0 +1,24 @@
+{
+  "id": "corerender",
+  "name": "CoreRender library",
+  "description": "Shared render module (Sources/CoreRender): the RenderBackend contract every app's Model draws through, the CPU backend over CoreRaster, the dispatcher that routes each op to a preferred backend or the CPU, and the parity harness. Linux-safe, Foundation only.",
+  "technology": "Swift 6, SwiftPM",
+  "tags": [
+    "internal"
+  ],
+  "order": 60,
+  "relationships": [
+    {
+      "source": "corerender",
+      "target": "coreraster",
+      "description": "the CPU backend draws through CoreRaster's buffers and operations",
+      "style": "sync"
+    },
+    {
+      "source": "corerender",
+      "target": "corecolor",
+      "description": "display encodes into CoreColor's color spaces",
+      "style": "sync"
+    }
+  ]
+}
