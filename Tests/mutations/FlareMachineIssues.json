@@ -47,5 +47,19 @@
     "anchor": "for state in states where !reached.contains(state.id) && warned.insert(state.id).inserted {",
     "replacement": "for state in states where !reached.contains(state.id) && (warned.insert(state.id).inserted || true) {",
     "filter": "StateMachineIssuesTests"
+  },
+  {
+    "note": "machine issues skip the condition value type check, so a bool value on a number input passes",
+    "file": "Sources/FlareCore/StateMachineIssues.swift",
+    "anchor": "if !(input.sameType(as: c.value) && c.value.isFinite) {",
+    "replacement": "if !c.value.isFinite {",
+    "filter": "TransitionCommandTests"
+  },
+  {
+    "note": "machine issues let a bool input be compared with less or greater",
+    "file": "Sources/FlareCore/StateMachineIssues.swift",
+    "anchor": "} else if c.op != .equal, case .bool = input {",
+    "replacement": "} else if c.op != .equal, case .number = input {",
+    "filter": "TransitionCommandTests"
   }
 ]

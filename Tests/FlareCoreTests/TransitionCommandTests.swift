@@ -80,6 +80,28 @@ import Testing
         Self.expectRefused(AddTransition(machineID: "btn", transition: bad), .invalidMachine(issue))
     }
 
+    @Test func orderingConditionOnBoolInputThrows() {
+        let bad = Transition(from: "idle", to: "hover", trigger: "tap",
+                             conditions: [Condition(input: "on", op: .less, value: .bool(true))])
+        let issue = MachineIssue(severity: .error, message: "condition compares bool input on with <", transitionIndex: 0)
+        Self.expectRefused(AddTransition(machineID: "btn", transition: bad, index: 0), .invalidMachine(issue))
+    }
+
+    @Test func conditionValueOfWrongTypeThrows() {
+        var start = Self.start()
+        start.stateMachines[1].inputs.append(MachineInput(name: "level", defaultValue: .number(1)))
+        let bad = Transition(from: "idle", to: "hover", trigger: "tap",
+                             conditions: [Condition(input: "level", op: .equal, value: .bool(true))])
+        let issue = MachineIssue(severity: .error, message: "condition on level has the wrong value type", transitionIndex: 0)
+        var doc = start
+        var add = AddTransition(machineID: "btn", transition: bad, index: 0)
+        #expect(throws: CommandError.invalidMachine(issue)) { try add.execute(&doc) }
+        #expect(doc == start)
+        var engine = CommandEngine(document: start)
+        #expect(throws: CommandError.invalidMachine(issue)) { try engine.perform(add) }
+        #expect(engine.document == start && !engine.canUndo)
+    }
+
     @Test func indexOutsideTransitionsThrows() {
         for i in [-1, 2] {
             Self.expectRefused(UpdateTransition(machineID: "btn", index: i, transition: Self.click), .invalidIndex(i))

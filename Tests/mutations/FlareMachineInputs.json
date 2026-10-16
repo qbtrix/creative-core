@@ -5,5 +5,12 @@
     "anchor": "guard machine.inputs[j].defaultValue.sameType(as: input.defaultValue) else {",
     "replacement": "guard true else {",
     "filter": "MachineInputCommandTests"
+  },
+  {
+    "note": "remove machine input removes the last input instead of the named one",
+    "file": "Sources/FlareCore/MachineInputCommands.swift",
+    "anchor": "machine.inputs.remove(at: try machine.inputIndex(name))",
+    "replacement": "_ = try machine.inputIndex(name); machine.inputs.removeLast()",
+    "filter": "MachineInputCommandTests"
   }
 ]

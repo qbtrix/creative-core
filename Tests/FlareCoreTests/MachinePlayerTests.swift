@@ -120,6 +120,27 @@ import Testing
         }
     }
 
+    @Test func fireTakesTheFirstMatchWhoseConditionsHold() throws {
+        let states = ["idle", "a", "b"].map { MachineState(id: $0, name: $0, sceneID: "s", startFrame: 0, endFrame: 0) }
+        let machine = StateMachine(
+            id: "m", name: "Pick", states: states,
+            transitions: [
+                Transition(from: "idle", to: "a", trigger: "click",
+                           conditions: [Condition(input: "level", op: .greater, value: .number(2))]),
+                Transition(from: "idle", to: "b", trigger: "click"),
+            ],
+            initialState: "idle", inputs: [MachineInput(name: "level", defaultValue: .number(0))])
+        let doc = Document(scenes: [Scene(id: "s", name: "S", durationFrames: 1)], stateMachines: [machine])
+        for level in [0.0, 2, 2.5, 3, 9] {
+            var player = try MachinePlayer(machineID: "m", in: doc)
+            let accepted = player.set("level", to: .number(level))
+            #expect(accepted)
+            player.fire("click")
+            #expect(player.stateID == machine.next(from: "idle", trigger: "click", inputs: player.inputs))
+            #expect(player.stateID == (level > 2 ? "a" : "b"))
+        }
+    }
+
     @Test func missingMachineThrows() {
         #expect(throws: TimelineError.stateMachineNotFound("x")) {
             try MachinePlayer(machineID: "x", in: StateMachineTests.document())
