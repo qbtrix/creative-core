@@ -27,3 +27,4 @@ utc	stage	event	ref	note
 2026-10-16T19:40Z	3	stopped	-	container restart 05:50Z-19:35Z
 2026-10-16T19:41Z	3	stage-start	cae920b	wave c MT-4; reopened #313
 2026-10-16T19:43Z	3	stage-start	cae920b	wave c MT-4 builder started (run act-1a1463a91ae-nkkr)
+2026-10-16T20:05Z	3	pr-opened	#346	MT-4 gradient alpha, fast-lane, head 07f0bc6
