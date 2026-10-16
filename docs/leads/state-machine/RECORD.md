@@ -2,9 +2,9 @@
 
 Issue: #312 · Packet: docs/blueprints/core/features/state-machine.md (on dev since #310)
 Run: act-1a1448178f5-56p5 · Session: claude/state-machine-feature-lead-016ymp (resumed 2026-10-16T11:40Z; earlier ynzph3, 8z5qtw; earlier run act-1a142b4b29a-bnb2) · Started: 2026-10-16T03:16Z
-Stage: 5 finish
+Stage: done
 Base: cae920b (round 3; round 2 623aa2e; round 1 8c445c7; wave f 57b645c; wave e 6689fa1; wave d 5cb1494; wave c 670a6ed; wave b f27f104; wave a base 69c9f80 is the feature's first base)
-Next: wait for CI 38951180654's macOS job (queued; Linux, Mutation, anchors, fast-lane green); green -> Belt-Contact-Sheet comment on #312; red -> gap issues (round budget: loop stopped after 2 clean rounds)
+Next: nothing; the feature is done (contact sheet on #312, CI run 38951180654 green incl. macOS, main promoted)
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
