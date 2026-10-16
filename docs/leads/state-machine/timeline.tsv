@@ -59,3 +59,5 @@ utc	stage	event	ref	note
 2026-10-16T16:45Z	3	heartbeat	-	waiting on builders, lane or CI
 2026-10-16T17:00Z	3	heartbeat	-	waiting on builders, lane or CI
 2026-10-16T17:15Z	3	heartbeat	-	waiting on builders, lane or CI
+2026-10-16T17:50Z	4	gate-run	8c445c7	885/886: CoreRaster timing budget only (environment)
+2026-10-16T17:50Z	4	round-findings	8c445c7	round 1: 16 confirmed (2 major), 1 refuted

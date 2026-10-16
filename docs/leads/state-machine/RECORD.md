@@ -4,7 +4,7 @@ Issue: #312 · Packet: docs/blueprints/core/features/state-machine.md (on dev si
 Run: act-1a1448178f5-56p5 · Session: claude/state-machine-feature-lead-016ymp (resumed 2026-10-16T11:40Z; earlier ynzph3, 8z5qtw; earlier run act-1a142b4b29a-bnb2) · Started: 2026-10-16T03:16Z
 Stage: 4 round 1
 Base: 8c445c7 (round 1; wave f 57b645c; wave e 6689fa1; wave d 5cb1494; wave c 670a6ed; wave b f27f104; wave a base 69c9f80 is the feature's first base)
-Next: round 1 critic panel running on 69c9f80..8c445c7; then fix batch or round 2
+Next: round 1 fix batches B1 (issues query/tests), B2 (commands docs/record/mutations/clamp), B3 (fuzz/undo coverage) running; wait for the lane, then round 2
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -23,7 +23,7 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 ## Rounds
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
 |---|---|---|---|---|---|---|---|---|
-| 1 | 8c445c7 | PASS on 57b645c (885 tests); SM-8 head PASS (886) | 72/72 (changed since 69c9f80) | 38877588760 green (5cb1494, through SM-4) | clarity, contract, undo, robustness, tests, design | running | – | – |
+| 1 | 8c445c7 | PASS on 57b645c (885); 8c445c7: 885/886, only CoreRaster smallDabOn12MegapixelsIsFast CPU budget (1.7-2.1 s vs 1.5 s, debug, fresh VM; not feature code, unchanged since 57b645c where it passed) | 72/72 (changed since 69c9f80) | 38877588760 green (5cb1494, through SM-4) | clarity, contract, undo, robustness, tests, design | 16 (2 major: refusal wording undocumented; 500-machine agreement test has no independent oracle) | B1, B2, B3 | no |
 
 ## Decisions
 - Waves follow the packet (a SM-1+SM-2; b SM-3+SM-7; c SM-4; d SM-5; e SM-6; f SM-8): the shared test files chain SM-2 to SM-6.
@@ -38,5 +38,7 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 - PRs, labels and comments go through the GitHub MCP tools (no gh auth in cloud sessions).
 
 ## Open
+- Round 1 #7 (Onion.onionFrames allocates one Int per window frame; unbounded with huge durations) is motion-tracks code, filed as a gap issue, not fixed here.
+- Round 1 #14 leaves `requireNoErrors` (StateMachineCommands.swift) on its own predicate until B1's `firstError(in:)` lands; round 2 switches it.
 - Builders' PR bodies got a server-appended attribution footer; the lane stripped it on merge (#314, #316). Templates now tell builders to PATCH it out.
 - The container lacked Swift; scripts/cloud-setup.sh installed 6.3.3. #220-#226 labelled in-progress.
