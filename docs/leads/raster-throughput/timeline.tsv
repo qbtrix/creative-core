@@ -24,3 +24,4 @@ utc	stage	event	ref	note
 2026-10-16T04:45Z	3	pr-merged	#323	RT-5
 2026-10-16T04:45Z	3	stage-end	waves	dev f7b9bcf holds RT-1..RT-5
 2026-10-16T04:45Z	4	stage-start	round 1	f7b9bcf
+2026-10-16T04:49Z	4	heartbeat	round 1	gate+mutate and critic panel running
