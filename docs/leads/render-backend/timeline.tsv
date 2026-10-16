@@ -5,3 +5,4 @@ utc	stage	event	ref	note
 2026-10-16T20:01Z	3	stage-start		wave 1: RB-1 builder (protected PR, human merge)
 2026-10-16T20:08Z	3	pr-opened	#350	RB-1 targets (protected, human merge)
 2026-10-16T20:43Z	3	stopped	#347	gate budgets on dev 9ba4c2b, asked supervisor
+2026-10-16T21:37Z	3	gate-run	dev 4f11af8	idle re-run still fails both budgets; waiting on supervisor
