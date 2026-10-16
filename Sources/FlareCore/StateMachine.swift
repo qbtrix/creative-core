@@ -67,9 +67,16 @@ public struct StateMachine: Codable, Sendable, Hashable {
         var current: [String: InputValue] = [:]
         for input in inputs where current[input.name] == nil { current[input.name] = input.defaultValue }
         for (name, value) in values { current[name] = value }
-        return transitions.first { t in
-            t.from == state && t.trigger == trigger && t.conditions.allSatisfy { $0.holds(current[$0.input]) }
-        }?.to ?? state
+        return firing(from: state, trigger: trigger, inputs: current)?.to ?? state
+    }
+
+    /// The first-match rule `next` and `MachinePlayer` share: the first
+    /// transition in declaration order whose `from` and `trigger` match and
+    /// whose conditions all hold against `values` (no defaults merged), or nil.
+    func firing(from state: String, trigger: String, inputs values: [String: InputValue]) -> Transition? {
+        transitions.first { t in
+            t.from == state && t.trigger == trigger && t.conditions.allSatisfy { $0.holds(values[$0.input]) }
+        }
     }
 }
 
