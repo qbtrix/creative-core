@@ -41,3 +41,4 @@ utc	stage	event	ref	note
 2026-10-16T05:42Z	4	pr-merged	#327	r2-b1
 2026-10-16T05:42Z	4	stage-start	round 3	fe5bc53
 2026-10-16T05:46Z	4	round-findings	round 3	panel clean: 0 major, 3 minor
+2026-10-16T05:49Z	4	heartbeat	round 3	gate+mutate running
