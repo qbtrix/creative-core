@@ -4,7 +4,7 @@ Issue: #311 · Packet: docs/blueprints/core/features/raster-throughput.md (in PR
 Run: act-1a142b4b264-6dd2 · Session: claude/raster-throughput-lead-pyis7l · Started: 2026-10-16T03:05Z
 Stage: 4 round 3
 Base: fe5bc5347337b361a511c148b58fbd56163e09fb (round 3; first base f05665f5b54a461ab4a4e981ed7d7b01d7ab37ed)
-Next: round 3: budgets x3, gate, mutate on fe5bc53 (scratchpad/r3) and the critic panel
+Next: round 3 mutate finishing; final fixer r3-b1 (rt/r3-b1) builds the feature-done PR; then round 4 on its SHA + the dispatched CI run, then the contact sheet
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -23,7 +23,7 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 |---|---|---|---|---|---|---|---|---|
 | 1 | f7b9bcf | PASS (814 tests) | 39/39 (validate: 203 anchors) | – (not dispatched yet) | clarity, contract, robustness, tests, compat, performance | 4 major, 9 minor (scratchpad r1/findings.md) | #324 (r1-b1, merged), #325 (r1-b2, merged), #326 (r1-b3, merged) | no |
 | 2 | f27f104 | PASS (816 tests) | 43/43 (validate: 207 anchors) | – | same 6 | 1 major (opacity==1 half of the opaque-row guard untested, no mutation entry), 2 minor | #327 (r2-b1, merged) | no |
-| 3 | fe5bc53 | running | running | – | same 6 | 0 blocker/major; 3 minor (C4 compositing description, band labels, region check duplicates cropped's) | feature-done PR | pending gate |
+| 3 | fe5bc53 | PASS (816 tests) | running | – | same 6 | 0 blocker/major; 3 minor (C4 compositing description, band labels, region check duplicates cropped's) | feature-done PR | pending gate |
 
 ## Decisions
 - Packet not yet on dev (PR #310 open); builders read it from origin/docs/core-packets-wave2.
@@ -42,6 +42,7 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 - RT-2 starts from rt/rt-1 before #319 merges, and rebases on dev once it does.
 
 ## Open
+- Round 3 release medians (fe5bc53, 3 runs, ms): copy 146/147/150 (30), paste 113/109/113 (30), copy band 38/33/37 (10), paste band 37/33/34 (10), merge 107/105/103 (60), flatten 211/219/228 (120), merge band 29/30/35 (20), tile 0.43/0.71/0.46 (0.5; 2 of 3 within).
 - Round 2 release medians (f27f104, quiet box, 3 runs, ms): copy 152/156/154 (30), paste 115/121/108 (30), copy band 38/36/35 (10), paste band 37/39/36 (10), merge 105/101/97 (60), flatten 209/210/215 (120), merge band 29/32/29 (20), tile 0.43/0.43/0.76 (0.5; 2 of 3 within), opaque copy 57-60 and multiply 104-107 report-only.
 - Finding 6's Float alpha table not done: it moves a CoreRaster.json anchor ("decoding display bytes does not premultiply"); ~10% on decode. Candidate for round 2.
 - FlareCore EngineStressTests.thousandCommandsNearTheLayerLimitStayInBudget misses its 5 s wall budget under load 6-8 (6.1-6.9 s); not this feature's file.
