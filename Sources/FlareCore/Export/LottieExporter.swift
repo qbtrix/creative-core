@@ -6,9 +6,11 @@
 // on top, so the order is reversed (Flare draws its first layer first).
 // Hidden layers are kept with `hd: true`.
 //
-// Each layer's scale, rotation and opacity are sampled at frame 0. When its x
-// or y track has more than one keyframe, the position is written split
-// (`p.s` true) with one animated property per axis: a keyframe has `t`, `s`,
+// Each layer's scale is sampled at frame 0. When its x or y track has more
+// than one keyframe, the position is written split (`p.s` true) with one
+// animated property per axis; a rotation or opacity track with more than one
+// keyframe animates `ks.r` (degrees) or `ks.o` (clamped to 0...1, times 100)
+// the same way, and with fewer it is its frame-0 value. A keyframe has `t`, `s`,
 // and either `h: 1` for hold or `o`/`i` tangents (linear is (0,0)/(1,1); a
 // cubic Bezier gives (x1,y1)/(x2,y2) with x clamped to 0...1 as `Easing` does).
 // Each shape becomes a group (`gr`) of its subpaths (`sh`), its stroke (`st`)
@@ -157,8 +159,8 @@ struct LottieTransform: Encodable, Sendable {
     var a = LottieStatic([0.0, 0.0])
     var p: LottiePosition
     var s: LottieStatic<[Double]>
-    var r: LottieStatic<Double>
-    var o: LottieStatic<Double>
+    var r: LottieScalar
+    var o: LottieScalar
 }
 
 struct LottieLayer: Encodable, Sendable {
@@ -195,8 +197,9 @@ struct LottieLayer: Encodable, Sendable {
         ks = LottieTransform(
             p: position,
             s: LottieStatic([try value("scaleX", 1) * 100, try value("scaleY", 1) * 100]),
-            r: LottieStatic(try value("rotation", 0)),
-            o: LottieStatic(min(max(try value("opacity", 1), 0), 1) * 100)
+            r: try LottieScalar(layer.tracks["rotation"] ?? [], at0: try value("rotation", 0)),
+            o: try LottieScalar(layer.tracks["opacity"] ?? [], at0: try value("opacity", 1),
+                                map: { min(max($0, 0), 1) * 100 })
         )
         shapes = try LottieExporter.content(of: layer, frame: 0, symbols: symbols, path: [])
     }
@@ -227,15 +230,16 @@ enum LottieScalar: Encodable, Sendable {
     case fixed(LottieStatic<Double>)
     case animated([LottieKeyframe])
 
-    /// `at0` is the track's value at frame 0, used when it has under two keyframes.
-    init(_ track: [Keyframe], at0: Double) throws {
+    /// `at0` is the track's finite value at frame 0, used when it has under two
+    /// keyframes. `map` turns a finite track value into the written one.
+    init(_ track: [Keyframe], at0: Double, map: (Double) -> Double = { $0 }) throws {
         guard track.count > 1 else {
-            self = .fixed(LottieStatic(at0))
+            self = .fixed(LottieStatic(map(at0)))
             return
         }
         var frames: [LottieKeyframe] = []
         for (index, keyframe) in track.enumerated() {
-            var out = LottieKeyframe(t: keyframe.frame, s: [try LottieExporter.finite(keyframe.value)])
+            var out = LottieKeyframe(t: keyframe.frame, s: [map(try LottieExporter.finite(keyframe.value))])
             if index < track.count - 1 {
                 switch keyframe.easing {
                 case .hold:
