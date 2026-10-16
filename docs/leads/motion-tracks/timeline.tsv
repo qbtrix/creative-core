@@ -1,0 +1,4 @@
+utc	stage	event	ref	note
+2026-10-16T03:16Z	0	stage-start	f05665f	base verified
+2026-10-16T03:20Z	0	stage-end	#313	depends on nothing open
+2026-10-16T03:20Z	1	stage-start	docs/core-packets-wave2	packet read
