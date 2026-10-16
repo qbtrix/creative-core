@@ -7,3 +7,4 @@ utc	stage	event	ref	note
 2026-10-16T20:43Z	3	stopped	#347	gate budgets on dev 9ba4c2b, asked supervisor
 2026-10-16T21:37Z	3	gate-run	dev 4f11af8	idle re-run still fails both budgets; waiting on supervisor
 2026-10-16T22:08Z	3	heartbeat	dev 90924cb	still waiting on supervisor ruling
+2026-10-16T22:39Z	3	heartbeat	dev 90924cb	no ruling on #347; still waiting
