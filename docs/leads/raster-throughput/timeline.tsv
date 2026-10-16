@@ -4,3 +4,4 @@ utc	stage	event	ref	note
 2026-10-16T04:12Z	1	stage-end	packet	read from docs/core-packets-wave2
 2026-10-16T04:14Z	2	stage-end	plan	waves a RT-1 RT-3 RT-4, b RT-2, c RT-5
 2026-10-16T04:15Z	3	stage-start	wave a	base f05665f
+2026-10-16T03:18Z	3	heartbeat	wave a	RT-1 RT-3 RT-4 builders running
