@@ -72,3 +72,5 @@ utc	stage	event	ref	note
 2026-10-16T18:33Z	3	heartbeat	-	waiting on builders, lane or CI
 2026-10-16T18:55Z	4	gate-run	623aa2e	891/892 (CoreRaster timing only, fails on base too); mutate 95/95
 2026-10-16T18:56Z	4	stage-start	623aa2e	round 2 critic panel
+2026-10-16T19:05Z	4	round-clean	623aa2e	round 2: 8 minor, no blocker or major
+2026-10-16T19:06Z	4	stage-start	623aa2e	r2-b1 fix batch (feature-done)
