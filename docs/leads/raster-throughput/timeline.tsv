@@ -21,3 +21,6 @@ utc	stage	event	ref	note
 2026-10-16T04:34Z	3	stage-start	wave c	RT-5 builder; budget finding posted on #311
 2026-10-16T04:36Z	3	pr-merged	#322	RT-2b
 2026-10-16T04:45Z	3	pr-opened	#323	RT-5 release budget suite
+2026-10-16T04:45Z	3	pr-merged	#323	RT-5
+2026-10-16T04:45Z	3	stage-end	waves	dev f7b9bcf holds RT-1..RT-5
+2026-10-16T04:45Z	4	stage-start	round 1	f7b9bcf
