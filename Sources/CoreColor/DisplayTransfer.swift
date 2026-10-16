@@ -8,10 +8,12 @@
 // that base plus one add-and-shift compare. Both spaces share the curve, so
 // they share the tables; Display P3 adds the same matrix step, in the same
 // order, as `Color3.converted`. The results are bit for bit those of
-// `converted` plus the clamp-and-round byte rule, with no `pow`, `throw`,
-// branch or call per value: `decode`, `encode` and `byte` are inlinable and
-// every value carries the tables, so a pixel loop in another module reads
-// them directly.
+// `converted` plus the clamp-and-round byte rule, with no `pow`, `throw` or
+// call per value and no branch per value beyond the one on the space:
+// `decode`, `encode` and `byte` are inlinable and every value carries the
+// tables, so a pixel loop in another module reads them directly. Table reads
+// go through a buffer pointer without a bounds check: a byte indexes the 256
+// decode entries, and `bucket` clamps first, so its index is always in range.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -42,8 +44,8 @@ public struct DisplayTransfer: Sendable, Hashable {
     /// .converted(from: space, to: .linearSRGB)`.
     @inlinable @inline(__always)
     public func decode(_ r: UInt8, _ g: UInt8, _ b: UInt8) -> Color3 {
-        let table = tables.decoded
-        let (c0, c1, c2) = (table[Int(r)], table[Int(g)], table[Int(b)])
+        // 256 entries: every byte is in range.
+        let (c0, c1, c2) = tables.decoded.withUnsafeBufferPointer { t in (t[Int(r)], t[Int(g)], t[Int(b)]) }
         guard isP3 else { return Color3(c0, c1, c2) }
         let p = Self.times(tables.linearSRGBFromP3, c0, c1, c2)
         return Color3(p.0, p.1, p.2)
@@ -51,13 +53,17 @@ public struct DisplayTransfer: Sendable, Hashable {
 
     /// For a finite color: each component of
     /// `(try linear.converted(from: .linearSRGB, to: space)).clampedToUnit()`,
-    /// times 255, rounded to nearest. NaN gives 0.
+    /// times 255, rounded to nearest. NaN gives 0. In sRGB, +infinity gives
+    /// 255 and -infinity 0, as the clamp would; in Display P3 an infinite
+    /// component can make the matrix give NaN, so its bytes are only
+    /// guaranteed not to trap.
     @inlinable @inline(__always)
     public func encode(_ linear: Color3) -> (UInt8, UInt8, UInt8) {
         let p = isP3 ? Self.times(tables.p3FromLinearSRGB, linear.c0, linear.c1, linear.c2)
             : (linear.c0, linear.c1, linear.c2)
-        let buckets = tables.buckets
-        return (Self.level(p.0, buckets), Self.level(p.1, buckets), Self.level(p.2, buckets))
+        return tables.buckets.withUnsafeBufferPointer { b in
+            (Self.level(p.0, b), Self.level(p.1, b), Self.level(p.2, b))
+        }
     }
 
     /// A value clamped to 0...1, times 255, rounded to nearest (half away
@@ -73,8 +79,10 @@ public struct DisplayTransfer: Sendable, Hashable {
         return UInt8(truncatingIfNeeded: nearest.bitPattern) &+ tie
     }
 
+    /// Two transfers are equal when their spaces are: the tables are shared.
     public static func == (a: DisplayTransfer, b: DisplayTransfer) -> Bool { a.space == b.space }
 
+    /// Hashes the space only, matching `==`.
     public func hash(into hasher: inout Hasher) { hasher.combine(space) }
 
     /// A row-major 3x3 matrix's entries.
@@ -140,17 +148,29 @@ public struct DisplayTransfer: Sendable, Hashable {
         return least.dropFirst().filter { $0 > start && $0 < end }
     }
 
-    /// `step(v)`: v clamped to the buckets, NaN to the first. With bits its
-    /// bit pattern and e its bucket's entry, bits - s and t are at most
-    /// 2^bucketShift, so e &+ bits = base << baseShift + 2^baseShift +
+    /// v clamped to `bucketFloor`...1, NaN to `bucketFloor`, as its bit pattern.
+    @inlinable @inline(__always)
+    static func clampedBits(_ v: Double) -> UInt64 {
+        let low = v > bucketFloor ? v : bucketFloor
+        return (low < 1 ? low : 1).bitPattern
+    }
+
+    /// The bucket of a `clampedBits` pattern, in 0..<bucketCount: the clamp
+    /// keeps bits from `bucketFloor`'s to 1's, the first and last bucket starts.
+    @inlinable @inline(__always)
+    static func bucket(_ bits: UInt64) -> Int {
+        Int(truncatingIfNeeded: bits >> bucketShift &- bucketFloor.bitPattern >> bucketShift)
+    }
+
+    /// `step(v)`, from `buckets` (the `Tables.buckets` entries). With bits
+    /// v's clamped bit pattern and e its bucket's entry, bits - s and t are at
+    /// most 2^bucketShift, so e &+ bits = base << baseShift + 2^baseShift +
     /// (bits - s) - t carries into the base exactly when bits - s >= t, that
     /// is when v reaches the threshold.
     @inlinable @inline(__always)
-    static func level(_ v: Double, _ buckets: [UInt64]) -> UInt8 {
-        let low = v > bucketFloor ? v : bucketFloor
-        let bits = (low < 1 ? low : 1).bitPattern
-        let entry = buckets[Int(truncatingIfNeeded: bits >> bucketShift &- bucketFloor.bitPattern >> bucketShift)]
-        return UInt8(truncatingIfNeeded: (entry &+ bits) >> baseShift)
+    static func level(_ v: Double, _ buckets: UnsafeBufferPointer<UInt64>) -> UInt8 {
+        let bits = clampedBits(v)
+        return UInt8(truncatingIfNeeded: (buckets[bucket(bits)] &+ bits) >> baseShift)
     }
 
     /// `least[k]`, k in 1...255: the smallest Double v with `step(v) >= k`.

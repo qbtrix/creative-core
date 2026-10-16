@@ -22,7 +22,7 @@ extension PixelBuffer {
         try rgba8(x: 0, y: 0, width: width, height: height, colorSpace: colorSpace)
     }
 
-    /// The `regionWidth x regionHeight` rectangle with its top left at (`x`, `y`)
+    /// The `width x height` rectangle with its top left at (`x`, `y`)
     /// as 8-bit straight-alpha RGBA bytes encoded in `colorSpace`: the same
     /// bytes as `cropped(x:y:width:height:)` then `rgba8(colorSpace:)`, without
     /// the copy. Throws `RasterError.invalid` for a `colorSpace` not in
@@ -40,6 +40,9 @@ extension PixelBuffer {
         let c = Self.channels
         let rowCount = regionWidth * c
         let count = regionHeight * rowCount
+        // In sRGB, ±infinity encodes as the largest finite values do; only the
+        // P3 matrix needs `finite`, or it would turn infinity - infinity into NaN.
+        let p3 = encoder.space == .displayP3
         // Every byte is written below, so the array starts uninitialized.
         return components.withUnsafeBufferPointer { source in
             [UInt8](unsafeUninitializedCapacity: count) { out, initialized in
@@ -49,7 +52,9 @@ extension PixelBuffer {
                     for i in stride(from: 0, to: rowCount, by: c) {
                         let s = RGBA(r: source[from + i], g: source[from + i + 1], b: source[from + i + 2],
                                      a: source[from + i + 3]).unpremultiplied()
-                        let (r, g, b) = encoder.encode(Color3(Self.finite(s.r), Self.finite(s.g), Self.finite(s.b)))
+                        let color = p3 ? Color3(Self.finite(s.r), Self.finite(s.g), Self.finite(s.b))
+                            : Color3(Double(s.r), Double(s.g), Double(s.b))
+                        let (r, g, b) = encoder.encode(color)
                         out[to + i] = r
                         out[to + i + 1] = g
                         out[to + i + 2] = b
@@ -92,16 +97,12 @@ extension PixelBuffer {
     }
 
     /// The display tables for `colorSpace`, or `RasterError.invalid` when it
-    /// is not in `displayColorSpaces`.
+    /// is not in `displayColorSpaces`, the spaces `DisplayTransfer` accepts.
     private static func displayTransfer(_ colorSpace: ColorSpace) throws -> DisplayTransfer {
-        guard displayColorSpaces.contains(colorSpace) else {
+        guard let transfer = try? DisplayTransfer(colorSpace) else {
             throw RasterError.invalid("color space \(colorSpace.rawValue): display bytes must be sRGB or displayP3")
         }
-        do {
-            return try DisplayTransfer(colorSpace)
-        } catch {
-            throw RasterError.invalid("display bytes conversion failed: \(error)")
-        }
+        return transfer
     }
 
     /// A straight component as a finite Double. Unpremultiplying a tiny alpha

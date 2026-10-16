@@ -61,5 +61,12 @@
     "anchor": "== 0.5 ? 1 : 0",
     "replacement": "== 0.5 ? 0 : 0",
     "filter": "DisplayTransferTests"
+  },
+  {
+    "note": "display transfer init accepts linear sRGB",
+    "file": "Sources/CoreColor/DisplayTransfer.swift",
+    "anchor": "guard space == .sRGB || space == .displayP3 else {",
+    "replacement": "guard space == .sRGB || space == .displayP3 || space == .linearSRGB else {",
+    "filter": "DisplayTransferTests"
   }
 ]
