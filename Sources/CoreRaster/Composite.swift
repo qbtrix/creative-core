@@ -18,7 +18,9 @@ public func composite(_ source: PixelBuffer, onto backdrop: PixelBuffer,
         throw RasterError.invalid(
             "source \(source.width)x\(source.height) does not match backdrop \(backdrop.width)x\(backdrop.height)")
     }
-    return try composite(source, onto: backdrop, x: 0, y: 0, mode: mode, opacity: opacity)
+    var result = backdrop
+    try result.composite(source, x: 0, y: 0, mode: mode, opacity: opacity)
+    return result
 }
 
 /// Composites `source` over `backdrop` with source pixel (sx, sy) on backdrop
@@ -26,26 +28,63 @@ public func composite(_ source: PixelBuffer, onto backdrop: PixelBuffer,
 /// and hang off any edge: only the overlap is visited, and a source entirely
 /// outside gives back the backdrop. Throws `RasterError.invalid` when
 /// `opacity` is outside 0...1 or not finite, or when a result component
-/// overflows to infinity.
+/// overflows to infinity. `backdrop` is unchanged either way.
 public func composite(_ source: PixelBuffer, onto backdrop: PixelBuffer, x: Int, y: Int,
                       mode: BlendMode, opacity: Float) throws -> PixelBuffer {
-    // NaN and the infinities are outside the range, so this also checks finiteness.
-    guard (0...1).contains(opacity) else {
-        throw RasterError.invalid("opacity \(opacity): must be a finite value in 0...1")
-    }
-    // Both bounds are checked before adding, so x + width cannot overflow.
-    guard x < backdrop.width, y < backdrop.height, x > -source.width, y > -source.height else {
-        return backdrop
-    }
     var result = backdrop
-    for by in max(y, 0)..<min(y + source.height, backdrop.height) {
-        for bx in max(x, 0)..<min(x + source.width, backdrop.width) {
-            let s = try source.pixel(x: bx - x, y: by - y)
-            let b = try backdrop.pixel(x: bx, y: by)
-            try result.setPixel(x: bx, y: by, sourceOver(s, b, mode: mode, opacity: opacity))
+    try result.composite(source, x: x, y: y, mode: mode, opacity: opacity)
+    return result
+}
+
+extension PixelBuffer {
+    /// Composites `source` over this buffer with source pixel (sx, sy) on
+    /// pixel (x + sx, y + sy), in place. Same pixels and same throws as
+    /// `composite(_:onto:x:y:mode:opacity:)`, without copying the backdrop.
+    /// A bad opacity throws before any change. A result that overflows to
+    /// infinity throws for the first such pixel in row order: the rows above
+    /// it already hold the composite, the rest are untouched, and every
+    /// stored component stays finite.
+    public mutating func composite(_ source: PixelBuffer, x: Int, y: Int,
+                                   mode: BlendMode, opacity: Float) throws {
+        // NaN and the infinities are outside the range, so this also checks finiteness.
+        guard (0...1).contains(opacity) else {
+            throw RasterError.invalid("opacity \(opacity): must be a finite value in 0...1")
+        }
+        // Both bounds are checked before adding, so x + width cannot overflow.
+        guard x < width, y < height, x > -source.width, y > -source.height else { return }
+        let x0 = max(x, 0), x1 = min(x + source.width, width)
+        let count = x1 - x0, n = count * Self.channels
+        let src = source.components
+        // An opaque source row under .normal at full opacity gives the source
+        // itself by the formula (with ==), so it is copied in.
+        let copies = mode == .normal && opacity == 1
+        var scratch = [Float](repeating: 0, count: n)
+        for by in max(y, 0)..<min(y + source.height, height) {
+            let from = ((by - y) * source.width + x0 - x) * Self.channels
+            let row = src[from..<(from + n)]
+            let opaqueRow = copies && stride(from: from + 3, to: from + n, by: 4).allSatisfy { src[$0] == 1 }
+            try updateRow(x: x0, y: by, count: count) { span in
+                if opaqueRow {
+                    span.replaceSubrange(span.startIndex..<span.endIndex, with: row)
+                    return
+                }
+                for k in 0..<count {
+                    let i = k * Self.channels, s = row.startIndex + i, b = span.startIndex + i
+                    let out = sourceOver(RGBA(r: src[s], g: src[s + 1], b: src[s + 2], a: src[s + 3]),
+                                         RGBA(r: span[b], g: span[b + 1], b: span[b + 2], a: span[b + 3]),
+                                         mode: mode, opacity: opacity)
+                    guard out.isFinite else {
+                        throw RasterError.invalid("pixel \(out) at (\(x0 + k), \(by)): components must be finite")
+                    }
+                    scratch[i] = out.r
+                    scratch[i + 1] = out.g
+                    scratch[i + 2] = out.b
+                    scratch[i + 3] = out.a
+                }
+                span.replaceSubrange(span.startIndex..<span.endIndex, with: scratch)
+            }
         }
     }
-    return result
 }
 
 /// One premultiplied source pixel over one premultiplied backdrop pixel.
