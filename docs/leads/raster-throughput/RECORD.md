@@ -2,9 +2,9 @@
 
 Issue: #311 · Packet: docs/blueprints/core/features/raster-throughput.md (in PR #310, read from branch docs/core-packets-wave2)
 Run: act-1a142b4b264-6dd2 · Session: claude/raster-throughput-lead-pyis7l · Started: 2026-10-16T03:05Z
-Stage: 4 round 3
-Base: fe5bc5347337b361a511c148b58fbd56163e09fb (round 3; first base f05665f5b54a461ab4a4e981ed7d7b01d7ab37ed)
-Next: wait for the lane on #331 (feature-done) and the CI run it dispatches on dev; round 4 (last) on that SHA; then the contact sheet and the gap issue for the budgets
+Stage: 4 round 4
+Base: 670a6ed570159dd3ccfdb06c7912bac040ff1a9b (round 4, holds #331 feature-done; first base f05665f5b54a461ab4a4e981ed7d7b01d7ab37ed)
+Next: round 4 (last): gate, mutate, budgets on 670a6ed (scratchpad/r4) and the critic panel; wait for the CI run on dev that #331 dispatched; then the contact sheet
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -21,7 +21,7 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 ## Rounds
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
 |---|---|---|---|---|---|---|---|---|
-| 1 | f7b9bcf | PASS (814 tests) | 39/39 (validate: 203 anchors) | – (not dispatched yet) | clarity, contract, robustness, tests, compat, performance | 4 major, 9 minor (scratchpad r1/findings.md) | #324 (r1-b1, merged), #325 (r1-b2, merged), #326 (r1-b3, merged) | no |
+| 1 | f7b9bcf | PASS (814 tests) | 39/39 (validate: 203 anchors) | run 337 on 16fa375 (RT-2): success | clarity, contract, robustness, tests, compat, performance | 4 major, 9 minor (scratchpad r1/findings.md) | #324 (r1-b1, merged), #325 (r1-b2, merged), #326 (r1-b3, merged) | no |
 | 2 | f27f104 | PASS (816 tests) | 43/43 (validate: 207 anchors) | – | same 6 | 1 major (opacity==1 half of the opaque-row guard untested, no mutation entry), 2 minor | #327 (r2-b1, merged) | no |
 | 3 | fe5bc53 | PASS (816 tests) | 44/44 (validate: 208 anchors) | – | same 6 | 0 blocker/major; 3 minor (C4 compositing description, band labels, region check duplicates cropped's) | #331 (r3-b1, feature-done) | yes |
 
