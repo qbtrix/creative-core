@@ -1,0 +1,16 @@
+[
+  {
+    "note": "lottie gradient stop alpha is dropped",
+    "file": "Sources/FlareCore/Export/LottieExporter.swift",
+    "anchor": "if alphas.contains(where: { $0 < 1 }) {",
+    "replacement": "if alphas.contains(where: { $0 < 0 }) {",
+    "filter": "LottieGradientAlphaTests"
+  },
+  {
+    "note": "lottie opaque gradient writes alpha stops",
+    "file": "Sources/FlareCore/Export/LottieExporter.swift",
+    "anchor": "if alphas.contains(where: { $0 < 1 }) {",
+    "replacement": "if alphas.contains(where: { $0 <= 1 }) {",
+    "filter": "LottieGradientAlphaTests"
+  }
+]
