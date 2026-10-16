@@ -35,3 +35,4 @@ utc	stage	event	ref	note
 2026-10-16T05:18Z	4	pr-merged	#326	r1-b3
 2026-10-16T05:18Z	4	stage-start	round 2	f27f104
 2026-10-16T05:26Z	4	round-findings	round 2	1 major (untested opacity==1 guard), 2 minor; fix batch r2-b1; budgets recorded
+2026-10-16T05:28Z	4	heartbeat	round 2	r2-b1 fixer running; mutate finishing
