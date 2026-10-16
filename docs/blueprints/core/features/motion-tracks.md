@@ -124,10 +124,13 @@ MT-3 scale: xs = tracks["scaleX"], ys = tracks["scaleY"]
   if xs.count <= 1 && ys.count <= 1: static [x0 * 100, y0 * 100]          # today
   else if one has <= 1 key: keys of the other; the constant one fills its slot
   else if frames and easings match: shared keys s = [x * 100, y * 100]
-  else: frames f in max(0, firstKey)...min(d - 1, lastKey); guard count <= maxBakedKeys else throw unsupported("scale track")
-        one linear key per f with s = [sample(f).scaleX * 100, sample(f).scaleY * 100]
+  else: lo = max(0, first key frame); hi = min(d - 1, last key frame)
+        if lo > hi: static [x0 * 100, y0 * 100]          # every key past the end, or d == 0: nothing plays
+        guard hi - lo + 1 <= maxBakedKeys else throw unsupported("scale track")
+        one linear key per f in lo...hi with s = [sample(f).scaleX * 100, sample(f).scaleY * 100]
 
-MT-4 gradient(stops): k = flat [offset, r, g, b]; if stops.contains { alpha < 1 }: k += flat [offset, alpha]
+MT-4 gradient(stops): alphas = stops.map { try channel($0.color.a) }   # throws on NaN first, as each color does
+  k = flat [offset, r, g, b]; if alphas.contains { $0 < 1 }: k += flat [offset, alpha]
 
 MT-5 FlareBudgetTests.reference(): seeded SplitMix64; 20 layers x 50 shapes (StageBudgetTests.shape);
   every layer keys x, y, scaleX, scaleY, rotation, opacity at 0, 150, 299; scene 300 frames;
@@ -174,7 +177,7 @@ MT-1); after **c**, #227 (LM-13a); after **d**, #228.
 |---|---|---|
 | MT-1 | `OnionTests`: frame 10 with 2 and 2 in 48 frames gives [8, 9, 11, 12]; frame 1 gives [0, 2, 3]; frame 47 gives [45, 46]; 0 and 0 gives []; -3 counts as 0; a 1-frame scene gives []; `Int.max` counts and `Int.min` frames return without trapping and inside the range | an edge frame repeats or leaks, the playhead frame is listed, or a large count traps |
 | MT-2 | `LottieTracksTests`: a one-layer scene with opacity keys (0: 1, 24: 0, ease-in-out) exports `ks.o` equal to a golden JSON string, values 100 and 0, tangents from the easing; rotation keys (0: 0, 12: 45 hold, 24: 90) export `ks.r` with `h` 1 on the hold key; opacity keys outside 0...1 clamp; every existing `LottieExporterTests` golden is byte-identical | a track stays static, a hold is lost, a clamp is missed, or a static export changes |
-| MT-3 | `LottieScaleTrackTests`: scaleX keys only gives keys with scaleY's constant in the second slot; both at the same frames and easing gives shared keys [100, 100] to [200, 200] equal to the golden; different frames give one linear key per frame from the first key to the last, each equal to `layer.sample(at:)` × 100; a bake over `maxBakedKeys` throws `unsupported("scale track")`; all scale-static goldens are unchanged | an axis is dropped, the bake skips a frame or leaves the scene range, or a huge bake is written |
+| MT-3 | `LottieScaleTrackTests`: scaleX keys only gives keys with scaleY's constant in the second slot; both at the same frames and easing gives shared keys [100, 100] to [200, 200] equal to the golden; different frames give one linear key per frame from the first key to the last, each equal to `layer.sample(at:)` × 100; a bake over `maxBakedKeys` throws `unsupported("scale track")`; keys all past the scene end, or a scene of 0 frames, export the static frame-0 value without trapping; all scale-static goldens are unchanged | an axis is dropped, the bake skips a frame or leaves the scene range, or a huge bake is written |
 | MT-4 | `LottieGradientAlphaTests`: a linear and a radial gradient with one stop at alpha 0.25 export `g.k` with the color stops then the alpha stops, `g.p` the stop count, equal to a golden; an opaque gradient's bytes equal today's; a NaN alpha throws `nonFiniteValue` | alpha is dropped, `p` counts alpha stops, or an opaque gradient's bytes change |
 | MT-5 | `FlareBudgetTests` (below), on a `reference` scene the test checks has 20 layers, 1,000 shapes, 300 frames, all six tracks keyed on every layer, and 50 instances of `outer` | a median exceeds its budget, or the scene drifts from the blueprint's `reference` |
 

@@ -56,7 +56,8 @@ Checked against the code on f05665f:
   and the #269 run). The extra time is the parallel load, not the dab.
 - Precedent for tables already in CoreRaster: `Adjustments.swift`'s sRGB tone
   mapping tabulates encode, map, decode once per call (`toneTableSteps`), and
-  `mappingPixels` is the non-throwing one-pass loop over storage (#248).
+  `mappingPixels` is one pass over storage with no per-pixel bounds checks
+  or `try` (#248); it throws once, for a non-finite result.
 
 `Histogram.swift` also encodes per pixel for its sRGB axis. It is not on the
 brush, copy or merge path (Curves no longer recounts per pointer sample), so
@@ -139,10 +140,14 @@ extension PixelBuffer {
 }
 // Both free `composite` functions stay, unchanged in signature: each copies
 // the backdrop and calls the method, so there is one loop, not two.
-// PixelBuffer.swift (RT-3): one internal writer,
-//   mutating func writeRow(_ values: ArraySlice<Float>, x: Int, y: Int)
-// with `copyRows`' contract (the caller checked the span and that every
-// value is finite); the file header lists it among the writers.
+// PixelBuffer.swift (RT-3): one internal helper that reads and writes a row
+// span in a single exclusive access, so the backdrop is never copied:
+//   mutating func updateRow<R>(x: Int, y: Int, count: Int,
+//                              _ body: (inout ArraySlice<Float>) throws -> R) rethrows -> R
+// with `copyRows`' contract (the caller checked the span and writes only
+// finite values); the file header lists it among the writers. Reading the
+// backdrop through `components` while writing would hold a second reference
+// to the storage and copy all of it on the first write.
 ```
 
 **Approved deviation (RT-3).** CoreRaster's mutating calls so far leave the
@@ -192,11 +197,12 @@ RT-3 composite in place (self is the backdrop)
   clip the overlap rows and columns once (the same guards as today)
   for each overlap row:
     if mode == .normal, opacity == 1, every source alpha in the row span == 1:
-      writeRow(source row span)                                    # equals the general formula by ==
+      updateRow: copy the source row span in                       # equals the general formula by ==
     else:
-      scratch[i] = sourceOver(source px, self px, mode, opacity)  # today's private per-pixel function
-      if any scratch component is not finite: throw setPixel's message for the first one
-      writeRow(scratch)
+      updateRow { span in
+        scratch[i] = sourceOver(source px, span px, mode, opacity) # today's private per-pixel function
+        if any scratch component is not finite: throw setPixel's message for the first one   # span untouched
+        span = scratch }
   free composite(source, onto: b, x, y, mode, opacity): var r = b; try r.composite(source, x, y, mode, opacity); return r
 
 RT-4 smallDab budget: measure the test thread's CPU time (clock_gettime CLOCK_THREAD_CPUTIME_ID,
@@ -214,8 +220,11 @@ wave: its three `DisplayBytes.swift` entries move with the code (the
 truncate-instead-of-round entry follows the byte rule to
 `DisplayTransfer.swift` and keeps its `DisplayBytesTests` filter; the
 premultiply and color-space entries get new anchors that still plant those
-bugs). RT-3 keeps `sourceOver` and the opacity guard text unchanged, so the
-three `Composite.swift` entries stay valid and RT-3 does not edit that file.
+bugs). RT-3 does not edit `CoreRaster.json`: it keeps the three
+`Composite.swift` anchors (`sourceOver`'s body and the opacity guard) and
+the five `PixelBuffer.swift` anchors (the size, bounds and finite guards and
+`unpremultiplied`) unchanged and unique, so `updateRow` and the new loop must
+not repeat their text.
 `CoreColor.json` anchors the `pow` lines in `ColorSpace.swift`, which RT-1
 leaves alone (the tables derive from them). Every new entry goes in the
 task's own plan file.
@@ -230,7 +239,7 @@ descriptions.
 |---|---|---|---|---|---|
 | RT-1 | #309 (part) | `DisplayTransfer`: decode table, encode thresholds, the byte rule; an exhaustive release-only check of the sRGB encode | `Sources/CoreColor/DisplayTransfer.swift`, `Tests/CoreColorTests/DisplayTransferTests.swift`, `Tests/mutations/CoreColorDisplayTransfer.json`, `docs/c4/parts/creative-core/corecolor/color-spaces.json` | – | ~300 |
 | RT-2 | #309 (part) | `rgba8` and `init(rgba8:)` over `DisplayTransfer`, one pass, no `try` per pixel; `rgba8(x:y:width:height:colorSpace:)` | `Sources/CoreRaster/DisplayBytes.swift`, `Tests/CoreRasterTests/DisplayBytesFastPathTests.swift`, `Tests/mutations/CoreRaster.json`, `Tests/mutations/CoreRasterDisplayBytes.json`, `docs/c4/parts/creative-core/coreraster/pixel-buffer.json` | RT-1 | ~300 |
-| RT-3 | #309 (part) | In-place `composite(_:x:y:mode:opacity:)`; the free functions call it; the opaque `.normal` row copy; `writeRow` | `Sources/CoreRaster/Composite.swift`, `Sources/CoreRaster/PixelBuffer.swift`, `Tests/CoreRasterTests/CompositeInPlaceTests.swift`, `Tests/mutations/CoreRasterCompositeInPlace.json`, `docs/c4/parts/creative-core/coreraster/compositing.json` | – | ~300 |
+| RT-3 | #309 (part) | In-place `composite(_:x:y:mode:opacity:)`; the free functions call it; the opaque `.normal` row copy; `updateRow` | `Sources/CoreRaster/Composite.swift`, `Sources/CoreRaster/PixelBuffer.swift`, `Tests/CoreRasterTests/CompositeInPlaceTests.swift`, `Tests/mutations/CoreRasterCompositeInPlace.json`, `docs/c4/parts/creative-core/coreraster/compositing.json` | – | ~300 |
 | RT-4 | #300 (closes) | `smallDabOn12MegapixelsIsFast` times its own thread's CPU time; the helper in `Support.swift` | `Tests/CoreRasterTests/RetouchBoundsTests.swift`, `Tests/CoreRasterTests/Support.swift` | – | ~60 |
 | RT-5 | #309 (closes) | The release budgets on one core and on four; `feature-done` | `Tests/CoreRasterTests/RasterThroughputBudgetTests.swift` | RT-2, RT-3 | ~180 |
 
@@ -241,9 +250,9 @@ Build waves inside the feature: **a** RT-1, RT-3, RT-4 (disjoint files);
 
 | id | test | fails when |
 |---|---|---|
-| RT-1 | `DisplayTransferTests`: `decode` equals `Color3.converted` with `==` on every byte for sRGB (the channels are independent), and for Display P3 on every gray, every one-channel ramp with the other two at 0, 128 and 255, and 100,000 seeded triples; `encode` equals the reference (converted, `clampedToUnit`, times 255, rounded) on 1,000,000 seeded Doubles in -0.5...1.5 and on both sides of every threshold (`least[k]` gives k, its next-lower Double gives k - 1) for both spaces; NaN gives 0 and ±infinity clamps; `DisplayTransfer(.oklab)` throws. Release only (`.serialized`, `.enabled(if: optimized)`): every Float in 0...1 encodes in sRGB to the reference byte | a table entry is off by one, the P3 matrix is skipped or applied in the wrong order, a threshold sits one value off, or a NaN traps |
+| RT-1 | `DisplayTransferTests` (`@testable import CoreColor`, to read the thresholds): `decode` equals `Color3.converted` with `==` on every byte for sRGB (the channels are independent), and for Display P3 on every gray, every one-channel ramp with the other two at 0, 128 and 255, and 100,000 seeded triples; `encode` equals the reference (converted, `clampedToUnit`, times 255, rounded) on 1,000,000 seeded Doubles in -0.5...1.5 and on both sides of every threshold (`least[k]` gives k, its next-lower Double gives k - 1) for both spaces; NaN gives 0 and ±infinity clamps; `DisplayTransfer(.oklab)` throws. Release only (`.serialized`, `.enabled(if: optimized)`): every Float in 0...1 encodes in sRGB to the reference byte | a table entry is off by one, the P3 matrix is skipped or applied in the wrong order, a threshold sits one value off, or a NaN traps |
 | RT-2 | `DisplayBytesFastPathTests`, against a private copy of today's two loops: for sRGB and Display P3, a buffer of every byte value per channel (gray and one-channel ramps) at alpha 0, 1, 128 and 255 decodes to equal components and encodes back to equal bytes; 50 seeded `randomPixel` buffers and pixels with alpha 1e-38 or 1e-45 (the overflow clamp) encode equally; `rgba8(x:y:width:height:)` equals `cropped` then `rgba8` for each tile of a 600 x 300 buffer and for 1 x 1 corners; a rect hanging off any edge, a zero size and a bad space throw; every existing `DisplayBytesTests` passes unchanged | one byte differs, the region reads the wrong rows, or a bad rect is accepted |
-| RT-3 | `CompositeInPlaceTests`, against a private copy of today's per-pixel loop: every `BlendMode` at opacities 0, 0.37 and 1, with sources hanging off each edge and corner and a source wholly outside, equals the reference with `==`; the free functions give the same; an opacity of NaN, -0.1 or 1.1 throws and changes nothing; a source pixel with alpha 1e-45 and a color of 1e30 throws in both, with the same message, and leaves every component of the in-place buffer finite; an opaque `.normal` source at opacity 1 equals the reference, and so does one whose row holds a single pixel of alpha 0.999; every existing `CompositeTests`, `CompositeOffsetTests` and `CompositeOffsetAdversarialTests` passes unchanged | a pixel differs, a throw case differs, a non-finite value is stored, or the row copy takes a row that is not opaque |
+| RT-3 | `CompositeInPlaceTests` (`@testable import CoreRaster`: its reference copy of today's loop and of `sourceOver` calls the internal `BlendMode.blend`), against that copy: every `BlendMode` at opacities 0, 0.37 and 1, with sources hanging off each edge and corner and a source wholly outside, equals the reference with `==`; the free functions give the same; an opacity of NaN, -0.1 or 1.1 throws and changes nothing; a source pixel with alpha 1e-45 and a color of 1e30 throws in both, with the same message, and leaves every component of the in-place buffer finite; an opaque `.normal` source at opacity 1 equals the reference, and so does one whose row holds a single pixel of alpha 0.999; every existing `CompositeTests`, `CompositeOffsetTests` and `CompositeOffsetAdversarialTests` passes unchanged | a pixel differs, a throw case differs, a non-finite value is stored, or the row copy takes a row that is not opaque |
 | RT-4 | `smallDabOn12MegapixelsIsFast` asserts the thread CPU time of the `cloned` call is under 1.5 s and keeps its four pixel checks; `scripts/ci` prints `CI: PASS` three runs in a row on a 4-core Linux box with nothing else running; the helper is checked once against a busy loop (its CPU time grows with work and is under the wall clock) | the budget is widened, or the test still fails because the thread waited for a core |
 | RT-5 | `RasterThroughputBudgetTests` (below) | a median exceeds its budget |
 
@@ -260,7 +269,7 @@ is skipped and the equivalence tests above carry the gate.
 | quality row | budget (release, best of 3) | test |
 |---|---|---|
 | PB-15, core part: Copy and Paste of 12 MP | one core: `rgba8()` ≤ 30 ms and `init(rgba8:)` ≤ 30 ms. Four cores (four 4000 x 750 bands through `DispatchQueue.concurrentPerform`): each ≤ 10 ms. That leaves Photo at least 60 ms of its 120 ms | `RasterThroughputBudgetTests.copyAndPasteWithinBudget` |
-| PB-16, core part: Merge Down and Flatten of 12 MP | one core: one in-place composite ≤ 60 ms, so Merge Down ≤ 60 ms and Flatten of three layers (two composites) ≤ 120 ms. Four cores (bands as above): ≤ 20 ms per composite. Both far inside 400 ms | `RasterThroughputBudgetTests.mergeAndFlattenWithinBudget` |
+| PB-16, core part: Merge Down and Flatten of 12 MP | one core: one in-place composite of a seeded source (straight colors in 0...1, alpha in 0.05...0.95, so no row takes the opaque copy), `.normal`, opacity 1, ≤ 60 ms, so Merge Down ≤ 60 ms and Flatten of three layers (two composites) ≤ 120 ms. Four cores (bands as above): ≤ 20 ms per composite. Both far inside 400 ms. The opaque row copy and `.multiply` at 0.37 are reported, not gated | `RasterThroughputBudgetTests.mergeAndFlattenWithinBudget` |
 | Region encode costs its pixels | one 256 px tile of a 12 MP buffer ≤ 0.5 ms | `RasterThroughputBudgetTests.tileEncodeWithinBudget` |
 | Same bytes, same pixels | every equivalence test above, in debug, on every `scripts/ci` run | RT-1 to RT-3 tests |
 | The dab budget holds under load | CPU time ≤ 1.5 s in debug, three full runs on 4 cores | `RetouchBoundsTests.smallDabOn12MegapixelsIsFast` |

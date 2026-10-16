@@ -4,7 +4,9 @@ Engine features, one feature-lead session each (`docs/factory/lead.md`).
 Wave 1 shipped. Wave 2 takes the open `needs-core` asks from Photo and Flare
 and the `gap` issue #300: three features, side by side. They wait on
 nothing and own no file in common. Each packet lists its tasks, owned
-files, acceptance tests and budgets. Base for wave 2: `origin/dev` f05665f
+files, acceptance tests and budgets. The priority column ranks the
+features; the source issues carry their own labels (#220 to #225 and #228 are
+`p3`, #226, #218 and #227 `p2`, #309 and #300 have none). Base for wave 2: `origin/dev` f05665f
 (2026-10-16).
 
 | wave | feature | packet | covers | priority | waits on | unblocks in the apps | feature issue | status |
@@ -71,7 +73,7 @@ feature once `main` holds them.
 
 | file | owner in wave 2 |
 |---|---|
-| `Sources/CoreColor/DisplayTransfer.swift`, `Sources/CoreRaster/DisplayBytes.swift`, `Composite.swift`, `PixelBuffer.swift`, their tests, `Tests/mutations/CoreRaster.json`, `docs/c4/parts/creative-core/corecolor/`, `docs/c4/parts/creative-core/coreraster/` | `raster-throughput` |
+| `Sources/CoreColor/DisplayTransfer.swift`, `Sources/CoreRaster/DisplayBytes.swift`, `Composite.swift`, `PixelBuffer.swift`, their tests, `Tests/CoreRasterTests/RetouchBoundsTests.swift`, `Tests/CoreRasterTests/Support.swift`, `Tests/mutations/CoreRaster.json`, `docs/c4/parts/creative-core/corecolor/`, `docs/c4/parts/creative-core/coreraster/` | `raster-throughput` |
 | `Sources/FlareCore/StateMachine.swift`, `StateMachineValidation.swift`, `SymbolCommands.swift`, `Command.swift`, `CommandRegistry.swift`, `Timeline.swift`, and the new `StateMachineIssues.swift`, `StateMachineCommands.swift`, `MachineStateCommands.swift`, `TransitionCommands.swift`, `MachineInputCommands.swift`, `MachinePlayer.swift` | `state-machine` |
 | `Tests/FlareCoreTests/CommandRegistryTests.swift`, `UndoPropertyTests.swift`, `CommandFuzzTests.swift`, `SymbolCommandsTests.swift`; `docs/c4/parts/creative-core/flarecore/statemachine.json`, `symbols.json`; `docs/engineering.md` | `state-machine` (SM-1 also writes `Onion.swift` into engineering.md's evaluation list for `motion-tracks`) |
 | `Sources/FlareCore/Export/LottieExporter.swift`, the new `Onion.swift`, `docs/c4/parts/creative-core/flarecore/timeline.json`, `export.json` | `motion-tracks` |

@@ -8,8 +8,8 @@ deterministic runtime player; and `RenameSymbol`.
 
 **Covers:** #220 (LC-11a), #221 (LC-11b), #222 (LC-11c), #223 (LC-11d),
 #224 (LC-11e), #225 (LC-12), #226 (LC-12b). #220 closes with SM-1, #226 with
-SM-2, #221 with SM-3, #225 with SM-7, #222 with SM-4, #223 with SM-5, #224
-with SM-6. It also finishes #101 (Q5): Q5a to Q5e are closed, and of the
+SM-2, #225 with SM-7, #221 and #222 with SM-4 (#221's fuzz lands there), #223
+with SM-5, #224 with SM-6. It also finishes #101 (Q5): Q5a to Q5e are closed, and of the
 command families #101 lists, only the state machine family is still
 missing; the lead comments on #101 when SM-6 merges, and the captain closes
 it.
@@ -38,12 +38,12 @@ command touches `Document.stateMachines` today.
 
 ## Journey steps
 
-Proven through a real `CommandEngine` on a scene `s` of 24 frames (the
-`StateMachineTests.document()` shape), each undo exact:
+Proven through a real `CommandEngine` on a document with scene `s` (24
+frames) and symbol `sym`, each undo exact:
 
 1. Add machine "button" with first state `idle` (frames 0 to 10): it is the
    initial state and `issues` is empty.
-2. Add states `hover` (11 to 24) and `pressed`: `issues` warns that each
+2. Add states `hover` (11 to 19) and `pressed` (20 to 24): `issues` warns that each
    can't be reached from `idle`. Add transitions `idle -> hover` on
    `pointerEnter` and `hover -> idle` on `pointerExit`: the `hover` warning
    goes.
@@ -55,7 +55,8 @@ Proven through a real `CommandEngine` on a scene `s` of 24 frames (the
    Nothing changes on any refusal.
 5. A player started on "button" runs the script advance 5, fire
    `pointerEnter`, advance 20, set `down` true, fire `click`, advance 3 and
-   gives the same frame trace on every run.
+   gives the trace `idle 5`, `hover 11`, `hover 13`, `pressed 20`,
+   `pressed 23` on every run.
 6. Rename symbol `sym` to "Bird"; "" is refused. Undo all gives back the
    start document.
 
@@ -70,10 +71,10 @@ anything; `CommandEngine.perform`'s validation stays the backstop.
 | `issues(in:)` | a valid machine with every state reachable: `[]` | never throws. Each broken rule `validateStateMachines` checks today is an `.error` issue with today's wording, in today's order; a state the initial state can't reach is a `.warning` on that state | – |
 | Machine commands | – | missing machine `stateMachineNotFound`; an id in use `duplicateID`; an empty name `emptyName`; a first state or initial state that breaks a rule `invalidMachine(issue)` | – |
 | State commands | – | missing state `stateNotFound`; removing a state a transition names, or the initial state, `invalidMachine(issue)` whose issue names that transition or state; a bad scene or frame range `invalidMachine(issue)` | – |
-| Transition commands | – | an index out of range `invalidIndex`; a `from` or `to` that names no state, or a condition that breaks a rule, `invalidMachine(issue)` | – |
+| Transition commands | – | an update or remove index out of range `invalidIndex` (add clamps, as `AddSymbol`); a `from` or `to` that names no state, or a condition that breaks a rule, `invalidMachine(issue)` | – |
 | Input commands | – | missing input `inputNotFound`; a duplicate name or a non-finite default `invalidMachine(issue)`; an update to another type `inputTypeChange`; removing an input a condition uses `invalidMachine(issue)` naming that transition | – |
 | `RenameSymbol` | – | missing symbol `symbolNotFound`; "" `emptyName` | – |
-| `MachinePlayer` | a trigger no transition takes, or an unknown one: nothing changes | a missing machine `TimelineError.machineNotFound`; a machine with an error issue `TimelineError.invalidMachine(issue)`; `set` of an unknown input, another type or a non-finite number returns false and changes nothing; `advance` by 0 or less changes nothing | – |
+| `MachinePlayer` | a trigger no transition takes, or an unknown one: nothing changes | a missing machine `TimelineError.stateMachineNotFound`; a machine with an error issue `TimelineError.invalidMachine(issue)`; `set` of an unknown input, another type or a non-finite number returns false and changes nothing; `advance` by 0 or less changes nothing | – |
 
 ## Contract slice
 
@@ -139,7 +140,7 @@ public struct MachinePlayer: Sendable, Hashable {
     public mutating func fire(_ trigger: String)        // a transition that fires restarts its target at startFrame, itself included
     public mutating func advance(frames count: Int)     // loops the current state's range
 }
-// Timeline.swift (SM-7): TimelineError gains machineNotFound(String) and invalidMachine(MachineIssue).
+// Timeline.swift (SM-7): TimelineError gains stateMachineNotFound(String) and invalidMachine(MachineIssue).
 // StateMachine.swift (SM-7): one internal `firing(from:trigger:inputs:) -> Transition?`
 // that `next` and the player share, so the first-match rule lives once.
 ```
@@ -183,10 +184,12 @@ SM-3..SM-6 every machine command:
   undo: put the recorded part back at its index; encode params only (CodingKeys)
 
 SM-7 player:
-  init: machine = doc machine or throw machineNotFound; error issue -> throw invalidMachine
+  init: machine = doc machine or throw stateMachineNotFound; error issue -> throw invalidMachine
         stateID = initialState; frame = its startFrame; inputs = defaults
   fire(t): if let tr = machine.firing(from: stateID, trigger: t, inputs: inputs) { stateID = tr.to; frame = start(tr.to) }
-  advance(n): guard n > 0; len = end - start + 1; frame = start + ((frame - start) + n % len) % len   # no overflow
+  advance(n): guard n > 0                     # durations have no upper limit, so work in UInt:
+    len = UInt(end - start) + 1; step = (UInt(frame - start) + UInt(n) % len) % len
+    frame = start + Int(step)                 # step <= end - start, so this fits
   set(name, v): guard declared, same type, finite else false; inputs[name] = v; true
 ```
 
@@ -197,19 +200,27 @@ Every task is one PR to `dev`: at most 400 changed lines and 15 files, label
 `Fast-Check: pass`, `Head:`. SM-8 also carries `feature-done`.
 
 **Shared test files.** `CommandRegistryTests.swift` (`expectedIDs`, its
-count of 44, the samples and `sampleDocument`) and `UndoPropertyTests.swift`
-are edited by SM-2 to SM-6, and `StateMachineCommands.swift`'s `all` by SM-3
-to SM-6, so they form one chain, SM-2 → SM-3 → SM-4 → SM-5 → SM-6, each
-rebased on the one before. SM-3 also gives `sampleDocument` a machine (so
-every machine sample is valid on it) and `CommandFuzzTests.randomDocument`
-zero to two random machines (so fuzzed machine commands hit real machines);
-the fuzz templates come from the registry samples, so SM-4 to SM-6 are
-fuzzed by adding samples. SM-1 and SM-7 touch neither and run beside the
-chain.
+count of 44, the samples and `sampleDocument`) is edited by SM-2 to SM-6,
+`UndoPropertyTests.swift` by SM-3 to SM-6 (SM-2's steps join
+`SymbolCommandsTests.undoSteps`, already in `allSteps`), and
+`StateMachineCommands.swift`'s `all` by SM-3 to SM-6. So they form one chain,
+SM-2 → SM-3 → SM-4 → SM-5 → SM-6, each rebased on the one before. SM-3 gives
+`sampleDocument` a machine, so every machine sample is valid on it. The mixed
+property starts from `Fixtures.withSymbol()`, which has no machine, so the
+machine steps must cope with none; SM-3's `AddStateMachine` step makes them
+for later steps. SM-4 gives `CommandFuzzTests.randomDocument` zero to two
+random valid machines, so fuzzed machine commands hit real ones (#221's
+fuzz); the fuzz templates come from the registry samples, so SM-5 and SM-6
+are fuzzed by adding samples. SM-1 and SM-7 touch none of these files and
+run beside the chain.
 
-**Mutation plans.** Each task puts its entries in its own plan file. No
-entry in `Tests/mutations/*.json` anchors a file this feature edits except
-the ones it creates, so no repointing.
+**Mutation plans.** Each task puts its entries in its own plan file.
+`Tests/mutations/FlareCore.json` anchors ten lines of the engine code in
+`Command.swift` and two lines of `CommandRegistry.swift`, one of them the
+`SwatchCommands.all,` line of `builtInFamilies`. SM-3 to SM-6 keep all twelve
+unchanged and unique: the new family line goes after `InstanceCommands.all,`
+and the new `CommandError` cases go in the enum, away from the engine. No
+other anchor sits in a file this feature edits.
 
 **C4 and docs.** SM-1 is the only task here that edits C4 parts or
 `docs/engineering.md`. It adds `StateMachineIssues.swift`,
@@ -225,18 +236,18 @@ adds `StateMachineIssues.swift`, `MachinePlayer.swift` and, for
 |---|---|---|---|---|---|
 | SM-1 | #220 (closes) | `MachineIssue`, `StateMachine.issues(in:)`; `validateStateMachines` over it with today's messages; C4 parts and the engineering.md lists | `Sources/FlareCore/StateMachineIssues.swift`, `Sources/FlareCore/StateMachineValidation.swift`, `Tests/FlareCoreTests/StateMachineIssuesTests.swift`, `Tests/mutations/FlareMachineIssues.json`, `docs/c4/parts/creative-core/flarecore/statemachine.json`, `docs/c4/parts/creative-core/flarecore/symbols.json`, `docs/engineering.md` | – | ~320 |
 | SM-2 | #226 (closes) | `RenameSymbol` | `Sources/FlareCore/SymbolCommands.swift`, `Tests/FlareCoreTests/RenameSymbolTests.swift`, `Tests/FlareCoreTests/SymbolCommandsTests.swift` (its samples and `undoSteps`), `Tests/FlareCoreTests/CommandRegistryTests.swift`, `Tests/mutations/FlareRenameSymbol.json` | – | ~140 |
-| SM-3 | #221 (closes) | The family and its line in `builtInFamilies`; `AddStateMachine`, `RenameStateMachine`, `RemoveStateMachine`, `SetInitialState`; `CommandError.stateMachineNotFound` and `.invalidMachine`; a machine in `sampleDocument` and in the fuzz document | `Sources/FlareCore/StateMachineCommands.swift`, `Sources/FlareCore/Command.swift`, `Sources/FlareCore/CommandRegistry.swift`, `Tests/FlareCoreTests/MachineCommandTests.swift`, `Tests/FlareCoreTests/CommandRegistryTests.swift`, `Tests/FlareCoreTests/UndoPropertyTests.swift`, `Tests/FlareCoreTests/CommandFuzzTests.swift`, `Tests/mutations/FlareMachineCommands.json` | SM-1, SM-2 (test chain) | ~360 |
-| SM-4 | #222 (closes) | `AddMachineState`, `UpdateMachineState`, `RemoveMachineState`; `CommandError.stateNotFound` | `Sources/FlareCore/MachineStateCommands.swift`, `Sources/FlareCore/StateMachineCommands.swift` (its `all`), `Sources/FlareCore/Command.swift`, `Tests/FlareCoreTests/MachineStateCommandTests.swift`, `Tests/FlareCoreTests/CommandRegistryTests.swift`, `Tests/FlareCoreTests/UndoPropertyTests.swift`, `Tests/mutations/FlareMachineStates.json` | SM-3 | ~280 |
+| SM-3 | #221 (part) | The family and its line in `builtInFamilies`; `AddStateMachine`, `RenameStateMachine`, `RemoveStateMachine`, `SetInitialState`; `CommandError.stateMachineNotFound` and `.invalidMachine`; a machine in `sampleDocument` | `Sources/FlareCore/StateMachineCommands.swift`, `Sources/FlareCore/Command.swift`, `Sources/FlareCore/CommandRegistry.swift`, `Tests/FlareCoreTests/MachineCommandTests.swift`, `Tests/FlareCoreTests/CommandRegistryTests.swift`, `Tests/FlareCoreTests/UndoPropertyTests.swift`, `Tests/mutations/FlareMachineCommands.json` | SM-1, SM-2 (test chain) | ~330 |
+| SM-4 | #222 (closes), #221 (closes) | `AddMachineState`, `UpdateMachineState`, `RemoveMachineState`; `CommandError.stateNotFound`; random machines in the fuzz document | `Sources/FlareCore/MachineStateCommands.swift`, `Sources/FlareCore/StateMachineCommands.swift` (its `all`), `Sources/FlareCore/Command.swift`, `Tests/FlareCoreTests/MachineStateCommandTests.swift`, `Tests/FlareCoreTests/CommandRegistryTests.swift`, `Tests/FlareCoreTests/UndoPropertyTests.swift`, `Tests/FlareCoreTests/CommandFuzzTests.swift`, `Tests/mutations/FlareMachineStates.json` | SM-3 | ~320 |
 | SM-5 | #223 (closes) | `AddTransition`, `UpdateTransition`, `RemoveTransition`; the `invalidIndex` doc line | `Sources/FlareCore/TransitionCommands.swift`, `Sources/FlareCore/StateMachineCommands.swift` (its `all`), `Sources/FlareCore/Command.swift` (doc comment only), `Tests/FlareCoreTests/TransitionCommandTests.swift`, `Tests/FlareCoreTests/CommandRegistryTests.swift`, `Tests/FlareCoreTests/UndoPropertyTests.swift`, `Tests/mutations/FlareTransitions.json` | SM-4 | ~260 |
 | SM-6 | #224 (closes) | `AddMachineInput`, `UpdateMachineInput`, `RemoveMachineInput`; `CommandError.inputNotFound` and `.inputTypeChange` | `Sources/FlareCore/MachineInputCommands.swift`, `Sources/FlareCore/StateMachineCommands.swift` (its `all`), `Sources/FlareCore/Command.swift`, `Tests/FlareCoreTests/MachineInputCommandTests.swift`, `Tests/FlareCoreTests/CommandRegistryTests.swift`, `Tests/FlareCoreTests/UndoPropertyTests.swift`, `Tests/mutations/FlareMachineInputs.json` | SM-5 | ~280 |
-| SM-7 | #225 (closes) | `MachinePlayer`; `TimelineError.machineNotFound` and `.invalidMachine`; the shared internal `firing` | `Sources/FlareCore/MachinePlayer.swift`, `Sources/FlareCore/StateMachine.swift`, `Sources/FlareCore/Timeline.swift`, `Tests/FlareCoreTests/MachinePlayerTests.swift`, `Tests/mutations/FlareMachinePlayer.json` | SM-1 | ~260 |
+| SM-7 | #225 (closes) | `MachinePlayer`; `TimelineError.stateMachineNotFound` and `.invalidMachine`; the shared internal `firing` | `Sources/FlareCore/MachinePlayer.swift`, `Sources/FlareCore/StateMachine.swift`, `Sources/FlareCore/Timeline.swift`, `Tests/FlareCoreTests/MachinePlayerTests.swift`, `Tests/mutations/FlareMachinePlayer.json` | SM-1 | ~260 |
 | SM-8 | – | `MachineJourneyTests`: the six journey steps through one engine and one player; `feature-done` | `Tests/FlareCoreTests/MachineJourneyTests.swift` | SM-6, SM-7 | ~180 |
 
 Build waves inside the feature: **a** SM-1, SM-2; **b** SM-3, SM-7; **c**
 SM-4; **d** SM-5; **e** SM-6; **f** SM-8. After **a**, #220 and #226 are
-closed (LM-10 can start once `main` holds SM-2); after **b**, #221 and #225;
-after **e**, #222, #223, #224, and LM-11 and LM-12 can start once `main`
-holds them.
+closed (LM-10 can start once `main` holds SM-2); after **b**, #225 (LM-12);
+after **c**, #221 and #222; after **d**, #223; after **e**, #224, and LM-11
+can start once `main` holds it.
 
 ## Acceptance test per task
 
@@ -244,11 +255,11 @@ holds them.
 |---|---|---|
 | SM-1 | `StateMachineIssuesTests`: every existing `StateMachineTests` and `MachineInputTests` validation test passes; `validateMessagesStayTheSame`: for each case of `badReferenceThrows` (8) and `validationRejects` (4), and a non-finite default, `FlareFormat.validate` throws `FormatError.invalid` with the exact text recorded from `dev` before the change; an unreachable state is one `.warning` on that state and validate passes; a transition to an unknown state is an `.error` with its `transitionIndex`; a seeded run of 500 random machines (`SplitMix64`) agrees: validate throws exactly when `issues` has an error, with the first error's message | a message changes, the order changes which error comes first, a warning blocks validate, or an issue loses its index |
 | SM-2 | `RenameSymbolTests`: rename and undo exact; "" throws `emptyName`; a missing id throws `symbolNotFound`; the command is in `SymbolCommands.all`, sampled, and in `SymbolCommandsTests.undoSteps` | an empty name lands or undo is inexact |
-| SM-3 | `MachineCommandTests`: add, rename, remove and set initial, each undo exact; remove then undo puts the machine back at its index; add with an id in use throws `duplicateID`; "" throws `emptyName`; a first state on a missing scene throws `invalidMachine` with that state's id; set initial to an unknown state throws `invalidMachine`; the family is registered, sampled and in the mixed `UndoPropertyTests`; `CommandFuzzTests` runs with machines in its random documents | a refusal changes the document, undo is inexact, or the fuzz never reaches a machine |
-| SM-4 | `MachineStateCommandTests`: add, update and remove a state, each undo exact; removing a state that transition 1 names throws `invalidMachine` whose issue has `transitionIndex == 1`; removing the initial state throws `invalidMachine` naming it; an update past the scene's duration throws; a missing state throws `stateNotFound`; sampled and in `UndoPropertyTests` | the refusal does not name the transition, or a dangling transition is committed |
-| SM-5 | `TransitionCommandTests`: add (append and at an index), update and remove, each undo exact; an update whose `to` names an unknown state throws `invalidMachine`; index -1 and count throw `invalidIndex`; a condition on an unknown input throws; sampled and in `UndoPropertyTests` | an update to an unknown state lands, or undo puts a transition back at another index |
+| SM-3 | `MachineCommandTests`: add, rename, remove and set initial, each undo exact; remove then undo puts the machine back at its index; add with an id in use throws `duplicateID`; "" throws `emptyName`; a first state on a missing scene throws `invalidMachine` with that state's id; set initial to an unknown state throws `invalidMachine`; the family is registered, sampled and in the mixed `UndoPropertyTests`, whose steps run from a document with no machine | a refusal changes the document or undo is inexact |
+| SM-4 | `MachineStateCommandTests`: add, update and remove a state, each undo exact; on a machine where only transition 1 names a state, removing that state throws `invalidMachine` whose issue has `transitionIndex == 1`; removing the initial state throws `invalidMachine` naming it; an update past the scene's duration throws; a missing state throws `stateNotFound`; sampled and in `UndoPropertyTests`; `CommandFuzzTests` runs with machines in its random documents | the refusal does not name the transition, a dangling transition is committed, or the fuzz never reaches a machine |
+| SM-5 | `TransitionCommandTests`: add (append and at an index), update and remove, each undo exact; an update whose `to` names an unknown state throws `invalidMachine`; update and remove at index -1 and at the count throw `invalidIndex`, while add clamps -1 to 0 and a large index to the end; a condition on an unknown input throws; sampled and in `UndoPropertyTests` | an update to an unknown state lands, or undo puts a transition back at another index |
 | SM-6 | `MachineInputCommandTests`: add, update default and remove, each undo exact; an update from bool to number throws `inputTypeChange`; removing an input a condition of transition 2 uses throws `invalidMachine` with `transitionIndex == 2`; a duplicate name and a NaN default throw; sampled and in `UndoPropertyTests` | a kind change lands, or a condition is left naming a missing input |
-| SM-7 | `MachinePlayerTests`: on the button machine of `StateMachineTests.document()`, the script advance 5, fire `pointerEnter`, advance 20, fire `pointerExit`, advance 3 gives the trace `idle 5`, `hover 11`, `hover 17`, `idle 0`, `idle 3`, and the same trace on a second player; a self-transition restarts its state at `startFrame`; an unknown trigger and `advance(0)` change nothing; `advance(Int.max)` stays in range; `set` of an unknown input, another type or NaN returns false; a missing machine and a machine with an error issue throw; `next(from:trigger:inputs:)` still passes every `StateMachineTests` and `MachineInputTests` case | the trace differs between runs, a frame leaves its range, or the first-match rule differs between `next` and the player |
+| SM-7 | `MachinePlayerTests`: on machine `m` of `StateMachineTests.document()` (idle 0 to 10, hover 11 to 24), the script advance 5, fire `pointerEnter`, advance 20, fire `pointerExit`, advance 3 gives the trace `idle 5`, `hover 11`, `hover 17`, `idle 0`, `idle 3`, and the same trace on a second player; a self-transition restarts its state at `startFrame`; an unknown trigger and `advance(0)` change nothing; `advance(Int.max)` stays in range, and so does any advance in a state spanning 0 to `Int.max` (a scene of `Int.max` frames is valid); `set` of an unknown input, another type or NaN returns false; a missing machine and a machine with an error issue throw; `next(from:trigger:inputs:)` still passes every `StateMachineTests` and `MachineInputTests` case | the trace differs between runs, a frame leaves its range, or the first-match rule differs between `next` and the player |
 | SM-8 | `MachineJourneyTests`: the six journey steps above in order, on one engine, then undo all gives back the start document and redo all gives back the end | any step's refusal changes the document, or the trace or the final document differs |
 
 ## Quality tests
