@@ -14,31 +14,52 @@
     "filter": "DisplayTransferTests"
   },
   {
-    "note": "display transfer search compares a threshold strictly, one value off",
+    "note": "display transfer bucket reaches its threshold one value early",
     "file": "Sources/CoreColor/DisplayTransfer.swift",
-    "anchor": "i += least[i + 1] <= v ? 1 : 0",
-    "replacement": "i += least[i + 1] < v ? 1 : 0",
+    "anchor": "(1 << baseShift - t)) &- start.bitPattern",
+    "replacement": "(1 << baseShift - t + 1)) &- start.bitPattern",
+    "filter": "DisplayTransferTests"
+  },
+  {
+    "note": "display transfer buckets span 5 mantissa bits, so one holds two thresholds",
+    "file": "Sources/CoreColor/DisplayTransfer.swift",
+    "anchor": "@inlinable static var bucketShift: UInt64 { 52 - 8 }",
+    "replacement": "@inlinable static var bucketShift: UInt64 { 52 - 5 }",
+    "filter": "DisplayTransferTests"
+  },
+  {
+    "note": "display transfer bucket floor sits above the first threshold",
+    "file": "Sources/CoreColor/DisplayTransfer.swift",
+    "anchor": "@inlinable static var bucketFloor: Double { 0x1p-13 }",
+    "replacement": "@inlinable static var bucketFloor: Double { 0x1p-12 }",
     "filter": "DisplayTransferTests"
   },
   {
     "note": "display transfer encode skips the P3 matrix",
     "file": "Sources/CoreColor/DisplayTransfer.swift",
-    "anchor": "let p = space == .displayP3 ? Matrix3.p3FromLinearSRGB * linear : linear",
-    "replacement": "let p = linear",
+    "anchor": "let p = isP3 ? Self.times(tables.p3FromLinearSRGB, linear.c0, linear.c1, linear.c2)",
+    "replacement": "let p = false ? Self.times(tables.p3FromLinearSRGB, linear.c0, linear.c1, linear.c2)",
     "filter": "DisplayTransferTests"
   },
   {
     "note": "display transfer decode skips the P3 matrix",
     "file": "Sources/CoreColor/DisplayTransfer.swift",
-    "anchor": "return space == .displayP3 ? Matrix3.linearSRGBFromP3 * c : c",
-    "replacement": "return c",
+    "anchor": "guard isP3 else { return Color3(c0, c1, c2) }",
+    "replacement": "guard false else { return Color3(c0, c1, c2) }",
     "filter": "DisplayTransferTests"
   },
   {
     "note": "display transfer byte truncates instead of rounding",
     "file": "Sources/CoreColor/DisplayTransfer.swift",
-    "anchor": "return UInt8((value * 255).rounded())",
-    "replacement": "return UInt8(value * 255)",
+    "anchor": "let nearest = scaled + 0x1p52",
+    "replacement": "let nearest = scaled.rounded(.towardZero) + 0x1p52",
+    "filter": "DisplayTransferTests"
+  },
+  {
+    "note": "display transfer byte rounds an exact half to even",
+    "file": "Sources/CoreColor/DisplayTransfer.swift",
+    "anchor": "== 0.5 ? 1 : 0",
+    "replacement": "== 0.5 ? 0 : 0",
     "filter": "DisplayTransferTests"
   }
 ]
