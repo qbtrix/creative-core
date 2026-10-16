@@ -23,7 +23,8 @@
 // identity group transform (`tr`). Each instance becomes a group, above the
 // layer's shapes, holding one group per visible symbol layer sampled at the
 // symbol frame (`Instance.resolve`), each with its own `tr`. A radial gradient's end point is its center moved right by the
-// radius. Gradient stop alpha is not written; the fill is opaque. Bezier tangents are relative
+// radius. A gradient's stop alpha is written as `[offset, alpha]` for each stop after the color
+// stops, only when some stop alpha is under 1. Bezier tangents are relative
 // to their vertex; quads are raised to cubics. A non-finite value throws.
 // Text is not written yet: a layer with text throws `unsupported("text")`.
 #if canImport(FoundationEssentials)
@@ -398,7 +399,8 @@ struct LottieItem: Encodable, Sendable {
     }
 }
 
-/// Gradient stops: `p` stops, flattened as offset, r, g, b for each.
+/// Gradient stops: `p` stops, flattened as offset, r, g, b for each, then, only
+/// when some stop alpha is under 1, offset, alpha for each.
 struct LottieGradientStops: Encodable, Sendable {
     var p: Int
     var k: LottieStatic<[Double]>
@@ -427,9 +429,15 @@ extension LottieItem {
         }
         func channel(_ v: Double) throws -> Double { min(max(try LottieExporter.finite(v), 0), 1) }
         func gradient(_ stops: [GradientStop]) throws -> LottieGradientStops {
-            let flat = try stops.flatMap { stop in
+            let alphas = try stops.map { try channel($0.color.a) }
+            var flat = try stops.flatMap { stop in
                 [try channel(stop.offset), try channel(stop.color.r),
                  try channel(stop.color.g), try channel(stop.color.b)]
+            }
+            if alphas.contains(where: { $0 < 1 }) {
+                for (stop, alpha) in zip(stops, alphas) {
+                    flat += [try channel(stop.offset), alpha]
+                }
             }
             return LottieGradientStops(p: stops.count, k: LottieStatic(flat))
         }
