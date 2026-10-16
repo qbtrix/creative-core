@@ -121,10 +121,35 @@ import Testing
         #expect(Self.undoSteps.count == 3)
     }
 
+    /// Machine, state, transition and input steps; input steps last.
+    static let familySteps = MachineCommandTests.undoSteps + MachineStateCommandTests.undoSteps
+        + TransitionCommandTests.undoSteps + undoSteps
+
     @Test(arguments: 0..<100)
     func inputUndoAllRestoresOriginal(seed: UInt64) throws {
-        try assertUndoRestoresDocument(seed: seed, steps: MachineCommandTests.undoSteps
-                                       + TransitionCommandTests.undoSteps + Self.undoSteps)
+        try assertUndoRestoresDocument(seed: seed, steps: Self.familySteps, start: TransitionCommandTests.start())
+    }
+
+    /// The seeds of `inputUndoAllRestoresOriginal` add transitions whose
+    /// condition uses a declared input, then try to remove that input, which
+    /// is refused. The start declares "on" but no condition uses it.
+    @Test func inputStepsReachInUseRefusal() {
+        var refused = 0
+        for seed in UInt64(0)..<100 {
+            var rng = SplitMix64(seed: seed)
+            var engine = CommandEngine(document: TransitionCommandTests.start())
+            var nextID = 0
+            for _ in 0..<40 {
+                let i = Int.random(in: 0..<Self.familySteps.count, using: &rng)
+                do {
+                    try Self.familySteps[i](&engine, &rng, &nextID)
+                } catch CommandError.invalidMachine(let issue)
+                    where i == Self.familySteps.count - 1 && issue.message.hasPrefix("condition names unknown input") {
+                    refused += 1
+                } catch {}
+            }
+        }
+        #expect(refused > 0)
     }
 
     /// One sample of each input command, valid on

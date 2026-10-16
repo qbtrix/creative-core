@@ -145,16 +145,29 @@ import Testing
         return Int.random(in: -1...count, using: &rng)
     }
 
-    /// A transition between states of machine `id` (or "missing"), sometimes
-    /// with a condition on an unknown input.
+    /// A transition between states of machine `id` (or "missing"), about 1 in
+    /// 5 with a condition on one of its inputs (or "missing").
     static func randomTransition(_ e: CommandEngine, _ id: String, _ rng: inout SplitMix64) -> Transition {
         var t = Transition(from: MachineStateCommandTests.anyState(e, id, &rng),
                            to: MachineStateCommandTests.anyState(e, id, &rng),
                            trigger: "t\(Int.random(in: 0...3, using: &rng))")
         if Int.random(in: 0..<5, using: &rng) == 0 {
-            t.conditions = [Condition(input: "ghost", op: .equal, value: .bool(true))]
+            let name = MachineInputCommandTests.anyInput(e, id, &rng)
+            let declared = e.document.stateMachines.first { $0.id == id }?.inputs.first { $0.name == name }
+            t.conditions = [randomCondition(name, declared?.defaultValue, &rng)]
         }
         return t
+    }
+
+    /// A condition on `input` with a value of the `declared` type (a bool for
+    /// an undeclared input), 1 in 4 of the other type.
+    static func randomCondition(_ input: String, _ declared: InputValue?, _ rng: inout SplitMix64) -> Condition {
+        var isNumber = false
+        if case .number = declared { isNumber = true }
+        if Int.random(in: 0..<4, using: &rng) == 0 { isNumber.toggle() }
+        guard isNumber else { return Condition(input: input, op: .equal, value: .bool(Bool.random(using: &rng))) }
+        let op = [ConditionOp.equal, .less, .greater].randomElement(using: &rng) ?? .equal
+        return Condition(input: input, op: op, value: .number(Double(Int.random(in: -3...3, using: &rng))))
     }
 
     /// Transition steps. They cope with a document without machines or
