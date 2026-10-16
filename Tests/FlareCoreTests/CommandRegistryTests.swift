@@ -1,6 +1,6 @@
 // CommandRegistryTests.swift: every built-in command round-trips through the
 // {"id", "params"} envelope and behaves the same after decoding (the ids are
-// checked against a hand-written list of all 44), and encode only their
+// checked against a hand-written list of all 45), and encode only their
 // params, so a command decoded after execute is fresh; unknown ids
 // and malformed envelopes throw a CommandError, never crash (seeded fuzz).
 import FlareCore
@@ -22,7 +22,7 @@ import Testing
         "scene.add", "scene.remove", "scene.rename", "scene.reorder", "scene.setCanvas", "scene.timing",
         "shape.add", "shape.remove", "shape.setFill", "shape.setPath", "shape.setStroke", "shape.translate",
         "swatch.add", "swatch.remove", "swatch.rename", "swatch.setColor",
-        "symbol.add", "symbol.convert", "symbol.remove",
+        "symbol.add", "symbol.convert", "symbol.remove", "symbol.rename",
         "text.add", "text.remove", "text.setFont", "text.setString",
     ]
 
@@ -98,7 +98,7 @@ import Testing
     }
 
     @Test func everyBuiltInCommandIsRegistered() {
-        #expect(Self.expectedIDs.count == 44)
+        #expect(Self.expectedIDs.count == 45)
         #expect(Set(Self.registry.ids) == Self.expectedIDs)
     }
 

@@ -1,0 +1,16 @@
+[
+  {
+    "note": "a symbol rename lets an empty name through",
+    "file": "Sources/FlareCore/SymbolCommands.swift",
+    "anchor": "guard !name.isEmpty else { throw CommandError.emptyName }",
+    "replacement": "guard !name.isEmpty || true else { throw CommandError.emptyName }",
+    "filter": "RenameSymbolTests"
+  },
+  {
+    "note": "undoing a symbol rename keeps the new name",
+    "file": "Sources/FlareCore/SymbolCommands.swift",
+    "anchor": "document.symbols[i].name = oldName",
+    "replacement": "document.symbols[i].name = name",
+    "filter": "RenameSymbolTests"
+  }
+]
