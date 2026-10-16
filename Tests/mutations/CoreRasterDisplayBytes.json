@@ -1,0 +1,23 @@
+[
+  {
+    "note": "the region encode reads its rows from the top of the buffer, ignoring y",
+    "file": "Sources/CoreRaster/DisplayBytes.swift",
+    "anchor": "let from = ((y + row) * width + x) * c",
+    "replacement": "let from = (row * width + x) * c",
+    "filter": "DisplayBytesFastPathTests"
+  },
+  {
+    "note": "the region encode reads each row from its first column, ignoring x",
+    "file": "Sources/CoreRaster/DisplayBytes.swift",
+    "anchor": "let from = ((y + row) * width + x) * c",
+    "replacement": "let from = ((y + row) * width) * c",
+    "filter": "DisplayBytesFastPathTests"
+  },
+  {
+    "note": "the region rect guard lets a rect hang off the right edge",
+    "file": "Sources/CoreRaster/DisplayBytes.swift",
+    "anchor": "x <= width - regionWidth, y <= height - regionHeight else {",
+    "replacement": "x < width, y <= height - regionHeight else {",
+    "filter": "DisplayBytesFastPathTests"
+  }
+]
