@@ -1,0 +1,3 @@
+utc	stage	event	ref	note
+2026-10-16T19:52Z	0	stage-start		setup: base 6967968, identity set, lead branch created
+2026-10-16T19:52Z	1	stage-end		packet read: 7 tasks in 6 waves, RB-1 protected
