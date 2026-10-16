@@ -22,7 +22,8 @@ FlareCore has four layers. Each depends only on the ones above it. CoreColor, Co
 2. **Evaluation**: `Easing.swift`, `Timeline.swift`, `Sampling.swift`,
    `ShapeBounds.swift`, `HitTest.swift`, `RenderList.swift` (the per-frame
    render list the stage, hit testing, bounds and exporters read),
-   `HitQuery.swift`, `Marquee.swift`, `WorldBounds.swift`. Read the model,
+   `HitQuery.swift`, `Marquee.swift`, `WorldBounds.swift`,
+   `StateMachineIssues.swift`, `MachinePlayer.swift`, `Onion.swift`. Read the model,
    never change it.
 3. **Commands**: `Command.swift`, `CommandRegistry.swift`, `*Commands.swift`.
    The only code that changes a `Document`.

@@ -1,0 +1,30 @@
+[
+  {
+    "note": "machine issues reachability never follows a transition, so every other state warns",
+    "file": "Sources/FlareCore/StateMachineIssues.swift",
+    "anchor": "for to in targets[id] ?? [] where seen.insert(to).inserted { queue.append(to) }",
+    "replacement": "for to in targets[id] ?? [] where seen.insert(to).inserted { _ = to }",
+    "filter": "StateMachineIssuesTests"
+  },
+  {
+    "note": "machine issues unreachable warning guard dropped, so reachable states warn too",
+    "file": "Sources/FlareCore/StateMachineIssues.swift",
+    "anchor": "for state in states where !reached.contains(state.id) && warned.insert(state.id).inserted {",
+    "replacement": "for state in states where warned.insert(state.id).inserted {",
+    "filter": "StateMachineIssuesTests"
+  },
+  {
+    "note": "machine issues lose the transition index on an unknown state",
+    "file": "Sources/FlareCore/StateMachineIssues.swift",
+    "anchor": "error(\"transition \\(t.from) -> \\(t.to) names an unknown state\", transition: i)",
+    "replacement": "error(\"transition \\(t.from) -> \\(t.to) names an unknown state\")",
+    "filter": "StateMachineIssuesTests"
+  },
+  {
+    "note": "machine issues validate throws on the first issue, so a warning blocks validate",
+    "file": "Sources/FlareCore/StateMachineValidation.swift",
+    "anchor": "if let issue = machine.issues(in: document).first(where: { $0.severity == .error }) {",
+    "replacement": "if let issue = machine.issues(in: document).first {",
+    "filter": "StateMachineIssuesTests"
+  }
+]
