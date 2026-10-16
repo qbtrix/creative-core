@@ -44,6 +44,7 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 - PRs, labels and comments go through the GitHub MCP tools (no gh auth in cloud sessions).
 
 ## Open
+- The contact sheet comment (#312) carries a footer the posting tool appends and re-appends on edit; it could not be removed from this session.
 - Gap #344: round 3's eight minors (docs, four mutation entries, two tidy-ups); no behavior change.
 - Round 1 #7 (Onion.onionFrames allocates one Int per window frame; unbounded with huge durations) is motion-tracks code, filed as gap #339, not fixed here.
 - Round 1 #14 leaves `requireNoErrors` (StateMachineCommands.swift) on its own predicate until B1's `firstError(in:)` lands; round 2 switches it.
