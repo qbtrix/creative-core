@@ -6,3 +6,4 @@ utc	stage	event	ref	note
 2026-10-16T03:25Z	2	stage-start	-	plan
 2026-10-16T03:26Z	2	stage-end	-	waves a b c d
 2026-10-16T03:27Z	3	stage-start	f05665f	wave a MT-1 MT-2
+2026-10-16T03:32Z	3	heartbeat	-	waiting on builders or the lane
