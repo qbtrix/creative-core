@@ -63,3 +63,4 @@ utc	stage	event	ref	note
 2026-10-16T17:50Z	4	round-findings	8c445c7	round 1: 16 confirmed (2 major), 1 refuted
 2026-10-16T18:05Z	4	gate-run	8c445c7	FAIL again on CoreRaster smallDab budget only (fixers compiling); re-gate when idle
 2026-10-16T18:05Z	4	stage-start	8c445c7	round 1 fix batches r1-b1 r1-b2 r1-b3; gap #339 filed
+2026-10-16T18:02Z	3	heartbeat	-	waiting on builders, lane or CI
