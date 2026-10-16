@@ -28,3 +28,4 @@ utc	stage	event	ref	note
 2026-10-16T04:55Z	4	gate-run	f7b9bcf	CI PASS 814 tests; mutate 39/39 caught
 2026-10-16T04:57Z	4	round-findings	round 1	4 major (updateRow double copy, normal-mode blend, display loop checks, frees in budget clock), 9 minor; 3 fix batches
 2026-10-16T05:09Z	4	pr-opened	#324	r1-b1 composite rows through one pointer
+2026-10-16T05:09Z	4	pr-merged	#324	r1-b1
