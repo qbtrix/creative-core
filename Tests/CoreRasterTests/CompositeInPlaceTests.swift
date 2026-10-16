@@ -3,8 +3,9 @@
 // sourceOver it replaced. Every blend mode at opacities 0, 0.37 and 1 with the
 // source hanging off each edge and corner or wholly outside; the free
 // functions; bad opacities; an overflow to infinity (same message, nothing
-// non-finite stored); and the opaque .normal row copy, including a row with
-// one pixel that is not quite opaque.
+// non-finite stored); the opaque .normal row copy, including a row with one
+// pixel that is not quite opaque; and a Flatten, two chained composites over
+// three layers.
 @testable import CoreRaster
 import Testing
 
@@ -149,4 +150,26 @@ private let offsets = [(-2, -1), (5, -1), (-2, 3), (5, 3), (2, -2), (2, 4), (-3,
     var got = backdrop
     try got.composite(source, x: 1, y: 1, mode: .normal, opacity: 1)
     #expect(got == (try referenceComposite(source, onto: backdrop, x: 1, y: 1, mode: .normal, opacity: 1)))
+}
+
+@Test func flattenOfThreeLayersEqualsTwoChainedReferenceComposites() throws {
+    var rng = SplitMix64(seed: 315)
+    let bottom = try randomBuffer(9, 7, &rng)
+    let middle = try randomBuffer(9, 7, &rng)
+    let top = try randomBuffer(5, 4, &rng)
+    let opaqueTop = try randomBuffer(9, 7, &rng, opaque: true)
+    let cases: [(BlendMode, Float, BlendMode, Float, PixelBuffer, Int, Int)] = [
+        (.normal, 1, .normal, 1, top, 3, 2), (.normal, 1, .normal, 1, opaqueTop, 0, 0),
+        (.multiply, 0.37, .normal, 1, top, -2, 4), (.normal, 0.37, .screen, 1, top, 6, -1),
+        (.overlay, 1, .luminosity, 0.37, opaqueTop, 1, 1), (.colorBurn, 0, .hue, 1, top, 2, 2),
+    ]
+    for (lowerMode, lowerOpacity, upperMode, upperOpacity, layer, x, y) in cases {
+        let once = try referenceComposite(middle, onto: bottom, x: 0, y: 0, mode: lowerMode, opacity: lowerOpacity)
+        let want = try referenceComposite(layer, onto: once, x: x, y: y, mode: upperMode, opacity: upperOpacity)
+        var got = bottom
+        try got.composite(middle, x: 0, y: 0, mode: lowerMode, opacity: lowerOpacity)
+        try got.composite(layer, x: x, y: y, mode: upperMode, opacity: upperOpacity)
+        #expect(got == want, "\(lowerMode) \(lowerOpacity) then \(upperMode) \(upperOpacity) at (\(x), \(y))")
+        #expect(got != bottom)
+    }
 }

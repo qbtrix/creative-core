@@ -40,7 +40,9 @@ public struct RGBA: Equatable, Hashable, Sendable {
     /// all zeros instead of dividing by zero.
     public func unpremultiplied() -> RGBA {
         guard a != 0 else { return .clear }
-        return RGBA(r: r / a, g: g / a, b: b / a, a: a)
+        // One lane-wise IEEE division: the same quotients as r / a, g / a, b / a.
+        let straight = SIMD4(r, g, b, a) / SIMD4(a, a, a, 1)
+        return RGBA(r: straight[0], g: straight[1], b: straight[2], a: a)
     }
 }
 
@@ -118,15 +120,18 @@ public struct PixelBuffer: Equatable, Sendable {
     }
 
     /// Hands `body` the components of `count` pixels of row `y` from column
-    /// `x`, to read and rewrite in one exclusive access to storage, so the
-    /// buffer is not copied when it is the only owner. For this module's image
-    /// operations, with `copyRows`' contract: the caller has checked that the
-    /// span lies inside this buffer, keeps the slice's count, and writes only
-    /// finite values. The slice keeps storage's indices (see `startIndex`).
+    /// `x`, indexed from 0, to read and rewrite in place in one exclusive
+    /// access to storage. Storage is copied first only when another value
+    /// shares it (as for any write); when this buffer is the only owner,
+    /// nothing is copied. For this module's image operations, with
+    /// `copyRows`' contract: the caller has checked that the span lies inside
+    /// this buffer, writes only finite values, and does not keep the pointer.
     mutating func updateRow<R>(x: Int, y: Int, count: Int,
-                               _ body: (inout ArraySlice<Float>) throws -> R) rethrows -> R {
+                               _ body: (UnsafeMutableBufferPointer<Float>) throws -> R) rethrows -> R {
         let start = (y * width + x) * Self.channels
-        return try body(&storage[start..<(start + count * Self.channels)])
+        return try storage.withUnsafeMutableBufferPointer { all in
+            try body(UnsafeMutableBufferPointer(rebasing: all[start..<(start + count * Self.channels)]))
+        }
     }
 
     /// The premultiplied pixel at column `x`, row `y` (0, 0 is top left).
