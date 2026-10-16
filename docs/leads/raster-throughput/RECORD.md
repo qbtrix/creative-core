@@ -4,7 +4,7 @@ Issue: #311 · Packet: docs/blueprints/core/features/raster-throughput.md (in PR
 Run: act-1a142b4b264-6dd2 · Session: claude/raster-throughput-lead-pyis7l · Started: 2026-10-16T03:05Z
 Stage: 3 wave b
 Base: 03fc069026d50f48536dca8c86935deb3183de18 (wave b; first base f05665f5b54a461ab4a4e981ed7d7b01d7ab37ed)
-Next: wait for the lane on #322 (RT-2b) and the RT-5 builder (rt/rt-5); then open RT-5, then Anatomy round 1
+Next: wait for the RT-5 builder (rt/rt-5), open its PR; then Anatomy round 1 on the dev SHA holding RT-5
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -13,7 +13,7 @@ Next: wait for the lane on #322 (RT-2b) and the RT-5 builder (rt/rt-5); then ope
 | RT-3 | a | in-place `composite(_:x:y:mode:opacity:)`, free functions call it, opaque `.normal` row copy, `updateRow` | Sources/CoreRaster/Composite.swift, Sources/CoreRaster/PixelBuffer.swift, Tests/CoreRasterTests/CompositeInPlaceTests.swift, Tests/mutations/CoreRasterCompositeInPlace.json, docs/c4/parts/creative-core/coreraster/compositing.json | CompositeInPlaceTests | CoreRasterCompositeInPlace.json (3/3 caught) | #320 | merged |
 | RT-4 | a | `smallDabOn12MegapixelsIsFast` times thread CPU time (closes #300) | Tests/CoreRasterTests/RetouchBoundsTests.swift, Tests/CoreRasterTests/Support.swift | smallDabOn12MegapixelsIsFast + helper busy-loop check | – | #318 | merged |
 | RT-2 | b | `rgba8` / `init(rgba8:)` over `DisplayTransfer`; region `rgba8(x:y:width:height:)` | Sources/CoreRaster/DisplayBytes.swift, Tests/CoreRasterTests/DisplayBytesFastPathTests.swift, Tests/mutations/CoreRaster.json, Tests/mutations/CoreRasterDisplayBytes.json, docs/c4/parts/creative-core/coreraster/pixel-buffer.json | DisplayBytesFastPathTests | repoint 3 CoreRaster.json entries + CoreRasterDisplayBytes.json | – | #321 | merged |
-| RT-2b | b2 | display encode by bucket table, inlinable across modules, to reach RT-5's budgets (RT-2 measured rgba8 450 ms, init 137 ms vs 30 ms) | Sources/CoreColor/DisplayTransfer.swift, Sources/CoreRaster/DisplayBytes.swift, their tests and mutation plans | existing equivalence tests + bucket invariant test | CoreColorDisplayTransfer.json (10/10 caught) | #322 | lane |
+| RT-2b | b2 | display encode by bucket table, inlinable across modules, to reach RT-5's budgets (RT-2 measured rgba8 450 ms, init 137 ms vs 30 ms) | Sources/CoreColor/DisplayTransfer.swift, Sources/CoreRaster/DisplayBytes.swift, their tests and mutation plans | existing equivalence tests + bucket invariant test | CoreColorDisplayTransfer.json (10/10 caught) | #322 | merged |
 | RT-5 | c | release budgets on one core and four; `feature-done` (closes #309) | Tests/CoreRasterTests/RasterThroughputBudgetTests.swift | RasterThroughputBudgetTests | – | – | building |
 
 Acceptance tests and quality bars: the packet's "Acceptance test per task" and "Quality tests" tables (binding; not copied to avoid drift).
