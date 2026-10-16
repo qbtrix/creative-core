@@ -134,23 +134,23 @@
   },
   {
     "note": "display bytes truncate instead of rounding to nearest",
-    "file": "Sources/CoreRaster/DisplayBytes.swift",
-    "anchor": "UInt8((v * 255).rounded())",
-    "replacement": "UInt8(v * 255)",
+    "file": "Sources/CoreColor/DisplayTransfer.swift",
+    "anchor": "UInt8((value * 255).rounded())",
+    "replacement": "UInt8(value * 255)",
     "filter": "DisplayBytesTests"
   },
   {
     "note": "decoding display bytes does not premultiply",
     "file": "Sources/CoreRaster/DisplayBytes.swift",
-    "anchor": "a: Float(bytes[i + 3]) / 255).premultiplied()",
-    "replacement": "a: Float(bytes[i + 3]) / 255)",
+    "anchor": "a: Float(src[i + 3]) / 255).premultiplied()",
+    "replacement": "a: Float(src[i + 3]) / 255)",
     "filter": "DisplayBytesTests"
   },
   {
     "note": "encoding display bytes ignores the color space",
     "file": "Sources/CoreRaster/DisplayBytes.swift",
-    "anchor": "try Self.convert(linear, from: .linearSRGB, to: colorSpace)",
-    "replacement": "try Self.convert(linear, from: .linearSRGB, to: .sRGB)",
+    "anchor": "let encoder = try Self.displayTransfer(colorSpace)",
+    "replacement": "let encoder = try Self.displayTransfer(.sRGB)",
     "filter": "DisplayBytesTests"
   },
   {

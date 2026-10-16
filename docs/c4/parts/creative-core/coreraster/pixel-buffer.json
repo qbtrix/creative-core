@@ -1,7 +1,7 @@
 {
   "id": "pixel-buffer",
   "name": "Pixel Buffer",
-  "description": "PixelBuffer and RGBA: validated sizes, bounds-checked access, premultiply helpers; conversion to and from 8-bit sRGB or Display P3 display bytes; the tile grid for per-tile storage and paint, and TileDiff for tile-by-tile undo; RasterError.",
+  "description": "PixelBuffer and RGBA: validated sizes, bounds-checked access, premultiply helpers; conversion to and from 8-bit sRGB or Display P3 display bytes through CoreColor's display tables, of the whole buffer or of one region without a crop copy; the tile grid for per-tile storage and paint, and TileDiff for tile-by-tile undo; RasterError.",
   "technology": "Swift 6, Foundation",
   "paths": [
     "Sources/CoreRaster/PixelBuffer.swift",
