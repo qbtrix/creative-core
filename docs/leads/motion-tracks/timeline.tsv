@@ -28,3 +28,5 @@ utc	stage	event	ref	note
 2026-10-16T19:41Z	3	stage-start	cae920b	wave c MT-4; reopened #313
 2026-10-16T19:43Z	3	stage-start	cae920b	wave c MT-4 builder started (run act-1a1463a91ae-nkkr)
 2026-10-16T20:05Z	3	pr-opened	#346	MT-4 gradient alpha, fast-lane, head 07f0bc6
+2026-10-16T20:40Z	3	pr-merged	#346	MT-4 gradient alpha merged as 6967968
+2026-10-16T20:41Z	3	stage-start	9ba4c2b	wave d MT-5 builder started
