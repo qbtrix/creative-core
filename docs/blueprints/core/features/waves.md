@@ -1,89 +1,104 @@
 # Core features: waves
 
-The nine open `p1` engine issues that block Flare's wave 2 (qbtrix/creative-apps
-`docs/blueprints/flare/features/waves.md`, merged as d56aa45), grouped into
-two features, one feature-lead session each (`docs/factory/lead.md`). Both
-run in wave 1, side by side: they wait on nothing, and they own no file in
-common. Each packet lists its tasks, owned files, acceptance tests and how it
-treats the open PRs. Base: `origin/dev` 1b45592 (2026-10-14).
+Engine features, one feature-lead session each (`docs/factory/lead.md`).
+Wave 1 shipped. Wave 2 takes the open `needs-core` asks from Photo and Flare
+and the `gap` issue #300: three features, side by side. They wait on
+nothing and own no file in common. Each packet lists its tasks, owned
+files, acceptance tests and budgets. Base for wave 2: `origin/dev` f05665f
+(2026-10-16).
 
-| wave | feature | packet | covers | waits on | unblocks in Flare | feature issue |
-|---|---|---|---|---|---|---|
-| 1 | What the stage draws and what a click picks | `stage-geometry.md` | #213, #214, #215, #182 | nothing | `live-stage` (with `edit-commands`) | #267 |
-| 1 | Undoable edits on scene and symbol layers | `edit-commands.md` | #171, #219, #216, #217, #173 | nothing | `live-keys`, `live-scenes`; `live-stage` (with `stage-geometry`) | #268 |
+| wave | feature | packet | covers | priority | waits on | unblocks in the apps | feature issue | status |
+|---|---|---|---|---|---|---|---|---|
+| 1 | What the stage draws and what a click picks | `stage-geometry.md` | #213, #214, #215, #182 | p1 | nothing | Flare `live-stage` | #267 | shipped (#306) |
+| 1 | Undoable edits on scene and symbol layers | `edit-commands.md` | #171, #219, #216, #217, #173 | p1 | nothing | Flare `live-keys`, `live-scenes`, `live-stage` | #268 | shipped (#299) |
+| 2 | Whole-image raster work at display speed | `raster-throughput.md` | #309, #300 | p1 | nothing | Photo `photo-edit` (PB-15, PB-16) and the brush tile render | file when this PR merges | planned |
+| 2 | State machines Flare can edit and play | `state-machine.md` | #220, #221, #222, #223, #224, #225, #226 | p2 | nothing | Flare LM-10, LM-11, LM-12 | file when this PR merges | planned |
+| 2 | Onion frames, Lottie tracks and the core budgets | `motion-tracks.md` | #218, #227, #228 | p2 | nothing | Flare LM-8, LM-13a; the QB-L5 to QB-L8 model budgets | file when this PR merges | planned |
 
-Flare's "waits on" cells, mapped to the task that closes each issue:
+What the apps wait on, mapped to the task that closes each issue:
 
-| Flare feature | waits on (creative-core) | closed by | ready when |
+| app task | waits on (creative-core) | closed by | ready when |
 |---|---|---|---|
-| `live-keys` | #171, #216, #219 | EC-2, EC-6, EC-3 | `main` contains EC-2, EC-3 and EC-6 (`edit-commands` build wave **c**) |
-| `live-scenes` | #217, #219 | EC-7b, EC-3 | `main` contains EC-7b and EC-3 (build wave **e**) |
-| `live-stage` | #213, #214, #215, #182, #173, #216 | SG-2, SG-4, SG-5, SG-7, EC-9, EC-6 | `main` contains both features; its ST-6 needs only rectangle and ellipse, so it can start once SG-6 is on `main`, before SG-7 closes #182 |
+| Photo `photo-edit` (creative-apps #1075): the PB-15 and PB-16 release gates | #309 | RT-5 (the API lands in RT-2 and RT-3) | `main` holds RT-2 and RT-3; then creative-apps files the one adoption PR the packet describes |
+| Flare LM-10 `LiveLibrary` | #226 | SM-2 | `main` holds SM-2 (`state-machine` build wave **a**) |
+| Flare LM-11 `LiveMachines` | #220, #221, #222, #223, #224 | SM-1, SM-3, SM-4, SM-5, SM-6 | `main` holds SM-6 (build wave **e**) |
+| Flare LM-12 `LivePreview` | #225 | SM-7 | `main` holds SM-7 (build wave **b**) |
+| Flare LM-8 `LiveOnion` | #218 | MT-1 | `main` holds MT-1 (`motion-tracks` build wave **a**) |
+| Flare LM-13a `LiveExport` | #227 | MT-4 | `main` holds MT-4 (build wave **c**) |
+| Flare IN-1 and IN-7 model budgets | #228 | MT-5 | `main` holds MT-5 |
 
-**Flare builds against creative-core `main`** (creative-apps `Package.swift`
-pins `branch: "main"`), and `main` moves only when full CI on `dev` is
-green. The lane dispatches that run after every 10 merged PRs, after a
-`feature-done` merge, and daily; the two features together open about 19
-PRs, so at least one mid-feature run is expected. A lead whose closing PRs
-for a Flare feature have merged tells the supervisor, which files that Flare
-feature issue once `main` holds them.
+**The apps build against creative-core `main`**, which moves only when full
+CI on `dev` is green. The lane dispatches that run after every 10 merged
+PRs, after a `feature-done` merge, and daily; wave 2 opens about 18 PRs, so
+at least one mid-wave run is expected. A lead whose closing PRs for an app
+task have merged tells the supervisor, which files or wakes that app's
+feature once `main` holds them.
 
 ## Why this order
 
-- **Two features, not more.** Every task that adds a command edits
-  `CommandRegistryTests.swift` (its id set and samples), and most also edit
-  `UndoPropertyTests.swift`. Two features in one wave may not share a file,
-  so all command work is one feature (`edit-commands`), chained on those two
-  test files. Everything that reads the model to draw, pick or bound, plus
-  the path builders, touches none of them, so it is the other feature
-  (`stage-geometry`) and runs at the same time. A third wave-1 feature would
-  have to split one of these chains and share their files.
-- **Keys and scenes first inside `edit-commands`.** The issues' old
-  dependencies (LC-7 after LC-6, LC-8 after LC-7) were the order of one line
-  each in `CommandRegistry.builtInFamilies`. On `dev` each family lists its
-  own commands in its own file, and the shape, layer and scene families are
-  already registered, so only the new instance family edits
-  `CommandRegistry.swift`. The chain therefore runs keyframe owner (#171),
-  stroke and path, duplicate (#216), scene edits (#217), then instances
-  (#173), with the two merges (#219) beside it. `live-keys` and
-  `live-scenes` can be filed hours before `live-stage`.
-- **Open PRs are finished, not redone.** #176 (keyframe owner) and #178
-  (instance commands) are 48 to 49 commits behind `dev`, conflict with it,
-  and are each just over the 400-line cap. `edit-commands` EC-1/EC-2 and
-  EC-8/EC-9 split and rebase them, starting from their branches; each
-  replacing PR names the one it replaces, and the lead closes the old PR
-  when the replacement merges. #163 (CoreRaster `TileDiff`) duplicates #164,
-  which merged and closed #156; no packet touches it.
+- **Three features at once.** Their files don't meet (table below).
+  `raster-throughput` stays in CoreColor and CoreRaster. `state-machine`
+  owns the command layer's shared files (`Command.swift`,
+  `CommandRegistry.swift`, `CommandRegistryTests.swift`,
+  `UndoPropertyTests.swift`, `CommandFuzzTests.swift`). `motion-tracks` owns
+  the Lottie exporter, a new `Onion.swift` and a new budget test, and adds
+  no command.
+- **raster-throughput first when slots are short.** It is the one `p1`:
+  Photo's `photo-edit` is building, and its Copy plus Paste of 12 MP takes
+  about 390 ms against PB-15's 120 ms (#309).
+- **One command chain inside state-machine.** Every task that adds a command
+  edits `CommandRegistryTests.swift` and `UndoPropertyTests.swift`, so those
+  tasks run one after another. `RenameSymbol` (`p2`, LM-10) goes first, then
+  machines, states, transitions and inputs, which is the issues' own order.
+  The issues' old `Depends on: #217` was one registry line each; `dev`'s
+  per-family lists removed that, and #217 is closed. The issues query and
+  the player touch neither file and run beside the chain.
+- **Lottie tasks in a row, budgets last.** The three Lottie tasks share
+  `LottieExporter.swift`, so they chain; onion frames run beside them; the
+  budgets come last so QB-L8 times the exporter that ships.
 
 ## Issue housekeeping (each lead, stage 0)
 
 - Add `in-progress` to every issue its packet covers, so the Belt mandate
   doesn't race the lead with a task worker on the same issue.
-- Edit the stale `Depends on:` lines: #216 ("#173") and #217 ("#216") now
-  depend on nothing open; their old order was registry-line stacking that
-  `dev`'s per-family command lists removed. Comment with a link to
-  `edit-commands.md`.
+- Edit the stale `Depends on:` lines and comment with a link to the packet:
+  #221 ("#220 (LC-11a), #217 (LC-8)") now depends on #220 only, inside the
+  packet; #226 ("#217 (LC-8)") and #228 ("#213, #214, #173, #219") depend on
+  nothing open. #222 to #224 keep their chain, which the packet keeps as
+  test-file stacking.
 
-## Files across the features
+## Files across the features (wave 2)
 
-| file | owner in wave 1 |
+| file | owner in wave 2 |
 |---|---|
-| `docs/c4/model.json`, `docs/engineering.md` | `stage-geometry` SG-1 (it also writes the description words for `edit-commands`' commands; `edit-commands` adds no source file) |
-| `Sources/FlareCore/Geometry.swift`, `Path.swift`, `ShapeBounds.swift`, `HitTest.swift`, `Export/SVGExporter.swift`, and the new `RenderList.swift`, `HitQuery.swift`, `Marquee.swift`, `WorldBounds.swift`, `PathBuilders*.swift` | `stage-geometry` |
-| `Sources/FlareCore/Commands.swift`, `KeyframeCommands.swift`, `LayerCommand.swift`, `Document.swift`, `GuideCommands.swift`, `ShapeCommands.swift`, `LayerCommands.swift`, `SceneCommands.swift`, `InstanceCommands.swift`, `Instance.swift`, `Command.swift`, `FlareFormat.swift`, `CommandRegistry.swift` | `edit-commands` |
-| `Tests/FlareCoreTests/CommandRegistryTests.swift`, `UndoPropertyTests.swift`, the family test files, `Tests/mutations/FlareCore.json` | `edit-commands` |
+| `Sources/CoreColor/DisplayTransfer.swift`, `Sources/CoreRaster/DisplayBytes.swift`, `Composite.swift`, `PixelBuffer.swift`, their tests, `Tests/mutations/CoreRaster.json`, `docs/c4/parts/creative-core/corecolor/`, `docs/c4/parts/creative-core/coreraster/` | `raster-throughput` |
+| `Sources/FlareCore/StateMachine.swift`, `StateMachineValidation.swift`, `SymbolCommands.swift`, `Command.swift`, `CommandRegistry.swift`, `Timeline.swift`, and the new `StateMachineIssues.swift`, `StateMachineCommands.swift`, `MachineStateCommands.swift`, `TransitionCommands.swift`, `MachineInputCommands.swift`, `MachinePlayer.swift` | `state-machine` |
+| `Tests/FlareCoreTests/CommandRegistryTests.swift`, `UndoPropertyTests.swift`, `CommandFuzzTests.swift`, `SymbolCommandsTests.swift`; `docs/c4/parts/creative-core/flarecore/statemachine.json`, `symbols.json`; `docs/engineering.md` | `state-machine` (SM-1 also writes `Onion.swift` into engineering.md's evaluation list for `motion-tracks`) |
+| `Sources/FlareCore/Export/LottieExporter.swift`, the new `Onion.swift`, `docs/c4/parts/creative-core/flarecore/timeline.json`, `export.json` | `motion-tracks` |
 | new test files and new `Tests/mutations/<plan>.json` files | the task that names them (the names don't overlap) |
 
-`#178` put `Transform.isFinite` in `Geometry.swift`; EC-8 moves it to
-`Instance.swift` so the two features stay apart.
+`Timeline.swift` stays with `state-machine` (the player's errors join
+`TimelineError`), which is why onion frames live in a new `Onion.swift` as
+an extension of `Timeline`.
 
-## Not in a packet (later)
+## Not in a packet
 
-The other blueprint engine rows wait for Flare's later features and are not
-`p1` blockers of wave 2: LC-9 onion frames (G46), LC-11a to LC-11e state
-machine commands, LC-12 player, LC-12b `RenameSymbol`, LC-13 Lottie tracks,
-LC-14 `FlareBudgetTests` (SG-8 and EC-10 add the stage and drag budgets it
-will extend). They become the next core features once these land.
+- **#304** (stage-geometry follow-ups) touches `RenderList.swift`,
+  `Marquee.swift`, `WorldBounds.swift`, `Geometry.swift` and `Instance.swift`.
+  No wave-2 packet touches those files, and none is about the render list's
+  names or mutants, so it stays a `gap` issue for a task worker.
+- **#305** (command-code gaps) touches `LayerCommands.swift`,
+  `SceneCommands.swift`, `ShapeCommands.swift`, `Document.swift` and
+  `FlareFormat.swift`, which no wave-2 packet touches. It stays a `gap`
+  issue. A worker that picks it up while `state-machine` runs should rebase
+  on that feature's `Command.swift` changes if it adds a `ModelError` case.
+- **#212** (DOC-2, copy G45 to G54 into `docs/gaps.md`) is a docs task with
+  no code; no packet edits `docs/gaps.md`. Once `motion-tracks` lands, G46 and
+  G52 are done.
+- **Later, no issue yet:** Histogram's sRGB axis still encodes per pixel
+  (it can adopt `DisplayTransfer`); Lottie export of animated tracks inside
+  symbols; creative-apps' adoption PR for `raster-throughput`, which that
+  repo files.
 
 ## The lead contract
 
