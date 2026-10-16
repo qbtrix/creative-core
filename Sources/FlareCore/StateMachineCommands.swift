@@ -16,6 +16,7 @@ public enum StateMachineCommands {
         AddStateMachine.self, RenameStateMachine.self, RemoveStateMachine.self, SetInitialState.self,
         AddMachineState.self, UpdateMachineState.self, RemoveMachineState.self,
         AddTransition.self, UpdateTransition.self, RemoveTransition.self,
+        AddMachineInput.self, UpdateMachineInput.self, RemoveMachineInput.self,
     ]
 }
 
