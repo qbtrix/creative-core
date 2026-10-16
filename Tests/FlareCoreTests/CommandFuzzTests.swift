@@ -21,6 +21,8 @@ import Testing
     /// commands hit real machines and states.
     static let machineIDs = ["btn", "nav"]
     static let stateIDs = ["idle", "hover", "off"]
+    /// Input names a fuzzed machine may declare; "on" is the one the samples name.
+    static let inputNames = ["on", "level"]
 
     /// One params template per built-in id, from the registry samples.
     static func templates() throws -> [(id: String, params: [String: Any])] {
@@ -53,8 +55,9 @@ import Testing
     }
 
     /// Up to 2 machines ("btn" first, as the samples name it) with 1-3 states
-    /// in range on `scenes` and 0-3 transitions between them, each passing
-    /// `issues(in:)`; none without scenes. Iterations are enough that machine
+    /// in range on `scenes`, 0-2 bool or number inputs and 0-3 transitions
+    /// between the states, some with a condition on a declared input, each
+    /// passing `issues(in:)`; none without scenes. Iterations are enough that machine
     /// and instance commands get past their lookups.
     static func randomMachines(_ scenes: [Scene], _ rng: inout SplitMix64) -> [StateMachine] {
         guard !scenes.isEmpty else { return [] }
@@ -67,14 +70,32 @@ import Testing
                 }
             }
             let ids = states.map(\.id)
+            let inputs = inputNames.shuffled(using: &rng).prefix(Int.random(in: 0...2, using: &rng)).map { name in
+                MachineInput(name: name, defaultValue: Bool.random(using: &rng)
+                    ? .bool(Bool.random(using: &rng)) : .number(Double(Int.random(in: -3...3, using: &rng))))
+            }
             let transitions = (0..<Int.random(in: 0...3, using: &rng)).compactMap { _ in
                 ids.randomElement(using: &rng).flatMap { from in
-                    ids.randomElement(using: &rng).map { Transition(from: from, to: $0, trigger: "hover") }
+                    ids.randomElement(using: &rng).map { to in
+                        let input = Bool.random(using: &rng) ? inputs.randomElement(using: &rng) : nil
+                        return Transition(from: from, to: to, trigger: "hover",
+                                          conditions: input.map { [validCondition($0, &rng)] } ?? [])
+                    }
                 }
             }
             return ids.first.map { StateMachine(id: id, name: id, states: states, transitions: transitions,
-                                                initialState: $0) }
+                                                initialState: $0, inputs: inputs) }
         }
+    }
+
+    /// A condition on `input` that passes `issues(in:)`: `==` on a bool, any
+    /// comparison on a number.
+    static func validCondition(_ input: MachineInput, _ rng: inout SplitMix64) -> Condition {
+        guard case .number = input.defaultValue else {
+            return Condition(input: input.name, op: .equal, value: .bool(Bool.random(using: &rng)))
+        }
+        let op = [ConditionOp.equal, .less, .greater].randomElement(using: &rng) ?? .equal
+        return Condition(input: input.name, op: op, value: .number(Double(Int.random(in: -3...3, using: &rng))))
     }
 
     /// Up to 3 layers drawn from `ids`, with 0-3 instances of `placeable` symbols each.
@@ -108,7 +129,7 @@ import Testing
     }
 
     static func randomString(_ rng: inout SplitMix64) -> String {
-        let pool = sceneIDs + layerIDs + symbolIDs + ["d"] + props + ["", "missing", "💥", String(repeating: "z", count: 300), "linear"]
+        let pool = sceneIDs + layerIDs + symbolIDs + inputNames + ["d"] + props + ["", "missing", "💥", String(repeating: "z", count: 300), "linear"]
         return pool.randomElement(using: &rng) ?? ""
     }
 
@@ -169,7 +190,7 @@ import Testing
     @Test func structuredFuzzNeverCrashesAndThrowsCleanly() throws {
         let templates = try Self.templates()
         #expect(Set(templates.map(\.id)) == CommandRegistryTests.expectedIDs)
-        var rng = SplitMix64(seed: 38)
+        var rng = SplitMix64(seed: 43)
         var decoded = 0, performed = 0
         var performedByID: [String: Int] = [:]
         var symbolOwnedKeyframeSets = 0
@@ -228,7 +249,9 @@ import Testing
         #expect(decoded > 1000)
         #expect(performed > 300)
         for id in ["instance.add", "instance.remove", "instance.setTransform", "instance.setPlayback",
-                   "machine.addState", "machine.updateState", "machine.removeState"] {
+                   "machine.addState", "machine.updateState", "machine.removeState",
+                   "machine.updateInput", "machine.removeInput", "machine.updateTransition",
+                   "machine.removeTransition"] {
             #expect(performedByID[id, default: 0] > 0, "\(id) never got past its lookups")
         }
         #expect(symbolOwnedKeyframeSets > 0)
