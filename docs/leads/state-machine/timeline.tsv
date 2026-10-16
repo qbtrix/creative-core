@@ -18,3 +18,4 @@ utc	stage	event	ref	note
 2026-10-16T07:10Z	3	pr-merged	#330	SM-3 machine commands
 2026-10-16T07:11Z	3	stage-start	670a6ed	wave c: SM-4 builder (resumed lead)
 2026-10-16T07:24Z	3	heartbeat	-	waiting on builders, lane or CI
+2026-10-16T07:39Z	3	heartbeat	-	waiting on builders, lane or CI
