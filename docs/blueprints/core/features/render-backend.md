@@ -183,9 +183,15 @@ canvas-host CH-10). GPU-side brush stamping: Photo paints in its Model today,
 so a `stamp` op family lands only once an issue moves stamping into
 CoreRaster.
 
-## Open
+## Decisions (captain, 2026-10-17)
 
-- **Core's lead loop is v2.** This packet has a Slices table (creative-apps
-  lead.md, rules 12 to 19). Until core's `lead.md` takes the v3 loop, a lead
-  runs it as v2 with the slices as its waves and the acceptance table as its
-  tests. Open decision for the captain in the design doc.
+1. **Metal lives in core as `CoreRenderMetal`.** It is the only module that
+   may import Metal; every file in it is wrapped in `#if canImport(Metal)` and
+   Linux builds it empty (CLAUDE.md, "Every module stays Linux-safe").
+2. **The Rendering setting is suite-wide,** set once in the launcher's
+   Settings pane, not per app.
+3. **Core runs v3.** `docs/factory/lead.md` has rules 12 to 19 and the
+   two-level done (merged-done on Linux, verified on the Mac).
+
+The targets of RB-1 (`Package.swift`, both modules as empty scaffolds, their
+test targets and C4 parts) landed with the decision PR; RB-1 is done.

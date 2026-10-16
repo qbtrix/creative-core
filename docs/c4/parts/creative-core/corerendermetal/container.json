@@ -1,0 +1,18 @@
+{
+  "id": "corerendermetal",
+  "name": "CoreRenderMetal library",
+  "description": "Metal render module (Sources/CoreRenderMetal): the Metal RenderBackend, macOS only. The one module allowed to import Metal; every file is wrapped in #if canImport(Metal), so Linux builds it empty.",
+  "technology": "Swift 6, SwiftPM, Metal",
+  "tags": [
+    "internal"
+  ],
+  "order": 70,
+  "relationships": [
+    {
+      "source": "corerendermetal",
+      "target": "corerender",
+      "description": "implements the RenderBackend contract, measured against the CPU backend",
+      "style": "sync"
+    }
+  ]
+}

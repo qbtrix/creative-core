@@ -203,11 +203,16 @@ Presenting into a `CAMetalLayer` (creative-apps canvas-host). Brush stamping
 (no core op yet). Float32 textures for a precision mode. A Vulkan or other
 GPU path.
 
+## Decisions (captain, 2026-10-17)
+
+1. **Metal lives in core as `CoreRenderMetal`.** It is the only module that
+   may import Metal; every file in it is wrapped in `#if canImport(Metal)` and
+   Linux builds it empty (CLAUDE.md, "Every module stays Linux-safe").
+2. **The Rendering setting is suite-wide,** set once in the launcher's
+   Settings pane, not per app.
+3. **Core runs v3.** `docs/factory/lead.md` has rules 12 to 19 and the
+   two-level done (merged-done on Linux, verified on the Mac).
+
 ## Open
 
-- **Metal in core.** core's CLAUDE.md says every module stays Linux-safe with
-  no Metal. This packet keeps that true for every module but
-  `CoreRenderMetal`, which compiles to nothing on Linux; the feature issue
-  (and a supervisor PR to CLAUDE.md's rule) records the exception. The
-  captain's decision 1 in the design doc.
 - **The runner's device.** Unknown until MB-2's first dev run.

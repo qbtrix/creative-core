@@ -13,9 +13,11 @@ that safe and fast. AGENTS.md points here.
 - `Sources/CoreRaster`: pixel buffers, compositing and image operations. Depends only on CoreColor.
 - `Sources/CoreAsset`: the shared asset model (`Asset`, `AssetRef`) and its manifest codec. Depends on nothing.
 - `Sources/CoreCatalog`: the photo and metadata catalog over SQLite. Depends only on GRDB.
+- `Sources/CoreRender`: the `RenderBackend` contract, the CPU backend, the dispatcher and the parity harness. Depends only on CoreRaster and CoreColor.
+- `Sources/CoreRenderMetal`: the Metal `RenderBackend`, macOS only. Depends only on CoreRender. The one module allowed to import Metal.
 
 Each module has one error type (`ColorError`, `RasterError`, `AssetError`,
-`CatalogError`) and its own test target. A new shared module needs an issue
+`CatalogError`, `RenderError`, which CoreRenderMetal shares) and its own test target. A new shared module needs an issue
 that approves it, because it edits `Package.swift`. FlareCore must not import
 the other modules yet.
 
@@ -97,6 +99,13 @@ the other modules yet.
   No AppKit, SwiftUI, Metal, CoreGraphics, Combine, `NSRegularExpression`,
   `String(format:)` or other Darwin-only API. Swift 6 language mode; code must
   compile with Swift 6.1 (the macOS runner's Xcode may be older than Linux's).
+  **One exception: Metal, in `CoreRenderMetal` only** (captain, 2026-10-17).
+  Every file under `Sources/CoreRenderMetal/` is wrapped whole in
+  `#if canImport(Metal)`, so Linux builds it as an empty module and `scripts/ci`
+  stays green there. The Metal backend's Linux-safe parts (capabilities,
+  tiling math, cache keys) live in `Sources/CoreRender/Metal/` with no Metal
+  import, so their tests and mutations run on Linux. No other module imports
+  Metal or depends on `CoreRenderMetal`.
 - **Value types and Sendable.** Model types are `struct`/`enum`, `Codable`,
   `Sendable`, `Hashable`. No classes in the model, no shared mutable state.
 - **Old files keep loading.** A new model field must decode from v1 files that
@@ -176,7 +185,11 @@ the other modules yet.
 
 A session started from a `feature-lead` issue is a lead: it follows
 `docs/factory/lead.md` (packet, build waves, Anatomy loop, contact sheet) and
-its workflow templates in `docs/factory/workflows/`. Every PR a lead or its
+its workflow templates in `docs/factory/workflows/`. A packet with a Slices
+table runs the v3 loop (lead.md rules 12 to 19) with two levels of done:
+merged-done (`Belt-Slice-Done:`) when the slice's PRs merged and dev's
+`Linux` job is green with them, and verified (`Belt-Slice-Verified:`) when
+its budgets and parity hold on the Mac. Every PR a lead or its
 agents open carries `Belt-Lead: <run id>` and `Feature: <feature>` lines
 above the `Fast-Check:` / `Head:` lines. `Belt-Lead:` PRs don't wait for
 `belt/review`; the lead's critic panel is their review.
