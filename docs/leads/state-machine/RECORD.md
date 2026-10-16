@@ -4,7 +4,7 @@ Issue: #312 · Packet: docs/blueprints/core/features/state-machine.md (on dev si
 Run: act-1a1448178f5-56p5 · Session: claude/state-machine-feature-lead-016ymp (resumed 2026-10-16T11:40Z; earlier ynzph3, 8z5qtw; earlier run act-1a142b4b29a-bnb2) · Started: 2026-10-16T03:16Z
 Stage: 3 wave f
 Base: 57b645c (wave f; wave e 6689fa1; wave d 5cb1494; wave c 670a6ed; wave b f27f104; wave a base 69c9f80 is the feature's first base)
-Next: wait for the wave-f builder (SM-8) PR and its lane merge; then stage 4 round 1 on the new dev SHA
+Next: SM-8 builder running; round 1 gate + mutation running on 57b645c (holds all feature source), then critic panel
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -33,6 +33,7 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 - SM-4 (#335) also edited MachineCommandTests (+2 -2): SM-3's test said its ids equal `all`, now a subset. Accepted; later machine tasks may need the same.
 - Resumed again (run act-1a1448178f5-56p5): wave d had merged (#336 SM-5) by dev 6689fa1.
 - Container restarted mid wave e; #337 (SM-6) had merged by dev 57b645c. #101 told its last family landed.
+- Round 1 runs on 57b645c beside the SM-8 build: SM-8 adds only a test file, and builders never wait on critics.
 - PRs, labels and comments go through the GitHub MCP tools (no gh auth in cloud sessions).
 
 ## Open
