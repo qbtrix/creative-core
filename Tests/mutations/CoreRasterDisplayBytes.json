@@ -19,5 +19,19 @@
     "anchor": "x <= width - regionWidth, y <= height - regionHeight else {",
     "replacement": "x < width, y <= height - regionHeight else {",
     "filter": "DisplayBytesFastPathTests"
+  },
+  {
+    "note": "the region encode skips the zero-size check",
+    "file": "Sources/CoreRaster/DisplayBytes.swift",
+    "anchor": "_ = try Self.validatedSize(width: regionWidth, height: regionHeight)",
+    "replacement": "",
+    "filter": "DisplayBytesFastPathTests"
+  },
+  {
+    "note": "the P3 encode skips the finite clamp, so infinity turns to NaN",
+    "file": "Sources/CoreRaster/DisplayBytes.swift",
+    "anchor": "let p3 = encoder.space == .displayP3",
+    "replacement": "let p3 = encoder.space == .sRGB",
+    "filter": "DisplayBytesFastPathTests"
   }
 ]

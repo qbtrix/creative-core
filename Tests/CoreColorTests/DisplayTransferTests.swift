@@ -1,8 +1,9 @@
 // DisplayTransferTests.swift: the table-based 8-bit display transfer against
 // the reference it replaces, `Color3.converted` plus the clamp-and-round byte
 // rule, with `==`: every decode byte, seeded triples, a million seeded
-// encodes, both sides of every encode threshold, NaN and infinities. In an
-// optimized build, every Float in 0...1 is also checked in sRGB.
+// encodes, both sides of every encode threshold, every bucket index in range
+// after the clamp, NaN and infinities. In an optimized build, every Float in
+// 0...1 is also checked in sRGB.
 @testable import CoreColor
 import Foundation
 import Testing
@@ -159,6 +160,26 @@ func encodeEqualsReferenceAroundEveryBucketBoundary(_ space: ColorSpace) throws 
         }
     }
     #expect(mismatches == 0)
+}
+
+@Test func everyBucketIndexIsInRangeAfterTheClamp() {
+    // `level` reads the bucket table without a bounds check: the clamp must
+    // keep every index in 0..<bucketCount, at every bucket boundary and for
+    // values past either end, NaN and infinities.
+    let count = DisplayTransfer.bucketCount
+    #expect(DisplayTransfer.shared.buckets.count == count)
+    let bucket = { (v: Double) in DisplayTransfer.bucket(DisplayTransfer.clampedBits(v)) }
+    for b in 0..<count {
+        let start = DisplayTransfer.bucketStart(b)
+        #expect(bucket(start) == b, "bucket \(b)")
+        #expect(bucket(start.nextUp) == b, "inside bucket \(b)")
+        #expect(bucket(start.nextDown) == max(b - 1, 0), "before bucket \(b)")
+    }
+    let past: [Double] = [1, 1.0.nextUp, 2, .greatestFiniteMagnitude, .infinity]
+    for v in past { #expect(bucket(v) == count - 1, "\(v)") }
+    let below: [Double] = [DisplayTransfer.bucketFloor.nextDown, 0, -0.0, -1, -.infinity, .nan,
+                           .leastNonzeroMagnitude, -.greatestFiniteMagnitude]
+    for v in below { #expect(bucket(v) == 0, "\(v)") }
 }
 
 @Test func byteRoundsExactHalvesAwayFromZero() {
