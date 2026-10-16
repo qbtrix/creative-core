@@ -1,45 +1,30 @@
 # motion-tracks lead record
 
-Issue: #313 · Packet: docs/blueprints/core/features/motion-tracks.md (on branch docs/core-packets-wave2, PR #310, until it merges)
-Run: act-1a142b4b27e-bv69 · Session: claude/motion-tracks-lead-pifwao · Started: 2026-10-16T03:16Z
-Stage: 3 wave c
-Base: cae920b (origin/dev 2026-10-16T19:40Z)
-Next: wait for MT-4's PR to merge via the lane, then wave d (MT-5, feature-done) on the new origin/dev
+Issue: #313 · Packet: docs/blueprints/core/features/motion-tracks.md
+Run: act-1a1463a91ae-nkkr · Session: claude/motion-tracks-lead-qyywzp (session_011q6y88xiPg7Pn4N3NTipgF) · Started: 2026-10-16T19:40Z (prior run act-1a142b4b27e-bv69 resumed)
+Stage: 3 wave c (MT-4 building)
+Base: cae920bb08f80e277a9e7fc9c88b0a298b55e8d0 (origin/dev at lead start)
+Next: wait for the MT-4 builder's PR to merge, then MT-5 (FlareBudgetTests, feature-done) on the new dev SHA.
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
 |---|---|---|---|---|---|---|---|
-| MT-1 | a | `Timeline.onionFrames(at:before:after:durationFrames:)` (closes #218) | Sources/FlareCore/Onion.swift, Tests/FlareCoreTests/OnionTests.swift, Tests/mutations/FlareOnion.json, docs/c4/parts/creative-core/flarecore/timeline.json | OnionTests | FlareOnion.json (clamp, playhead excluded, saturating) | #317 (c7f1c76) | merged |
-| MT-2 | a | Lottie animated opacity and rotation tracks (#227 part) | Sources/FlareCore/Export/LottieExporter.swift, Tests/FlareCoreTests/LottieTracksTests.swift, Tests/mutations/FlareLottieTracks.json | LottieTracksTests | FlareLottieTracks.json (opacity clamp, hold) | #315 (7feb023) | merged |
-| MT-3 | b | Lottie animated scale: one-track, shared keys, per-frame bake; `maxBakedKeys` (#227 part) | LottieExporter.swift, Tests/FlareCoreTests/LottieScaleTrackTests.swift, Tests/mutations/FlareLottieScale.json | LottieScaleTrackTests | FlareLottieScale.json (bake cap, range clamp) | #328 (merged 05:45Z) | merged |
-| MT-4 | c | Gradient stop alpha; export C4 description (closes #227) | LottieExporter.swift, Tests/FlareCoreTests/LottieGradientAlphaTests.swift, Tests/mutations/FlareLottieGradientAlpha.json, docs/c4/parts/creative-core/flarecore/export.json | LottieGradientAlphaTests | FlareLottieGradientAlpha.json (alpha < 1 guard) | – | building |
-| MT-5 | d | FlareBudgetTests on `reference`: QB-L5..QB-L8; `feature-done` (closes #228) | Tests/FlareCoreTests/FlareBudgetTests.swift | FlareBudgetTests | – | – | planned |
-
-Acceptance tests and quality bars: the packet's "Acceptance test per task" and "Quality tests" tables (copied by reference; the packet wins).
-- MT-1 OnionTests: 10/2/2/48 → [8,9,11,12]; 1 → [0,2,3]; 47 → [45,46]; 0,0 → []; -3 counts 0; 1-frame scene → []; Int.max counts / Int.min frames don't trap.
-- MT-2 LottieTracksTests: golden `ks.o` (100→0, ease tangents); `ks.r` with `h` 1 on hold; opacity clamp; existing goldens byte-identical.
-- MT-3 LottieScaleTrackTests: one-track keys; shared keys golden [100,100]→[200,200]; bake one linear key per frame == sample×100; > maxBakedKeys throws unsupported("scale track"); keys past end / 0 frames → static; static goldens unchanged.
-- MT-4 LottieGradientAlphaTests: linear+radial alpha 0.25 → color stops then alpha stops, `p` = stop count, golden; opaque bytes unchanged; NaN alpha throws nonFiniteValue.
-- MT-5 FlareBudgetTests: QB-L5 hit ≤10 ms, QB-L6 render list ≤20 ms, QB-L7 drag ≤10 ms, QB-L8 SVG frame <1 s, Lottie 300 frames <10 s; scene shape asserted.
+| MT-1 | a | Timeline.onionFrames | Onion.swift, OnionTests | OnionTests | FlareOnion.json | #317 | merged |
+| MT-2 | a | Lottie opacity and rotation tracks | LottieExporter.swift, LottieTracksTests | LottieTracksTests | FlareLottieTracks.json | #315 | merged |
+| MT-3 | b | Lottie scale tracks, maxBakedKeys | LottieExporter.swift, LottieScaleTrackTests | LottieScaleTrackTests | FlareLottieScale.json | #328 | merged |
+| MT-4 | c | Lottie gradient stop alpha | LottieExporter.swift, LottieGradientAlphaTests | LottieGradientAlphaTests | FlareLottieGradientAlpha.json | pending | building |
+| MT-5 | d | FlareBudgetTests reference scene; feature-done | FlareBudgetTests.swift | FlareBudgetTests | - | - | not started |
 
 ## Rounds
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
 |---|---|---|---|---|---|---|---|---|
+| – | – | – | – | – | – | – | – | – |
 
 ## Decisions
-- Packet read from branch docs/core-packets-wave2 (PR #310 not merged yet); the issue says so.
-- Builder branches are `lead/motion-tracks-<id>`: `lead/motion-tracks/<id>` would collide with the `lead/motion-tracks` ref.
-- `gh` has no valid token in this session; agents open PRs and set labels with the GitHub MCP tools.
-
-- Waves follow the packet: a = MT-1 + MT-2 (disjoint files), b = MT-3, c = MT-4 (LottieExporter.swift chain), d = MT-5 (feature-done).
-- Builders run from an adapted copy of build-wave.js (branch names, MCP PR opening); the template itself is unchanged.
-
-- The container restarted at ~05:00Z; the 15-minute heartbeat loop died with it, so Belt saw a stall. Restarted the heartbeat.
-- The GitHub MCP server appends an attribution footer to PR bodies; builders must strip it with update_pull_request after opening.
-- Baseline scripts/ci on f05665f failed two timing budgets (RetouchBoundsTests, EngineStressTests) under load 18 on 4 cores; contention, not code.
-
-- #328's body said `Closes #313`, so the lane closed the feature issue at 05:45Z. Reopened it at 19:40Z with a comment, and builder prompts now forbid closing keywords on the feature issue.
-- The container was down from about 05:50Z to 19:35Z (a second restart). The 8 h lead wall clock has passed; continuing because Belt resumed the session.
+- Packet base was f05665f; dev is at cae920b. MT-1, MT-2, MT-3 were already merged before this lead started, so the lead starts at wave c.
+- Status branch lead/motion-tracks is the one the playbook names. Builder PRs use the designated branch claude/motion-tracks-lead-qyywzp, restarted from origin/dev after each merge, per the session's branch rule.
+- Swift 6.3.3 installed via scripts/cloud-setup.sh (the pinned toolchain).
 
 ## Open
-- none yet
+- Packet says the lead's critic panel is run after the build waves; not yet run.
+- Issue #313 shows state reopened; no contact sheet yet.
