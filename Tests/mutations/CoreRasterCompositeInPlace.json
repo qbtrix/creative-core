@@ -1,0 +1,23 @@
+[
+  {
+    "note": "the in-place composite copies a normal row that is not wholly opaque",
+    "file": "Sources/CoreRaster/Composite.swift",
+    "anchor": "let opaqueRow = copies && stride(from: from + 3, to: from + n, by: 4).allSatisfy { src[$0] == 1 }",
+    "replacement": "let opaqueRow = copies",
+    "filter": "CompositeInPlaceTests"
+  },
+  {
+    "note": "the in-place composite row stores a non-finite component",
+    "file": "Sources/CoreRaster/Composite.swift",
+    "anchor": "guard out.isFinite else {",
+    "replacement": "guard out.isFinite || out.a.isFinite else {",
+    "filter": "CompositeInPlaceTests"
+  },
+  {
+    "note": "the in-place overlap clip drops the backdrop's last column",
+    "file": "Sources/CoreRaster/Composite.swift",
+    "anchor": "x1 = min(x + source.width, width)",
+    "replacement": "x1 = min(x + source.width, width - 1)",
+    "filter": "CompositeInPlaceTests"
+  }
+]

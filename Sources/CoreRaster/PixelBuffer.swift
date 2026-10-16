@@ -3,9 +3,9 @@
 // Invariants a reader must keep: width and height are at least 1, the pixel
 // count is at most `maxPixels`, `storage.count == width * height * 4`, and every
 // stored component is finite. Every size goes through `validatedSize`, and every
-// write through `setPixel`, `copyRows` or `init(checkedWidth:height:storage:)`
-// (whose callers in this module check the same rules), so the invariants hold
-// for any value of this type.
+// write through `setPixel`, `copyRows`, `updateRow` or
+// `init(checkedWidth:height:storage:)` (whose callers in this module check the
+// same rules), so the invariants hold for any value of this type.
 
 /// One pixel: four Float32 components. Inside a `PixelBuffer` the color is
 /// premultiplied by alpha; the helpers convert to and from straight alpha.
@@ -115,6 +115,18 @@ public struct PixelBuffer: Equatable, Sendable {
             let to = ((y + row) * width + x) * Self.channels
             storage.replaceSubrange(to..<(to + rowCount), with: source.storage[from..<(from + rowCount)])
         }
+    }
+
+    /// Hands `body` the components of `count` pixels of row `y` from column
+    /// `x`, to read and rewrite in one exclusive access to storage, so the
+    /// buffer is not copied when it is the only owner. For this module's image
+    /// operations, with `copyRows`' contract: the caller has checked that the
+    /// span lies inside this buffer, keeps the slice's count, and writes only
+    /// finite values. The slice keeps storage's indices (see `startIndex`).
+    mutating func updateRow<R>(x: Int, y: Int, count: Int,
+                               _ body: (inout ArraySlice<Float>) throws -> R) rethrows -> R {
+        let start = (y * width + x) * Self.channels
+        return try body(&storage[start..<(start + count * Self.channels)])
     }
 
     /// The premultiplied pixel at column `x`, row `y` (0, 0 is top left).
