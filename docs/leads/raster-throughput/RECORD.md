@@ -24,6 +24,8 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 | 1 | f7b9bcf | PASS (814 tests) | 39/39 (validate: 203 anchors) | – (not dispatched yet) | clarity, contract, robustness, tests, compat, performance | 4 major, 9 minor (scratchpad r1/findings.md) | #324 (r1-b1, merged), #325 (r1-b2, merged), #326 (r1-b3, merged) | no |
 | 2 | f27f104 | PASS (816 tests) | 43/43 (validate: 207 anchors) | – | same 6 | 1 major (opacity==1 half of the opaque-row guard untested, no mutation entry), 2 minor | #327 (r2-b1, merged) | no |
 
+| 3 | fe5bc53 | running | running | – | same 6 | 0 blocker/major; 3 minor (C4 compositing description, band labels, region check duplicates cropped's) | feature-done PR | pending gate |
+
 ## Decisions
 - Packet not yet on dev (PR #310 open); builders read it from origin/docs/core-packets-wave2.
 - Swift was missing in the container; ran scripts/cloud-setup.sh (Swift 6.3.3).
@@ -33,6 +35,7 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 - Session restarted after wave a builders finished; resumed from their pushed branches.
 - RT-2 shipped correct but slow (2-6x faster than today, 15x over budget): the 8-step search in DisplayTransfer.encode dominates. Added task RT-2b rather than widening RT-2.
 - RT-2b: bucket-table encode + @inlinable; bytes identical; 2.4-3.5x faster. Further SIMD row API would change the contract slice: not done without the captain.
+- Round 3 minors ride the last PR, which carries `feature-done`; round 4 (the budget's last) runs on the SHA it lands, with the CI run it dispatches.
 - Round 1 finding 11 (best of 3 vs median): keep the median of 5; the packet's Done check says medians.
 - Round 1: internal `updateRow` may take an UnsafeMutableBufferPointer (same name and contract); public API unchanged.
 - RT-5 opened without `feature-done`: the Anatomy loop follows it, so the last fix PR (or a RECORD/packet status PR) carries `feature-done`.
