@@ -126,6 +126,56 @@ func encodeEqualsReferenceOnBothSidesOfEveryThreshold(_ space: ColorSpace) throw
     }
 }
 
+@Test func everyBucketHoldsAtMostOneThreshold() {
+    let count = DisplayTransfer.bucketCount
+    #expect(DisplayTransfer.bucketStart(0) < DisplayTransfer.least[1])
+    #expect(DisplayTransfer.bucketStart(count - 1) == 1)
+    var inside = 0
+    for b in 0..<count {
+        let n = DisplayTransfer.thresholds(inBucket: b).count
+        #expect(n <= 1, "bucket \(b) at \(DisplayTransfer.bucketStart(b)) holds \(n) thresholds")
+        inside += n
+    }
+    // Every threshold is inside a bucket or on a bucket's first Double.
+    let onStarts = (1...255).filter { k in
+        (0..<count).contains { DisplayTransfer.bucketStart($0) == DisplayTransfer.least[k] }
+    }.count
+    #expect(inside + onStarts == 255)
+}
+
+@Test(arguments: spaces)
+func encodeEqualsReferenceAroundEveryBucketBoundary(_ space: ColorSpace) throws {
+    let t = try DisplayTransfer(space)
+    var mismatches = 0
+    for b in 0..<DisplayTransfer.bucketCount {
+        let start = DisplayTransfer.bucketStart(b)
+        for v in [start.nextDown, start, start.nextUp] {
+            // In P3 the bucket applies after the matrix: start from the P3 value.
+            let c = space == .sRGB ? Color3(v, 0, 1) : Matrix3.linearSRGBFromP3 * Color3(v, 0, 1)
+            if encoded(t, c) != (try referenceEncode(c, space)) {
+                mismatches += 1
+                if mismatches <= 5 { Issue.record("\(space) bucket \(b) at \(v) encodes differently") }
+            }
+        }
+    }
+    #expect(mismatches == 0)
+}
+
+@Test func byteRoundsExactHalvesAwayFromZero() {
+    var ties = 0
+    for k in 0..<255 {
+        let guess = (Double(k) + 0.5) / 255
+        for v in [guess.nextDown, guess, guess.nextUp] {
+            #expect(DisplayTransfer.byte(v) == referenceByte(v), "\(v)")
+            if v * 255 == Double(k) + 0.5 {
+                ties += 1
+                #expect(DisplayTransfer.byte(v) == UInt8(k + 1), "tie at \(k).5")
+            }
+        }
+    }
+    #expect(ties > 100)
+}
+
 @Test func nanGivesZeroAndInfinitiesClamp() throws {
     let s = try DisplayTransfer(.sRGB)
     #expect(encoded(s, Color3(.nan, .infinity, -.infinity)) == [0, 255, 0])

@@ -135,8 +135,8 @@
   {
     "note": "display bytes truncate instead of rounding to nearest",
     "file": "Sources/CoreColor/DisplayTransfer.swift",
-    "anchor": "UInt8((value * 255).rounded())",
-    "replacement": "UInt8(value * 255)",
+    "anchor": "let nearest = scaled + 0x1p52",
+    "replacement": "let nearest = scaled.rounded(.towardZero) + 0x1p52",
     "filter": "DisplayBytesTests"
   },
   {
