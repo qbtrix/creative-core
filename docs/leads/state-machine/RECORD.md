@@ -2,9 +2,9 @@
 
 Issue: #312 · Packet: docs/blueprints/core/features/state-machine.md (on dev since #310)
 Run: act-1a1448178f5-56p5 · Session: claude/state-machine-feature-lead-016ymp (resumed 2026-10-16T11:40Z; earlier ynzph3, 8z5qtw; earlier run act-1a142b4b29a-bnb2) · Started: 2026-10-16T03:16Z
-Stage: 4 round 2
-Base: 623aa2e (round 2; round 1 8c445c7; wave f 57b645c; wave e 6689fa1; wave d 5cb1494; wave c 670a6ed; wave b f27f104; wave a base 69c9f80 is the feature's first base)
-Next: wait for r2-b1 (feature-done) PR and its lane merge; then round 3 (same six lenses) on that SHA while the dev CI run it triggers runs; done after round 3 clean + CI green, then the contact sheet
+Stage: 4 round 3
+Base: cae920b (round 3; round 2 623aa2e; round 1 8c445c7; wave f 57b645c; wave e 6689fa1; wave d 5cb1494; wave c 670a6ed; wave b f27f104; wave a base 69c9f80 is the feature's first base)
+Next: round 3 gate + mutation + same six-lens panel on cae920b; CI run 38951180654 (feature-done) on cae920b; clean + green -> contact sheet on #312
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -23,7 +23,7 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 ## Rounds
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
 |---|---|---|---|---|---|---|---|---|
-| 2 | 623aa2e | 891/892: only CoreRaster smallDab CPU budget (2.3 s), which also fails on the pre-feature base 69c9f80 on this VM | 95/95; 233 anchors resolve | none yet holds the merges (6 since 5cb1494) | same six | 8 minor, 0 refuted | r2-b1 (6 fixed; 2 declined) | yes (gate: timing-only, env) |
+| 2 | 623aa2e | 891/892: only CoreRaster smallDab CPU budget (2.3 s), which also fails on the pre-feature base 69c9f80 on this VM | 95/95; 233 anchors resolve | none yet holds the merges (6 since 5cb1494) | same six | 8 minor, 0 refuted | #343 r2-b1 merged (7 fixed; 2 declined) | yes (gate: timing-only, env) |
 | 1 | 8c445c7 | PASS on 57b645c (885); 8c445c7: 885/886, first run 885/886 (CoreRaster smallDab budget, cold VM memory after a container restart: 2.1 s, 0.9 s once memory was warmed); rerun under fixer load FAIL on the same test (2.17 s); re-gate when the machine is idle | 72/72 (changed since 69c9f80) | 38877588760 green (5cb1494, through SM-4) | clarity, contract, undo, robustness, tests, design | 16 (2 major: refusal wording undocumented; 500-machine agreement test has no independent oracle) | #340 (B1), #341 (B2), #342 (B3) merged | no |
 
 ## Decisions

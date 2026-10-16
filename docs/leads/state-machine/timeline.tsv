@@ -75,3 +75,6 @@ utc	stage	event	ref	note
 2026-10-16T19:05Z	4	round-clean	623aa2e	round 2: 8 minor, no blocker or major
 2026-10-16T19:06Z	4	stage-start	623aa2e	r2-b1 fix batch (feature-done)
 2026-10-16T18:48Z	3	heartbeat	-	waiting on builders, lane or CI
+2026-10-16T18:58Z	4	pr-merged	#343	r2-b1, feature-done
+2026-10-16T18:58Z	4	ci-run	38951180654	dispatched on cae920b by the lane
+2026-10-16T18:59Z	4	stage-start	cae920b	round 3 gate and mutation
