@@ -26,7 +26,7 @@ extension StateMachine {
     /// Throws the first error issue of this machine as `invalidMachine`;
     /// warnings (an unreachable state) pass.
     func requireNoErrors(in document: Document) throws {
-        if let issue = issues(in: document).first(where: { $0.severity == .error }) {
+        if let issue = firstError(in: document) {
             throw CommandError.invalidMachine(issue)
         }
     }
@@ -91,7 +91,8 @@ struct MachineEditRecord: Sendable, Hashable {
 public struct AddStateMachine: Command {
     public static let id = "machine.add"
     public var label: String { "Add State Machine" }
-    /// The new machine's id; unique among the document's machines.
+    /// The new machine's id (not the command id, which is `Self.id`); unique
+    /// among the document's machines. Later commands address it as `machineID`.
     public var id: String
     /// The new machine's name; not empty.
     public var name: String

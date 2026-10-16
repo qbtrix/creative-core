@@ -96,7 +96,10 @@ public enum CommandError: Error, Equatable, Sendable {
     /// "unknown initial state idle", removing input down reads "condition
     /// names unknown input down". To tell the user what to fix, word the
     /// refusal from `issue.stateID` and `issue.transitionIndex` instead, e.g.
-    /// "idle is the initial state" or "transition 2 still uses hover".
+    /// "idle is the initial state" or "transition 2 still uses hover". An
+    /// issue about an input (a duplicate name, a non-finite default) has both
+    /// nil and names the input only in `message`, so for AddMachineInput and
+    /// UpdateMachineInput word the refusal from the input you sent.
     case invalidMachine(MachineIssue)
     /// The state machine has no state with this id (UpdateMachineState,
     /// RemoveMachineState).

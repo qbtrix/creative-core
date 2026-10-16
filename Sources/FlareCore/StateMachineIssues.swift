@@ -19,19 +19,25 @@ public struct MachineIssue: Sendable, Hashable {
         /// blocks validate, a command or a player.
         case warning
     }
+    /// Whether the issue blocks (error) or only warns (warning).
     public var severity: Severity
     /// For an error, the rule, worded as `FlareFormat.validate` words it after
     /// "state machine <id>: ". For a warning, "<state> can't be reached from
     /// <initial state>". When a machine command refuses an edit, the message
     /// describes the machine as the edit would leave it (removing the initial
     /// state reads "unknown initial state <id>"), so word a refusal to the user
-    /// from `stateID` and `transitionIndex` instead.
+    /// from `stateID` and `transitionIndex` instead. An issue about an input
+    /// (a duplicate name, a non-finite default) has both nil and names the
+    /// input only here, so word a refusal of AddMachineInput or
+    /// UpdateMachineInput from the input the caller sent.
     public var message: String
     /// The state the issue is about, when there is one.
     public var stateID: String?
     /// The index of the transition the issue is about, when there is one.
     public var transitionIndex: Int?
 
+    /// Makes an issue; leave stateID and transitionIndex nil when the issue
+    /// is about no single state or transition.
     public init(severity: Severity, message: String, stateID: String? = nil, transitionIndex: Int? = nil) {
         self.severity = severity
         self.message = message
@@ -100,7 +106,8 @@ extension StateMachine {
     }
 
     /// The first error of `issues(in:)`, or nil when nothing blocks the
-    /// machine. The one gate validate and `MachinePlayer.init` share.
+    /// machine. The one gate validate, `MachinePlayer.init` and the machine
+    /// commands share.
     func firstError(in document: Document) -> MachineIssue? {
         issues(in: document).first(where: { $0.severity == .error })
     }

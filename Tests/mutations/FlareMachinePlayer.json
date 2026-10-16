@@ -33,5 +33,12 @@
     "anchor": "if let issue = found.firstError(in: document) {",
     "replacement": "if let issue = found.firstError(in: document), issue.message.isEmpty {",
     "filter": "MachinePlayerTests"
+  },
+  {
+    "note": "machine player fire takes the last matching transition and skips its conditions",
+    "file": "Sources/FlareCore/MachinePlayer.swift",
+    "anchor": "guard let transition = machine.firing(from: stateID, trigger: trigger, inputs: inputs),",
+    "replacement": "guard let transition = machine.transitions.last(where: { $0.from == stateID && $0.trigger == trigger }),",
+    "filter": "MachinePlayerTests"
   }
 ]

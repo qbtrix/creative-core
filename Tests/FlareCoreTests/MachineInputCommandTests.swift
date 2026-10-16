@@ -74,6 +74,19 @@ import Testing
         Self.expectRefused(AddMachineInput(machineID: "btn", input: again), .invalidMachine(issue))
     }
 
+    @Test func inputIssueNamesTheInputOnlyInItsMessage() throws {
+        var doc = Self.start()
+        var add = AddMachineInput(machineID: "btn", input: MachineInput(name: "level", defaultValue: .number(3)))
+        do {
+            try add.execute(&doc)
+            Issue.record("a duplicate input name was accepted")
+        } catch CommandError.invalidMachine(let issue) {
+            #expect(issue.stateID == nil && issue.transitionIndex == nil)
+            #expect(issue.message.contains("level"))
+        }
+        #expect(doc == Self.start())
+    }
+
     @Test func nonFiniteDefaultThrows() {
         let nan = MachineInput(name: "speed", defaultValue: .number(.nan))
         Self.expectRefused(AddMachineInput(machineID: "btn", input: nan),
