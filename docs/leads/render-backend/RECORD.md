@@ -4,7 +4,7 @@ Issue: #347 · Packet: docs/blueprints/core/features/render-backend.md
 Run: act-1a14644b047-dxwc · Session: see the Belt run page · Started: 2026-10-16T19:52Z
 Stage: 3 wave 1 (RB-1, protected: waiting on a human merge)
 Base: 6967968ed037539869535c4c22fefeab7cc8ea32 (origin/dev)
-Next: RB-1 is a protected-path PR (Package.swift). The lane will not merge it; a human must. Open it, comment on #347, and stop builder work that depends on it until it lands.
+Next: RB-1 builder opens a protected PR (no fast-lane label). Needs a human merge before RB-2 can start. Gate caveat: scripts/ci is red on this sandbox from two timing budgets; see Open.
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -32,3 +32,4 @@ Next: RB-1 is a protected-path PR (Package.swift). The lane will not merge it; a
 ## Open
 - RB-1 touches the protected path Package.swift. The fast lane refuses it. A human must review and merge. Without it, nothing in RB-2..RB-7 can build.
 - Packet Base says origin/dev cae920b; the brief and the live dev are 6967968. The brief's SHA is used.
+- Gate on dev 6967968 (this sandbox, 4 cores): scripts/ci fails in `swift test` at two wall-clock budgets under parallel load: RetouchBoundsTests `smallDabOn12MegapixelsIsFast` (2.1 to 2.6 s against 1.5 s; passes alone at 0.97 s) and EngineStressTests `thousandCommandsNearTheLayerLimitStayInBudget` (5.37 s against 5.0 s). `swift test --no-parallel` passes all 901 tests. GitHub runs for dev are green (cae920b, success). Until the budgets hold here, no PR can honestly carry `Fast-Check: pass`; the sandbox gate is not a substitute for the runner's.
