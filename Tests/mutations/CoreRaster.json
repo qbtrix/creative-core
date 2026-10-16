@@ -142,8 +142,8 @@
   {
     "note": "decoding display bytes does not premultiply",
     "file": "Sources/CoreRaster/DisplayBytes.swift",
-    "anchor": "a: Float(src[i + 3]) / 255).premultiplied()",
-    "replacement": "a: Float(src[i + 3]) / 255)",
+    "anchor": "a: alpha[Int(src[i + 3])]).premultiplied()",
+    "replacement": "a: alpha[Int(src[i + 3])])",
     "filter": "DisplayBytesTests"
   },
   {

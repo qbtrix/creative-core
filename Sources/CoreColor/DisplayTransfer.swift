@@ -9,11 +9,12 @@
 // they share the tables; Display P3 adds the same matrix step, in the same
 // order, as `Color3.converted`. The results are bit for bit those of
 // `converted` plus the clamp-and-round byte rule, with no `pow`, `throw` or
-// call per value and no branch per value beyond the one on the space:
-// `decode`, `encode` and `byte` are inlinable and every value carries the
-// tables, so a pixel loop in another module reads them directly. Table reads
-// go through a buffer pointer without a bounds check: a byte indexes the 256
-// decode entries, and `bucket` clamps first, so its index is always in range.
+// call per component and no branch per component beyond the one on the space:
+// `decode`, `encode` and `byte` are inlinable and every `DisplayTransfer`
+// carries the shared tables, so a pixel loop in another module reads them
+// directly. Table reads go through a buffer pointer without a bounds check: a
+// byte indexes the 256 decode entries, and `bucket` clamps first, so its index
+// is always in range.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -22,7 +23,7 @@ import Foundation
 
 /// 8-bit display encoding of linear sRGB in sRGB or Display P3, by table.
 /// Bit for bit the same as `Color3.converted` followed by DisplayBytes'
-/// clamp and round, without a `pow` or a `throw` per value.
+/// clamp and round, without a `pow` or a `throw` per component.
 public struct DisplayTransfer: Sendable, Hashable {
     /// `.sRGB` or `.displayP3`.
     public let space: ColorSpace

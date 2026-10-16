@@ -7,6 +7,13 @@
     "filter": "CompositeInPlaceTests"
   },
   {
+    "note": "the in-place composite copies an opaque normal row below full opacity",
+    "file": "Sources/CoreRaster/Composite.swift",
+    "anchor": "let copies = mode == .normal && opacity == 1",
+    "replacement": "let copies = mode == .normal",
+    "filter": "CompositeInPlaceTests"
+  },
+  {
     "note": "the in-place composite row stores a non-finite component",
     "file": "Sources/CoreRaster/Composite.swift",
     "anchor": "guard out.isFinite else {",
