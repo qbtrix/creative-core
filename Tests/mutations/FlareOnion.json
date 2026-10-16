@@ -1,0 +1,37 @@
+[
+  {
+    "note": "onion skips the clamp to frame 0 and shows negative frames",
+    "file": "Sources/FlareCore/Onion.swift",
+    "anchor": "let lo = max(0, back.overflow ? Int.min : back.partialValue)",
+    "replacement": "let lo = back.overflow ? Int.min : back.partialValue",
+    "filter": "OnionTests"
+  },
+  {
+    "note": "onion clamps to durationFrames instead of the last frame",
+    "file": "Sources/FlareCore/Onion.swift",
+    "anchor": "let hi = min(durationFrames - 1,",
+    "replacement": "let hi = min(durationFrames,",
+    "filter": "OnionTests"
+  },
+  {
+    "note": "onion includes the playhead frame itself",
+    "file": "Sources/FlareCore/Onion.swift",
+    "anchor": "return (lo...hi).filter { $0 != frame }",
+    "replacement": "return Array(lo...hi)",
+    "filter": "OnionTests"
+  },
+  {
+    "note": "onion subtract wraps instead of saturating on overflow",
+    "file": "Sources/FlareCore/Onion.swift",
+    "anchor": "back.overflow ? Int.min : back.partialValue",
+    "replacement": "back.partialValue",
+    "filter": "OnionTests"
+  },
+  {
+    "note": "onion add wraps instead of saturating on overflow",
+    "file": "Sources/FlareCore/Onion.swift",
+    "anchor": "ahead.overflow ? Int.max : ahead.partialValue",
+    "replacement": "ahead.partialValue",
+    "filter": "OnionTests"
+  }
+]
