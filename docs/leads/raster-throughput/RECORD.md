@@ -43,6 +43,8 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 - RT-2 starts from rt/rt-1 before #319 merges, and rebases on dev once it does.
 
 ## Open
+- Round 4 release medians (670a6ed, 3 runs, ms): copy 156/167/156 (30), paste 104/129/102 (30), copy band 39/43/38 (10), paste band 39/38/37 (10), merge 104/109/113 (60), flatten 215/192/201 (120), merge band 30/30/28 (20), tile 0.53/0.46/0.76 (0.5).
+- Container restart interrupted the round-4 mutate run and left a planted mutant in Onion.swift in the scratch checkout; restored with git checkout and rerun.
 - Gap issues filed: #332 (p1, release budgets unmet on the 4-core Linux box: re-baseline or caller-buffer API, captain decision), #333 (p3, round-4 minors: checkedRegion placement/name, region-encode mutation entry).
 - #309 stays open: its budget rows are unmet (#332).
 - Round 3 release medians (fe5bc53, 3 runs, ms): copy 146/147/150 (30), paste 113/109/113 (30), copy band 38/33/37 (10), paste band 37/33/34 (10), merge 107/105/103 (60), flatten 211/219/228 (120), merge band 29/30/35 (20), tile 0.43/0.71/0.46 (0.5; 2 of 3 within).
