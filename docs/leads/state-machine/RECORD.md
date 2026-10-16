@@ -2,9 +2,9 @@
 
 Issue: #312 · Packet: docs/blueprints/core/features/state-machine.md (on dev since #310)
 Run: act-1a1448178f5-56p5 · Session: claude/state-machine-feature-lead-016ymp (resumed 2026-10-16T11:40Z; earlier ynzph3, 8z5qtw; earlier run act-1a142b4b29a-bnb2) · Started: 2026-10-16T03:16Z
-Stage: 3 wave f
-Base: 57b645c (wave f; wave e 6689fa1; wave d 5cb1494; wave c 670a6ed; wave b f27f104; wave a base 69c9f80 is the feature's first base)
-Next: SM-8 builder running; round 1 gate + mutation running on 57b645c (holds all feature source), then critic panel
+Stage: 4 round 1
+Base: 8c445c7 (round 1; wave f 57b645c; wave e 6689fa1; wave d 5cb1494; wave c 670a6ed; wave b f27f104; wave a base 69c9f80 is the feature's first base)
+Next: round 1 critic panel running on 69c9f80..8c445c7; then fix batch or round 2
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -16,13 +16,14 @@ Next: SM-8 builder running; round 1 gate + mutation running on 57b645c (holds al
 | SM-4 | c | Add/Update/Remove MachineState; CommandError.stateNotFound; machines in fuzz document (closes #222, #221) | MachineStateCommands.swift, StateMachineCommands.swift, Command.swift, MachineStateCommandTests.swift, CommandRegistryTests.swift, UndoPropertyTests.swift, CommandFuzzTests.swift, FlareMachineStates.json | MachineStateCommandTests | FlareMachineStates.json | #335 | merged |
 | SM-5 | d | Add/Update/Remove Transition; invalidIndex doc line (closes #223) | TransitionCommands.swift, StateMachineCommands.swift, Command.swift (doc), TransitionCommandTests.swift, CommandRegistryTests.swift, UndoPropertyTests.swift, FlareTransitions.json | TransitionCommandTests | FlareTransitions.json | #336 | merged |
 | SM-6 | e | Add/Update/Remove MachineInput; CommandError.inputNotFound, .inputTypeChange (closes #224) | MachineInputCommands.swift, StateMachineCommands.swift, Command.swift, MachineInputCommandTests.swift, CommandRegistryTests.swift, UndoPropertyTests.swift, FlareMachineInputs.json | MachineInputCommandTests | FlareMachineInputs.json | #337 | merged |
-| SM-8 | f | MachineJourneyTests: six journey steps, one engine, one player | MachineJourneyTests.swift | MachineJourneyTests | – | – | building |
+| SM-8 | f | MachineJourneyTests: six journey steps, one engine, one player | MachineJourneyTests.swift | MachineJourneyTests | – | #338 | merged |
 
 Acceptance tests and quality bars: the packet's "Acceptance test per task" and "Quality tests" tables, verbatim.
 
 ## Rounds
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
 |---|---|---|---|---|---|---|---|---|
+| 1 | 8c445c7 | PASS on 57b645c (885 tests); SM-8 head PASS (886) | 72/72 (changed since 69c9f80) | 38877588760 green (5cb1494, through SM-4) | clarity, contract, undo, robustness, tests, design | running | – | – |
 
 ## Decisions
 - Waves follow the packet (a SM-1+SM-2; b SM-3+SM-7; c SM-4; d SM-5; e SM-6; f SM-8): the shared test files chain SM-2 to SM-6.
