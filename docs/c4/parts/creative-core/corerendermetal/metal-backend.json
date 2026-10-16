@@ -1,0 +1,10 @@
+{
+  "id": "metal-backend",
+  "name": "Metal Backend",
+  "description": "The CoreRenderMetal module marker, compiled only under canImport(Metal). Later changes add the Metal backend.",
+  "technology": "Swift 6, Metal",
+  "paths": [
+    "Sources/CoreRenderMetal/MetalBackend.swift"
+  ],
+  "order": 10
+}

@@ -8,6 +8,8 @@
 //   CoreRaster   pixel buffers, compositing and image operations (Photo, Library, Halo)
 //   CoreAsset    the shared asset model every app imports and exports
 //   CoreCatalog  photo and metadata catalog over SQLite, through GRDB (Library)
+//   CoreRender   render backend contract and CPU backend (over CoreRaster)
+//   CoreRenderMetal  Metal render backend; an empty module on Linux
 // GRDB is pinned exactly. 7.10.0 is the first release that links against
 // Ubuntu's system SQLite (built without WAL snapshots), and it needs tools 6.1,
 // so 6.1 is this package's floor. On Linux the build needs libsqlite3-dev.
@@ -23,6 +25,8 @@ let package = Package(
         .library(name: "CoreRaster", targets: ["CoreRaster"]),
         .library(name: "CoreAsset", targets: ["CoreAsset"]),
         .library(name: "CoreCatalog", targets: ["CoreCatalog"]),
+        .library(name: "CoreRender", targets: ["CoreRender"]),
+        .library(name: "CoreRenderMetal", targets: ["CoreRenderMetal"]),
     ],
     dependencies: [
         .package(url: "https://github.com/groue/GRDB.swift.git", exact: "7.11.1"),
@@ -33,6 +37,8 @@ let package = Package(
         .target(name: "CoreRaster", dependencies: ["CoreColor"]),
         .target(name: "CoreAsset"),
         .target(name: "CoreCatalog", dependencies: [.product(name: "GRDB", package: "GRDB.swift")]),
+        .target(name: "CoreRender", dependencies: ["CoreRaster", "CoreColor"]),
+        .target(name: "CoreRenderMetal", dependencies: ["CoreRender"]),
         .testTarget(name: "FlareCoreTests", dependencies: ["FlareCore"]),
         .testTarget(name: "CoreColorTests", dependencies: ["CoreColor"]),
         .testTarget(name: "CoreRasterTests", dependencies: ["CoreRaster"]),
@@ -41,5 +47,7 @@ let package = Package(
             name: "CoreCatalogTests",
             dependencies: ["CoreCatalog", .product(name: "GRDB", package: "GRDB.swift")]
         ),
+        .testTarget(name: "CoreRenderTests", dependencies: ["CoreRender"]),
+        .testTarget(name: "CoreRenderMetalTests", dependencies: ["CoreRenderMetal"]),
     ]
 )

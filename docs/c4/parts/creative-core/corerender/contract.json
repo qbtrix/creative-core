@@ -1,0 +1,10 @@
+{
+  "id": "contract",
+  "name": "Render Contract",
+  "description": "The CoreRender module marker (CoreRenderModule). Later changes add the RenderBackend contract, its ops and errors.",
+  "technology": "Swift 6, Foundation",
+  "paths": [
+    "Sources/CoreRender/CoreRender.swift"
+  ],
+  "order": 10
+}

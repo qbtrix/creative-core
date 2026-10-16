@@ -1,0 +1,18 @@
+{
+  "id": "corerendermetal",
+  "name": "CoreRenderMetal library",
+  "description": "Metal render backend (Sources/CoreRenderMetal) for CoreRender. Its one file is compiled only where Metal exists, so Linux builds an empty module.",
+  "technology": "Swift 6, SwiftPM, Metal",
+  "tags": [
+    "internal"
+  ],
+  "order": 70,
+  "relationships": [
+    {
+      "source": "corerendermetal",
+      "target": "corerender",
+      "description": "implements CoreRender's backend contract on the GPU",
+      "style": "sync"
+    }
+  ]
+}

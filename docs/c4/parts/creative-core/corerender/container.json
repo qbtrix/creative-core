@@ -1,0 +1,24 @@
+{
+  "id": "corerender",
+  "name": "CoreRender library",
+  "description": "Shared render module (Sources/CoreRender): the render backend contract and its CPU backend over CoreRaster, for Photo, Library and Halo. Linux-safe, Foundation only.",
+  "technology": "Swift 6, SwiftPM",
+  "tags": [
+    "internal"
+  ],
+  "order": 60,
+  "relationships": [
+    {
+      "source": "corerender",
+      "target": "coreraster",
+      "description": "renders through CoreRaster's pixel buffers and image operations",
+      "style": "sync"
+    },
+    {
+      "source": "corerender",
+      "target": "corecolor",
+      "description": "surfaces carry colors in CoreColor's spaces",
+      "style": "sync"
+    }
+  ]
+}
