@@ -1,0 +1,16 @@
+[
+  {
+    "note": "lottie animated opacity skips the clamp to zero one",
+    "file": "Sources/FlareCore/Export/LottieExporter.swift",
+    "anchor": "map: { min(max($0, 0), 1) * 100 }",
+    "replacement": "map: { $0 * 100 }",
+    "filter": "LottieTracksTests"
+  },
+  {
+    "note": "lottie animated track drops the hold flag",
+    "file": "Sources/FlareCore/Export/LottieExporter.swift",
+    "anchor": "out.h = 1",
+    "replacement": "out.h = nil",
+    "filter": "LottieTracksTests"
+  }
+]
