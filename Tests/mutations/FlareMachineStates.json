@@ -1,16 +1,23 @@
 [
   {
-    "note": "remove machine state undo appends instead of restoring its index",
-    "file": "Sources/FlareCore/MachineStateCommands.swift",
-    "anchor": "document.stateMachines[i].states.insert(removed, at: removedIndex)",
-    "replacement": "document.stateMachines[i].states.append(removed)",
+    "note": "machine state undo restores only the machine name, not its states",
+    "file": "Sources/FlareCore/StateMachineCommands.swift",
+    "anchor": "        stateMachines[index] = old\n",
+    "replacement": "        stateMachines[index].name = old.name\n",
     "filter": "MachineStateCommandTests"
   },
   {
-    "note": "remove machine state skips the rules check so a dangling transition lands",
+    "note": "remove machine state removes the last state instead of the named one",
     "file": "Sources/FlareCore/MachineStateCommands.swift",
-    "anchor": "        _ = try document.editStateMachine(machineID) { machine in\n            let k = try machine.stateIndex(stateID)\n            state = machine.states.remove(at: k)\n            j = k\n        }",
-    "replacement": "        let i = try document.stateMachineIndex(machineID)\n        let k = try document.stateMachines[i].stateIndex(stateID)\n        state = document.stateMachines[i].states.remove(at: k)\n        j = k",
+    "anchor": "machine.states.remove(at: try machine.stateIndex(stateID))",
+    "replacement": "_ = try machine.stateIndex(stateID); machine.states.removeLast()",
+    "filter": "MachineStateCommandTests"
+  },
+  {
+    "note": "update machine state appends the new values instead of replacing the state",
+    "file": "Sources/FlareCore/MachineStateCommands.swift",
+    "anchor": "machine.states[try machine.stateIndex(state.id)] = state",
+    "replacement": "_ = try machine.stateIndex(state.id); machine.states.append(state)",
     "filter": "MachineStateCommandTests"
   }
 ]

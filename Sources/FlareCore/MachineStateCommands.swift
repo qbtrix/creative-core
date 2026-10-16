@@ -8,6 +8,24 @@ import FoundationEssentials
 import Foundation
 #endif
 
+/// What a machine state command records for undo: the machine as it was and
+/// its index, from `editStateMachine`.
+struct MachineEditRecord: Sendable, Hashable {
+    var old: StateMachine?
+    var index: Int?
+
+    /// Runs `editStateMachine` on machine `id` and records its result.
+    mutating func edit(_ document: inout Document, _ id: String,
+                       _ change: (inout StateMachine) throws -> Void) throws {
+        (old, index) = try document.editStateMachine(id, change)
+    }
+
+    /// Puts the recorded machine back; `notExecuted` when nothing was recorded.
+    func undo(_ document: inout Document) throws {
+        try document.restoreStateMachine(old, at: index)
+    }
+}
+
 extension StateMachine {
     /// The position of state `id`, or `stateNotFound`.
     func stateIndex(_ id: String) throws -> Int {
@@ -25,8 +43,7 @@ public struct AddMachineState: Command {
     public var machineID: String
     /// The new state; its id is unique within the machine.
     public var state: MachineState
-    var old: StateMachine?
-    var index: Int?
+    var record = MachineEditRecord()
 
     private enum CodingKeys: String, CodingKey { case machineID, state }
 
@@ -37,11 +54,11 @@ public struct AddMachineState: Command {
 
     public mutating func execute(_ document: inout Document) throws {
         let state = state
-        (old, index) = try document.editStateMachine(machineID) { $0.states.append(state) }
+        try record.edit(&document, machineID) { $0.states.append(state) }
     }
 
     public func undo(_ document: inout Document) throws {
-        try document.restoreStateMachine(old, at: index)
+        try record.undo(&document)
     }
 }
 
@@ -54,38 +71,37 @@ public struct UpdateMachineState: Command {
     public var machineID: String
     /// The state's new values; `state.id` picks the state to change.
     public var state: MachineState
-    var old: StateMachine?
-    var index: Int?
+    var record = MachineEditRecord()
 
     private enum CodingKeys: String, CodingKey { case machineID, state }
 
-    public init(machineID: String, state: MachineState) {
-        self.machineID = machineID
-        self.state = state
-    }
-
     public mutating func execute(_ document: inout Document) throws {
         let state = state
-        (old, index) = try document.editStateMachine(machineID) { machine in
+        try record.edit(&document, machineID) { machine in
             machine.states[try machine.stateIndex(state.id)] = state
         }
     }
 
     public func undo(_ document: inout Document) throws {
-        try document.restoreStateMachine(old, at: index)
+        try record.undo(&document)
+    }
+
+    public init(machineID: String, state: MachineState) {
+        self.machineID = machineID
+        self.state = state
     }
 }
 
-/// Removes state `stateID` from machine `machineID`; undo puts it back at its
-/// index. Throws `stateMachineNotFound`, `stateNotFound`, or `invalidMachine`
-/// when the state is the initial state or a transition still names it.
+/// Removes state `stateID` from machine `machineID`; undo puts the machine
+/// back as it was, so the state returns at its index. Throws
+/// `stateMachineNotFound`, `stateNotFound`, or `invalidMachine` when the
+/// state is the initial state or a transition still names it.
 public struct RemoveMachineState: Command {
     public static let id = "machine.removeState"
     public var label: String { "Delete State" }
     public var machineID: String
     public var stateID: String
-    var removed: MachineState?
-    var removedIndex: Int?
+    var record = MachineEditRecord()
 
     private enum CodingKeys: String, CodingKey { case machineID, stateID }
 
@@ -96,22 +112,12 @@ public struct RemoveMachineState: Command {
 
     public mutating func execute(_ document: inout Document) throws {
         let stateID = stateID
-        var state: MachineState?
-        var j: Int?
-        _ = try document.editStateMachine(machineID) { machine in
-            let k = try machine.stateIndex(stateID)
-            state = machine.states.remove(at: k)
-            j = k
+        try record.edit(&document, machineID) { machine in
+            machine.states.remove(at: try machine.stateIndex(stateID))
         }
-        (removed, removedIndex) = (state, j)
     }
 
     public func undo(_ document: inout Document) throws {
-        guard let removed, let removedIndex else { throw CommandError.notExecuted }
-        let i = try document.stateMachineIndex(machineID)
-        guard (0...document.stateMachines[i].states.count).contains(removedIndex) else {
-            throw CommandError.invalidIndex(removedIndex)
-        }
-        document.stateMachines[i].states.insert(removed, at: removedIndex)
+        try record.undo(&document)
     }
 }
