@@ -82,3 +82,4 @@ utc	stage	event	ref	note
 2026-10-16T19:25Z	4	gate-run	cae920b	895/896 timing-only (env); mutate 99/99
 2026-10-16T19:25Z	4	ci-run	38951180654	Linux, Mutation, anchors green; macOS queued
 2026-10-16T19:26Z	4	stage-start	cae920b	round 3 critic panel
+2026-10-16T19:18Z	3	heartbeat	-	waiting on builders, lane or CI
