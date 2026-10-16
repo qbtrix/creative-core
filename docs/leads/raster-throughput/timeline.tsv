@@ -32,3 +32,5 @@ utc	stage	event	ref	note
 2026-10-16T05:17Z	4	pr-opened	#325	r1-b2 display loops
 2026-10-16T05:18Z	4	pr-opened	#326	r1-b3 budget clock
 2026-10-16T05:18Z	4	pr-merged	#325	r1-b2
+2026-10-16T05:18Z	4	pr-merged	#326	r1-b3
+2026-10-16T05:18Z	4	stage-start	round 2	f27f104
