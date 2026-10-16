@@ -87,6 +87,11 @@ public enum CommandError: Error, Equatable, Sendable {
     case emptySwatchName
     /// A name is empty where one is required, e.g. a scene name.
     case emptyName
+    /// The document has no state machine with this id.
+    case stateMachineNotFound(String)
+    /// The edit would break a state machine rule; the issue names the rule and
+    /// the state or transition it is about (see `StateMachine.issues(in:)`).
+    case invalidMachine(MachineIssue)
     /// A color channel is not finite or not in 0...1.
     case invalidColor(Color)
     /// An index outside the valid range. The number is one of: a layer

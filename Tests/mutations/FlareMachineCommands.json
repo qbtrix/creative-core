@@ -1,0 +1,23 @@
+[
+  {
+    "note": "add state machine lets a used machine id through",
+    "file": "Sources/FlareCore/StateMachineCommands.swift",
+    "anchor": "guard !document.stateMachines.contains(where: { $0.id == id }) else { throw CommandError.duplicateID(id) }",
+    "replacement": "guard !document.stateMachines.contains(where: { $0.id == id + \"!\" }) else { throw CommandError.duplicateID(id) }",
+    "filter": "MachineCommandTests"
+  },
+  {
+    "note": "machine edit stores the copy before checking its rules",
+    "file": "Sources/FlareCore/StateMachineCommands.swift",
+    "anchor": "        try machine.requireNoErrors(in: self)\n        let old = stateMachines[i]\n        stateMachines[i] = machine",
+    "replacement": "        let old = stateMachines[i]\n        stateMachines[i] = machine\n        try machine.requireNoErrors(in: self)",
+    "filter": "MachineCommandTests"
+  },
+  {
+    "note": "remove state machine undo appends instead of restoring its index",
+    "file": "Sources/FlareCore/StateMachineCommands.swift",
+    "anchor": "document.stateMachines.insert(removed, at: removedIndex)",
+    "replacement": "document.stateMachines.append(removed)",
+    "filter": "MachineCommandTests"
+  }
+]
