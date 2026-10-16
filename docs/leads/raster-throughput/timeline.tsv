@@ -14,3 +14,4 @@ utc	stage	event	ref	note
 2026-10-16T03:56Z	3	stage-end	wave a	dev 03fc069
 2026-10-16T04:05Z	3	pr-opened	#321	RT-2 rgba8 over tables + region
 2026-10-16T04:06Z	3	stage-start	wave b2	RT-2b fast encode, budgets missed by RT-2
+2026-10-16T04:05Z	3	pr-merged	#321	RT-2

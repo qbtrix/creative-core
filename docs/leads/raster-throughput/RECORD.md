@@ -4,7 +4,7 @@ Issue: #311 · Packet: docs/blueprints/core/features/raster-throughput.md (in PR
 Run: act-1a142b4b264-6dd2 · Session: claude/raster-throughput-lead-pyis7l · Started: 2026-10-16T03:05Z
 Stage: 3 wave b
 Base: 03fc069026d50f48536dca8c86935deb3183de18 (wave b; first base f05665f5b54a461ab4a4e981ed7d7b01d7ab37ed)
-Next: wait for the lane on #321 (RT-2) and the RT-2b builder (rt/rt-2b); then RT-5
+Next: wait for the RT-2b builder (rt/rt-2b), open its PR; then RT-5
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -12,7 +12,7 @@ Next: wait for the lane on #321 (RT-2) and the RT-2b builder (rt/rt-2b); then RT
 | RT-1 | a | `DisplayTransfer`: decode table, encode thresholds, byte rule | Sources/CoreColor/DisplayTransfer.swift, Tests/CoreColorTests/DisplayTransferTests.swift, Tests/mutations/CoreColorDisplayTransfer.json, docs/c4/parts/creative-core/corecolor/color-spaces.json | DisplayTransferTests | CoreColorDisplayTransfer.json (6/6 caught) | #319 | merged |
 | RT-3 | a | in-place `composite(_:x:y:mode:opacity:)`, free functions call it, opaque `.normal` row copy, `updateRow` | Sources/CoreRaster/Composite.swift, Sources/CoreRaster/PixelBuffer.swift, Tests/CoreRasterTests/CompositeInPlaceTests.swift, Tests/mutations/CoreRasterCompositeInPlace.json, docs/c4/parts/creative-core/coreraster/compositing.json | CompositeInPlaceTests | CoreRasterCompositeInPlace.json (3/3 caught) | #320 | merged |
 | RT-4 | a | `smallDabOn12MegapixelsIsFast` times thread CPU time (closes #300) | Tests/CoreRasterTests/RetouchBoundsTests.swift, Tests/CoreRasterTests/Support.swift | smallDabOn12MegapixelsIsFast + helper busy-loop check | – | #318 | merged |
-| RT-2 | b | `rgba8` / `init(rgba8:)` over `DisplayTransfer`; region `rgba8(x:y:width:height:)` | Sources/CoreRaster/DisplayBytes.swift, Tests/CoreRasterTests/DisplayBytesFastPathTests.swift, Tests/mutations/CoreRaster.json, Tests/mutations/CoreRasterDisplayBytes.json, docs/c4/parts/creative-core/coreraster/pixel-buffer.json | DisplayBytesFastPathTests | repoint 3 CoreRaster.json entries + CoreRasterDisplayBytes.json | – | #321 | lane |
+| RT-2 | b | `rgba8` / `init(rgba8:)` over `DisplayTransfer`; region `rgba8(x:y:width:height:)` | Sources/CoreRaster/DisplayBytes.swift, Tests/CoreRasterTests/DisplayBytesFastPathTests.swift, Tests/mutations/CoreRaster.json, Tests/mutations/CoreRasterDisplayBytes.json, docs/c4/parts/creative-core/coreraster/pixel-buffer.json | DisplayBytesFastPathTests | repoint 3 CoreRaster.json entries + CoreRasterDisplayBytes.json | – | #321 | merged |
 | RT-2b | b2 | display encode by bucket table, inlinable across modules, to reach RT-5's budgets (RT-2 measured rgba8 450 ms, init 137 ms vs 30 ms) | Sources/CoreColor/DisplayTransfer.swift, Sources/CoreRaster/DisplayBytes.swift, their tests and mutation plans | existing equivalence tests + bucket invariant test | CoreColorDisplayTransfer.json | – | building |
 | RT-5 | c | release budgets on one core and four; `feature-done` (closes #309) | Tests/CoreRasterTests/RasterThroughputBudgetTests.swift | RasterThroughputBudgetTests | – | – | waits on RT-2, RT-3 |
 
