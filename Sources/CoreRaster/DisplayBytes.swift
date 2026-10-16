@@ -32,12 +32,7 @@ extension PixelBuffer {
     public func rgba8(x: Int, y: Int, width regionWidth: Int, height regionHeight: Int,
                       colorSpace: ColorSpace = .sRGB) throws -> [UInt8] {
         let encoder = try Self.displayTransfer(colorSpace)
-        _ = try Self.validatedSize(width: regionWidth, height: regionHeight)
-        guard x >= 0, y >= 0, regionWidth <= width, regionHeight <= height,
-              x <= width - regionWidth, y <= height - regionHeight else {
-            throw RasterError.invalid(
-                "crop \(regionWidth)x\(regionHeight) at (\(x), \(y)) is outside \(width)x\(height)")
-        }
+        try checkedRegion(x: x, y: y, width: regionWidth, height: regionHeight)
         let c = Self.channels
         let rowCount = regionWidth * c
         let count = regionHeight * rowCount

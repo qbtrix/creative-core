@@ -6,9 +6,10 @@
 // there); the equivalence tests in DisplayBytesFastPathTests and
 // CompositeInPlaceTests carry the debug gate. Inputs are built once per test,
 // outside the timed region, and each run's earlier result is released before
-// the clock starts, so no timed region pays to free it. Each row prints its median as
-// `budget <row>: <ms> ms (budget <ms> ms)` and gates on it; reported rows
-// print `(report only)`.
+// the clock starts, so no timed region pays to free it. Each row prints the
+// median of its runs as `budget <row>: <ms> ms (budget <ms> ms)` and gates on
+// it; a "slowest band" row's run time is its slowest band's wall time, so it
+// prints the median over runs of that. Reported rows print `(report only)`.
 import CoreRaster
 import Dispatch
 import Testing
@@ -140,7 +141,7 @@ struct RasterThroughputBudgetTests {
         let encoded = try bandRuns { band in
             try layer.rgba8(x: 0, y: band * bandHeight, width: width, height: bandHeight)
         }
-        check("copy rgba8 band 4000x750 four cores", encoded.times, budget: .milliseconds(10))
+        check("copy rgba8 slowest band 4000x750 four cores", encoded.times, budget: .milliseconds(10))
         // The bands do the whole picture's work: together they are its bytes.
         #expect(encoded.last.flatMap { $0 } == bytes)
 
@@ -148,7 +149,7 @@ struct RasterThroughputBudgetTests {
         let decoded = try bandRuns { band in
             try PixelBuffer(rgba8: bandBytes[band], width: width, height: bandHeight)
         }
-        check("paste init(rgba8:) band 4000x750 four cores", decoded.times, budget: .milliseconds(10))
+        check("paste init(rgba8:) slowest band 4000x750 four cores", decoded.times, budget: .milliseconds(10))
         for (i, part) in decoded.last.enumerated() {
             #expect(try part == band(i, of: pasted))
         }
@@ -206,7 +207,7 @@ struct RasterThroughputBudgetTests {
             times.append(results.map(\.time).max() ?? .zero)
             last = results.map(\.value)
         }
-        check("merge down composite band 4000x750 four cores", times, budget: .milliseconds(20))
+        check("merge down composite slowest band 4000x750 four cores", times, budget: .milliseconds(20))
         for (i, part) in last.enumerated() {
             #expect(try part == band(i, of: merged.last))
         }
