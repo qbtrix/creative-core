@@ -23,7 +23,7 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 ## Rounds
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
 |---|---|---|---|---|---|---|---|---|
-| 1 | 8c445c7 | PASS on 57b645c (885); 8c445c7: 885/886, only CoreRaster smallDabOn12MegapixelsIsFast CPU budget (1.7-2.1 s vs 1.5 s, debug, fresh VM; not feature code, unchanged since 57b645c where it passed) | 72/72 (changed since 69c9f80) | 38877588760 green (5cb1494, through SM-4) | clarity, contract, undo, robustness, tests, design | 16 (2 major: refusal wording undocumented; 500-machine agreement test has no independent oracle) | B1, B2, B3 | no |
+| 1 | 8c445c7 | PASS on 57b645c (885); 8c445c7: 885/886, first run 885/886 (CoreRaster smallDab budget, cold VM memory after a container restart: 2.1 s, 0.9 s once memory was warmed); rerun PASS | 72/72 (changed since 69c9f80) | 38877588760 green (5cb1494, through SM-4) | clarity, contract, undo, robustness, tests, design | 16 (2 major: refusal wording undocumented; 500-machine agreement test has no independent oracle) | B1, B2, B3 | no |
 
 ## Decisions
 - Waves follow the packet (a SM-1+SM-2; b SM-3+SM-7; c SM-4; d SM-5; e SM-6; f SM-8): the shared test files chain SM-2 to SM-6.
@@ -35,10 +35,11 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 - Resumed again (run act-1a1448178f5-56p5): wave d had merged (#336 SM-5) by dev 6689fa1.
 - Container restarted mid wave e; #337 (SM-6) had merged by dev 57b645c. #101 told its last family landed.
 - Round 1 runs on 57b645c beside the SM-8 build: SM-8 adds only a test file, and builders never wait on critics.
+- Gate and mutation runs go through `flock /tmp/creative-core-ci.lock` so parallel fixers don't break timing budgets; after a container restart, warm 3 GB of memory before the gate.
 - PRs, labels and comments go through the GitHub MCP tools (no gh auth in cloud sessions).
 
 ## Open
-- Round 1 #7 (Onion.onionFrames allocates one Int per window frame; unbounded with huge durations) is motion-tracks code, filed as a gap issue, not fixed here.
+- Round 1 #7 (Onion.onionFrames allocates one Int per window frame; unbounded with huge durations) is motion-tracks code, filed as gap #339, not fixed here.
 - Round 1 #14 leaves `requireNoErrors` (StateMachineCommands.swift) on its own predicate until B1's `firstError(in:)` lands; round 2 switches it.
 - Builders' PR bodies got a server-appended attribution footer; the lane stripped it on merge (#314, #316). Templates now tell builders to PATCH it out.
 - The container lacked Swift; scripts/cloud-setup.sh installed 6.3.3. #220-#226 labelled in-progress.
