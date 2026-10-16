@@ -5,6 +5,7 @@
 // CoreColor's `DisplayTransfer` (the tables that equal `Color3.converted`
 // plus the clamp-and-round byte rule) and the alpha math through
 // `RGBA.unpremultiplied` / `RGBA.premultiplied`; nothing here repeats them.
+// Decoding reads alpha from a 256-entry table of `Float(byte) / 255`.
 // Each call is one pass over storage with no `try` per pixel. Encoding clamps
 // each value to 0...1 after the transfer curve and rounds to nearest. A fully
 // transparent pixel encodes as 0, 0, 0, 0. A region encodes a rectangle of
@@ -79,22 +80,28 @@ extension PixelBuffer {
         }
         let c = Self.channels
         // Every component is written below, so the array starts uninitialized.
+        // A byte always indexes 0...255, so the alpha table is read unchecked.
         let storage = bytes.withUnsafeBufferPointer { src in
-            [Float](unsafeUninitializedCapacity: src.count) { out, initialized in
-                for i in stride(from: 0, to: src.count, by: c) {
-                    let linear = decoder.decode(src[i], src[i + 1], src[i + 2])
-                    let p = RGBA(r: Float(linear.c0), g: Float(linear.c1), b: Float(linear.c2),
-                                 a: Float(src[i + 3]) / 255).premultiplied()
-                    out[i] = p.r
-                    out[i + 1] = p.g
-                    out[i + 2] = p.b
-                    out[i + 3] = p.a
+            Self.alphaTable.withUnsafeBufferPointer { alpha in
+                [Float](unsafeUninitializedCapacity: src.count) { out, initialized in
+                    for i in stride(from: 0, to: src.count, by: c) {
+                        let linear = decoder.decode(src[i], src[i + 1], src[i + 2])
+                        let p = RGBA(r: Float(linear.c0), g: Float(linear.c1), b: Float(linear.c2),
+                                     a: alpha[Int(src[i + 3])]).premultiplied()
+                        out[i] = p.r
+                        out[i + 1] = p.g
+                        out[i + 2] = p.b
+                        out[i + 3] = p.a
+                    }
+                    initialized = src.count
                 }
-                initialized = src.count
             }
         }
         self.init(checkedWidth: width, height: height, storage: storage)
     }
+
+    /// Straight alpha for each byte: entry b is `Float(b) / 255`.
+    private static let alphaTable: [Float] = (0...255).map { Float($0) / 255 }
 
     /// The display tables for `colorSpace`, or `RasterError.invalid` when it
     /// is not in `displayColorSpaces`, the spaces `DisplayTransfer` accepts.

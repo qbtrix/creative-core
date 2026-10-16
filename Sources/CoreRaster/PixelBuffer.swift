@@ -40,9 +40,7 @@ public struct RGBA: Equatable, Hashable, Sendable {
     /// all zeros instead of dividing by zero.
     public func unpremultiplied() -> RGBA {
         guard a != 0 else { return .clear }
-        // One lane-wise IEEE division: the same quotients as r / a, g / a, b / a.
-        let straight = SIMD4(r, g, b, a) / SIMD4(a, a, a, 1)
-        return RGBA(r: straight[0], g: straight[1], b: straight[2], a: a)
+        return RGBA(r: r / a, g: g / a, b: b / a, a: a)
     }
 }
 

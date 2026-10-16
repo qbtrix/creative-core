@@ -3,8 +3,9 @@
 // sourceOver it replaced. Every blend mode at opacities 0, 0.37 and 1 with the
 // source hanging off each edge and corner or wholly outside; the free
 // functions; bad opacities; an overflow to infinity (same message, nothing
-// non-finite stored); the opaque .normal row copy, including a row with one
-// pixel that is not quite opaque; and a Flatten, two chained composites over
+// non-finite stored); the opaque .normal row copy, only at opacity 1 (an opaque
+// source at 0.37 and 0 takes the formula), including a row with one pixel that
+// is not quite opaque; and a Flatten, two chained composites over
 // three layers.
 @testable import CoreRaster
 import Testing
@@ -140,10 +141,14 @@ private let offsets = [(-2, -1), (5, -1), (-2, 3), (5, 3), (2, -2), (2, 4), (-3,
     var rng = SplitMix64(seed: 314)
     let backdrop = try randomBuffer(8, 6, &rng)
     var source = try randomBuffer(5, 4, &rng, opaque: true)
-    for (x, y) in [(0, 0), (-2, -1), (5, 4), (2, 1)] {
-        var got = backdrop
-        try got.composite(source, x: x, y: y, mode: .normal, opacity: 1)
-        #expect(got == (try referenceComposite(source, onto: backdrop, x: x, y: y, mode: .normal, opacity: 1)))
+    // Below full opacity an opaque row is no longer the source: it takes the formula.
+    for opacity: Float in [1, 0.37, 0] {
+        for (x, y) in [(0, 0), (-2, -1), (5, 4), (2, 1)] {
+            var got = backdrop
+            try got.composite(source, x: x, y: y, mode: .normal, opacity: opacity)
+            #expect(got == (try referenceComposite(source, onto: backdrop, x: x, y: y, mode: .normal,
+                                                   opacity: opacity)), "\(opacity) at (\(x), \(y))")
+        }
     }
     // One pixel just short of opaque: its row must take the formula, not the copy.
     try source.setPixel(x: 3, y: 2, RGBA(r: 0.5, g: -0.4, b: 0.9, a: 0.999).premultiplied())
