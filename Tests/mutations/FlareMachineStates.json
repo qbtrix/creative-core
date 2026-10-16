@@ -1,0 +1,23 @@
+[
+  {
+    "note": "machine state undo restores only the machine name, not its states",
+    "file": "Sources/FlareCore/StateMachineCommands.swift",
+    "anchor": "        stateMachines[index] = old\n",
+    "replacement": "        stateMachines[index].name = old.name\n",
+    "filter": "MachineStateCommandTests"
+  },
+  {
+    "note": "remove machine state removes the last state instead of the named one",
+    "file": "Sources/FlareCore/MachineStateCommands.swift",
+    "anchor": "machine.states.remove(at: try machine.stateIndex(stateID))",
+    "replacement": "_ = try machine.stateIndex(stateID); machine.states.removeLast()",
+    "filter": "MachineStateCommandTests"
+  },
+  {
+    "note": "update machine state appends the new values instead of replacing the state",
+    "file": "Sources/FlareCore/MachineStateCommands.swift",
+    "anchor": "machine.states[try machine.stateIndex(state.id)] = state",
+    "replacement": "_ = try machine.stateIndex(state.id); machine.states.append(state)",
+    "filter": "MachineStateCommandTests"
+  }
+]

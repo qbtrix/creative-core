@@ -92,6 +92,9 @@ public enum CommandError: Error, Equatable, Sendable {
     /// The edit would break a state machine rule; the issue names the rule and
     /// the state or transition it is about (see `StateMachine.issues(in:)`).
     case invalidMachine(MachineIssue)
+    /// The state machine has no state with this id (UpdateMachineState,
+    /// RemoveMachineState).
+    case stateNotFound(String)
     /// A color channel is not finite or not in 0...1.
     case invalidColor(Color)
     /// An index outside the valid range. The number is one of: a layer
