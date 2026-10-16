@@ -13,9 +13,9 @@ features; the source issues carry their own labels (#220 to #225 and #228 are
 |---|---|---|---|---|---|---|---|---|
 | 1 | What the stage draws and what a click picks | `stage-geometry.md` | #213, #214, #215, #182 | p1 | nothing | Flare `live-stage` | #267 | shipped (#306) |
 | 1 | Undoable edits on scene and symbol layers | `edit-commands.md` | #171, #219, #216, #217, #173 | p1 | nothing | Flare `live-keys`, `live-scenes`, `live-stage` | #268 | shipped (#299) |
-| 2 | Whole-image raster work at display speed | `raster-throughput.md` | #309, #300 | p1 | nothing | Photo `photo-edit` (PB-15, PB-16) and the brush tile render | file when this PR merges | planned |
-| 2 | State machines Flare can edit and play | `state-machine.md` | #220, #221, #222, #223, #224, #225, #226 | p2 | nothing | Flare LM-10, LM-11, LM-12 | file when this PR merges | planned |
-| 2 | Onion frames, Lottie tracks and the core budgets | `motion-tracks.md` | #218, #227, #228 | p2 | nothing | Flare LM-8, LM-13a; the QB-L5 to QB-L8 model budgets | file when this PR merges | planned |
+| 2 | Whole-image raster work at display speed | `raster-throughput.md` | #309, #300 | p1 | nothing | Photo `photo-edit` (PB-15, PB-16) and the brush tile render | #311 | planned |
+| 2 | State machines Flare can edit and play | `state-machine.md` | #220, #221, #222, #223, #224, #225, #226 | p2 | nothing | Flare LM-10, LM-11, LM-12 | #312 | planned |
+| 2 | Onion frames, Lottie tracks and the core budgets | `motion-tracks.md` | #218, #227, #228 | p2 | nothing | Flare LM-8, LM-13a; the QB-L5 to QB-L8 model budgets | #313 | planned |
 
 What the apps wait on, mapped to the task that closes each issue:
 
