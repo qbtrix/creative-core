@@ -11,3 +11,6 @@ utc	stage	event	ref	note
 2026-10-16T04:33Z	3	heartbeat	-	waiting on builders, lane or CI
 2026-10-16T04:48Z	3	heartbeat	-	waiting on builders, lane or CI
 2026-10-16T05:03Z	3	heartbeat	-	waiting on builders, lane or CI
+2026-10-16T05:25Z	3	pr-merged	#314	SM-2 RenameSymbol
+2026-10-16T05:25Z	3	pr-merged	#316	SM-1 issues query
+2026-10-16T05:26Z	3	stage-start	f27f104	wave b: SM-3, SM-7 builders
