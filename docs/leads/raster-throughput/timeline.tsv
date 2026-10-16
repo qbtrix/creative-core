@@ -26,3 +26,4 @@ utc	stage	event	ref	note
 2026-10-16T04:45Z	4	stage-start	round 1	f7b9bcf
 2026-10-16T04:49Z	4	heartbeat	round 1	gate+mutate and critic panel running
 2026-10-16T04:55Z	4	gate-run	f7b9bcf	CI PASS 814 tests; mutate 39/39 caught
+2026-10-16T04:57Z	4	round-findings	round 1	4 major (updateRow double copy, normal-mode blend, display loop checks, frees in budget clock), 9 minor; 3 fix batches

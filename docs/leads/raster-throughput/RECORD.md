@@ -4,7 +4,7 @@ Issue: #311 · Packet: docs/blueprints/core/features/raster-throughput.md (in PR
 Run: act-1a142b4b264-6dd2 · Session: claude/raster-throughput-lead-pyis7l · Started: 2026-10-16T03:05Z
 Stage: 4 round 1
 Base: f7b9bcfb2d91d5c151e289864008f76f75c64314 (round 1; first base f05665f5b54a461ab4a4e981ed7d7b01d7ab37ed)
-Next: round 1: critic panel running; then fix batch
+Next: round 1 fix batches running (rt/r1-b1 composite, rt/r1-b2 display, rt/r1-b3 budget clock); open their PRs, then round 2
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -21,7 +21,7 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 ## Rounds
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
 |---|---|---|---|---|---|---|---|---|
-| 1 | f7b9bcf | PASS (814 tests) | 39/39 (validate: 203 anchors) | – (not dispatched yet) | clarity, contract, robustness, tests, compat, performance | pending | – | – |
+| 1 | f7b9bcf | PASS (814 tests) | 39/39 (validate: 203 anchors) | – (not dispatched yet) | clarity, contract, robustness, tests, compat, performance | 4 major, 9 minor (scratchpad r1/findings.md) | r1-b1, r1-b2, r1-b3 | no |
 
 ## Decisions
 - Packet not yet on dev (PR #310 open); builders read it from origin/docs/core-packets-wave2.
@@ -32,6 +32,8 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 - Session restarted after wave a builders finished; resumed from their pushed branches.
 - RT-2 shipped correct but slow (2-6x faster than today, 15x over budget): the 8-step search in DisplayTransfer.encode dominates. Added task RT-2b rather than widening RT-2.
 - RT-2b: bucket-table encode + @inlinable; bytes identical; 2.4-3.5x faster. Further SIMD row API would change the contract slice: not done without the captain.
+- Round 1 finding 11 (best of 3 vs median): keep the median of 5; the packet's Done check says medians.
+- Round 1: internal `updateRow` may take an UnsafeMutableBufferPointer (same name and contract); public API unchanged.
 - RT-5 opened without `feature-done`: the Anatomy loop follows it, so the last fix PR (or a RECORD/packet status PR) carries `feature-done`.
 - RT-5 keeps the packet's budgets unchanged (no self-widening); misses go in the contact sheet and a gap issue.
 - RT-2 starts from rt/rt-1 before #319 merges, and rebases on dev once it does.
