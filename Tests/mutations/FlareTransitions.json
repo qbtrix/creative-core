@@ -1,0 +1,9 @@
+[
+  {
+    "note": "remove transition removes the last transition instead of the indexed one",
+    "file": "Sources/FlareCore/TransitionCommands.swift",
+    "anchor": "machine.transitions.remove(at: index)",
+    "replacement": "machine.transitions.removeLast()",
+    "filter": "TransitionCommandTests"
+  }
+]
