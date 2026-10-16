@@ -1,30 +1,13 @@
 // MachineStateCommands.swift: commands that add, update and remove the states
 // of a state machine. Each follows the one rule set of StateMachineCommands:
 // edit a copy of the machine, throw its first error issue as `invalidMachine`
-// before touching the document, record what undo needs, encode params only.
+// before touching the document, record what undo needs (via
+// `MachineEditRecord`), encode params only.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
 import Foundation
 #endif
-
-/// What a machine state command records for undo: the machine as it was and
-/// its index, from `editStateMachine`.
-struct MachineEditRecord: Sendable, Hashable {
-    var old: StateMachine?
-    var index: Int?
-
-    /// Runs `editStateMachine` on machine `id` and records its result.
-    mutating func edit(_ document: inout Document, _ id: String,
-                       _ change: (inout StateMachine) throws -> Void) throws {
-        (old, index) = try document.editStateMachine(id, change)
-    }
-
-    /// Puts the recorded machine back; `notExecuted` when nothing was recorded.
-    func undo(_ document: inout Document) throws {
-        try document.restoreStateMachine(old, at: index)
-    }
-}
 
 extension StateMachine {
     /// The position of state `id`, or `stateNotFound`.
@@ -40,6 +23,7 @@ extension StateMachine {
 public struct AddMachineState: Command {
     public static let id = "machine.addState"
     public var label: String { "Add State" }
+    /// The id of the state machine to edit.
     public var machineID: String
     /// The new state; its id is unique within the machine.
     public var state: MachineState
@@ -68,6 +52,7 @@ public struct AddMachineState: Command {
 public struct UpdateMachineState: Command {
     public static let id = "machine.updateState"
     public var label: String { "Edit State" }
+    /// The id of the state machine to edit.
     public var machineID: String
     /// The state's new values; `state.id` picks the state to change.
     public var state: MachineState
@@ -95,11 +80,16 @@ public struct UpdateMachineState: Command {
 /// Removes state `stateID` from machine `machineID`; undo puts the machine
 /// back as it was, so the state returns at its index. Throws
 /// `stateMachineNotFound`, `stateNotFound`, or `invalidMachine` when the
-/// state is the initial state or a transition still names it.
+/// state is the initial state (issue "unknown initial state <id>", with
+/// `stateID` set) or a transition still names it (issue "transition <from> ->
+/// <to> names an unknown state", with `transitionIndex` set).
 public struct RemoveMachineState: Command {
     public static let id = "machine.removeState"
     public var label: String { "Delete State" }
+    /// The id of the state machine to edit.
     public var machineID: String
+    /// The id of the state to remove; not the initial state, and no
+    /// transition may still name it.
     public var stateID: String
     var record = MachineEditRecord()
 

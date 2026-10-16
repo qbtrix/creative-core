@@ -97,6 +97,25 @@ import Testing
         #expect(throws: CommandError.notExecuted) { try SetInitialState(machineID: "btn", stateID: "idle").undo(&doc) }
     }
 
+    @Test func undoAfterMachineMovedThrowsStateMachineNotFound() throws {
+        var doc = Self.start()
+        var rename = RenameStateMachine(machineID: "btn", name: "Toggle")
+        try rename.execute(&doc)
+        doc.stateMachines.swapAt(0, 1)
+        let moved = doc
+        #expect(throws: CommandError.stateMachineNotFound("btn")) { try rename.undo(&doc) }
+        #expect(doc == moved)
+    }
+
+    @Test func removeUndoPastTheEndThrowsInvalidIndex() throws {
+        var doc = Self.start()
+        var remove = RemoveStateMachine(machineID: "c")
+        try remove.execute(&doc)
+        doc.stateMachines.removeAll { $0.id == "a" || $0.id == "btn" }
+        #expect(throws: CommandError.invalidIndex(2)) { try remove.undo(&doc) }
+        #expect(doc.stateMachines.isEmpty)
+    }
+
     /// Both `execute` alone and `perform` throw `error` and change nothing.
     static func expectRefused(_ command: some Command, _ error: CommandError) {
         var cmd = command

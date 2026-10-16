@@ -24,6 +24,7 @@ extension StateMachine {
 public struct AddMachineInput: Command {
     public static let id = "machine.addInput"
     public var label: String { "Add Input" }
+    /// The id of the state machine to edit.
     public var machineID: String
     /// The new input; its name is unique within the machine.
     public var input: MachineInput
@@ -53,6 +54,7 @@ public struct AddMachineInput: Command {
 public struct UpdateMachineInput: Command {
     public static let id = "machine.updateInput"
     public var label: String { "Edit Input" }
+    /// The id of the state machine to edit.
     public var machineID: String
     /// The input's new values; `input.name` picks the input to change.
     public var input: MachineInput
@@ -84,11 +86,14 @@ public struct UpdateMachineInput: Command {
 /// Removes input `name` from machine `machineID`; undo puts the machine back
 /// as it was, so the input returns at its index. Throws
 /// `stateMachineNotFound`, `inputNotFound`, or `invalidMachine` naming the
-/// first transition whose condition still uses the input.
+/// first transition whose condition still uses the input (issue "condition
+/// names unknown input <name>", with `transitionIndex` set).
 public struct RemoveMachineInput: Command {
     public static let id = "machine.removeInput"
     public var label: String { "Delete Input" }
+    /// The id of the state machine to edit.
     public var machineID: String
+    /// The name of the input to remove; no condition may still use it.
     public var name: String
     var record = MachineEditRecord()
 

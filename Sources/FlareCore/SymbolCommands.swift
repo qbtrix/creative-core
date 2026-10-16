@@ -53,9 +53,7 @@ public struct AddSymbol: Command {
                 throw CommandError.symbolNotFound(instance.symbolID)
             }
         }
-        let count = document.symbols.count
-        let at = min(max(index ?? count, 0), count)
-        document.symbols.insert(symbol, at: at)
+        document.symbols.insert(symbol, at: document.symbols.clampedInsertIndex(index))
     }
 
     public func undo(_ document: inout Document) throws {
@@ -96,7 +94,9 @@ public struct RemoveSymbol: Command {
 public struct RenameSymbol: Command {
     public static let id = "symbol.rename"
     public var label: String { "Rename Symbol" }
+    /// The id of the symbol to rename.
     public var symbolID: String
+    /// The new name; not empty.
     public var name: String
     var oldName: String?
 

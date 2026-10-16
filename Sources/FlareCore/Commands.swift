@@ -18,6 +18,14 @@ public enum CoreCommands {
     ]
 }
 
+extension Array {
+    /// Where an add command inserts: `index`, or the end when nil, clamped to
+    /// `0...count` so an out-of-range position never traps.
+    func clampedInsertIndex(_ index: Int?) -> Int {
+        Swift.min(Swift.max(index ?? count, 0), count)
+    }
+}
+
 public struct AddLayer: LayerCommand {
     public static let id = "layer.add"
     public var label: String { "Add Layer" }
@@ -51,7 +59,7 @@ public struct AddLayer: LayerCommand {
     public mutating func execute(_ document: inout Document) throws {
         try document.withLayers(owner) { layers in
             guard !layers.contains(where: { $0.id == layer.id }) else { throw CommandError.duplicateID(layer.id) }
-            layers.insert(layer, at: min(max(index ?? layers.count, 0), layers.count))
+            layers.insert(layer, at: layers.clampedInsertIndex(index))
         }
     }
 

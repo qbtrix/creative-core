@@ -5,5 +5,19 @@
     "anchor": "machine.transitions.remove(at: index)",
     "replacement": "machine.transitions.removeLast()",
     "filter": "TransitionCommandTests"
+  },
+  {
+    "note": "add transition does not clamp a negative insert index",
+    "file": "Sources/FlareCore/Commands.swift",
+    "anchor": "Swift.min(Swift.max(index ?? count, 0), count)",
+    "replacement": "Swift.min(index ?? count, count)",
+    "filter": "TransitionCommandTests"
+  },
+  {
+    "note": "transition index check lets an out-of-range index through",
+    "file": "Sources/FlareCore/TransitionCommands.swift",
+    "anchor": "guard transitions.indices.contains(index) else { throw CommandError.invalidIndex(index) }",
+    "replacement": "guard index >= -5 else { throw CommandError.invalidIndex(index) }",
+    "filter": "TransitionCommandTests"
   }
 ]

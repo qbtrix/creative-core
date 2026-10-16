@@ -91,6 +91,12 @@ public enum CommandError: Error, Equatable, Sendable {
     case stateMachineNotFound(String)
     /// The edit would break a state machine rule; the issue names the rule and
     /// the state or transition it is about (see `StateMachine.issues(in:)`).
+    /// Its `message` keeps the file format's wording, so it describes the
+    /// machine as the edit would leave it: removing initial state idle reads
+    /// "unknown initial state idle", removing input down reads "condition
+    /// names unknown input down". To tell the user what to fix, word the
+    /// refusal from `issue.stateID` and `issue.transitionIndex` instead, e.g.
+    /// "idle is the initial state" or "transition 2 still uses hover".
     case invalidMachine(MachineIssue)
     /// The state machine has no state with this id (UpdateMachineState,
     /// RemoveMachineState).
@@ -106,9 +112,11 @@ public enum CommandError: Error, Equatable, Sendable {
     /// An index outside the valid range. The number is one of: a layer
     /// position (ReorderLayer), a scene position (ReorderScene), an instance
     /// index within a layer (RemoveInstance, SetInstanceTransform,
-    /// SetInstancePlayback, and RemoveInstance undo), a guide
-    /// index (MoveGuide, RemoveGuide, AddGuide undo), a swatch position (RemoveSwatch undo),
-    /// a transition index (UpdateTransition, RemoveTransition), or 0 for an empty layer list (ConvertToSymbol). A shape index missing
+    /// SetInstancePlayback, and RemoveInstance undo), a guide index
+    /// (MoveGuide, RemoveGuide, AddGuide undo), a swatch position
+    /// (RemoveSwatch undo), a transition index (UpdateTransition,
+    /// RemoveTransition), a state machine position (RemoveStateMachine undo),
+    /// or 0 for an empty layer list (ConvertToSymbol). A shape index missing
     /// from a layer throws `shapeNotFound` instead.
     case invalidIndex(Int)
     /// `undo` was called on a command that never executed.
