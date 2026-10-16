@@ -6,11 +6,16 @@
 // on top, so the order is reversed (Flare draws its first layer first).
 // Hidden layers are kept with `hd: true`.
 //
-// Each layer's scale is sampled at frame 0. When its x or y track has more
-// than one keyframe, the position is written split (`p.s` true) with one
-// animated property per axis; a rotation or opacity track with more than one
-// keyframe animates `ks.r` (degrees) or `ks.o` (clamped to 0...1, times 100)
-// the same way, and with fewer it is its frame-0 value. A keyframe has `t`, `s`,
+// When a layer's x or y track has more than one keyframe, the position is
+// written split (`p.s` true) with one animated property per axis; a rotation
+// or opacity track with more than one keyframe animates `ks.r` (degrees) or
+// `ks.o` (clamped to 0...1, times 100) the same way, and with fewer it is its
+// frame-0 value. Scale (`ks.s`, times 100) is one 2-D property: static when
+// neither scale track has two keyframes; the keyed track's keyframes with the
+// other axis constant when only one has; shared keyframes when both have keys
+// at the same frames with the same easings; otherwise one linear keyframe per
+// frame, sampled, from the first key to the last within the scene, capped at
+// `maxBakedKeys`. A keyframe has `t`, `s`,
 // and either `h: 1` for hold or `o`/`i` tangents (linear is (0,0)/(1,1); a
 // cubic Bezier gives (x1,y1)/(x2,y2) with x clamped to 0...1 as `Easing` does).
 // Each shape becomes a group (`gr`) of its subpaths (`sh`), its stroke (`st`)
@@ -39,6 +44,12 @@ public enum LottieExportError: Error, Equatable, Sendable {
 public enum LottieExporter {
     /// The Lottie format version written in `v`.
     public static let version = "5.7.0"
+
+    /// The most keyframes a baked scale property may hold. Scale tracks keyed
+    /// at different frames are baked one keyframe per frame; past this many the
+    /// export throws `unsupported("scale track")` instead of writing a huge file
+    /// or allocating for a key range read from an untrusted document.
+    public static let maxBakedKeys = 10_000
 
     /// `symbols` are the document's symbols, which the scene's instances name.
     public static func export(scene: Scene, symbols: [Symbol] = []) throws -> Data {
@@ -158,7 +169,7 @@ struct LottieRoot: Encodable, Sendable {
 struct LottieTransform: Encodable, Sendable {
     var a = LottieStatic([0.0, 0.0])
     var p: LottiePosition
-    var s: LottieStatic<[Double]>
+    var s: LottieProperty<[Double]>
     var r: LottieScalar
     var o: LottieScalar
 }
@@ -196,7 +207,8 @@ struct LottieLayer: Encodable, Sendable {
         }
         ks = LottieTransform(
             p: position,
-            s: LottieStatic([try value("scaleX", 1) * 100, try value("scaleY", 1) * 100]),
+            s: try LottieProperty(scaleOf: layer, x0: try value("scaleX", 1), y0: try value("scaleY", 1),
+                                  durationFrames: durationFrames),
             r: try LottieScalar(layer.tracks["rotation"] ?? [], at0: try value("rotation", 0)),
             o: try LottieScalar(layer.tracks["opacity"] ?? [], at0: try value("opacity", 1),
                                 map: { min(max($0, 0), 1) * 100 })
@@ -225,42 +237,10 @@ enum LottiePosition: Encodable, Sendable {
     }
 }
 
-/// A scalar property: static (`a` 0) or animated (`a` 1) from a track.
-enum LottieScalar: Encodable, Sendable {
-    case fixed(LottieStatic<Double>)
+/// A property: static (`a` 0) or animated (`a` 1) from keyframes.
+enum LottieProperty<Value: Encodable & Sendable>: Encodable, Sendable {
+    case fixed(LottieStatic<Value>)
     case animated([LottieKeyframe])
-
-    /// `at0` is the track's finite value at frame 0, used when it has under two
-    /// keyframes. `map` turns a finite track value into the written one.
-    init(_ track: [Keyframe], at0: Double, map: (Double) -> Double = { $0 }) throws {
-        guard track.count > 1 else {
-            self = .fixed(LottieStatic(map(at0)))
-            return
-        }
-        var frames: [LottieKeyframe] = []
-        for (index, keyframe) in track.enumerated() {
-            var out = LottieKeyframe(t: keyframe.frame, s: [map(try LottieExporter.finite(keyframe.value))])
-            if index < track.count - 1 {
-                switch keyframe.easing {
-                case .hold:
-                    out.h = 1
-                case .linear:
-                    out.o = LottieEase(0, 0)
-                    out.i = LottieEase(1, 1)
-                case let .cubicBezier(x1, y1, x2, y2):
-                    if x1.isFinite, y1.isFinite, x2.isFinite, y2.isFinite {
-                        out.o = LottieEase(min(max(x1, 0), 1), y1)
-                        out.i = LottieEase(min(max(x2, 0), 1), y2)
-                    } else {
-                        out.o = LottieEase(0, 0)
-                        out.i = LottieEase(1, 1)
-                    }
-                }
-            }
-            frames.append(out)
-        }
-        self = .animated(frames)
-    }
 
     private enum Keys: String, CodingKey { case a, k }
 
@@ -276,6 +256,62 @@ enum LottieScalar: Encodable, Sendable {
     }
 }
 
+/// A scalar property, animated from one track.
+typealias LottieScalar = LottieProperty<Double>
+
+extension LottieProperty where Value == Double {
+    /// `at0` is the track's finite value at frame 0, used when it has under two
+    /// keyframes. `map` turns a finite track value into the written one.
+    init(_ track: [Keyframe], at0: Double, map: (Double) -> Double = { $0 }) throws {
+        guard track.count > 1 else {
+            self = .fixed(LottieStatic(map(at0)))
+            return
+        }
+        self = .animated(try LottieKeyframe.list(track) { _, key in [map(try LottieExporter.finite(key.value))] })
+    }
+}
+
+extension LottieProperty where Value == [Double] {
+    /// A layer's 2-D scale, times 100, from its `scaleX` and `scaleY` tracks.
+    /// `x0` and `y0` are the finite scales at frame 0.
+    init(scaleOf layer: Layer, x0: Double, y0: Double, durationFrames: Int) throws {
+        let xs = layer.tracks["scaleX"] ?? []
+        let ys = layer.tracks["scaleY"] ?? []
+        let still = Self.fixed(LottieStatic([x0 * 100, y0 * 100]))
+        func f(_ v: Double) throws -> Double { try LottieExporter.finite(v) * 100 }
+        if xs.count <= 1, ys.count <= 1 {
+            self = still
+        } else if ys.count <= 1 {
+            self = .animated(try LottieKeyframe.list(xs) { _, key in [try f(key.value), y0 * 100] })
+        } else if xs.count <= 1 {
+            self = .animated(try LottieKeyframe.list(ys) { _, key in [x0 * 100, try f(key.value)] })
+        } else if xs.count == ys.count,
+                  zip(xs, ys).allSatisfy({ $0.frame == $1.frame && $0.easing == $1.easing }) {
+            self = .animated(try LottieKeyframe.list(xs) { index, key in [try f(key.value), try f(ys[index].value)] })
+        } else {
+            let frames = (xs + ys).map(\.frame)
+            let lo = max(0, frames.min() ?? 0)
+            let hi = min(durationFrames - 1, frames.max() ?? 0)
+            // durationFrames > 0 keeps durationFrames - 1 from overflowing; lo >= 0 keeps hi - lo + 1 in range.
+            guard durationFrames > 0, lo <= hi else {
+                self = still
+                return
+            }
+            guard hi - lo + 1 <= LottieExporter.maxBakedKeys else {
+                throw LottieExportError.unsupported("scale track")
+            }
+            var baked: [LottieKeyframe] = []
+            baked.reserveCapacity(hi - lo + 1)
+            for frame in lo...hi {
+                let s = layer.sample(at: Double(frame))
+                let key = LottieKeyframe(t: frame, s: [try f(s["scaleX"] ?? 1), try f(s["scaleY"] ?? 1)])
+                baked.append(frame < hi ? key.eased(.linear) : key)
+            }
+            self = .animated(baked)
+        }
+    }
+}
+
 /// One keyframe of an animated property. The last one carries only `t` and `s`.
 struct LottieKeyframe: Encodable, Sendable {
     var t: Int
@@ -283,6 +319,36 @@ struct LottieKeyframe: Encodable, Sendable {
     var o: LottieEase?
     var i: LottieEase?
     var h: Int?
+
+    /// One keyframe per track key, `value` giving each one's `s` from its index
+    /// and key; every keyframe but the last carries its key's easing.
+    static func list(_ track: [Keyframe], value: (Int, Keyframe) throws -> [Double]) throws -> [LottieKeyframe] {
+        try track.enumerated().map { index, key in
+            let out = LottieKeyframe(t: key.frame, s: try value(index, key))
+            return index < track.count - 1 ? out.eased(key.easing) : out
+        }
+    }
+
+    /// This keyframe with `easing` written as `h: 1` for hold or `o`/`i` tangents.
+    func eased(_ easing: Easing) -> LottieKeyframe {
+        var out = self
+        switch easing {
+        case .hold:
+            out.h = 1
+        case .linear:
+            out.o = LottieEase(0, 0)
+            out.i = LottieEase(1, 1)
+        case let .cubicBezier(x1, y1, x2, y2):
+            if x1.isFinite, y1.isFinite, x2.isFinite, y2.isFinite {
+                out.o = LottieEase(min(max(x1, 0), 1), y1)
+                out.i = LottieEase(min(max(x2, 0), 1), y2)
+            } else {
+                out.o = LottieEase(0, 0)
+                out.i = LottieEase(1, 1)
+            }
+        }
+        return out
+    }
 }
 
 /// An easing tangent: `{"x": [x], "y": [y]}` on the 0...1 progress square.

@@ -1,0 +1,23 @@
+[
+  {
+    "note": "lottie scale bake skips the maxBakedKeys guard",
+    "file": "Sources/FlareCore/Export/LottieExporter.swift",
+    "anchor": "guard hi - lo + 1 <= LottieExporter.maxBakedKeys else {",
+    "replacement": "guard hi - lo + 1 <= Int.max else {",
+    "filter": "LottieScaleTrackTests"
+  },
+  {
+    "note": "lottie scale bake range leaves the scene end",
+    "file": "Sources/FlareCore/Export/LottieExporter.swift",
+    "anchor": "let hi = min(durationFrames - 1, frames.max() ?? 0)",
+    "replacement": "let hi = min(durationFrames, frames.max() ?? 0)",
+    "filter": "LottieScaleTrackTests"
+  },
+  {
+    "note": "lottie scale shared keys ignore easing mismatch",
+    "file": "Sources/FlareCore/Export/LottieExporter.swift",
+    "anchor": "$0.frame == $1.frame && $0.easing == $1.easing",
+    "replacement": "$0.frame == $1.frame",
+    "filter": "LottieScaleTrackTests"
+  }
+]
