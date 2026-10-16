@@ -1,0 +1,37 @@
+[
+  {
+    "note": "machine player advance guard lets a zero or negative count move the frame",
+    "file": "Sources/FlareCore/MachinePlayer.swift",
+    "anchor": "guard count > 0, let state = machine.states.first(where: { $0.id == stateID }),",
+    "replacement": "guard count != 0, let state = machine.states.first(where: { $0.id == stateID }),",
+    "filter": "MachinePlayerTests"
+  },
+  {
+    "note": "machine player advance loop length off by one, so the end frame is skipped",
+    "file": "Sources/FlareCore/MachinePlayer.swift",
+    "anchor": "let length = UInt(state.endFrame - state.startFrame) + 1",
+    "replacement": "let length = UInt(state.endFrame - state.startFrame) + 2",
+    "filter": "MachinePlayerTests"
+  },
+  {
+    "note": "machine player fire keeps the old frame instead of restarting at startFrame",
+    "file": "Sources/FlareCore/MachinePlayer.swift",
+    "anchor": "        frame = target.startFrame",
+    "replacement": "        frame = max(frame, target.startFrame)",
+    "filter": "MachinePlayerTests"
+  },
+  {
+    "note": "machine player set drops the finite check, so NaN is accepted",
+    "file": "Sources/FlareCore/MachinePlayer.swift",
+    "anchor": "guard let current = inputs[input], current.sameType(as: value), value.isFinite else { return false }",
+    "replacement": "guard let current = inputs[input], current.sameType(as: value) else { return false }",
+    "filter": "MachinePlayerTests"
+  },
+  {
+    "note": "machine player init ignores error issues and plays a broken machine",
+    "file": "Sources/FlareCore/MachinePlayer.swift",
+    "anchor": "if let issue = found.issues(in: document).first(where: { $0.severity == .error }) {",
+    "replacement": "if let issue = found.issues(in: document).first(where: { $0.severity == .error && $0.message.isEmpty }) {",
+    "filter": "MachinePlayerTests"
+  }
+]

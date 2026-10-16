@@ -14,6 +14,10 @@ import Foundation
 public enum TimelineError: Error, Equatable, Sendable {
     case invalidFPS(Int)
     case invalidTime(Double)
+    /// `MachinePlayer` was asked for a state machine id the document lacks.
+    case stateMachineNotFound(String)
+    /// `MachinePlayer` was given a machine that breaks a rule: its first error issue.
+    case invalidMachine(MachineIssue)
 }
 
 public enum Timeline {
