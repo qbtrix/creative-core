@@ -1,12 +1,13 @@
 {
   "id": "timeline",
   "name": "Timeline",
-  "description": "Frame/time conversion, keyframe interpolation with binary-search segment lookup, easing curves (linear, cubic bezier, hold), and sampling a layer's property values at a frame for rendering and export.",
+  "description": "Frame/time conversion, keyframe interpolation with binary-search segment lookup, easing curves (linear, cubic bezier, hold), sampling a layer's property values at a frame for rendering and export, and onion skin frames around the playhead.",
   "technology": "Swift 6, Foundation",
   "paths": [
     "Sources/FlareCore/Timeline.swift",
     "Sources/FlareCore/Easing.swift",
-    "Sources/FlareCore/Sampling.swift"
+    "Sources/FlareCore/Sampling.swift",
+    "Sources/FlareCore/Onion.swift"
   ],
   "order": 30
 }
