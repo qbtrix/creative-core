@@ -14,15 +14,15 @@
     "filter": "DisplayBytesFastPathTests"
   },
   {
-    "note": "the region rect guard lets a rect hang off the right edge",
-    "file": "Sources/CoreRaster/DisplayBytes.swift",
+    "note": "the shared region rect guard lets a rect hang off the right edge",
+    "file": "Sources/CoreRaster/Transform.swift",
     "anchor": "x <= width - regionWidth, y <= height - regionHeight else {",
     "replacement": "x < width, y <= height - regionHeight else {",
     "filter": "DisplayBytesFastPathTests"
   },
   {
-    "note": "the region encode skips the zero-size check",
-    "file": "Sources/CoreRaster/DisplayBytes.swift",
+    "note": "the shared region check skips the zero-size check",
+    "file": "Sources/CoreRaster/Transform.swift",
     "anchor": "_ = try Self.validatedSize(width: regionWidth, height: regionHeight)",
     "replacement": "",
     "filter": "DisplayBytesFastPathTests"

@@ -15,12 +15,7 @@ extension PixelBuffer {
     /// Throws `RasterError.invalid` for a size `validatedSize` rejects or a
     /// rectangle that is not wholly inside this buffer.
     public func cropped(x: Int, y: Int, width newWidth: Int, height newHeight: Int) throws -> PixelBuffer {
-        _ = try Self.validatedSize(width: newWidth, height: newHeight)
-        guard x >= 0, y >= 0, newWidth <= width, newHeight <= height,
-              x <= width - newWidth, y <= height - newHeight else {
-            throw RasterError.invalid(
-                "crop \(newWidth)x\(newHeight) at (\(x), \(y)) is outside \(width)x\(height)")
-        }
+        try checkedRegion(x: x, y: y, width: newWidth, height: newHeight)
         let input = components
         let c = Self.channels
         var output: [Float] = []
@@ -30,6 +25,20 @@ extension PixelBuffer {
             output.append(contentsOf: input[start..<(start + newWidth * c)])
         }
         return PixelBuffer(checkedWidth: newWidth, height: newHeight, storage: output)
+    }
+
+    /// Checks the `width x height` rectangle with its top left at (`x`, `y`),
+    /// the one region check `cropped` and the region `rgba8` share. Throws
+    /// `RasterError.invalid` first for a size `validatedSize` rejects, then for
+    /// a rectangle not wholly inside this buffer. Each bound is compared before
+    /// any subtraction, so nothing overflows for any `Int` input.
+    func checkedRegion(x: Int, y: Int, width regionWidth: Int, height regionHeight: Int) throws {
+        _ = try Self.validatedSize(width: regionWidth, height: regionHeight)
+        guard x >= 0, y >= 0, regionWidth <= width, regionHeight <= height,
+              x <= width - regionWidth, y <= height - regionHeight else {
+            throw RasterError.invalid(
+                "crop \(regionWidth)x\(regionHeight) at (\(x), \(y)) is outside \(width)x\(height)")
+        }
     }
 
     /// This image turned clockwise by `turn`. A quarter turn swaps width and
