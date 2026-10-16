@@ -52,3 +52,4 @@ utc	stage	event	ref	note
 2026-10-16T06:04Z	5	stage-start	finish	gap #332 #333 filed; waiting on CI run 338
 2026-10-16T06:10Z	5	heartbeat	finish	waiting on CI run 338
 2026-10-16T06:10Z	5	ci-run	338	dev 670a6ed success; main fast-forwarded
+2026-10-16T06:21Z	5	heartbeat	finish	container restarted; rerunning round-4 mutate and budgets
