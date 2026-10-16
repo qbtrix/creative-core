@@ -22,9 +22,30 @@
   },
   {
     "note": "machine issues validate throws on the first issue, so a warning blocks validate",
-    "file": "Sources/FlareCore/StateMachineValidation.swift",
-    "anchor": "if let issue = machine.issues(in: document).first(where: { $0.severity == .error }) {",
-    "replacement": "if let issue = machine.issues(in: document).first {",
+    "file": "Sources/FlareCore/StateMachineIssues.swift",
+    "anchor": "issues(in: document).first(where: { $0.severity == .error })",
+    "replacement": "issues(in: document).first",
+    "filter": "StateMachineIssuesTests"
+  },
+  {
+    "note": "machine issues check inputs before states, so a bad default outranks a bad state",
+    "file": "Sources/FlareCore/StateMachineIssues.swift",
+    "anchor": "        var stateIDs = Set<String>()\n        for state in states {\n            if !stateIDs.insert(state.id).inserted { error(\"duplicate state id \\(state.id)\", state: state.id) }\n            guard let duration = durations[state.sceneID] else {\n                error(\"state \\(state.id) has unknown scene \\(state.sceneID)\", state: state.id)\n                continue\n            }\n            if !(state.startFrame >= 0 && state.startFrame <= state.endFrame && state.endFrame <= duration) {\n                error(\"state \\(state.id) frame range outside scene\", state: state.id)\n            }\n        }\n        let initialKnown = stateIDs.contains(initialState)\n        if !initialKnown { error(\"unknown initial state \\(initialState)\", state: initialState) }\n        var declared: [String: InputValue] = [:]\n        for input in inputs {\n            guard declared[input.name] == nil else {\n                error(\"duplicate input \\(input.name)\")\n                continue\n            }\n            if !input.defaultValue.isFinite { error(\"input \\(input.name) default is not finite\") }\n            declared[input.name] = input.defaultValue\n        }\n",
+    "replacement": "        var declared: [String: InputValue] = [:]\n        for input in inputs {\n            guard declared[input.name] == nil else {\n                error(\"duplicate input \\(input.name)\")\n                continue\n            }\n            if !input.defaultValue.isFinite { error(\"input \\(input.name) default is not finite\") }\n            declared[input.name] = input.defaultValue\n        }\n        var stateIDs = Set<String>()\n        for state in states {\n            if !stateIDs.insert(state.id).inserted { error(\"duplicate state id \\(state.id)\", state: state.id) }\n            guard let duration = durations[state.sceneID] else {\n                error(\"state \\(state.id) has unknown scene \\(state.sceneID)\", state: state.id)\n                continue\n            }\n            if !(state.startFrame >= 0 && state.startFrame <= state.endFrame && state.endFrame <= duration) {\n                error(\"state \\(state.id) frame range outside scene\", state: state.id)\n            }\n        }\n        let initialKnown = stateIDs.contains(initialState)\n        if !initialKnown { error(\"unknown initial state \\(initialState)\", state: initialState) }\n",
+    "filter": "StateMachineIssuesTests"
+  },
+  {
+    "note": "machine issues reachability runs past an unknown initial state, so it also warns",
+    "file": "Sources/FlareCore/StateMachineIssues.swift",
+    "anchor": "        guard initialKnown else { return out }\n",
+    "replacement": "",
+    "filter": "StateMachineIssuesTests"
+  },
+  {
+    "note": "machine issues warn twice for two unreachable states sharing an id",
+    "file": "Sources/FlareCore/StateMachineIssues.swift",
+    "anchor": "for state in states where !reached.contains(state.id) && warned.insert(state.id).inserted {",
+    "replacement": "for state in states where !reached.contains(state.id) && (warned.insert(state.id).inserted || true) {",
     "filter": "StateMachineIssuesTests"
   }
 ]

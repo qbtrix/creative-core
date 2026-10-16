@@ -34,7 +34,7 @@ public struct MachinePlayer: Sendable, Hashable {
         guard let found = document.stateMachines.first(where: { $0.id == machineID }) else {
             throw TimelineError.stateMachineNotFound(machineID)
         }
-        if let issue = found.issues(in: document).first(where: { $0.severity == .error }) {
+        if let issue = found.firstError(in: document) {
             throw TimelineError.invalidMachine(issue)
         }
         guard let initial = found.states.first(where: { $0.id == found.initialState }) else {
@@ -43,9 +43,7 @@ public struct MachinePlayer: Sendable, Hashable {
         machine = found
         stateID = initial.id
         frame = initial.startFrame
-        var values: [String: InputValue] = [:]
-        for input in found.inputs where values[input.name] == nil { values[input.name] = input.defaultValue }
-        inputs = values
+        inputs = found.defaultInputValues
     }
 
     /// Sets input `input` to `value` and returns true. Returns false and

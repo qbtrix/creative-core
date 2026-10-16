@@ -10,9 +10,22 @@ import Foundation
 
 /// One broken rule (an error) or a likely mistake (a warning) in a state machine.
 public struct MachineIssue: Sendable, Hashable {
-    public enum Severity: String, Sendable, Hashable { case error, warning }
+    /// How much an issue matters.
+    public enum Severity: String, Sendable, Hashable {
+        /// A broken rule. It makes `FlareFormat.validate` throw, every machine
+        /// command refuse, and `MachinePlayer.init` throw.
+        case error
+        /// A likely mistake (a state the initial state can't reach). It never
+        /// blocks validate, a command or a player.
+        case warning
+    }
     public var severity: Severity
-    /// The rule, worded as `FlareFormat.validate` words it after "state machine <id>: ".
+    /// For an error, the rule, worded as `FlareFormat.validate` words it after
+    /// "state machine <id>: ". For a warning, "<state> can't be reached from
+    /// <initial state>". When a machine command refuses an edit, the message
+    /// describes the machine as the edit would leave it (removing the initial
+    /// state reads "unknown initial state <id>"), so word a refusal to the user
+    /// from `stateID` and `transitionIndex` instead.
     public var message: String
     /// The state the issue is about, when there is one.
     public var stateID: String?
@@ -84,6 +97,12 @@ extension StateMachine {
                 severity: .warning, message: "\(state.id) can't be reached from \(initialState)", stateID: state.id))
         }
         return out
+    }
+
+    /// The first error of `issues(in:)`, or nil when nothing blocks the
+    /// machine. The one gate validate and `MachinePlayer.init` share.
+    func firstError(in document: Document) -> MachineIssue? {
+        issues(in: document).first(where: { $0.severity == .error })
     }
 
     /// The ids reachable from the initial state over every transition,

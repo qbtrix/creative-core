@@ -15,7 +15,7 @@ extension FlareFormat {
         for machine in document.stateMachines {
             let m = machine.id
             guard machineIDs.insert(m).inserted else { throw FormatError.invalid("duplicate state machine id \(m)") }
-            if let issue = machine.issues(in: document).first(where: { $0.severity == .error }) {
+            if let issue = machine.firstError(in: document) {
                 throw FormatError.invalid("state machine \(m): \(issue.message)")
             }
         }

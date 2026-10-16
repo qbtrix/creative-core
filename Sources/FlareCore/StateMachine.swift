@@ -64,10 +64,17 @@ public struct StateMachine: Codable, Sendable, Hashable {
     /// all hold wins; if none matches, the machine stays in `state`. `values`
     /// gives current input values; a missing input uses its declared default.
     public func next(from state: String, trigger: String, inputs values: [String: InputValue] = [:]) -> String {
-        var current: [String: InputValue] = [:]
-        for input in inputs where current[input.name] == nil { current[input.name] = input.defaultValue }
+        var current = defaultInputValues
         for (name, value) in values { current[name] = value }
         return firing(from: state, trigger: trigger, inputs: current)?.to ?? state
+    }
+
+    /// Every declared input at its default, by name. When two inputs share a
+    /// name, the first declared wins. `next` and `MachinePlayer` share it.
+    var defaultInputValues: [String: InputValue] {
+        var values: [String: InputValue] = [:]
+        for input in inputs where values[input.name] == nil { values[input.name] = input.defaultValue }
+        return values
     }
 
     /// The first-match rule `next` and `MachinePlayer` share: the first
