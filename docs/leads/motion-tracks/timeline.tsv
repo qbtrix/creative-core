@@ -23,3 +23,6 @@ utc	stage	event	ref	note
 2026-10-16T06:49Z	3	heartbeat	-	waiting on builders or the lane
 2026-10-16T07:04Z	3	heartbeat	-	waiting on builders or the lane
 2026-10-16T07:19Z	3	heartbeat	-	waiting on builders or the lane
+2026-10-16T05:45Z	3	pr-merged	#328	MT-3 animated scale
+2026-10-16T19:40Z	3	stopped	-	container restart 05:50Z-19:35Z
+2026-10-16T19:41Z	3	stage-start	cae920b	wave c MT-4; reopened #313

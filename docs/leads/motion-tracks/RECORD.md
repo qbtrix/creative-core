@@ -2,17 +2,17 @@
 
 Issue: #313 · Packet: docs/blueprints/core/features/motion-tracks.md (on branch docs/core-packets-wave2, PR #310, until it merges)
 Run: act-1a142b4b27e-bv69 · Session: claude/motion-tracks-lead-pifwao · Started: 2026-10-16T03:16Z
-Stage: 3 wave b
-Base: f27f1042e2944c2c750dda91f2e3f24cdfdde08f
-Next: wait for MT-3's PR to merge via the lane, then wave c (MT-4) on the new origin/dev
+Stage: 3 wave c
+Base: cae920b (origin/dev 2026-10-16T19:40Z)
+Next: wait for MT-4's PR to merge via the lane, then wave d (MT-5, feature-done) on the new origin/dev
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
 |---|---|---|---|---|---|---|---|
 | MT-1 | a | `Timeline.onionFrames(at:before:after:durationFrames:)` (closes #218) | Sources/FlareCore/Onion.swift, Tests/FlareCoreTests/OnionTests.swift, Tests/mutations/FlareOnion.json, docs/c4/parts/creative-core/flarecore/timeline.json | OnionTests | FlareOnion.json (clamp, playhead excluded, saturating) | #317 (c7f1c76) | merged |
 | MT-2 | a | Lottie animated opacity and rotation tracks (#227 part) | Sources/FlareCore/Export/LottieExporter.swift, Tests/FlareCoreTests/LottieTracksTests.swift, Tests/mutations/FlareLottieTracks.json | LottieTracksTests | FlareLottieTracks.json (opacity clamp, hold) | #315 (7feb023) | merged |
-| MT-3 | b | Lottie animated scale: one-track, shared keys, per-frame bake; `maxBakedKeys` (#227 part) | LottieExporter.swift, Tests/FlareCoreTests/LottieScaleTrackTests.swift, Tests/mutations/FlareLottieScale.json | LottieScaleTrackTests | FlareLottieScale.json (bake cap, range clamp) | – | building |
-| MT-4 | c | Gradient stop alpha; export C4 description (closes #227) | LottieExporter.swift, Tests/FlareCoreTests/LottieGradientAlphaTests.swift, Tests/mutations/FlareLottieGradientAlpha.json, docs/c4/parts/creative-core/flarecore/export.json | LottieGradientAlphaTests | FlareLottieGradientAlpha.json (alpha < 1 guard) | – | planned |
+| MT-3 | b | Lottie animated scale: one-track, shared keys, per-frame bake; `maxBakedKeys` (#227 part) | LottieExporter.swift, Tests/FlareCoreTests/LottieScaleTrackTests.swift, Tests/mutations/FlareLottieScale.json | LottieScaleTrackTests | FlareLottieScale.json (bake cap, range clamp) | #328 (merged 05:45Z) | merged |
+| MT-4 | c | Gradient stop alpha; export C4 description (closes #227) | LottieExporter.swift, Tests/FlareCoreTests/LottieGradientAlphaTests.swift, Tests/mutations/FlareLottieGradientAlpha.json, docs/c4/parts/creative-core/flarecore/export.json | LottieGradientAlphaTests | FlareLottieGradientAlpha.json (alpha < 1 guard) | – | building |
 | MT-5 | d | FlareBudgetTests on `reference`: QB-L5..QB-L8; `feature-done` (closes #228) | Tests/FlareCoreTests/FlareBudgetTests.swift | FlareBudgetTests | – | – | planned |
 
 Acceptance tests and quality bars: the packet's "Acceptance test per task" and "Quality tests" tables (copied by reference; the packet wins).
@@ -37,6 +37,9 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 - The container restarted at ~05:00Z; the 15-minute heartbeat loop died with it, so Belt saw a stall. Restarted the heartbeat.
 - The GitHub MCP server appends an attribution footer to PR bodies; builders must strip it with update_pull_request after opening.
 - Baseline scripts/ci on f05665f failed two timing budgets (RetouchBoundsTests, EngineStressTests) under load 18 on 4 cores; contention, not code.
+
+- #328's body said `Closes #313`, so the lane closed the feature issue at 05:45Z. Reopened it at 19:40Z with a comment, and builder prompts now forbid closing keywords on the feature issue.
+- The container was down from about 05:50Z to 19:35Z (a second restart). The 8 h lead wall clock has passed; continuing because Belt resumed the session.
 
 ## Open
 - none yet
