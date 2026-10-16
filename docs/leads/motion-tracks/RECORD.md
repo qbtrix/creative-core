@@ -2,9 +2,9 @@
 
 Issue: #313 · Packet: docs/blueprints/core/features/motion-tracks.md (on branch docs/core-packets-wave2, PR #310, until it merges)
 Run: act-1a142b4b27e-bv69 · Session: claude/motion-tracks-lead-pifwao · Started: 2026-10-16T03:16Z
-Stage: 1 packet
+Stage: 3 wave a
 Base: f05665f5b54a461ab4a4e981ed7d7b01d7ab37ed
-Next: plan waves a (MT-1, MT-2), b (MT-3), c (MT-4), d (MT-5) and start wave a
+Next: wait for wave a PRs (MT-1, MT-2) to merge via the lane; then wave b (MT-3) on the new origin/dev
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -31,5 +31,8 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 - Builder branches are `lead/motion-tracks-<id>`: `lead/motion-tracks/<id>` would collide with the `lead/motion-tracks` ref.
 - `gh` has no valid token in this session; agents open PRs and set labels with the GitHub MCP tools.
 
+- Waves follow the packet: a = MT-1 + MT-2 (disjoint files), b = MT-3, c = MT-4 (LottieExporter.swift chain), d = MT-5 (feature-done).
+- Builders run from an adapted copy of build-wave.js (branch names, MCP PR opening); the template itself is unchanged.
+
 ## Open
-- none
+- none yet

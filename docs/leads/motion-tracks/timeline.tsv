@@ -2,3 +2,7 @@ utc	stage	event	ref	note
 2026-10-16T03:16Z	0	stage-start	f05665f	base verified
 2026-10-16T03:20Z	0	stage-end	#313	depends on nothing open
 2026-10-16T03:20Z	1	stage-start	docs/core-packets-wave2	packet read
+2026-10-16T03:24Z	1	stage-end	packet	tasks copied
+2026-10-16T03:25Z	2	stage-start	-	plan
+2026-10-16T03:26Z	2	stage-end	-	waves a b c d
+2026-10-16T03:27Z	3	stage-start	f05665f	wave a MT-1 MT-2
