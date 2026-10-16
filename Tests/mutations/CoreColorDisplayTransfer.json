@@ -1,0 +1,44 @@
+[
+  {
+    "note": "display transfer threshold bisection keeps the value one byte too high",
+    "file": "Sources/CoreColor/DisplayTransfer.swift",
+    "anchor": "if Int(step(Double(bitPattern: mid))) >= k { hi = mid }",
+    "replacement": "if Int(step(Double(bitPattern: mid))) > k { hi = mid }",
+    "filter": "DisplayTransferTests"
+  },
+  {
+    "note": "display transfer bisection upper bound stops at one half",
+    "file": "Sources/CoreColor/DisplayTransfer.swift",
+    "anchor": "var hi = (1.0 as Double).bitPattern",
+    "replacement": "var hi = (0.5 as Double).bitPattern",
+    "filter": "DisplayTransferTests"
+  },
+  {
+    "note": "display transfer search compares a threshold strictly, one value off",
+    "file": "Sources/CoreColor/DisplayTransfer.swift",
+    "anchor": "i += least[i + 1] <= v ? 1 : 0",
+    "replacement": "i += least[i + 1] < v ? 1 : 0",
+    "filter": "DisplayTransferTests"
+  },
+  {
+    "note": "display transfer encode skips the P3 matrix",
+    "file": "Sources/CoreColor/DisplayTransfer.swift",
+    "anchor": "let p = space == .displayP3 ? Matrix3.p3FromLinearSRGB * linear : linear",
+    "replacement": "let p = linear",
+    "filter": "DisplayTransferTests"
+  },
+  {
+    "note": "display transfer decode skips the P3 matrix",
+    "file": "Sources/CoreColor/DisplayTransfer.swift",
+    "anchor": "return space == .displayP3 ? Matrix3.linearSRGBFromP3 * c : c",
+    "replacement": "return c",
+    "filter": "DisplayTransferTests"
+  },
+  {
+    "note": "display transfer byte truncates instead of rounding",
+    "file": "Sources/CoreColor/DisplayTransfer.swift",
+    "anchor": "return UInt8((value * 255).rounded())",
+    "replacement": "return UInt8(value * 255)",
+    "filter": "DisplayTransferTests"
+  }
+]
