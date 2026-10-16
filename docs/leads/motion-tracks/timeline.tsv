@@ -31,3 +31,4 @@ utc	stage	event	ref	note
 2026-10-16T20:40Z	3	pr-merged	#346	MT-4 gradient alpha merged as 6967968
 2026-10-16T20:41Z	3	stage-start	9ba4c2b	wave d MT-5 builder started
 2026-10-16T21:02Z	3	stopped	dfb6aa7	MT-5 blocked: QB-L5 hit median 17.2 ms over 10 ms, idle rerun confirms; decision pending
+2026-10-16T21:30Z	3	stopped	dfb6aa7	third stall; blocked on QB-L5 budget decision; issue labelled needs-human

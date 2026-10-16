@@ -2,7 +2,7 @@
 
 Issue: #313 · Packet: docs/blueprints/core/features/motion-tracks.md
 Run: act-1a1463a91ae-nkkr · Session: claude/motion-tracks-lead-qyywzp (session_011q6y88xiPg7Pn4N3NTipgF) · Started: 2026-10-16T19:40Z (prior run act-1a142b4b27e-bv69 resumed)
-Stage: 3 wave d (MT-5 blocked on the QB-L5 budget decision)
+Stage: 3 wave d (MT-5 blocked; #313 labelled needs-human after the third stall)
 Base: 9ba4c2b (origin/dev after #346 merged)
 Next: wait for the supervisor's choice on the QB-L5 hit budget (raise with amendment, optimize hit path in a separate PR, or shrink the reference scene). Then finish MT-5 and open its PR. Idle rerun: hit median 17.2 ms over 10 ms budget (not load).
 
