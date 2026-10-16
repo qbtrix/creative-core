@@ -19,5 +19,12 @@
     "anchor": "x1 = min(x + source.width, width)",
     "replacement": "x1 = min(x + source.width, width - 1)",
     "filter": "CompositeInPlaceTests"
+  },
+  {
+    "note": "source-over takes the normal-mode shortcut for every blend mode",
+    "file": "Sources/CoreRaster/Composite.swift",
+    "anchor": "let blended = mode == .normal ? cs",
+    "replacement": "let blended = mode == mode ? cs",
+    "filter": "CompositeInPlaceTests"
   }
 ]
