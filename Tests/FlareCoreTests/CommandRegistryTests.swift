@@ -20,6 +20,7 @@ import Testing
         "label.remove", "label.set",
         "machine.add", "machine.remove", "machine.rename", "machine.setInitial",
         "machine.addState", "machine.removeState", "machine.updateState",
+        "machine.addTransition", "machine.removeTransition", "machine.updateTransition",
         "layer.add", "layer.duplicate", "layer.remove", "layer.rename", "layer.reorder", "layer.setFlags",
         "scene.add", "scene.remove", "scene.rename", "scene.reorder", "scene.setCanvas", "scene.timing",
         "shape.add", "shape.remove", "shape.setFill", "shape.setPath", "shape.setStroke", "shape.translate",
@@ -43,6 +44,7 @@ import Testing
             + InstanceCommandsTests.registrySamples()
             + MachineCommandTests.registrySamples()
             + MachineStateCommandTests.registrySamples()
+            + TransitionCommandTests.registrySamples()
     }
 
     /// The text fixture plus a second, empty scene, unused symbol "spark",
@@ -106,7 +108,7 @@ import Testing
     }
 
     @Test func everyBuiltInCommandIsRegistered() {
-        #expect(Self.expectedIDs.count == 52)
+        #expect(Self.expectedIDs.count == 55)
         #expect(Set(Self.registry.ids) == Self.expectedIDs)
     }
 

@@ -15,6 +15,7 @@ public enum StateMachineCommands {
     public static let all: [any Command.Type] = [
         AddStateMachine.self, RenameStateMachine.self, RemoveStateMachine.self, SetInitialState.self,
         AddMachineState.self, UpdateMachineState.self, RemoveMachineState.self,
+        AddTransition.self, UpdateTransition.self, RemoveTransition.self,
     ]
 }
 

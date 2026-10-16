@@ -102,7 +102,7 @@ public enum CommandError: Error, Equatable, Sendable {
     /// index within a layer (RemoveInstance, SetInstanceTransform,
     /// SetInstancePlayback, and RemoveInstance undo), a guide
     /// index (MoveGuide, RemoveGuide, AddGuide undo), a swatch position (RemoveSwatch undo),
-    /// or 0 for an empty layer list (ConvertToSymbol). A shape index missing
+    /// a transition index (UpdateTransition, RemoveTransition), or 0 for an empty layer list (ConvertToSymbol). A shape index missing
     /// from a layer throws `shapeNotFound` instead.
     case invalidIndex(Int)
     /// `undo` was called on a command that never executed.
