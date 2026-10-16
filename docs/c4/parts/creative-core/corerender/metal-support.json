@@ -1,0 +1,10 @@
+{
+  "id": "metal-support",
+  "name": "Metal Support",
+  "description": "The Metal backend's Linux-safe parts (Sources/CoreRender/Metal): binary16 half-float conversion for filling rgba16Float textures from Float32 buffers and reading them back, and later capability state, tile grids and pipeline cache keys. Pure Swift bit math, no Metal import, so it builds, tests and mutates on Linux.",
+  "technology": "Swift 6, Foundation",
+  "paths": [
+    "Sources/CoreRender/Metal/"
+  ],
+  "order": 20
+}

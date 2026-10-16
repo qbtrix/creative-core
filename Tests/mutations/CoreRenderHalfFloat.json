@@ -1,0 +1,44 @@
+[
+  {
+    "note": "half-float encode truncates instead of rounding to nearest even",
+    "file": "Sources/CoreRender/Metal/HalfFloat.swift",
+    "anchor": "rest > halfway || (rest == halfway && mantissa & 1 == 1)",
+    "replacement": "false",
+    "filter": "HalfFloatTests"
+  },
+  {
+    "note": "half-float encode rounds a tie away from zero instead of to even",
+    "file": "Sources/CoreRender/Metal/HalfFloat.swift",
+    "anchor": "rest > halfway || (rest == halfway && mantissa & 1 == 1)",
+    "replacement": "rest >= halfway",
+    "filter": "HalfFloatTests"
+  },
+  {
+    "note": "half-float exponent bias is off by one",
+    "file": "Sources/CoreRender/Metal/HalfFloat.swift",
+    "anchor": "private static let bias = 15",
+    "replacement": "private static let bias = 16",
+    "filter": "HalfFloatTests"
+  },
+  {
+    "note": "half-float overflow threshold is off by one exponent step",
+    "file": "Sources/CoreRender/Metal/HalfFloat.swift",
+    "anchor": "guard exponent < 31 else { return sign | infinity }",
+    "replacement": "guard exponent < 32 else { return sign | infinity }",
+    "filter": "HalfFloatTests"
+  },
+  {
+    "note": "half-float subnormal path drops the implicit bit",
+    "file": "Sources/CoreRender/Metal/HalfFloat.swift",
+    "anchor": "let full = implicitBit | fraction",
+    "replacement": "let full = fraction",
+    "filter": "HalfFloatTests"
+  },
+  {
+    "note": "half-float decode of a subnormal uses the wrong unit",
+    "file": "Sources/CoreRender/Metal/HalfFloat.swift",
+    "anchor": "let magnitude = Float(fraction) * 0x1p-24",
+    "replacement": "let magnitude = Float(fraction) * 0x1p-23",
+    "filter": "HalfFloatTests"
+  }
+]
