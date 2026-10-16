@@ -4,12 +4,12 @@ Issue: #347 · Packet: docs/blueprints/core/features/render-backend.md
 Run: act-1a14644b047-dxwc · Session: see the Belt run page · Started: 2026-10-16T19:52Z
 Stage: 3 wave 1 (RB-1, protected: waiting on a human merge)
 Base: 6967968ed037539869535c4c22fefeab7cc8ea32 (origin/dev)
-Next: RB-1 builder opens a protected PR (no fast-lane label). Needs a human merge before RB-2 can start. Gate caveat: scripts/ci is red on this sandbox from two timing budgets; see Open.
+Next: a human reviews and merges #350 (RB-1). Then RB-2 starts from the new origin/dev. Gate caveat: scripts/ci is red on this sandbox from timing budgets; see Open.
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
 |---|---|---|---|---|---|---|---|
-| RB-1 | 1 | two targets, Linux-empty Metal module, C4 parts | Package.swift, Sources/CoreRender/CoreRender.swift, Sources/CoreRenderMetal/MetalBackend.swift, Tests/CoreRenderTests/TargetsTests.swift, Tests/CoreRenderMetalTests/TargetsTests.swift, docs/c4/parts/creative-core/corerender/* | TargetsTests | none | – | blocked: protected path, needs human merge |
+| RB-1 | 1 | two targets, Linux-empty Metal module, C4 parts | Package.swift, Sources/CoreRender/CoreRender.swift, Sources/CoreRenderMetal/MetalBackend.swift, Tests/CoreRenderTests/TargetsTests.swift, Tests/CoreRenderMetalTests/TargetsTests.swift, docs/c4/parts/creative-core/corerender/* | TargetsTests | none | – | #350 open (protected, no fast-lane label): awaiting human merge |
 | RB-2 | 2 | RenderOp, RenderError, RenderSurface, RenderBackend, ToneAdjustment, FakeBackend | Sources/CoreRender/{RenderOp,RenderSurface,RenderBackend,ToneAdjustment,FakeBackend}.swift, Tests/CoreRenderTests/RenderBackendFakeTests.swift | RenderBackendFakeTests | none | – | waiting on RB-1 |
 | RB-3 | 3 | CPUBackend and CPUSurface: surface, read, release, display, composite | Sources/CoreRender/CPU/CPUBackend.swift, Sources/CoreRender/CPU/CPUSurface.swift, Tests/CoreRenderTests/CPUBackendTests.swift, Tests/mutations/CoreRenderCPUBackend.json | CPUBackendTests | CoreRenderCPUBackend | – | waiting on RB-2 |
 | RB-4 | 4 | CPUBackend transform, resample, blur, adjust, retouch | Sources/CoreRender/CPU/CPUBackend+Ops.swift, Tests/CoreRenderTests/CPUBackendOpsTests.swift, Tests/mutations/CoreRenderCPUBackendOps.json | CPUBackendOpsTests | CoreRenderCPUBackendOps | – | waiting on RB-3 |
@@ -33,3 +33,4 @@ Next: RB-1 builder opens a protected PR (no fast-lane label). Needs a human merg
 - RB-1 touches the protected path Package.swift. The fast lane refuses it. A human must review and merge. Without it, nothing in RB-2..RB-7 can build.
 - Packet Base says origin/dev cae920b; the brief and the live dev are 6967968. The brief's SHA is used.
 - Gate on dev 6967968 (this sandbox, 4 cores): scripts/ci fails in `swift test` at two wall-clock budgets under parallel load: RetouchBoundsTests `smallDabOn12MegapixelsIsFast` (2.1 to 2.6 s against 1.5 s; passes alone at 0.97 s) and EngineStressTests `thousandCommandsNearTheLayerLimitStayInBudget` (5.37 s against 5.0 s). `swift test --no-parallel` passes all 901 tests. GitHub runs for dev are green (cae920b, success). Until the budgets hold here, no PR can honestly carry `Fast-Check: pass`; the sandbox gate is not a substitute for the runner's.
+- RB-1 PR #350 (branch render-backend/rb-1, head 426a411b7c26852ce02c78c46ba11e2a70fcbf82): swift build passes. scripts/ci fails on two budgets. swift test --no-parallel shows 903 tests with one failure: thousandCommandsNearTheLayerLimitStayInBudget at 5.62 s against 5.0 s. So the budget fails serially too, not only under parallel load. Fast-Check is marked "not run". c4-assemble --check reports drift from the new parts; the Generated workflow on dev regenerates model.json.
