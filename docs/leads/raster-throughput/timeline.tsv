@@ -37,3 +37,4 @@ utc	stage	event	ref	note
 2026-10-16T05:26Z	4	round-findings	round 2	1 major (untested opacity==1 guard), 2 minor; fix batch r2-b1; budgets recorded
 2026-10-16T05:28Z	4	heartbeat	round 2	r2-b1 fixer running; mutate finishing
 2026-10-16T05:31Z	4	gate-run	f27f104	CI PASS 816; mutate 43/43
+2026-10-16T05:41Z	4	pr-opened	#327	r2-b1 opacity guard test, alpha table, scalar unpremultiply
