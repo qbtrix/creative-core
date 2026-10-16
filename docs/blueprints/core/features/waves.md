@@ -16,6 +16,8 @@ features; the source issues carry their own labels (#220 to #225 and #228 are
 | 2 | Whole-image raster work at display speed | `raster-throughput.md` | #309, #300 | p1 | nothing | Photo `photo-edit` (PB-15, PB-16) and the brush tile render | #311 | planned |
 | 2 | State machines Flare can edit and play | `state-machine.md` | #220, #221, #222, #223, #224, #225, #226 | p2 | nothing | Flare LM-10, LM-11, LM-12 | #312 | planned |
 | 2 | Onion frames, Lottie tracks and the core budgets | `motion-tracks.md` | #218, #227, #228 | p2 | nothing | Flare LM-8, LM-13a; the QB-L5 to QB-L8 model budgets | #313 | planned |
+| 3 | A `RenderBackend` contract, the CPU backend over CoreRaster, the dispatcher and the parity harness | `render-backend.md` | dual-renderer design 2026-10-17 (sections 1, 5) | p1 | nothing (RT-3's in-place composite is a swap, not a wait) | creative-apps `canvas-host` CH-10 (live presenter); every app's Model drawing through a `RenderDispatcher` | file when ready | planned |
+| 4 | The Metal backend, one op family per slice behind capability flags, each with a parity test; one dedicated lead on its own Belt line | `metal-backend.md` | dual-renderer design 2026-10-17 (sections 1, 5, 7) | p2 | render-backend | Automatic and GPU in Settings > Rendering doing anything; big-document speed in Photo and Halo | file when ready | planned |
 
 What the apps wait on, mapped to the task that closes each issue:
 
@@ -28,6 +30,8 @@ What the apps wait on, mapped to the task that closes each issue:
 | Flare LM-8 `LiveOnion` | #218 | MT-1 | `main` holds MT-1 (`motion-tracks` build wave **a**) |
 | Flare LM-13a `LiveExport` | #227 | MT-4 | `main` holds MT-4 (build wave **c**) |
 | Flare IN-1 and IN-7 model budgets | #228 | MT-5 | `main` holds MT-5 |
+| creative-apps `canvas-host` CH-10 (the live `MetalPresenting`) and each app's "Model draws through a `RenderDispatcher`" adoption | render-backend | RB-5 (the dispatcher), RB-7 (`feature-done`) | `main` holds RB-7; then one `scripts/bump-core` PR in creative-apps |
+| creative-apps Settings > Rendering: Automatic and GPU draw on Metal | metal-backend | MB-3 and MB-4 (display and composite), then each family's last task | `main` holds the family; each lands in the apps through its own bump |
 
 **The apps build against creative-core `main`**, which moves only when full
 CI on `dev` is green. The lane dispatches that run after every 10 merged
@@ -58,6 +62,13 @@ feature once `main` holds them.
 - **Lottie tasks in a row, budgets last.** The three Lottie tasks share
   `LottieExporter.swift`, so they chain; onion frames run beside them; the
   budgets come last so QB-L8 times the exporter that ships.
+
+- **Waves 3 and 4 (dual renderer, 2026-10-17).** `render-backend` is small and
+  Linux-safe and gates everything GPU; it runs as soon as a slot opens.
+  `metal-backend` is one lead's slow line: many small slices, one op family
+  each, never more than one or two PRs in flight, so the apps stay shippable
+  on CPU after every merge. Its `Package.swift` edit (RB-1) is a protected
+  path: the supervisor merges that PR.
 
 ## Issue housekeeping (each lead, stage 0)
 

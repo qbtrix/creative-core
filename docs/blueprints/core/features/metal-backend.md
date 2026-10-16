@@ -1,0 +1,213 @@
+# Feature packet: metal-backend
+
+**Feature:** the Metal `RenderBackend`, grown one op family at a time behind
+`supports` flags, each family landing with the parity test that proves it
+matches the CPU backend within the stated tolerance, so the dispatcher routes
+only what Metal does right and the apps stay shippable on CPU after every
+PR. Sized for one dedicated lead working slowly on its own Belt line: many
+small slices, one family each.
+**Line:** `line:core` (its own Belt line, one lead) · **Wave:** 4 (`waves.md`) · **Lead branch:** `lead/metal-backend`
+
+**Covers:** the dual-renderer design
+(`paw-workspace/docs/design/drafts/2026-10-17-dual-renderer.md`, sections 1,
+5 and 7). macOS only: every file under `Sources/CoreRenderMetal/` is wrapped
+whole in `#if canImport(Metal)`; the Linux-safe parts (capability state,
+tiling math, pipeline cache keys) live in `Sources/CoreRender/Metal/` with
+no Metal import, so mutations run on Linux.
+
+**Unblocks:** Automatic and GPU in creative-apps' Settings > Rendering doing
+anything; canvas-host CH-10's live presenter; big-document and live-effect
+speed in Photo and Halo.
+
+**Depends on:** `render-backend` (RB-a for the targets and the contract, RB-c
+for the harness and the CPU goldens). Base: `origin/dev` after `render-backend`'s
+`feature-done`.
+
+**Where parity runs.** core's `ci.yml` has a macOS job (`macos-15`,
+`scripts/ci` on dev runs). Every parity test is
+`.enabled(if: MetalBackend.defaultDevice != nil)`; whether that runner
+exposes a device is unverified until the first run (MB-2 records the answer
+in `waves.md`). When it skips, the lead runs the suite on its Mac before each
+`Fast-Check:` and the Mac finisher posts the counts. Linux never builds Metal.
+
+## Slices
+
+| slice | behavior (one sentence) | tasks | checks | waits on |
+|---|---|---|---|---|
+| MB-a | `MetalBackend` exists with a device, a queue, upload and download of tiled `rgba16Float` surfaces, an empty `supports`, a health probe that drops to CPU on device loss, and a pipeline cache; the parity suite is scaffolded with every family disabled. | MB-1, MB-2 | `MetalSurfaceTests`, `MetalCapabilitiesTests`, `ParityTests` (scaffold) | render-backend (RB-a: MB-1; RB-c: MB-2) |
+| MB-b | Display encodes through the same `DisplayTransfer` tables as the CPU, and `.normal` composite with opacity and offsets matches within `.standard`. | MB-3, MB-4 | `ParityTests/display`, `ParityTests/compositeNormal` | MB-a (MB-3, MB-4) |
+| MB-c | The twelve separable blend modes match within `.standard`, including the opaque-row path. | MB-5, MB-6 | `ParityTests/blendSeparable` | MB-b (MB-5) |
+| MB-d | Crop, quarter turns and both resample filters match within `.standard`. | MB-7, MB-8 | `ParityTests/transform`, `ParityTests/resample` | MB-a (MB-7, MB-8) |
+| MB-e | Hue, saturation, color and luminosity match within `.nonSeparable`, with the clip-colour edge cases. | MB-9, MB-10 | `ParityTests/blendNonSeparable` | MB-c (MB-9) |
+| MB-f | Gaussian blur and unsharp mask match within `.standard`. | MB-11, MB-12 | `ParityTests/blur` | MB-d (MB-11) |
+| MB-g | Every `ToneAdjustment` matches within `.standard`. | MB-13, MB-14 | `ParityTests/adjust` | MB-a (MB-13) |
+| MB-h | Clone through a mask matches; surfaces tile and evict to the CPU copy under a memory bound; `residentBytes` is reported; the feature is done. | MB-15, MB-16, MB-17 | `ParityTests/retouch`, `MetalTilingTests`, `MetalBudgetTests` | MB-b to MB-g (MB-17) |
+
+`ui_slice: none`: an engine feature with no screen. Each slice is one
+family; a slice's `supports` entry is added by its last task, so the
+dispatcher never routes a family whose parity test isn't green.
+
+## Journey steps
+
+Engine only. On the apps' side: creative-apps SJ28 (GPU picked, the status
+reads "Metal (<device>)"), and Photo's and Halo's journeys unchanged on GPU.
+
+## Screens and states
+
+None.
+
+## Contract slice
+
+```swift
+// Sources/CoreRender/Metal/MetalCapabilities.swift (MB-1, Linux-safe)
+public struct MetalCapabilities: Equatable, Sendable {
+    public private(set) var supported: Set<RenderOp>
+    public private(set) var healthy: Bool
+    public private(set) var lastError: String?
+    public mutating func enable(_ op: RenderOp)
+    public mutating func fail(_ reason: String)      // healthy = false, supported stays (for the status note)
+    public mutating func recover()                   // after a new device
+}
+// Sources/CoreRender/Metal/SurfaceTiling.swift (MB-1, Linux-safe)
+public struct SurfaceTiling: Equatable, Sendable {    // 256 px tiles, as CoreRaster's Tiles.swift
+    public init(width: Int, height: Int) throws
+    public var tileCount: Int; public func rect(_ index: Int) throws -> TileRect
+    public func tiles(touching x: Int, y: Int, width: Int, height: Int) -> [Int]
+}
+// Sources/CoreRender/Metal/PipelineKey.swift (MB-2, Linux-safe)
+public struct PipelineKey: Hashable, Codable, Sendable { public let op: RenderOp; public let variant: String }
+// Sources/CoreRenderMetal/MetalBackend.swift (MB-1, #if canImport(Metal))
+public final class MetalBackend: RenderBackend, @unchecked Sendable {
+    public static var defaultDevice: MTLDevice? { MTLCreateSystemDefaultDevice() }
+    public init(device: MTLDevice, cacheURL: URL?) throws
+    public var name: String                          // "Metal (<device.name>)"
+    public var supports: Set<RenderOp>               // capabilities.supported when healthy, else []
+    public var isHealthy: Bool
+    public var residentBytes: Int
+    // the protocol's methods; an op outside `supports` throws .unsupported(op)
+}
+```
+
+## Pseudocode
+
+- **Surfaces.** `MetalSurface`: one `MTLTexture` per tile (`rgba16Float`,
+  linear, premultiplied), `SurfaceTiling` for the grid, and a CPU
+  `PixelBuffer` shadow filled on `read` or eviction. `surface(_:)` uploads
+  Float32 to Float16 per tile; `read` downloads and converts back.
+- **Display.** A compute kernel reads the Float16 texture, applies the
+  `DisplayTransfer` decode-free encode through a 1-D table texture uploaded
+  from `DisplayTransfer(.sRGB)` or `.displayP3`, clamps and rounds exactly as
+  `rgba8` does, writes `rgba8Unorm`. Parity: 2/255.
+- **Composite.** One kernel per blend family with the W3C formulas from
+  `BlendMode.swift`, straight colours computed from premultiplied inputs with
+  the same alpha guards (alpha <= 1e-6 treated as 0, the CPU's rule).
+- **Pipeline cache.** `MTLBinaryArchive` at `cacheURL`; a missing or stale
+  archive compiles on a background queue while `supports` excludes the
+  family, so the first frames draw on CPU and nothing stalls.
+- **Health.** A command buffer error or a lost device calls
+  `capabilities.fail(reason)`; `isHealthy` turns false; the dispatcher routes
+  everything to the CPU and records the reason. `recover()` on a new device.
+- **Memory.** `residentBytes` sums tile textures; above `budgetBytes` (half of
+  `device.recommendedMaxWorkingSetSize`) the least recently used tiles are
+  released after their shadow is current.
+
+## Tasks
+
+| id | issue | what | owned files | depends on | size |
+|---|---|---|---|---|---|
+| MB-1 | – | `MetalCapabilities`, `SurfaceTiling` (Linux-safe, with mutations); `MetalBackend` with device, queue, `MetalSurface` upload and download; `supports` empty | `Sources/CoreRender/Metal/MetalCapabilities.swift`, `Sources/CoreRender/Metal/SurfaceTiling.swift`, `Tests/CoreRenderTests/MetalCapabilitiesTests.swift`, `Tests/CoreRenderTests/SurfaceTilingTests.swift`, `Tests/mutations/CoreRenderMetalCapabilities.json`, `Tests/mutations/CoreRenderSurfaceTiling.json`, `Sources/CoreRenderMetal/MetalBackend.swift`, `Sources/CoreRenderMetal/MetalSurface.swift`, `Tests/CoreRenderMetalTests/MetalSurfaceTests.swift`, `docs/c4/parts/creative-core/corerender/metal-support.json`, `docs/c4/parts/creative-core/corerendermetal/metal-backend.json` | – | ~380, 11 |
+| MB-2 | – | `PipelineKey` and the `MTLBinaryArchive` cache; health probe and `fail`/`recover` wiring; `ParityTests` scaffold, every family disabled; the runner-device answer in `waves.md` | `Sources/CoreRender/Metal/PipelineKey.swift`, `Sources/CoreRenderMetal/MetalPipelines.swift`, `Tests/CoreRenderMetalTests/MetalPipelinesTests.swift`, `Tests/CoreRenderMetalTests/ParityTests.swift`, `Tests/mutations/CoreRenderMetalCapabilities.json`, `docs/blueprints/core/features/waves.md` | MB-1 | ~300, 6 |
+| MB-3 | – | Display kernel over the `DisplayTransfer` table texture; enables `ParityTests/display`; `supports += .display` | `Sources/CoreRenderMetal/Shaders/Display.metal`, `Sources/CoreRenderMetal/MetalBackend+Display.swift`, `Tests/CoreRenderMetalTests/ParityTests+Display.swift` | MB-2 | ~220, 3 |
+| MB-4 | – | `.normal` composite with opacity and offsets, in place on the backdrop's tiles; enables `compositeNormal`; `supports += .composite` | `Sources/CoreRenderMetal/Shaders/Composite.metal`, `Sources/CoreRenderMetal/MetalBackend+Composite.swift`, `Tests/CoreRenderMetalTests/ParityTests+Composite.swift` | MB-2 | ~260, 3 |
+| MB-5 | – | The twelve separable modes as kernel variants; enables `blendSeparable` | `Sources/CoreRenderMetal/Shaders/BlendSeparable.metal`, `Sources/CoreRenderMetal/MetalBackend+BlendSeparable.swift`, `Tests/CoreRenderMetalTests/ParityTests+BlendSeparable.swift` | MB-4 | ~300, 3 |
+| MB-6 | – | Opaque-row fast path (a blit when the source row is opaque at opacity 1) with equal pixels; `supports += .blendSeparable` | `Sources/CoreRenderMetal/MetalBackend+OpaqueRows.swift`, `Tests/CoreRenderMetalTests/ParityTests+OpaqueRows.swift` | MB-5 | ~160, 2 |
+| MB-7 | – | Crop and quarter turns as blits and a rotate kernel; enables `transform`; `supports += .transform` | `Sources/CoreRenderMetal/Shaders/Transform.metal`, `Sources/CoreRenderMetal/MetalBackend+Transform.swift`, `Tests/CoreRenderMetalTests/ParityTests+Transform.swift` | MB-2 | ~220, 3 |
+| MB-8 | – | Bilinear and lanczos3 as two separable passes with clamp-to-edge taps and normalised weights; enables `resample`; `supports += .resample` | `Sources/CoreRenderMetal/Shaders/Resample.metal`, `Sources/CoreRenderMetal/MetalBackend+Resample.swift`, `Tests/CoreRenderMetalTests/ParityTests+Resample.swift` | MB-2 | ~300, 3 |
+| MB-9 | – | Hue, saturation, color, luminosity with Lum, Sat, SetLum, SetSat, ClipColor; enables `blendNonSeparable` at `.nonSeparable` | `Sources/CoreRenderMetal/Shaders/BlendNonSeparable.metal`, `Sources/CoreRenderMetal/MetalBackend+BlendNonSeparable.swift`, `Tests/CoreRenderMetalTests/ParityTests+BlendNonSeparable.swift` | MB-5 | ~280, 3 |
+| MB-10 | – | ClipColor edge cases (lum at 0 and 1, grey sources) in Float32 math inside the kernel; `supports += .blendNonSeparable` | `Sources/CoreRenderMetal/Shaders/BlendNonSeparable.metal`, `Tests/CoreRenderMetalTests/ParityTests+BlendNonSeparable.swift` | MB-9 | ~120, 2 |
+| MB-11 | – | Gaussian blur, two passes, the CPU's kernel builder uploaded as weights; enables `blur` | `Sources/CoreRenderMetal/Shaders/Blur.metal`, `Sources/CoreRenderMetal/MetalBackend+Blur.swift`, `Tests/CoreRenderMetalTests/ParityTests+Blur.swift` | MB-8 | ~240, 3 |
+| MB-12 | – | Unsharp mask over the blur; `supports += .blur` | `Sources/CoreRenderMetal/MetalBackend+Unsharp.swift`, `Tests/CoreRenderMetalTests/ParityTests+Unsharp.swift` | MB-11 | ~140, 2 |
+| MB-13 | – | Exposure, levels, curves (the curve as a 1-D table) on unpremultiplied values; enables `adjust` | `Sources/CoreRenderMetal/Shaders/Adjust.metal`, `Sources/CoreRenderMetal/MetalBackend+Adjust.swift`, `Tests/CoreRenderMetalTests/ParityTests+Adjust.swift` | MB-2 | ~280, 3 |
+| MB-14 | – | White balance, contrast, highlights and shadows; `supports += .adjust` | `Sources/CoreRenderMetal/Shaders/Adjust.metal`, `Sources/CoreRenderMetal/MetalBackend+Adjust.swift`, `Tests/CoreRenderMetalTests/ParityTests+Adjust.swift` | MB-13 | ~220, 3 |
+| MB-15 | – | Clone through a mask; enables `retouch`; `supports += .retouch` | `Sources/CoreRenderMetal/Shaders/Retouch.metal`, `Sources/CoreRenderMetal/MetalBackend+Retouch.swift`, `Tests/CoreRenderMetalTests/ParityTests+Retouch.swift` | MB-4 | ~220, 3 |
+| MB-16 | – | LRU eviction to the shadow under `budgetBytes`; `residentBytes`; `MetalBudgetTests` (release, reported) | `Sources/CoreRenderMetal/MetalSurface+Eviction.swift`, `Tests/CoreRenderMetalTests/MetalTilingTests.swift`, `Tests/CoreRenderMetalTests/MetalBudgetTests.swift` | MB-1 | ~240, 3 |
+| MB-17 | – | Every family on; the parity counts and the runner answer in `waves.md`; `feature-done` | `docs/blueprints/core/features/waves.md`, `Tests/CoreRenderMetalTests/ParityTests.swift` | MB-3 to MB-16 | ~80, 2 |
+
+## Build waves
+
+- Wave 1: MB-1. Independent in this wave: MB-1 alone.
+- Wave 2: MB-2, MB-16. Independent in this wave: both.
+- Wave 3: MB-3, MB-4, MB-7, MB-8, MB-13. Independent in this wave: all five.
+- Wave 4: MB-5, MB-11, MB-14, MB-15. Independent in this wave: all four.
+- Wave 5: MB-6, MB-9, MB-12. Independent in this wave: all three.
+- Wave 6: MB-10. Independent in this wave: MB-10 alone.
+- Wave 7: MB-17 (`feature-done`, final). Independent in this wave: MB-17 alone.
+
+Longest chain: MB-1 → MB-2 → MB-4 → MB-5 → MB-9 → MB-10 → MB-17 (7).
+Chain of 7: the backend, then its pipelines, then the composite kernel the
+blend variants extend (separable, then non-separable in the same shader file,
+then its edge cases); MB-17 carries `feature-done`. One lead builds this
+slowly: a wave with five independent tasks is still taken one or two at a
+time, each PR with its parity run on the lead's Mac.
+
+## Acceptance test per task
+
+Parity tests are `.enabled(if: MetalBackend.defaultDevice != nil)` and
+compare against the CPU goldens from `render-backend` RB-7 with
+`ParityHarness.compare`. Linux-safe tests carry mutations; shader code is
+covered by parity, not mutations.
+
+| id | test | fails when | mutations (plan: label → filter) |
+|---|---|---|---|
+| MB-1 | `MetalCapabilitiesTests`: `enable` then `fail` gives `supported` kept and `healthy` false; `recover` restores; `SurfaceTilingTests`: 4096 x 2160 gives 17 x 9 tiles, the last column 0 px wide never exists, `tiles(touching:)` on a rect spanning two tiles gives both; `MetalSurfaceTests` (macOS, device): `read(surface(b))` within 1e-3 of `b` for 20 seeded buffers (Float16 round trip), `residentBytes` equals tiles x bytes | tiling is off by one or a round trip loses more than Float16 | `CoreRenderMetalCapabilities`: `fail` clears `supported` → `MetalCapabilitiesTests`; `CoreRenderSurfaceTiling`: `<=` for `<` on the last tile → `SurfaceTilingTests` |
+| MB-2 | `MetalPipelinesTests`: a cold cache compiles and writes the archive; a warm start loads without compiling (a counter); a corrupt archive recompiles and rewrites; `fail` after a mocked command-buffer error turns `isHealthy` false and `supports` empty; `ParityTests` scaffold lists every family disabled with "waits on MB-n" | the cache is ignored, or an error leaves `supports` on | `CoreRenderMetalCapabilities`: `recover` keeps `lastError` → `MetalCapabilitiesTests`; `PipelineKey` ignores `variant` in `==` → `MetalPipelinesTests` |
+| MB-3 | `ParityTests/display`: the display golden set in sRGB and P3 within 2/255; every byte value per channel round-trips | the table or the rounding differs | none: shader |
+| MB-4 | `ParityTests/compositeNormal`: opacities 0, 0.37, 1, sources off every edge and corner, wholly outside, alpha 1e-45 source; within `.standard` | an edge pixel or an alpha guard differs | none: shader |
+| MB-5 | `ParityTests/blendSeparable`: twelve modes at three opacities within `.standard` | a formula differs | none: shader |
+| MB-6 | `ParityTests/opaqueRows`: an opaque `.normal` row at opacity 1 equals the golden with zero delta; a row with one 0.999 alpha pixel takes the kernel path | the blit runs on a non-opaque row | none: shader |
+| MB-7 | `ParityTests/transform`: crop at every corner, three turns, zero delta (exact copies) | a turn maps wrong | none: shader |
+| MB-8 | `ParityTests/resample`: both filters up and down at 5 sizes within `.standard`; a constant image stays constant | weights don't normalise | none: shader |
+| MB-9 | `ParityTests/blendNonSeparable`: four modes within `.nonSeparable` on the seeded set | SetLum or SetSat differs | none: shader |
+| MB-10 | the same suite's edge rows: lum 0 and 1, grey sources, within `.nonSeparable` | ClipColor skips a bound | none: shader |
+| MB-11 | `ParityTests/blur`: sigma 0, 0.5, 3, 20 within `.standard`; clamp-to-edge at the borders | a border reads black | none: shader |
+| MB-12 | `ParityTests/unsharp`: amount, sigma, threshold grid within `.standard` | the threshold compares the wrong way | none: shader |
+| MB-13 | `ParityTests/adjust`: exposure, levels, curves within `.standard`, in linear and sRGB encodings | premultiply order differs | none: shader |
+| MB-14 | `ParityTests/adjust` develop rows within `.standard` | a slider's sign flips | none: shader |
+| MB-15 | `ParityTests/retouch`: clone with offsets off the edge through rect, ellipse and polygon masks within `.standard` | a mask edge differs | none: shader |
+| MB-16 | `MetalTilingTests`: above `budgetBytes` the LRU tile is released after its shadow is current and `read` still equals the golden; `MetalBudgetTests` (release): a 4K x 20-layer composite's `residentBytes` stays under the budget; sample-to-result p95 ≤ 4 ms per composite, reported | eviction loses pixels | none: device-bound (Linux can't run it) |
+| MB-17 | `ParityTests` has no disabled family; `supports == Set(RenderOp.allCases)`; `waves.md` records the counts | a family is still off | none |
+
+## Quality tests
+
+| quality row | budget | test |
+|---|---|---|
+| Parity per family | `.standard` 2/255 and 1e-3; `.nonSeparable` 4/255 | `ParityTests/*` |
+| First launch | a cold cache draws on CPU (no stall); compile finishes off the main queue | `MetalPipelinesTests` |
+| Fallback | device loss routes every op to the CPU within one op and records the reason | `MetalCapabilitiesTests`, `RenderDispatcherTests` (render-backend) |
+| Memory | 4K x 20 layers under half the working set; eviction keeps pixels | `MetalTilingTests`, `MetalBudgetTests` (reported) |
+| Speed | 4K composite p95 ≤ 4 ms (Metal) against ≤ 8 ms CPU, reported | `MetalBudgetTests` |
+| Linux-safe | `scripts/ci` on Linux builds `CoreRenderMetal` empty and tests `CoreRender/Metal/` with mutations | the Linux CI job |
+
+## Done check
+
+Per slice: its parity test green on a device (the macOS job when it has one,
+else the lead's Mac with the run recorded in the PR body), the Linux job
+green, no open `finding`, mutations scored for the Linux-safe files, and
+`supports` extended only in the slice's last task. The lead posts one line
+per slice on the feature issue with the parity counts and the worst delta.
+Then `Belt-Contact-Sheet:` and a `scripts/bump-core` in creative-apps.
+
+## Not in this packet
+
+Presenting into a `CAMetalLayer` (creative-apps canvas-host). Brush stamping
+(no core op yet). Float32 textures for a precision mode. A Vulkan or other
+GPU path.
+
+## Open
+
+- **Metal in core.** core's CLAUDE.md says every module stays Linux-safe with
+  no Metal. This packet keeps that true for every module but
+  `CoreRenderMetal`, which compiles to nothing on Linux; the feature issue
+  (and a supervisor PR to CLAUDE.md's rule) records the exception. The
+  captain's decision 1 in the design doc.
+- **The runner's device.** Unknown until MB-2's first dev run.
