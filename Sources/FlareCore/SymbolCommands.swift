@@ -1,4 +1,4 @@
-// SymbolCommands.swift: commands that add, remove and create symbol
+// SymbolCommands.swift: commands that add, remove, rename and create symbol
 // definitions. Same
 // shape as SceneCommands.swift: params first, undo state as optional vars
 // last. Undo restores the document exactly, including symbol order.
@@ -13,7 +13,9 @@ import Foundation
 
 /// The symbol commands, registered in `CommandRegistry.builtIn`.
 public enum SymbolCommands {
-    public static let all: [any Command.Type] = [AddSymbol.self, RemoveSymbol.self, ConvertToSymbol.self]
+    public static let all: [any Command.Type] = [
+        AddSymbol.self, RemoveSymbol.self, RenameSymbol.self, ConvertToSymbol.self,
+    ]
 }
 
 extension Document {
@@ -86,6 +88,36 @@ public struct RemoveSymbol: Command {
         guard let removed, let removedIndex else { throw CommandError.notExecuted }
         let at = min(max(removedIndex, 0), document.symbols.count)
         document.symbols.insert(removed, at: at)
+    }
+}
+
+/// Renames a symbol definition. A missing symbol throws `symbolNotFound` and
+/// an empty name throws `emptyName`, both before any change.
+public struct RenameSymbol: Command {
+    public static let id = "symbol.rename"
+    public var label: String { "Rename Symbol" }
+    public var symbolID: String
+    public var name: String
+    var oldName: String?
+
+    private enum CodingKeys: String, CodingKey { case symbolID, name }
+
+    public init(symbolID: String, name: String) {
+        self.symbolID = symbolID
+        self.name = name
+    }
+
+    public mutating func execute(_ document: inout Document) throws {
+        let i = try document.symbolIndex(symbolID)
+        guard !name.isEmpty else { throw CommandError.emptyName }
+        oldName = document.symbols[i].name
+        document.symbols[i].name = name
+    }
+
+    public func undo(_ document: inout Document) throws {
+        guard let oldName else { throw CommandError.notExecuted }
+        let i = try document.symbolIndex(symbolID)
+        document.symbols[i].name = oldName
     }
 }
 

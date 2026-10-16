@@ -1,4 +1,5 @@
-// SymbolCommandsTests.swift: AddSymbol, RemoveSymbol and ConvertToSymbol. Add,
+// SymbolCommandsTests.swift: AddSymbol, RemoveSymbol and ConvertToSymbol
+// (RenameSymbol has RenameSymbolTests). Add,
 // undo and redo restore the document exactly; removing a symbol an instance
 // still uses throws symbolInUse and changes nothing; converting layers moves
 // them into a new symbol and one undo restores the original.
@@ -144,6 +145,7 @@ import Testing
         [
             AddSymbol(symbol: Symbol(id: "new", name: "New", durationFrames: 4), index: 0),
             RemoveSymbol(symbolID: "spark"),
+            RenameSymbol(symbolID: "spark", name: "Flash"),
             ConvertToSymbol(sceneID: Fixtures.sceneID, layerIDs: ["ball"], symbolID: "wrap", name: "Wrap"),
         ]
     }
@@ -165,6 +167,10 @@ import Testing
         },
         { e, rng, _ in
             try e.perform(RemoveSymbol(symbolID: anySymbol(e, &rng)))
+        },
+        { e, rng, nextID in
+            nextID += 1
+            try e.perform(RenameSymbol(symbolID: anySymbol(e, &rng), name: Bool.random(using: &rng) ? "" : "R\(nextID)"))
         },
         { e, rng, nextID in
             nextID += 1
