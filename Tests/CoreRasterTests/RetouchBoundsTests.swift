@@ -3,7 +3,9 @@
 // checks the output is byte-identical to a full pass over every pixel (the
 // loop before #257, kept here as the reference): a small dab, a full mask, an
 // empty mask, dabs on each edge with negative and positive offsets, and a
-// seeded fuzz. A timing test runs a 64x64 dab on 12 MP.
+// seeded fuzz. A timing test runs a 64x64 dab on 12 MP and counts the test
+// thread's CPU time, not the wall clock, so a loaded parallel run (#300) does
+// not fail it.
 import CoreRaster
 import Testing
 
@@ -93,7 +95,9 @@ private let offsets = [(0, 0), (3, 2), (-3, -2), (5, -1), (-4, 3), (11, 0), (0, 
 }
 
 /// A 64x64 dab on 12 MP. Before #257 one call took about 0.6 s in release and
-/// 4.5 s in debug; the dab's own pixels are now the only per-pixel work.
+/// 4.5 s in debug; the dab's own pixels are now the only per-pixel work. The
+/// budget is the thread's CPU time: with 750 tests on 4 cores the wall clock
+/// also counts the time the thread waits for a core (#300).
 @Test func smallDabOn12MegapixelsIsFast() throws {
     let width = 4000, height = 3000
     let gray = RGBA(r: 0.2, g: 0.2, b: 0.2, a: 1)
@@ -104,13 +108,38 @@ private let offsets = [(0, 0), (3, 2), (-3, -2), (5, -1), (-4, 3), (11, 0), (0, 
     }
     let dab = try Mask.rectangle(width: width, height: height, x: 2000, y: 1500, w: 64, h: 64)
     var out = input
-    let elapsed = try ContinuousClock().measure {
-        out = try input.cloned(offset: (dx: 300, dy: 0), through: dab)
+    var cpu = Duration.zero
+    let wall = try ContinuousClock().measure {
+        cpu = try measureThreadCPUTime {
+            out = try input.cloned(offset: (dx: 300, dy: 0), through: dab)
+        }
     }
-    print("clone 64x64 dab on \(width)x\(height): \(elapsed) (was ~0.6 s release, ~4.5 s debug)")
-    #expect(elapsed < .seconds(1.5))
+    print("clone 64x64 dab on \(width)x\(height): \(cpu) thread CPU, \(wall) wall (was ~0.6 s release, ~4.5 s debug)")
+    #expect(cpu < .seconds(1.5))
     #expect(try out.pixel(x: 2000, y: 1500) == source)
     #expect(try out.pixel(x: 2063, y: 1563) == source)
     #expect(try out.pixel(x: 2064, y: 1563) == gray)
     #expect(try out.pixel(x: 1999, y: 1500) == gray)
+}
+
+/// The thread clock the dab budget uses: more work costs more CPU time, and a
+/// thread cannot use more CPU time than the wall clock that passed (plus a
+/// little for the two clocks' granularity).
+@Test func threadCPUTimeGrowsWithWorkAndStaysUnderTheWallClock() throws {
+    func spin(_ steps: Int) -> UInt64 {
+        var rng = SplitMix64(seed: 300)
+        var sum: UInt64 = 0
+        for _ in 0..<steps { sum ^= rng.next() }
+        return sum
+    }
+    var sums: [UInt64] = []
+    var small = Duration.zero, large = Duration.zero
+    let wall = try ContinuousClock().measure {
+        small = try measureThreadCPUTime { sums.append(spin(100_000)) }
+        large = try measureThreadCPUTime { sums.append(spin(5_000_000)) }
+    }
+    #expect(sums.count == 2 && sums[0] != sums[1])
+    #expect(small > .zero)
+    #expect(large > small)
+    #expect(small + large <= wall + .milliseconds(5))
 }
