@@ -2,9 +2,9 @@
 
 Issue: #312 · Packet: docs/blueprints/core/features/state-machine.md (on dev since #310)
 Run: act-1a142b4b29a-bnb2 · Session: claude/state-machine-feature-lead-ynzph3 (resumed 2026-10-16T07:10Z; first 8z5qtw) · Started: 2026-10-16T03:16Z
-Stage: 3 wave c
-Base: 670a6ed570159dd3ccfdb06c7912bac040ff1a9b (wave c; wave b f27f104; wave a base 69c9f80 is the feature's first base)
-Next: wait for the wave-c builder (SM-4) PR, then for the lane to merge it; then wave d (SM-5)
+Stage: 3 wave d
+Base: 5cb1494 (wave d; wave c 670a6ed; wave b f27f104; wave a base 69c9f80 is the feature's first base)
+Next: wait for the wave-d builder (SM-5) PR, then for the lane to merge it; then wave e (SM-6)
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -13,8 +13,8 @@ Next: wait for the wave-c builder (SM-4) PR, then for the lane to merge it; then
 | SM-2 | a | `RenameSymbol` (closes #226) | SymbolCommands.swift, RenameSymbolTests.swift, SymbolCommandsTests.swift, CommandRegistryTests.swift, FlareRenameSymbol.json | RenameSymbolTests | FlareRenameSymbol.json | #314 | merged |
 | SM-3 | b | family + registry line; Add/Rename/Remove StateMachine, SetInitialState; CommandError.stateMachineNotFound, .invalidMachine; machine in sampleDocument (#221 part) | StateMachineCommands.swift, Command.swift, CommandRegistry.swift, MachineCommandTests.swift, CommandRegistryTests.swift, UndoPropertyTests.swift, FlareMachineCommands.json | MachineCommandTests | FlareMachineCommands.json | #330 | merged |
 | SM-7 | b | `MachinePlayer`; TimelineError cases; shared internal `firing` (closes #225) | MachinePlayer.swift, StateMachine.swift, Timeline.swift, MachinePlayerTests.swift, FlareMachinePlayer.json | MachinePlayerTests | FlareMachinePlayer.json | #329 | merged |
-| SM-4 | c | Add/Update/Remove MachineState; CommandError.stateNotFound; machines in fuzz document (closes #222, #221) | MachineStateCommands.swift, StateMachineCommands.swift, Command.swift, MachineStateCommandTests.swift, CommandRegistryTests.swift, UndoPropertyTests.swift, CommandFuzzTests.swift, FlareMachineStates.json | MachineStateCommandTests | FlareMachineStates.json | – | building |
-| SM-5 | d | Add/Update/Remove Transition; invalidIndex doc line (closes #223) | TransitionCommands.swift, StateMachineCommands.swift, Command.swift (doc), TransitionCommandTests.swift, CommandRegistryTests.swift, UndoPropertyTests.swift, FlareTransitions.json | TransitionCommandTests | FlareTransitions.json | – | waits SM-4 |
+| SM-4 | c | Add/Update/Remove MachineState; CommandError.stateNotFound; machines in fuzz document (closes #222, #221) | MachineStateCommands.swift, StateMachineCommands.swift, Command.swift, MachineStateCommandTests.swift, CommandRegistryTests.swift, UndoPropertyTests.swift, CommandFuzzTests.swift, FlareMachineStates.json | MachineStateCommandTests | FlareMachineStates.json | #335 | merged |
+| SM-5 | d | Add/Update/Remove Transition; invalidIndex doc line (closes #223) | TransitionCommands.swift, StateMachineCommands.swift, Command.swift (doc), TransitionCommandTests.swift, CommandRegistryTests.swift, UndoPropertyTests.swift, FlareTransitions.json | TransitionCommandTests | FlareTransitions.json | – | building |
 | SM-6 | e | Add/Update/Remove MachineInput; CommandError.inputNotFound, .inputTypeChange (closes #224) | MachineInputCommands.swift, StateMachineCommands.swift, Command.swift, MachineInputCommandTests.swift, CommandRegistryTests.swift, UndoPropertyTests.swift, FlareMachineInputs.json | MachineInputCommandTests | FlareMachineInputs.json | – | waits SM-5 |
 | SM-8 | f | MachineJourneyTests: six journey steps, one engine, one player | MachineJourneyTests.swift | MachineJourneyTests | – | – | waits SM-6, SM-7 |
 
@@ -30,6 +30,7 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 - #310 merged during setup; wave a starts from 69c9f80 (f05665f + the packet docs only).
 - The `feature-done` label goes on the last PR after the Anatomy loop (SM-8 if the loop is clean, else the last fix), so the CI run it triggers covers every fix.
 - Resumed after a stall: wave b had merged (#329 SM-7, #330 SM-3) by dev 670a6ed.
+- SM-4 (#335) also edited MachineCommandTests (+2 -2): SM-3's test said its ids equal `all`, now a subset. Accepted; later machine tasks may need the same.
 - PRs, labels and comments go through the GitHub MCP tools (no gh auth in cloud sessions).
 
 ## Open
