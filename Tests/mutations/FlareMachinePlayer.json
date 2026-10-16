@@ -30,8 +30,8 @@
   {
     "note": "machine player init ignores error issues and plays a broken machine",
     "file": "Sources/FlareCore/MachinePlayer.swift",
-    "anchor": "if let issue = found.issues(in: document).first(where: { $0.severity == .error }) {",
-    "replacement": "if let issue = found.issues(in: document).first(where: { $0.severity == .error && $0.message.isEmpty }) {",
+    "anchor": "if let issue = found.firstError(in: document) {",
+    "replacement": "if let issue = found.firstError(in: document), issue.message.isEmpty {",
     "filter": "MachinePlayerTests"
   }
 ]
