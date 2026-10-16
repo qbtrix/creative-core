@@ -2,9 +2,9 @@
 
 Issue: #311 · Packet: docs/blueprints/core/features/raster-throughput.md (in PR #310, read from branch docs/core-packets-wave2)
 Run: act-1a142b4b264-6dd2 · Session: claude/raster-throughput-lead-pyis7l · Started: 2026-10-16T03:05Z
-Stage: 4 round 2
-Base: f27f1042e2944c2c750dda91f2e3f24cdfdde08f (round 2; first base f05665f5b54a461ab4a4e981ed7d7b01d7ab37ed)
-Next: wait for the lane on #327 (r2-b1); then round 3 on that dev SHA
+Stage: 4 round 3
+Base: fe5bc5347337b361a511c148b58fbd56163e09fb (round 3; first base f05665f5b54a461ab4a4e981ed7d7b01d7ab37ed)
+Next: round 3: budgets x3, gate, mutate on fe5bc53 (scratchpad/r3) and the critic panel
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -22,7 +22,7 @@ Acceptance tests and quality bars: the packet's "Acceptance test per task" and "
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
 |---|---|---|---|---|---|---|---|---|
 | 1 | f7b9bcf | PASS (814 tests) | 39/39 (validate: 203 anchors) | – (not dispatched yet) | clarity, contract, robustness, tests, compat, performance | 4 major, 9 minor (scratchpad r1/findings.md) | #324 (r1-b1, merged), #325 (r1-b2, merged), #326 (r1-b3, merged) | no |
-| 2 | f27f104 | PASS (816 tests) | 43/43 (validate: 207 anchors) | – | same 6 | 1 major (opacity==1 half of the opaque-row guard untested, no mutation entry), 2 minor | #327 (r2-b1) | no |
+| 2 | f27f104 | PASS (816 tests) | 43/43 (validate: 207 anchors) | – | same 6 | 1 major (opacity==1 half of the opaque-row guard untested, no mutation entry), 2 minor | #327 (r2-b1, merged) | no |
 
 ## Decisions
 - Packet not yet on dev (PR #310 open); builders read it from origin/docs/core-packets-wave2.
