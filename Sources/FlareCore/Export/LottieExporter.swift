@@ -1,4 +1,4 @@
-// LottieExporter.swift: a scene as a static Lottie JSON document.
+// LottieExporter.swift: a scene as a Lottie JSON document.
 //
 // Follows the public Lottie format docs. The top level carries `v`, `fr`
 // (fps), `ip`/`op` (frame range), `w`/`h` (canvas size) and `layers`. Each
@@ -23,7 +23,9 @@
 // identity group transform (`tr`). Each instance becomes a group, above the
 // layer's shapes, holding one group per visible symbol layer sampled at the
 // symbol frame (`Instance.resolve`), each with its own `tr`. A radial gradient's end point is its center moved right by the
-// radius. Gradient stop alpha is not written; the fill is opaque. Bezier tangents are relative
+// radius. Gradient stops (`g.k`) are offset, r, g, b for each stop, then, only
+// when some stop alpha is under 1, offset, alpha for each stop; `g.p` is the
+// stop count, so an all-opaque gradient carries no alpha stops. Bezier tangents are relative
 // to their vertex; quads are raised to cubics. A non-finite value throws.
 // Text is not written yet: a layer with text throws `unsupported("text")`.
 #if canImport(FoundationEssentials)
@@ -398,7 +400,8 @@ struct LottieItem: Encodable, Sendable {
     }
 }
 
-/// Gradient stops: `p` stops, flattened as offset, r, g, b for each.
+/// Gradient stops: `p` stops, flattened as offset, r, g, b for each, then
+/// offset, alpha for each when some stop is translucent.
 struct LottieGradientStops: Encodable, Sendable {
     var p: Int
     var k: LottieStatic<[Double]>
@@ -427,9 +430,13 @@ extension LottieItem {
         }
         func channel(_ v: Double) throws -> Double { min(max(try LottieExporter.finite(v), 0), 1) }
         func gradient(_ stops: [GradientStop]) throws -> LottieGradientStops {
-            let flat = try stops.flatMap { stop in
+            var flat = try stops.flatMap { stop in
                 [try channel(stop.offset), try channel(stop.color.r),
                  try channel(stop.color.g), try channel(stop.color.b)]
+            }
+            let alphas = try stops.map { try channel($0.color.a) }
+            if alphas.contains(where: { $0 < 1 }) {
+                flat += try zip(stops, alphas).flatMap { stop, alpha in [try channel(stop.offset), alpha] }
             }
             return LottieGradientStops(p: stops.count, k: LottieStatic(flat))
         }

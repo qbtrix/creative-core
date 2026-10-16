@@ -1,7 +1,7 @@
 {
   "id": "export",
   "name": "Export",
-  "description": "Exporters that turn a scene into other formats: one frame as an SVG document, a scene as a Lottie JSON document with animated position and easing, and the frame plan (numbers, times, pixel sizes, file names) for a numbered PNG sequence. Output is byte-stable and throws on non-finite values.",
+  "description": "Exporters that turn a scene into other formats: one frame as an SVG document, a scene as a Lottie JSON document with animated position, scale, rotation and opacity (with their easing), and gradient stop alpha, and the frame plan (numbers, times, pixel sizes, file names) for a numbered PNG sequence. Output is byte-stable and throws on non-finite values.",
   "technology": "Swift 6, Foundation",
   "paths": [
     "Sources/FlareCore/Export/*.swift"
