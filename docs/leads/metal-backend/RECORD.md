@@ -1,29 +1,17 @@
 # metal-backend lead record
 
 Issue: #348 · Packet: docs/blueprints/core/features/metal-backend.md
-Run: act-1a149b549c8-v538 · Started: 2026-10-17T11:55Z (third run; earlier act-1a148001532-1w03 from 03:55Z, act-1a14644b538-njln from 2026-10-16T19:51Z)
-Stage: 4 fix round 2 (last) for MB-b+MB-d running (wf_c70605f7-96e, r2b+r2d on 4e27e16); wave 6 merged (#405 MB-g, #406 MB-f); MB-c waits on a dev CI run holding 0161e91+
+Run: act-1a14ab2b672-8guo · Resumed: 2026-10-17T17:00Z (fourth run; earlier act-1a149b549c8-v538, act-1a148001532-1w03, act-1a14644b538-njln)
+Stage: 4 regenerated Anatomy round on 4e27e16: MB-b and MB-d (their 2nd and last fix round; the r2 findings and fixer died with the last session, no branch was pushed) plus first rounds for MB-c, MB-f, MB-g; wave 7 next: MB-9 (MB-e), MB-15 (MB-h)
 Base: 4e27e16 (origin/dev)
-Next (for a relaunched lead): 0. NOW: fix round 2 PRs (lead/metal-backend-r2b, -r2d); then round 3 panel on the new dev head (gate+mutate in r4wt into ab3/, critic-panel.js, firstBase 17b2ea5, round-2 lenses; findings go to MB-17); anatomy for MB-f and MB-g; Belt-Slice-Done MB-c/MB-f/MB-g once dev CI Linux green holds them; then MB-9/10, MB-15, MB-17 (feature-done), contact sheet. PR bodies say Refs #348, never Closes.
-not eligible), rebase on origin/dev, rerun `scripts/ci`, move its `Head:`. 2. Once #353 is on dev: rebase
-`lead/metal-backend-mb-1b` (one commit) onto origin/dev, run `scripts/ci` (Linux builds the module empty; the gate
-proves the wrapping and the rest of the package), push, open its PR from the body in RECORD's Builder brief
-(`Slice: MB-a`, no Mutate line, `Unverified API: none` paragraph), label fast-lane. Until then heartbeat `lead/metal-backend` every 15 min and read #347 and #348 for the
-supervisor's pick on how `FakeBackend` records calls (asked 02:55Z on #347). 2. The pre-built branches
-`lead/metal-backend-mb-1a-rest` and `lead/metal-backend-mb-1b` (pushed, no PR) carry a first commit that is a
-local shim of RB-2's contract types (`temp: RB-2 shim`, drop before PR) and then the task's real commits. When RB-2
-is on dev: set `Base:`, `git rebase --onto origin/dev <shim commit> <branch>`, fix any name that RB-2 spelled
-differently from the packet, run `scripts/ci` and `scripts/mutate --run --plan <plan>`, open the PR per the brief
-(`Belt-Lead: act-1a148001532-1w03`, `Feature: metal-backend`, `Slice: MB-a`, `Mutate:` lines, `Fast-Check:`,
-`Head:`), strip the server footer, wait for the lane. MB-1a-rest first, then MB-1b. 3. Then MB-2 and MB-16 (wave 2)
-once MB-1b has merged; MB-2 needs render-backend RB-6's `ParityHarness` for the parity scaffold.
+Next (for a relaunched lead): gate+mutate on dev (--changed-since 17b2ea5) → critic-panel.js (firstBase 17b2ea5, lenses clarity, correctness, reuse+packet, test oracle) → one fix-batch per slice, disjoint files; build MB-9 then MB-10 (MB-e) and MB-15 (MB-h) alongside; Belt-Slice-Done MB-c/MB-f/MB-g once a dev CI Linux job holding #401..#406 is green; then MB-17 (feature-done) and the contact sheet. PR bodies say Refs #348, never Closes.
 
 ## Loop
 
 v3 (the packet has a Slices table; lead.md rules 12 to 19). Done per slice has two levels:
 merged-done (`Belt-Slice-Done:` once the slice's PRs merged and dev's `Linux` job is green
 with them) and verified (`Belt-Slice-Verified:` from the Mac finisher; never blocks the lead).
-Every PR body: `Belt-Lead: act-1a148001532-1w03`, `Feature: metal-backend`,
+Every PR body: `Belt-Lead: act-1a14ab2b672-8guo`, `Feature: metal-backend`,
 `Slice: <id>`, `Mutate: n/n <Plan>` per plan, `Fast-Check: pass`, `Head: <sha>`.
 
 ## Slices
@@ -31,13 +19,13 @@ Every PR body: `Belt-Lead: act-1a148001532-1w03`, `Feature: metal-backend`,
 | slice | tasks | waits on | state (open, merged, merged-done, verified) | Slice-Done run | Mac-Finish |
 |---|---|---|---|---|---|
 | MB-a | MB-1, MB-2 | render-backend:RB-a (contract types landed as #352) | merged-done; 3 rounds run (round 3: 19 confirmed; majors in #385, docs in #387, rest deferred to MB-17); round 4 pending | 39010063417 | wanted (posted on run 39040738062) |
-| MB-b | MB-3, MB-4 | MB-a | MB-3 merged #389; MB-4 building | – | – |
-| MB-c | MB-5, MB-6 | MB-b | open | – | – |
-| MB-d | MB-7, MB-8 | MB-a | MB-7 merged #390; MB-8 building | – | – |
-| MB-e | MB-9, MB-10 | MB-c | open | – | – |
-| MB-f | MB-11, MB-12 | MB-d | open | – | – |
-| MB-g | MB-13, MB-14 | MB-a | open | – | – |
-| MB-h | MB-15, MB-16, MB-17 | MB-b to MB-g | open | – | – |
+| MB-b | MB-3, MB-4 | MB-a | merged-done (#389, #392; fix round 1 #403, #404); fix round 2 regenerating on 4e27e16 | 39043767442 | wanted (39044767871) |
+| MB-c | MB-5, MB-6 | MB-b | merged (#398, #401); waits on a dev CI run holding #401; first Anatomy round now | – | – |
+| MB-d | MB-7, MB-8 | MB-a | merged-done (#390, #393; fix round 1 #403, #404); fix round 2 regenerating | 39044767871 | wanted (39044767871) |
+| MB-e | MB-9, MB-10 | MB-c | building (wave 7) | – | – |
+| MB-f | MB-11, MB-12 | MB-d | merged (#402, #406); waits on dev CI; first Anatomy round now | – | – |
+| MB-g | MB-13, MB-14 | MB-a | merged (#400, #405); waits on dev CI; first Anatomy round now | – | – |
+| MB-h | MB-15, MB-16, MB-17 | MB-b to MB-g | MB-16 merged #366; MB-15 building (wave 7); MB-17 last | – | – |
 
 ## Tasks
 
