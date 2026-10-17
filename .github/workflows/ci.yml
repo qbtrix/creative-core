@@ -19,7 +19,9 @@
 # pull_request runs only for rare hotfix PRs to main.
 #
 # Trade-off: macOS-only breakage and escaped mutations can sit on dev until the
-# next feature run, so a dev-red culprit range can span several PRs.
+# next feature run, so a dev-red culprit range can span several PRs. PRs that
+# touch the Metal backend get a macOS build and Metal test run before merge
+# (metal-pr.yml), which narrows the macOS half of that.
 #
 # The fast lane also counts a passing check from this workflow ("CI") on a PR
 # head and reads its job names, so keep those names stable.

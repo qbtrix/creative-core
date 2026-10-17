@@ -1,0 +1,46 @@
+# Metal PR gate: builds everything, tests included, and runs the Metal test
+# target on macOS for a PR into dev that touches the Metal backend. Linux
+# compiles CoreRenderMetal as an empty module, and full CI (ci.yml) runs on dev
+# only once a feature is built, so without this a Metal compile error or a
+# failing parity test reaches dev before any macOS run sees it.
+#
+# The fast lane needs no change to wait for it: decide() in scripts/fast-lane.sh
+# holds a PR while any check on its head is running and refuses it while one is
+# red. Keep the job name off the lane's CI_CHECKS list (Linux, macOS, Mutation
+# anchors, Mutation): a passing check with one of those names counts as proof
+# that scripts/ci passed, which this job does not run.
+#
+# Paths: the Metal sources (shaders live in Sources/CoreRenderMetal/Shaders),
+# its tests, the Linux-safe Metal parts in CoreRender it builds on, and this file.
+# Same runner as ci.yml's macOS job.
+name: Metal PR
+
+on:
+  pull_request:
+    branches: [dev]
+    paths:
+      - Sources/CoreRenderMetal/**
+      - Sources/CoreRender/Metal/**
+      - Tests/CoreRenderMetalTests/**
+      - Package.swift
+      - Package.resolved
+      - .github/workflows/metal-pr.yml
+
+permissions:
+  contents: read
+
+# A new push supersedes the run on the old head; macOS runners queue, so free them.
+concurrency:
+  group: metal-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  metal:
+    name: Metal (macOS)
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift --version
+      - run: swift build --build-tests
+      - run: swift test --skip-build --filter CoreRenderMetalTests
