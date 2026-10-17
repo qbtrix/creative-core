@@ -59,4 +59,4 @@ utc	stage	event	ref	note
 2026-10-17T14:31Z	4	anatomy-round	dev b8d1272	RB-b round 4 (final) started: critic and gate
 2026-10-17T14:33Z	4	anatomy-round	dev b8d1272	RB-b round 4 (final): 1 minor (forwarder table rows); rides rbc-composite-in-place; loop ends
 2026-10-17T14:38Z	4	gate	dev b8d1272	998/999 (EngineStress flake, passes alone); render plans 30/30 caught; 311 anchors
-2026-10-17T14:46Z	4	pr	#386	RB-c in-place composite (+RB-b round 4 rows, header wording) opened, head 10d4069; 23/23 changed-since caught; release budget median +1.57% (noisy)
+2026-10-17T14:30Z	4	pr	#386	RB-c in-place composite (+RB-b round 4 rows, header wording) opened, head 10d4069; 23/23 changed-since caught; release budget median +1.57% (noisy)
