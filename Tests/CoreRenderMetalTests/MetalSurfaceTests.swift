@@ -90,8 +90,8 @@ private struct SplitMix64: RandomNumberGenerator {
     func freshBackendSupportsLandedFamiliesAndIsHealthy() throws {
         let backend = try Self.backend()
         #expect(backend.isHealthy && backend.residentBytes == 0 && backend.capabilities.lastError == nil)
-        let landed: Set<RenderOp> = backend.device.readWriteTextureSupport == .tier2 ? [.display, .transform, .resample, .adjust, .blur, .retouch, .composite, .blendSeparable] : [.display, .transform, .resample, .adjust, .blur, .retouch]
-        #expect(backend.supports == landed, "only the families whose slices landed (MB-3, MB-7, MB-8, MB-12, MB-14, MB-15; MB-4 and MB-6 on read-write tier 2)")
+        let landed: Set<RenderOp> = backend.device.readWriteTextureSupport == .tier2 ? [.display, .transform, .resample, .adjust, .blur, .retouch, .composite, .blendSeparable, .blendNonSeparable] : [.display, .transform, .resample, .adjust, .blur, .retouch]
+        #expect(backend.supports == landed, "only the families whose slices landed (MB-3, MB-7, MB-8, MB-12, MB-14, MB-15; MB-4, MB-6 and MB-10 on read-write tier 2)")
         #expect(backend.name.hasPrefix("Metal ("))
     }
 
@@ -100,6 +100,7 @@ private struct SplitMix64: RandomNumberGenerator {
         let backend = try Self.backend()
         let surface = try backend.surface(PixelBuffer(width: 4, height: 4))
         var backdrop = try backend.surface(PixelBuffer(width: 4, height: 4))
+        guard backend.device.readWriteTextureSupport != .tier2 else { return }  // MB-10 lands hue there
         #expect(throws: RenderError.unsupported(.blendNonSeparable)) {
             try backend.composite(surface, onto: &backdrop, x: 0, y: 0, mode: .hue, opacity: 1)
         }
