@@ -12,7 +12,9 @@
 // throw it, without failing the backend, when a buffer would exceed `maxBufferLength`. A probe, a command buffer or a texture allocation that fails
 // leaves the backend unhealthy with the reason in `capabilities.lastError` (so `deviceLost` is only ever thrown with `isHealthy` false), and only a
 // `recover` whose probe passes makes it healthy again. No GPU wait or runtime compile of a custom
-// source runs under the lock: `supports` and `isHealthy` answer while a probe is in flight.
+// source runs under the lock: `supports` and `isHealthy` answer while a probe is in flight. A backend from
+// `startingInBackground` (MetalBackend+Warmup.swift, MB-17) leaves each family out of `supports` until its
+// pipelines finish compiling off the caller's queue; the plain init compiles each on first use.
 #if canImport(Metal)
 import CoreColor
 import CoreRaster
@@ -50,11 +52,14 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     private var useClock: UInt64 = 0
     /// Rows the opaque-row fast path blitted (MB-6, MetalBackend+OpaqueRows.swift); under the lock.
     var blittedRows = 0
+    /// Whether the background compile ran on the main thread, nil until it starts (MB-17); under the lock.
+    var compiledOnMainThread: Bool?
     /// One full tile's texture bytes (256 x 256 x 8): the floor of `budgetBytes`.
     private static let tileBytes = SurfaceTiling.tileSize * SurfaceTiling.tileSize * MetalSurface.bytesPerPixel
 
     /// Opens a backend on `device`. Throws `RenderError.deviceLost` when it gives no command
-    /// queue. `cacheURL` is reserved (see the property) and never touched.
+    /// queue. `cacheURL` is reserved (see the property) and never touched. Each built-in pipeline
+    /// compiles on its first use; `startingInBackground` compiles them off the caller's queue instead.
     public init(device: any MTLDevice, cacheURL: URL?) throws {
         self.device = device
         self.commandQueue = try Self.makeQueue(on: device)
@@ -155,12 +160,18 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
 
     /// Makes a new command queue on `device`, runs the probe on it and, only if the probe passes,
     /// installs the queue and clears the failure: `isHealthy` true, `lastError` nil. Throws
-    /// `RenderError.deviceLost` when the device gives no queue (the failure stays in place) or the
-    /// probe fails (the backend is marked failed with the probe's reason, as `probe` does).
+    /// `RenderError.deviceLost` when the device gives no queue or the probe fails, after marking the
+    /// backend failed with that reason (so a healthy backend whose retry fails turns unhealthy too).
     /// `device` cannot change: after a real device loss, open a new `MetalBackend` on a new device.
     /// `probeSource` replaces the probe's MSL, as `probe(source:)`'s does; tests use it.
     public func recover(probeSource: String? = nil) throws {
-        let queue = try Self.makeQueue(on: device)
+        let queue: any MTLCommandQueue
+        do {
+            queue = try Self.makeQueue(on: device)
+        } catch RenderError.deviceLost(let reason) {
+            fail(reason)
+            throw RenderError.deviceLost(reason)
+        }
         try checkedProbe(source: probeSource, on: queue)
         withCapabilities { capabilities in
             commandQueue = queue

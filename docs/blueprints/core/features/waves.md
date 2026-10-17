@@ -69,9 +69,22 @@ feature once `main` holds them.
   each, never more than one or two PRs in flight, so the apps stay shippable
   on CPU after every merge. Its `Package.swift` edit (RB-1) is a protected
   path: the supervisor merges that PR.
-- **Runner answer (metal-backend, MB-2).** The macos-15 runner exposes a
-  Metal device: dev CI run 39010063417 ran `MetalPipelinesTests` there, so
-  the parity suite runs on dev's macOS job, not only on the lead's Mac.
+- **Runner answer (metal-backend, MB-2).** The hosted macOS runner exposes a
+  Metal device (Apple Paravirtual device; dev CI run 39010063417 first ran
+  `MetalPipelinesTests` there), and the "Metal (macOS)" PR check from #414
+  builds and tests CoreRenderMetal on it for every Metal PR, so the parity
+  suite runs in CI, not only on the lead's Mac. The budgets
+  (`MetalBudgetTests`) run release-only, so CI's debug build skips them; the
+  Mac finisher runs and records them.
+- **Metal-backend parity counts (MB-17).** 11 parity families
+  (`ParityTests.families`, bound one to one by `familiesAreBoundToTests`)
+  with 20 device-gated parity tests, `everyFamilyIsOn` among them, and no
+  disabled family. The Linux-safe helpers are planted in 17
+  `Tests/mutations/CoreRender*.json` plans, 121 entries: AdjustTable 7,
+  BlurTable 5, CPUBackend 5, CPUBackendOps 13, CompositeMap 5, Dispatcher 12,
+  DisplayTable 4, Fake 9, HalfFloat 6, MetalCapabilities 8, OpaqueRows 4,
+  Parity 11, PipelineKey 5, ResampleTable 5, SurfaceTiling 11, TileMap 4,
+  Unsharp 7. `scripts/ci` on Linux runs 1048 tests.
 
 ## Issue housekeeping (each lead, stage 0)
 

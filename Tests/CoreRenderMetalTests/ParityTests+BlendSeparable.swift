@@ -16,6 +16,7 @@ extension ParityTests {
             let metal = try MetalBackend.onDefaultDevice()
             #expect(metal.supports.contains(.blendSeparable) == (metal.device.readWriteTextureSupport == .tier2), "MB-6, on tier 2")
             guard metal.supports.contains(.blendSeparable) else { return }
+            try Self.expectGoldens(for: .blendSeparable, on: metal)
             let modes = BlendMode.allCases.filter { RenderOp(compositing: $0) != .blendNonSeparable }
             #expect(modes.count == 12)
             let samples = try ParityHarness.sampleSet(for: .blendSeparable)

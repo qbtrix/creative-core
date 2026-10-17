@@ -7,7 +7,8 @@
 // built-in kernels live only in `states` and the health probe's only in `probeState`, so no
 // caller source (`prepared`, filled by `preparePipeline`) can replace either;
 // `compileCount` counts pipelines built from source and `loadCount` requests answered from
-// a memo; a failed compile memoises nothing. Every library compiles with `compileOptions()`: IEEE math (no
+// a memo; a failed compile memoises nothing. The background compile (MB-17, MetalBackend+Warmup.swift)
+// builds with `build` off the lock and memoises with `install`, never replacing a pipeline already held. Every library compiles with `compileOptions()`: IEEE math (no
 // fast math), so the kernels divide, take roots and keep NaN and infinity as the Linux-safe mirrors
 // (DisplayTable, AdjustTable, CompositeMap) do in Swift; the options are not part of `PipelineKey`. Callers
 // hold the backend's lock: nothing here is Sendable or synchronised.
@@ -53,6 +54,16 @@ final class MetalPipelines {
     /// `key` and `source`. Throws as `compile` does, memoising nothing.
     func pipeline(for key: PipelineKey, source: String) throws -> any MTLComputePipelineState {
         try memoised(key, source: source, in: &states)
+    }
+
+    /// True when `key`'s built-in pipeline is memoised; the background compile skips such a key.
+    func holds(_ key: PipelineKey) -> Bool { states[key] != nil }
+
+    /// Memoises `state`, built with `build` off the lock by the background compile, as `key`'s built-in
+    /// pipeline and counts it in `compileCount`; a key memoised meanwhile keeps the pipeline it holds.
+    func install(_ state: any MTLComputePipelineState, for key: PipelineKey) {
+        noteCompile()
+        if states[key] == nil { states[key] = state }
     }
 
     /// The caller's pipeline for `key`, memoised apart from the built-in ones, so a caller's

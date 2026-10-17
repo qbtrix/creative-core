@@ -4,7 +4,9 @@
 // Invariants: `supported` only ever grows, and `fail` keeps it (so a status
 // note can still say what would run on a working device); `healthy` and
 // `lastError` move together, `fail` setting both and `recover` clearing both;
-// `effectiveSupports` is empty while not healthy.
+// `effectiveSupports` is empty while not healthy and never holds a family in
+// `compiling` (its pipelines are still building off the caller's queue, MB-17),
+// so the dispatcher draws that family on the CPU until `finishCompiling`.
 
 /// The Metal backend's capability and health state, as routing will see it.
 public struct MetalCapabilities: Equatable, Sendable {
@@ -22,11 +24,29 @@ public struct MetalCapabilities: Equatable, Sendable {
     /// rendering status note so the user can see why the GPU is off.
     public private(set) var lastError: String?
 
-    /// What the backend reports as its `supports`: `supported` while healthy,
-    /// and nothing while not, so `RenderDispatcher` sends every op to the
-    /// CPU after a device loss until `recover()`.
+    /// The families whose built-in pipelines are still compiling in the
+    /// background (`MetalBackend.startingInBackground`). They stay in
+    /// `supported` but out of `effectiveSupports` until `finishCompiling`.
+    public private(set) var compiling: Set<RenderOp> = []
+
+    /// What the backend reports as its `supports`: `supported` less the
+    /// families still `compiling` while healthy, and nothing while not, so
+    /// `RenderDispatcher` sends every op to the CPU after a device loss until
+    /// `recover()`, and a family to the CPU until its pipelines are built.
     public var effectiveSupports: Set<RenderOp> {
-        healthy ? supported : []
+        healthy ? supported.subtracting(compiling) : []
+    }
+
+    /// Holds `ops` out of `effectiveSupports` while their pipelines compile.
+    public mutating func startCompiling(_ ops: Set<RenderOp>) {
+        compiling.formUnion(ops)
+    }
+
+    /// `op`'s pipelines are built, or their compile failed and was recorded
+    /// with `fail`: it leaves `compiling`, so it counts again while healthy
+    /// (after a failed compile, an op compiles its pipeline on first use).
+    public mutating func finishCompiling(_ op: RenderOp) {
+        compiling.remove(op)
     }
 
     /// A healthy backend that supports nothing yet, with no error.

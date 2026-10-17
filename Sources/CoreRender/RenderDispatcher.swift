@@ -88,6 +88,7 @@ public struct RenderDispatcher: Sendable {
         owner(of: surface)?.release(surface)
     }
 
+    /// Display bytes on the backend routed for `.display`, `s` uploaded to it if needed.
     public func display(_ s: RenderSurface, colorSpace: ColorSpace) throws -> [UInt8] {
         try run(.display, s) { try $0.display($1, colorSpace: colorSpace) }
     }
@@ -111,24 +112,31 @@ public struct RenderDispatcher: Sendable {
         if moved, original != s { release(original) }
     }
 
+    /// A crop on the backend routed for `.transform`.
     public func cropped(_ s: RenderSurface, x: Int, y: Int, width: Int, height: Int) throws -> RenderSurface {
         try run(.transform, s) { try $0.cropped($1, x: x, y: y, width: width, height: height) }
     }
+    /// A quarter turn on the backend routed for `.transform`.
     public func rotated(_ s: RenderSurface, _ turn: QuarterTurn) throws -> RenderSurface {
         try run(.transform, s) { try $0.rotated($1, turn) }
     }
+    /// A resample on the backend routed for `.resample`.
     public func resampled(_ s: RenderSurface, width: Int, height: Int, filter: ResampleFilter) throws -> RenderSurface {
         try run(.resample, s) { try $0.resampled($1, width: width, height: height, filter: filter) }
     }
+    /// A gaussian blur on the backend routed for `.blur`.
     public func gaussianBlur(_ s: RenderSurface, sigma: Double) throws -> RenderSurface {
         try run(.blur, s) { try $0.gaussianBlur($1, sigma: sigma) }
     }
+    /// An unsharp mask on the backend routed for `.blur`, the family it shares with the blur.
     public func unsharpMask(_ s: RenderSurface, amount: Double, sigma: Double, threshold: Double) throws -> RenderSurface {
         try run(.blur, s) { try $0.unsharpMask($1, amount: amount, sigma: sigma, threshold: threshold) }
     }
+    /// A tone adjustment on the backend routed for `.adjust`.
     public func adjusted(_ s: RenderSurface, _ adjustment: ToneAdjustment) throws -> RenderSurface {
         try run(.adjust, s) { try $0.adjusted($1, adjustment) }
     }
+    /// A clone through `mask` on the backend routed for `.retouch`.
     public func cloned(_ s: RenderSurface, offset: (dx: Int, dy: Int), through mask: Mask) throws -> RenderSurface {
         try run(.retouch, s) { try $0.cloned($1, offset: offset, through: mask) }
     }

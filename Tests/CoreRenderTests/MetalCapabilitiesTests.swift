@@ -1,7 +1,8 @@
 // MetalCapabilitiesTests.swift: the capability and health state the dispatcher
 // reads. A fresh value supports nothing and is healthy; `fail` turns healthy
 // off with the reason but keeps `supported`; `recover` restores health and
-// clears the reason; `enable` is idempotent and never heals.
+// clears the reason; `enable` is idempotent and never heals; a family still
+// compiling stays in `supported` but out of `effectiveSupports` until it finishes.
 import CoreRender
 import Testing
 
@@ -57,5 +58,21 @@ import Testing
         #expect(capabilities.supported == [.display])
         capabilities.recover()
         #expect(capabilities.effectiveSupports == [.display])
+    }
+
+    @Test func aCompilingFamilyIsHeldOutUntilItFinishes() {
+        var capabilities = MetalCapabilities()
+        for op in [RenderOp.display, .blur, .composite] { capabilities.enable(op) }
+        capabilities.startCompiling([.blur, .composite])
+        #expect(capabilities.compiling == [.blur, .composite])
+        #expect(capabilities.effectiveSupports == [.display], "a cold family draws on the CPU")
+        #expect(capabilities.supported == [.display, .blur, .composite], "compiling keeps supported")
+        capabilities.finishCompiling(.blur)
+        #expect(capabilities.effectiveSupports == [.display, .blur])
+        capabilities.fail("x")
+        #expect(capabilities.effectiveSupports.isEmpty)
+        capabilities.recover()
+        capabilities.finishCompiling(.composite)
+        #expect(capabilities.compiling.isEmpty && capabilities.effectiveSupports == capabilities.supported)
     }
 }
