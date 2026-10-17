@@ -47,5 +47,19 @@
     "anchor": "let start = rows.lowerBound * rowBytes",
     "replacement": "let start = (rows.lowerBound + 1) * rowBytes",
     "filter": "ParityHarnessTests|CPUGoldenTests"
+  },
+  {
+    "note": "byte compare skips colour when only one alpha byte is zero",
+    "file": "Sources/CoreRender/Parity/ParityHarness.swift",
+    "anchor": "a[i + 3] == 0 && b[i + 3] == 0",
+    "replacement": "a[i + 3] == 0 || b[i + 3] == 0",
+    "filter": "ParityHarnessTests"
+  },
+  {
+    "note": "pack band height for a quarter turn uses the source's height",
+    "file": "Sources/CoreRender/Parity/ParityPack.swift",
+    "anchor": "case .rotated(.degrees90), .rotated(.degrees270): return sample.source.width",
+    "replacement": "case .rotated(.degrees90), .rotated(.degrees270): return sample.source.height",
+    "filter": "ParityHarnessTests|CPUGoldenTests"
   }
 ]

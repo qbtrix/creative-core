@@ -78,6 +78,9 @@ private func fill(_ w: Int, _ h: Int, _ r: Float, _ g: Float, _ b: Float, _ a: F
         #expect(clear.passed && clear.worstByteDelta == 0, "\(clear)")
         let visible = try ParityHarness.compare(golden: golden([255, 255, 0, 1]), fill(1, 1, 0, 0, 0, 1.0 / 255))
         #expect(!visible.passed && visible.worstByteDelta == 255, "\(visible)")
+        // Only the golden's alpha byte is 0: the result is visible (alpha byte 1), so its colour counts.
+        let oneSide = try ParityHarness.compare(golden: golden([255, 255, 0, 0]), fill(1, 1, 0, 0, 0, 1.0 / 255))
+        #expect(!oneSide.passed && oneSide.worstByteDelta == 255, "\(oneSide)")
         // A real band: blur's alpha-subnormal keeps colour under alpha byte 0; flushed to clear, it passes.
         let band = try ParityGolden.band(from: CPUGoldenTests.root, op: .blur, sample: "alpha-subnormal")
         var flushed = band.bytes

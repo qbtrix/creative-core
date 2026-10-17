@@ -117,7 +117,7 @@ an empty module. Products for both; test targets `CoreRenderTests` and
   `sampleSet` order). `ParityGolden.band(from:op:sample:)` copies one
   sample's rows out as its own golden for `compare(golden:_:)`; Foundation
   only, no image codec. `ParityHarness.sampleSet(for: op)` builds inputs from
-  seeded `randomPixel` buffers plus edge cases (alpha 0, 1e-45, opaque rows,
+  buffers seeded with `ParityRandom` (SplitMix64) plus edge cases (alpha 0, 1e-45, opaque rows,
   sources off every edge).
 
 ## Tasks
