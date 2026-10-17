@@ -44,3 +44,5 @@ utc	stage	event	ref	note
 2026-10-17T14:02Z	4	anatomy-round	dev 07c7a70	RB-b round 1 not clean (6 minor); fixer building
 2026-10-17T14:05Z	4	gate	dev 07c7a70	993/993 CI: PASS; 308 anchors; all render plans caught
 2026-10-17T14:06Z	4	heartbeat	dev 07c7a70	RB-b round 1 fixer and RB-7 builder running; newest dev CI 39037816632 (4b2aa75)
+2026-10-17T14:08Z	4	pr-merged	dev 5cfdd5c	#381 RB-b round 1 fix
+2026-10-17T14:08Z	4	anatomy-round	dev 5cfdd5c	RB-b round 2 started: critic and gate
