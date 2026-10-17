@@ -26,5 +26,12 @@
     "anchor": "healthy ? supported : []",
     "replacement": "supported",
     "filter": "MetalCapabilitiesTests"
+  },
+  {
+    "note": "metal capabilities recover leaves healthy false, so the dispatcher never returns to Metal",
+    "file": "Sources/CoreRender/Metal/MetalCapabilities.swift",
+    "anchor": "recover() {\n        healthy = true\n",
+    "replacement": "recover() {\n        healthy = false\n",
+    "filter": "MetalCapabilitiesTests"
   }
 ]

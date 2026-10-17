@@ -221,9 +221,12 @@ GPU path.
   cache plus an in-process memo keyed by `PipelineKey`. `cacheURL` stays in
   `MetalBackend.init` as a reserved parameter so callers need not change if an
   archive returns.
-- **Background compile is deferred to MB-3.** A family's first pipeline
-  compiles on first use for now; compiling off the caller's queue while
-  `supports` excludes the family lands with the first real kernel.
+- **Background compile is deferred to MB-17.** A family's first pipeline
+  compiles on first use, under the backend's lock; MB-3 shipped that way.
+  Compiling off the caller's queue while `supports` excludes the family, and
+  the First launch row, move to MB-17. `preparePipeline` builds caller
+  kernels in a memo of their own, so it cannot warm or replace a built-in
+  pipeline.
 - **`PipelineKey.validated` bounds the variant** at 64 UTF-8 bytes
   (`PipelineKey.maxVariantLength`) as well as checking it is an identifier.
 - **`recover()` keeps the same device.** `device` is fixed at init, so

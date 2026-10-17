@@ -3,8 +3,9 @@
 // so no `.metal` file or resource bundle is needed. Each pipeline is compiled once per
 // `PipelineKey` and memoised in `states`; later requests for the key reuse it, and Metal's
 // own shader cache speeds the compile across launches. Nothing is read from or written to
-// disk. Invariants: every state in `states` and `probeState` was made on `device`; the
-// health probe's pipeline lives only in `probeState`, so no caller key can replace it;
+// disk. Invariants: every state in `states`, `prepared` and `probeState` was made on `device`;
+// built-in kernels live only in `states` and the health probe's only in `probeState`, so no
+// caller source (`prepared`, filled by `preparePipeline`) can replace either;
 // `compileCount` counts pipelines built from source and `loadCount` requests answered from
 // a memo; a failed compile memoises nothing. Callers hold the backend's lock: nothing here is Sendable or
 // synchronised.
@@ -36,6 +37,8 @@ final class MetalPipelines {
 
     private let device: any MTLDevice
     private var states: [PipelineKey: any MTLComputePipelineState] = [:]
+    /// Pipelines built from caller source by `MetalBackend.preparePipeline`. No op reads them.
+    private var prepared: [PipelineKey: any MTLComputePipelineState] = [:]
     /// The health probe's pipeline, compiled from `probeSource` on first use.
     private var probeState: (any MTLComputePipelineState)?
 
@@ -43,16 +46,30 @@ final class MetalPipelines {
         self.device = device
     }
 
-    /// The pipeline for `key`: the memoised one (`loadCount`), else `source` compiled and
-    /// memoised (`compileCount`). The memo is keyed by `key` alone, so a later `source` for
-    /// a key already held is not compiled. Throws as `compile` does, memoising nothing.
+    /// The built-in pipeline for `key`: the memoised one (`loadCount`), else `source` compiled
+    /// and memoised (`compileCount`). Only the backend's own ops call this, with their shader's
+    /// `key` and `source`. Throws as `compile` does, memoising nothing.
     func pipeline(for key: PipelineKey, source: String) throws -> any MTLComputePipelineState {
-        if let state = states[key] {
+        try memoised(key, source: source, in: &states)
+    }
+
+    /// The caller's pipeline for `key`, memoised apart from the built-in ones, so a caller's
+    /// kernel under a built-in key (say `display`/`encode`) never runs in place of the backend's.
+    func prepared(for key: PipelineKey, source: String) throws -> any MTLComputePipelineState {
+        try memoised(key, source: source, in: &prepared)
+    }
+
+    /// `memo[key]` (`loadCount`), else `source` compiled into it (`compileCount`). The memo is
+    /// keyed by `key` alone, so a later `source` for a key already held is not compiled.
+    private func memoised(
+        _ key: PipelineKey, source: String, in memo: inout [PipelineKey: any MTLComputePipelineState]
+    ) throws -> any MTLComputePipelineState {
+        if let state = memo[key] {
             loadCount += 1
             return state
         }
         let state = try compile(key, source: source)
-        states[key] = state
+        memo[key] = state
         return state
     }
 

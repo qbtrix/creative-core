@@ -98,15 +98,16 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
         #endif
     }
 
-    /// Compiles and memoises the kernel named by `op` and `variant` in `source` (MSL), so the first
-    /// op that needs it does not pay the compile; a key already memoised is not compiled again.
-    /// `variant` may come from outside: it goes through `PipelineKey.validated`. Throws
-    /// `RenderError.raster` for a variant outside `[A-Za-z0-9_]` or when `source` has no such
-    /// kernel, and Metal's error when it does not compile. Never fails the backend. The probe's
-    /// pipeline is kept apart, so `.display` with variant "probe" compiles the caller's kernel.
+    /// Compiles and memoises the caller's kernel named by `op` and `variant` in `source` (MSL), to
+    /// check it builds on this device; a key already memoised is not compiled again. `variant` may
+    /// come from outside: it goes through `PipelineKey.validated`. Throws `RenderError.raster` for a
+    /// variant outside `[A-Za-z0-9_]` or when `source` has no such kernel, and Metal's error when it
+    /// does not compile. Never fails the backend. Caller pipelines are kept apart from the backend's
+    /// own: `.display` with variant "encode" or "probe" compiles the caller's kernel and no op runs it.
+    /// Built-in ops compile their own pipeline on first use.
     public func preparePipeline(op: RenderOp, variant: String, source: String) throws {
         let key = try PipelineKey.validated(op: op, variant: variant)
-        _ = try withLock { try pipelines.pipeline(for: key, source: source) }
+        _ = try withLock { try pipelines.prepared(for: key, source: source) }
     }
 
     /// Reports a finished command buffer's `status` and `error` (after `waitUntilCompleted` or in a
@@ -228,7 +229,8 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     /// Uploads `buffer` as a tiled rgba16Float surface, then evicts least recently used tiles until
     /// `residentBytes` fits `budgetBytes`. Throws `RenderError.raster` for a size the tiling rejects
     /// and `RenderError.deviceLost` when a texture cannot be made, after marking the backend failed
-    /// with that reason (a device out of memory routes ops to the CPU until `recover`).
+    /// with that reason. A texture that will not allocate means the device is out of memory: release
+    /// surfaces or lower `budgetBytes`, since `recover` alone passes and the same upload fails again.
     public func surface(_ buffer: PixelBuffer) throws -> RenderSurface {
         let clock = withLock { tick() }
         let stored: MetalSurface

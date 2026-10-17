@@ -10,11 +10,13 @@ import Foundation
 import Metal
 
 extension MetalBackend {
-    /// `surface` as straight-alpha bytes in `colorSpace`. Throws `RenderError.raster` for a non-display
-    /// space, `surfaceMismatch`, or `deviceLost` (backend failed) when the GPU work cannot run or fails.
+    /// `surface` as straight-alpha bytes in `colorSpace`. Throws `unsupported(.display)` while the
+    /// backend is unhealthy, `RenderError.raster` for a non-display space, `surfaceMismatch`, or
+    /// `deviceLost` (backend failed) when the GPU work cannot run or fails.
     func encodeDisplay(_ surface: RenderSurface, colorSpace: ColorSpace) throws -> [UInt8] {
         let table = try DisplayTable(colorSpace)
         let (tiling, tiles, shadows, pipeline, queue) = try withLock {
+            guard state.effectiveSupports.contains(.display) else { throw RenderError.unsupported(.display) }
             let stored = try lookup(surface)
             stored.touch(tick())
             let pipeline = try pipelines.pipeline(for: DisplayShader.key, source: DisplayShader.source)
