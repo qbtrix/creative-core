@@ -289,9 +289,9 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     public func resampled(_ s: RenderSurface, width: Int, height: Int, filter: ResampleFilter) throws -> RenderSurface {
         try resample(s, width: width, height: height, filter: filter)
     }
-    /// Two-pass gaussian blur: MB-11. Throws `unsupported(.blur)`.
+    /// Two-pass gaussian blur: MB-11 (MetalBackend+Blur.swift); `.blur` joins `supports` with MB-12.
     public func gaussianBlur(_ s: RenderSurface, sigma: Double) throws -> RenderSurface {
-        throw RenderError.unsupported(.blur)
+        try blur(s, sigma: sigma)
     }
     /// Unsharp mask over the blur: MB-12. Throws `unsupported(.blur)`.
     public func unsharpMask(_ s: RenderSurface, amount: Double, sigma: Double,

@@ -1,0 +1,16 @@
+[
+  {
+    "note": "blur table weights are stored without dividing by their total",
+    "file": "Sources/CoreRender/Metal/BlurTable.swift",
+    "anchor": "raw.map { Float($0 / total) }",
+    "replacement": "raw.map { Float($0) }",
+    "filter": "BlurTableTests"
+  },
+  {
+    "note": "blur table kernel radius rounds three sigma down",
+    "file": "Sources/CoreRender/Metal/BlurTable.swift",
+    "anchor": "let radius = (3 * sigma).rounded(.up)",
+    "replacement": "let radius = (3 * sigma).rounded(.down)",
+    "filter": "BlurTableTests"
+  }
+]
