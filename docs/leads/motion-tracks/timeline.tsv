@@ -40,3 +40,5 @@ utc	stage	event	ref	note
 2026-10-17T13:27Z	4	pr-merged	dev 23af67b	#370 Anatomy round 1 fixes (scale finite after x100, onion cap 1000, +4 -2 mutations)
 2026-10-17T13:31Z	4	anatomy-round	dev 23af67b	round 2 not clean; 3 minor to fixer
 2026-10-17T13:40Z	4	pr-opened	dev	#372 round 2 fixes (group scale finite after x100, onion add saturation test, contract slice)
+2026-10-17T13:45Z	4	pr-merged	dev e2d3b95	#372 Anatomy round 2 fixes
+2026-10-17T13:45Z	4	anatomy-round	dev e2d3b95	round 3 started: critic and gate
