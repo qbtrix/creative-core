@@ -58,3 +58,4 @@ utc	stage	event	ref	note
 2026-10-17T14:25Z	4	merge	dev b8d1272	RB-b round 3 fix #384 merged (forwarders, self-composite guard; Dispatcher 12/12)
 2026-10-17T14:31Z	4	anatomy-round	dev b8d1272	RB-b round 4 (final) started: critic and gate
 2026-10-17T14:33Z	4	anatomy-round	dev b8d1272	RB-b round 4 (final): 1 minor (forwarder table rows); rides rbc-composite-in-place; loop ends
+2026-10-17T14:38Z	4	gate	dev b8d1272	998/999 (EngineStress flake, passes alone); render plans 30/30 caught; 311 anchors
