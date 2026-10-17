@@ -1,0 +1,16 @@
+[
+  {
+    "note": "adjust table endpoint samples past the last step so the table ends short of 1",
+    "file": "Sources/CoreRender/Metal/AdjustTable.swift",
+    "anchor": "let u = Float(i) / Float(steps)",
+    "replacement": "let u = Float(i) / Float(steps + 1)",
+    "filter": "AdjustTableTests"
+  },
+  {
+    "note": "adjust table interpolation index drops the square-root spacing",
+    "file": "Sources/CoreRender/Metal/AdjustTable.swift",
+    "anchor": "let f = v.squareRoot() * Float(n)",
+    "replacement": "let f = v * Float(n)",
+    "filter": "AdjustTableTests"
+  }
+]
