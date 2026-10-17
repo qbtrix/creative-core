@@ -299,9 +299,13 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     }
 
     /// The stored surface behind `surface`; call with the lock held. Throws
-    /// `RenderError.surfaceMismatch` for another backend's name or an id not held (never made, or released).
+    /// `RenderError.surfaceMismatch` for another backend's name, an id not held (never made, or released),
+    /// or a handle whose width and height differ from the stored tiling, the same checks as `SurfaceStore`.
     private func lookup(_ surface: RenderSurface) throws -> MetalSurface {
-        guard surface.backend == name, let stored = surfaces[surface.id] else { throw RenderError.surfaceMismatch }
+        guard surface.backend == name, let stored = surfaces[surface.id],
+              stored.tiling.width == surface.width, stored.tiling.height == surface.height else {
+            throw RenderError.surfaceMismatch
+        }
         return stored
     }
 
