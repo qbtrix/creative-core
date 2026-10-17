@@ -19,5 +19,19 @@
     "anchor": "let intermediate = min(product(newWidth, height), product(width, newHeight))",
     "replacement": "let intermediate = max(product(newWidth, height), product(width, newHeight))",
     "filter": "ResampleTableTests"
+  },
+  {
+    "note": "resample table length guard accepts a zero input length",
+    "file": "Sources/CoreRender/Metal/ResampleTable.swift",
+    "anchor": "guard length >= 1, newLength >= 1, length <= limit",
+    "replacement": "guard length >= 0, newLength >= 1, length <= limit",
+    "filter": "ResampleTableTests"
+  },
+  {
+    "note": "resample table length guard accepts a zero output length",
+    "file": "Sources/CoreRender/Metal/ResampleTable.swift",
+    "anchor": "guard length >= 1, newLength >= 1, length <= limit, newLength <= limit else",
+    "replacement": "guard length >= 1, newLength >= 0, length <= limit, newLength <= limit else",
+    "filter": "ResampleTableTests"
   }
 ]
