@@ -265,11 +265,12 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     public func display(_ s: RenderSurface, colorSpace: ColorSpace) throws -> [UInt8] {
         try encodeDisplay(s, colorSpace: colorSpace)
     }
-    /// `.normal` composite in place: MB-4 (MetalBackend+Composite.swift). Other modes throw `unsupported` of their family.
+    /// Composite in place: `.normal` MB-4, the separable modes MB-5 (once `.blendSeparable` is enabled), see
+    /// MetalBackend+Composite.swift and +BlendSeparable.swift. Non-separable modes throw `unsupported(.blendNonSeparable)`.
     public func composite(_ s: RenderSurface, onto b: inout RenderSurface, x: Int, y: Int,
                           mode: BlendMode, opacity: Float) throws {
-        guard mode == .normal else { throw RenderError.unsupported(RenderOp(compositing: mode)) }
-        try compositeNormal(s, onto: b, x: x, y: y, opacity: opacity)
+        guard RenderOp(compositing: mode) != .blendNonSeparable else { throw RenderError.unsupported(.blendNonSeparable) }
+        try compositeInPlace(s, onto: b, x: x, y: y, mode: mode, opacity: opacity)
     }
     /// Crop as blits: MB-7 (MetalBackend+Transform.swift). An invalid rectangle throws the CPU's error.
     public func cropped(_ s: RenderSurface, x: Int, y: Int, width: Int, height: Int) throws -> RenderSurface {

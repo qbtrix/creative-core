@@ -1,7 +1,8 @@
-// MetalBackend+Composite.swift: `.normal` composite in place on the backdrop's tiles (MB-4), piece by piece
-// from CompositeMap through `composite_normal`. Invariants: the CPU backend's checks in its order before any
-// pixel changes; evicted backdrop tiles come back to textures first and the budget holds after; a source that
-// is the backdrop is read from a snapshot; no GPU wait under the lock; a GPU failure throws `deviceLost`.
+// MetalBackend+Composite.swift: composite in place on the backdrop's tiles (MB-4), piece by piece from
+// CompositeMap through `composite_normal` or a separable mode's kernel (MB-5, MetalBackend+BlendSeparable.swift).
+// Invariants: the CPU backend's checks in its order before any pixel changes; evicted backdrop tiles come back
+// to textures first and the budget holds after; a source that is the backdrop is read from a snapshot; no GPU
+// wait under the lock; a GPU failure throws `deviceLost`.
 #if canImport(Metal)
 import CoreRaster
 import CoreRender
@@ -12,11 +13,12 @@ extension MetalBackend {
     /// Read-write texture tier 2, which `composite_normal` needs to read and write rgba16Float tiles in place.
     static func compositesInPlace(on device: any MTLDevice) -> Bool { device.readWriteTextureSupport == .tier2 }
 
-    /// Composites `s` over `b` with source pixel (0, 0) on backdrop pixel (`x`, `y`), in place, as the CPU does.
-    func compositeNormal(_ s: RenderSurface, onto b: RenderSurface, x: Int, y: Int, opacity: Float) throws {
+    /// Composites `s` over `b` through `mode` with source pixel (0, 0) on backdrop pixel (`x`, `y`), in place, as the CPU does.
+    func compositeInPlace(_ s: RenderSurface, onto b: RenderSurface, x: Int, y: Int, mode: BlendMode, opacity: Float) throws {
         let planned = try withLock { () throws -> CompositePlan? in
             guard state.healthy else { throw RenderError.deviceLost(state.lastError ?? "backend unhealthy") }
-            guard state.supported.contains(.composite) else { throw RenderError.unsupported(.composite) }
+            let family = RenderOp(compositing: mode)
+            guard state.supported.contains(family) else { throw RenderError.unsupported(family) }
             let (source, backdrop) = (try lookup(s), try lookup(b))
             try CompositeMap.validate(opacity: opacity)
             let pieces = try CompositeMap.pieces(source: source.tiling, onto: backdrop.tiling, x: x, y: y)
@@ -37,7 +39,8 @@ extension MetalBackend {
             for index in Set(pieces.map(\.destinationTile)) where backdrop.tiles[index] == nil {
                 evicted[index] = backdrop.shadows[index]
             }
-            let pipeline = try pipelines.pipeline(for: CompositeShader.key, source: CompositeShader.source)
+            let kernel = try Self.compositeKernel(for: mode)
+            let pipeline = try pipelines.pipeline(for: kernel.key, source: kernel.source)
             return CompositePlan(backdrop: backdrop, pieces: pieces, resident: resident, staged: staged, evicted: evicted, pipeline: pipeline, queue: commandQueue)
         }
         guard let plan = planned else { return }
@@ -68,7 +71,7 @@ extension MetalBackend {
         evictIfNeeded()
     }
 
-    /// Runs `composite_normal` over every piece and waits; call with the lock free.
+    /// Runs the plan's kernel over every piece and waits; call with the lock free.
     private func encode(_ plan: CompositePlan, textures: [Int: any MTLTexture], targets: [Int: any MTLTexture],
                         opacity: Float) throws {
         let pairs = try plan.pieces.map { piece in
