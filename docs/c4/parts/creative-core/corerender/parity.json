@@ -1,7 +1,7 @@
 {
   "id": "parity",
   "name": "Parity Harness",
-  "description": "How one RenderBackend is measured against another (Sources/CoreRender/Parity): ParityTolerance (byte and linear bounds, .standard and .nonSeparable); ParityHarness.compare, which checks two results' sRGB display bytes through CoreRaster's rgba8 and their linear premultiplied Floats over visible pixels and names the worst pixel; the deterministic sample set per RenderOp (seeded buffers plus alpha 0, subnormal alpha, opaque rows and sources off every edge) and rendering a sample on any backend; and golden files (raw rgba8 bytes beside a JSON header), validated as untrusted input.",
+  "description": "How one RenderBackend is measured against another (Sources/CoreRender/Parity): ParityTolerance (byte and linear bounds, .standard and .nonSeparable); ParityHarness.compare, which checks two results' sRGB display bytes through CoreRaster's rgba8 and their linear premultiplied Floats over visible pixels and names the worst pixel; ParityHarness.compare(golden:), the bytes-only compare of a result against a golden, encoded in the golden's color space (both compares count only alpha where both alpha bytes are 0); ParityPack, the layout of the packed CPU goldens (ParityPack.all, each sample's band of rows) and ParityGolden.band(from:op:sample:) and rows(_:), which copy one sample's golden out of its pack; the deterministic sample set per RenderOp (seeded buffers plus alpha 0, subnormal alpha, opaque rows and sources off every edge) and rendering a sample on any backend; and golden files (raw rgba8 bytes beside a JSON header), validated as untrusted input.",
   "technology": "Swift 6, Foundation",
   "paths": [
     "Sources/CoreRender/Parity/"

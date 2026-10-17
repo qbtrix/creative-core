@@ -26,5 +26,26 @@
     "anchor": "passed: worst <= header.tolerance.bytes,",
     "replacement": "passed: worst <= header.tolerance.bytes + 1,",
     "filter": "ParityHarnessTests"
+  },
+  {
+    "note": "byte compare checks colour where both alpha bytes are zero",
+    "file": "Sources/CoreRender/Parity/ParityHarness.swift",
+    "anchor": "let channels = a[i + 3] == 0 && b[i + 3] == 0 ? 3..<4 : 0..<4",
+    "replacement": "let channels = a[i + 3] == 0 && b[i + 3] == 0 ? 0..<4 : 0..<4",
+    "filter": "ParityHarnessTests"
+  },
+  {
+    "note": "golden compare encodes in sRGB instead of the golden's space",
+    "file": "Sources/CoreRender/Parity/ParityHarness.swift",
+    "anchor": "try result.rgba8(colorSpace: header.colorSpace)",
+    "replacement": "try result.rgba8(colorSpace: .sRGB)",
+    "filter": "ParityHarnessTests"
+  },
+  {
+    "note": "golden band slice starts one row late",
+    "file": "Sources/CoreRender/Parity/ParityPack.swift",
+    "anchor": "let start = rows.lowerBound * rowBytes",
+    "replacement": "let start = (rows.lowerBound + 1) * rowBytes",
+    "filter": "ParityHarnessTests|CPUGoldenTests"
   }
 ]

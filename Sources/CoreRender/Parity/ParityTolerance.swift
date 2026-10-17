@@ -3,7 +3,8 @@
 
 /// The largest difference `ParityHarness.compare` accepts between two results.
 public struct ParityTolerance: Codable, Equatable, Hashable, Sendable {
-    /// Largest per-channel difference of the 8-bit sRGB display bytes.
+    /// Largest per-channel difference of the 8-bit display bytes: sRGB between two results,
+    /// the golden's color space against a golden.
     public let bytes: UInt8
     /// Largest per-component difference of the linear premultiplied buffers,
     /// over pixels whose alpha is above 0.01 in either result.

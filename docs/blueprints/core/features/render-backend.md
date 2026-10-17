@@ -110,8 +110,12 @@ an empty module. Products for both; test targets `CoreRenderTests` and
   `rgba8(.sRGB)` bytes, max per-channel delta <= `bytes`, and on the linear
   Float buffers max delta <= `linear` for pixels whose alpha > 0.01; returns
   the worst pixel's location for the message.
-- **Goldens.** `Tests/CoreRenderTests/Golden/<op>/<case>.rgba8` (raw bytes)
-  with `<case>.json` (width, height, colour space, tolerance); Foundation
+- **Goldens.** Packed, one golden per `ParityPack.all` entry:
+  `Tests/CoreRenderTests/Golden/<first op>/<ops joined by ->.rgba8` (raw
+  bytes) with `.json` (width, height, colour space, tolerance), a stack of
+  one band per sample (the pack's ops in order, each op's samples in
+  `sampleSet` order). `ParityGolden.band(from:op:sample:)` copies one
+  sample's rows out as its own golden for `compare(golden:_:)`; Foundation
   only, no image codec. `ParityHarness.sampleSet(for: op)` builds inputs from
   seeded `randomPixel` buffers plus edge cases (alpha 0, 1e-45, opaque rows,
   sources off every edge).
