@@ -6,8 +6,10 @@ import Testing
 @Test func coreRenderMetalImports() {
     #if canImport(Metal)
     let device = MetalBackend.defaultDevice
+    print("CoreRenderMetal: default device \(device?.name ?? "none")")
     #expect(device == nil || device?.name.isEmpty == false, "a runner without a GPU has no default device")
     #else
-    #expect(Bool(true), "Linux builds CoreRenderMetal empty")
+    // On Linux the proof is the build itself: this file imports CoreRenderMetal and compiles
+    // against an empty module, so there is nothing to assert at run time.
     #endif
 }
