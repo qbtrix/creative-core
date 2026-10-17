@@ -398,7 +398,7 @@ struct LottieItem: Encodable, Sendable {
         var item = LottieItem(ty: "tr")
         item.p = LottieStatic([try f(t.x), try f(t.y)])
         item.a = LottieStatic([0, 0])
-        item.s = LottieStatic([try f(t.scaleX) * 100, try f(t.scaleY) * 100])
+        item.s = LottieStatic([try f(t.scaleX * 100), try f(t.scaleY * 100)])
         item.r = .rotation(LottieStatic(try f(t.rotation)))
         item.o = LottieStatic(min(max(try f(opacity), 0), 1) * 100)
         return item

@@ -33,5 +33,12 @@
     "anchor": "self = .animated(try LottieKeyframe.list(xs) { _, key in [try f(key.value), y] })",
     "replacement": "self = .animated(try LottieKeyframe.list(xs) { _, key in [y, try f(key.value)] })",
     "filter": "LottieScaleTrackTests"
+  },
+  {
+    "note": "lottie group transform checks scale finite before the times 100",
+    "file": "Sources/FlareCore/Export/LottieExporter.swift",
+    "anchor": "item.s = LottieStatic([try f(t.scaleX * 100), try f(t.scaleY * 100)])",
+    "replacement": "item.s = LottieStatic([try f(t.scaleX) * 100, try f(t.scaleY) * 100])",
+    "filter": "LottieScaleTrackTests"
   }
 ]

@@ -70,10 +70,15 @@ New public API. Names are binding for the lead and builders.
 ```swift
 // Onion.swift (MT-1), evaluation layer
 extension Timeline {
+    /// The most onion frames shown on each side of the playhead. Far more
+    /// than any skin is drawn with; it bounds the result to 2,000 frames
+    /// whatever the counts and the duration.
+    public static let maxOnionSkins = 1_000
+
     /// The frames an onion skin shows around `frame`: up to `before` frames
     /// before it and `after` after it, ascending, without `frame` itself,
     /// clamped to `0..<durationFrames` (frames past an edge are dropped).
-    /// Negative counts count as 0.
+    /// Negative counts count as 0; counts above `maxOnionSkins` count as it.
     public static func onionFrames(at frame: Int, before: Int, after: Int, durationFrames: Int) -> [Int]
 }
 // LottieExporter.swift (MT-3): public static let maxBakedKeys = 10_000

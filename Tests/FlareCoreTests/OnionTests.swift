@@ -68,6 +68,9 @@ import Testing
         let huge = Timeline.onionFrames(at: 5_000, before: Int.max, after: Int.max, durationFrames: 1_000_000_000_000)
         #expect(huge == Array((5_000 - cap)..<5_000) + Array(5_001...(5_000 + cap)))
         #expect(Timeline.onionFrames(at: 0, before: 0, after: Int.max, durationFrames: Int.max).count == cap)
+        // `frame + after` overflows Int; it saturates, so the window ends at the last frame.
+        #expect(Timeline.onionFrames(at: Int.max - 1, before: 5, after: 5, durationFrames: Int.max)
+            == Array((Int.max - 6)...(Int.max - 2)))
         #expect(Timeline.onionFrames(at: cap + 50, before: cap + 5, after: 0, durationFrames: cap + 100).first == 50)
         #expect(Timeline.onionFrames(at: 0, before: 0, after: cap + 5, durationFrames: cap + 100).last == cap)
     }
