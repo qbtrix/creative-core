@@ -4,13 +4,13 @@ Issue: #347 · Packet: docs/blueprints/core/features/render-backend.md
 Run: act-1a149b544ea-emiq (line lead: render-backend, motion-tracks) · Started: 2026-10-17 (prior runs act-1a14644b047-dxwc)
 Stage: 3 waves (v3 loop, slices RB-a, RB-b, RB-c)
 Base: 3be8939 (origin/dev)
-Next: RB-b round 2 fix PR (rbb-anatomy-2) to merge, then RB-b round 3; RB-c in-place composite fix PR (rbc-composite-in-place, the release budget miss from #382), then RB-c Anatomy round 1; feature-done on the feature's last PR after the loops; Belt-Slice-Done RB-b and RB-c after a dev CI run holding their last PRs has green Linux.
+Next: RB-b round 3 (critic and gate on 8cd012a); RB-c in-place composite fix PR (rbc-composite-in-place, the release budget miss from #382), then RB-c Anatomy round 1; feature-done on the feature's last PR after the loops; Belt-Slice-Done RB-b and RB-c after a dev CI run holding their last PRs has green Linux.
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
 |---|---|---|---|---|---|
 | RB-a | RB-1, RB-2a, RB-2b | nothing | merged-done (loop ended at 4 rounds; last finding rides RB-5) | 39037816632 (4b2aa75, Linux and macOS green) | wanted (issuecomment-6234729253) |
-| RB-b | RB-3, RB-4, RB-5 | RB-a | merged (all tasks on dev 07c7a70); round 1 fixed by #381; round 2 not clean (1 major, 2 minor), fixer building | – | – |
+| RB-b | RB-4, RB-5 | RB-a | merged; round 2 fixed by #383 (8cd012a); round 3 running | – | – |
 | RB-c | RB-6, RB-7 | RB-b (RB-7 only) | merged (RB-7 #382, 658f0c2); release budget miss (+218%) being fixed | – | – |
 
 ## Tasks
@@ -33,7 +33,7 @@ Next: RB-b round 2 fix PR (rbb-anatomy-2) to merge, then RB-b round 3; RB-c in-p
 | 3 | RB-a | ff4ae9f | 967/967 on e2d3b95 (ff4ae9f adds comments and one entry), CI: PASS | CoreRenderFake 9/9 | – | round 2 fixes, whole slice, first-use clarity | 2 minor: FakeBackend.swift:12 still names a dispatcher as present; SurfaceStore.replace has guards but no caller, test or mutation. #373 mutation verified real | comment: #374 (merged as 4b2aa75; also rewords metal-support comments, comments only); replace: #377 (caller, test, CoreRenderCPUBackend#5) | no |
 | 4 | RB-a | 4682eee | 978/978, CI: PASS | CoreRenderFake 9/9, CoreRenderCPUBackend 5/5 | – | round 3 fixes, whole slice, first-use clarity (final round) | 1 minor: CoreRender.swift:10 says the contract does not exist yet; (a) and (b) verified fixed, #377 wording true | #380 (07c7a70), merged | no; loop ends (4 rounds) |
 | 1 | RB-b | 07c7a70 | 993/993, CI: PASS | CoreRenderFake 9/9, CoreRenderCPUBackend 5/5, CoreRenderCPUBackendOps 13/13, CoreRenderDispatcher 9/9 | – | correctness, rules fit, first-use clarity, tests; #377 concurrency | 6 minor: RenderBackend.swift:4 stale "as its families land"; dispatcher blur test passes if both throw; equal backend names confuse ownership (doc); backend(for:) records lastFallback and unhealthy-backend reads undocumented; reason strings have no constants; #377 concurrent composite judged acceptable as documented. All 25 mutations traced real | #381 (5cfdd5c), merged | no |
-| 2 | RB-b | 5cfdd5c | 993/993, CI: PASS | CoreRenderDispatcher 9/9, CoreRenderCPUBackend 5/5, CoreRenderCPUBackendOps 13/13 | – | round 1 fixes verified, missed items, first-use clarity | 1 major: health-before-support order has no test or mutation (swap passes all tests). 2 minor: CPUBackend.swift:14-16 concurrency caveat reads as a guarantee with the wrong cause; cpu-backend.json says surface/read/release are CoreRaster calls. All 6 round 1 fixes verified; 27 mutations traced real | fixer building | no |
+| 2 | RB-b | 5cfdd5c | 993/993, CI: PASS | CoreRenderDispatcher 9/9, CoreRenderCPUBackend 5/5, CoreRenderCPUBackendOps 13/13 | – | round 1 fixes verified, missed items, first-use clarity | 1 major: health-before-support order has no test or mutation (swap passes all tests). 2 minor: CPUBackend.swift:14-16 concurrency caveat reads as a guarantee with the wrong cause; cpu-backend.json says surface/read/release are CoreRaster calls. All 6 round 1 fixes verified; 27 mutations traced real | #383 (8cd012a), merged; CoreRenderDispatcher#9 escaped before the test, caught after | no |
 
 ## Decisions
 - Recorder question (asked 02:55Z, no ruling): backends keep the non-mutating protocol and hold storage behind a lock, as MetalBackend on dev (#354) already does. The CPU backend needs the same thing anyway (the packet's CPUSurface is a class), so this is the backend pattern, not a model type. FakeBackend stays a struct as the packet spells it; its call log and surfaces live in a shared reference-typed store. One store type (SurfaceStore) serves the fake and the CPU backend (rule 16).
