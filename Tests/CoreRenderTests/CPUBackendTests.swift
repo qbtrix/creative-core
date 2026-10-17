@@ -2,8 +2,8 @@
 // over 50 seeded buffers, display bytes equal to CoreRaster's in sRGB and P3,
 // composite equal to CoreRaster's for every blend mode at opacities 0, 0.37 and 1
 // with sources off every edge, released, unknown, foreign and mis-sized surfaces,
-// CoreRaster errors passed through, RB-4's families refused, and the parity sample
-// set for its families reproduced with zero delta. The store's `replace` size
+// CoreRaster errors passed through, every family supported, and the parity sample
+// set for every family reproduced with zero delta. The store's `replace` size
 // guard, which composite writes back through, is checked directly.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
@@ -144,19 +144,10 @@ private func seededBuffer(width: Int, height: Int, seed: UInt64) throws -> Pixel
         #expect(try store.buffer(for: s) == same)
     }
 
-    @Test func rb4FamiliesThrowUnsupported() throws {
+    @Test func supportsEveryFamily() {
         let cpu = CPUBackend()
-        #expect(cpu.supports == [.display, .composite, .blendSeparable, .blendNonSeparable])
+        #expect(cpu.supports == Set(RenderOp.allCases))
         #expect(cpu.isHealthy)
-        let s = try cpu.surface(try seededBuffer(width: 4, height: 4, seed: 3))
-        let mask = try Mask(width: 4, height: 4, fill: 1)
-        #expect(throws: RenderError.unsupported(.transform)) { try cpu.cropped(s, x: 0, y: 0, width: 2, height: 2) }
-        #expect(throws: RenderError.unsupported(.transform)) { try cpu.rotated(s, .degrees90) }
-        #expect(throws: RenderError.unsupported(.resample)) { try cpu.resampled(s, width: 2, height: 2, filter: .lanczos3) }
-        #expect(throws: RenderError.unsupported(.blur)) { try cpu.gaussianBlur(s, sigma: 1) }
-        #expect(throws: RenderError.unsupported(.blur)) { try cpu.unsharpMask(s, amount: 1, sigma: 1, threshold: 0) }
-        #expect(throws: RenderError.unsupported(.adjust)) { try cpu.adjusted(s, .contrast(10)) }
-        #expect(throws: RenderError.unsupported(.retouch)) { try cpu.cloned(s, offset: (dx: 1, dy: 0), through: mask) }
     }
 
     @Test func paritySamplesForItsFamiliesMatchCoreRasterWithZeroDelta() throws {
@@ -172,6 +163,11 @@ private func seededBuffer(width: Int, height: Int, seed: UInt64) throws -> Pixel
                 case let .composite(x, y, mode, opacity):
                     let backdrop = try #require(sample.backdrop)
                     expected = try composite(sample.source, onto: backdrop, x: x, y: y, mode: mode, opacity: opacity)
+                case .rotated(let turn): expected = sample.source.rotated(turn)
+                case let .resampled(w, h, filter): expected = try sample.source.resized(width: w, height: h, filter: filter)
+                case .gaussianBlur(let sigma): expected = try sample.source.gaussianBlur(sigma: sigma)
+                case .adjusted(.contrast(let amount)): expected = try sample.source.contrast(amount)
+                case let .cloned(dx, dy, mask): expected = try sample.source.cloned(offset: (dx: dx, dy: dy), through: mask)
                 default:
                     Issue.record("unexpected call for \(op): \(sample.name)")
                     continue

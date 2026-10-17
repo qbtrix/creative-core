@@ -3,8 +3,8 @@
 // (one lock, so the protocol stays non-mutating and Sendable), and every op is
 // the CoreRaster call itself, so its pixels equal the direct call with `==`.
 // This file (render-backend RB-3) covers surface, read, release, display and
-// the compositing families; transform, resample, blur, adjust and retouch are
-// RB-4's and throw `unsupported` until then.
+// the compositing families; CPUBackend+Ops.swift (RB-4) holds transform,
+// resample, blur, adjust and retouch, each a new surface through `derived`.
 // Invariants: a surface this backend did not make, has released, or whose
 // size disagrees with its pixels throws `surfaceMismatch`; `composite` blends
 // in place through CoreRaster at the given opacity and stores the result under
@@ -20,8 +20,8 @@ import CoreRaster
 /// The CPU RenderBackend: CoreRaster behind the RenderBackend contract.
 public struct CPUBackend: RenderBackend {
     public let name: String
-    /// Display and the compositing families (RB-3).
-    public let supports: Set<RenderOp> = [.display, .composite, .blendSeparable, .blendNonSeparable]
+    /// Every family: the CPU is the reference.
+    public let supports: Set<RenderOp> = Set(RenderOp.allCases)
     /// The CPU is never lost.
     public var isHealthy: Bool { true }
 
@@ -60,27 +60,12 @@ public struct CPUBackend: RenderBackend {
         try store.replace(b, with: backdrop)
     }
 
-    // RB-4's families: not supported yet.
-    public func cropped(_ s: RenderSurface, x: Int, y: Int, width: Int, height: Int) throws -> RenderSurface {
-        throw RenderError.unsupported(.transform)
-    }
-    public func rotated(_ s: RenderSurface, _ turn: QuarterTurn) throws -> RenderSurface {
-        throw RenderError.unsupported(.transform)
-    }
-    public func resampled(_ s: RenderSurface, width: Int, height: Int, filter: ResampleFilter) throws -> RenderSurface {
-        throw RenderError.unsupported(.resample)
-    }
-    public func gaussianBlur(_ s: RenderSurface, sigma: Double) throws -> RenderSurface {
-        throw RenderError.unsupported(.blur)
-    }
-    public func unsharpMask(_ s: RenderSurface, amount: Double, sigma: Double, threshold: Double) throws -> RenderSurface {
-        throw RenderError.unsupported(.blur)
-    }
-    public func adjusted(_ s: RenderSurface, _ adjustment: ToneAdjustment) throws -> RenderSurface {
-        throw RenderError.unsupported(.adjust)
-    }
-    public func cloned(_ s: RenderSurface, offset: (dx: Int, dy: Int), through mask: Mask) throws -> RenderSurface {
-        throw RenderError.unsupported(.retouch)
+    /// `body` run on `s`'s pixels, gated by `op`, with any CoreRaster error
+    /// mapped to `.raster`, its result stored as a new surface; `s` is unchanged.
+    func derived(_ s: RenderSurface, _ op: RenderOp,
+                 _ body: (PixelBuffer) throws -> PixelBuffer) throws -> RenderSurface {
+        let source = try input(s, op)
+        return store.insert(try RenderError.mapping { try body(source) })
     }
 
     /// Throws `unsupported(op)` outside `supports`, then returns `s`'s pixels
