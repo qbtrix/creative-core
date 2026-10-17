@@ -37,14 +37,14 @@ public struct MetalCapabilities: Equatable, Sendable {
     /// Records a device loss or command-buffer error: the backend turns
     /// unhealthy with `reason` as `lastError`, so the dispatcher routes
     /// everything to the CPU. `supported` is kept, so the status note can say
-    /// what would run once a device is back.
+    /// what would run once the backend recovers.
     public mutating func fail(_ reason: String) {
         healthy = false
         lastError = reason
     }
 
-    /// Called after a new device is up: the backend is healthy again with no
-    /// error, and `supported` is as it was before the failure.
+    /// Called once the backend has a working command queue again: it is
+    /// healthy with no error, and `supported` is as it was before the failure.
     public mutating func recover() {
         healthy = true
         lastError = nil

@@ -1,10 +1,10 @@
 [
   {
-    "note": "surface tiling column count rounds down, so the last partial column is lost",
-    "file": "Sources/CoreRender/Metal/SurfaceTiling.swift",
-    "anchor": "public var columns: Int { (width + Self.tileSize - 1) / Self.tileSize }",
-    "replacement": "public var columns: Int { width / Self.tileSize }",
-    "filter": "SurfaceTilingTests"
+    "note": "surface tiling column count rounds down (CoreRaster's shared tile count), so the last partial column is lost",
+    "file": "Sources/CoreRaster/Tiles.swift",
+    "anchor": "length < 1 ? 0 : (length - 1) / tileSize + 1",
+    "replacement": "length < 1 ? 0 : length / tileSize",
+    "filter": "SurfaceTilingTests|TilesTests"
   },
   {
     "note": "surface tiling rect accepts index == tileCount (<= for <), a tile past the last",
@@ -14,11 +14,11 @@
     "filter": "SurfaceTilingTests"
   },
   {
-    "note": "surface tiling last column is a full tile instead of clipped to the surface",
-    "file": "Sources/CoreRender/Metal/SurfaceTiling.swift",
-    "anchor": "width: min(Self.tileSize, width - x)",
-    "replacement": "width: Self.tileSize",
-    "filter": "SurfaceTilingTests"
+    "note": "surface tiling last column is a full tile instead of clipped to the surface (CoreRaster's shared tile rect)",
+    "file": "Sources/CoreRaster/Tiles.swift",
+    "anchor": "width: min(tileSize, width - x)",
+    "replacement": "width: tileSize",
+    "filter": "SurfaceTilingTests|TilesTests"
   },
   {
     "note": "surface tiling tiles(touching:) drops the last overlapped column",

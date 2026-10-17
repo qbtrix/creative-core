@@ -25,10 +25,11 @@ for the harness and the CPU goldens). Base: `origin/dev` after `render-backend`'
 
 **Where parity runs.** core's `ci.yml` has a macOS job (`macos-15`,
 `scripts/ci` on dev runs). Every parity test is
-`.enabled(if: MetalBackend.defaultDevice != nil)`; whether that runner
-exposes a device is unverified until the first run (MB-2 records the answer
-in `waves.md`). When it skips, the lead runs the suite on its Mac before each
-`Fast-Check:` and the Mac finisher posts the counts. Linux never builds Metal.
+`.enabled(if: MetalBackend.defaultDevice != nil)`; the macos-15 runner
+exposes a Metal device (dev CI run 39010063417: `MetalPipelinesTests` ran
+there; recorded in `waves.md`), so parity runs on dev's macOS job. If a later
+runner skips, the lead runs the suite on its Mac before each `Fast-Check:` and
+the Mac finisher posts the counts. Linux never builds Metal.
 
 ## Slices
 
@@ -213,6 +214,20 @@ GPU path.
 3. **Core runs v3.** `docs/factory/lead.md` has rules 12 to 19 and the
    two-level done (merged-done on Linux, verified on the Mac).
 
+## Deviations (lead, 2026-10-17, slice MB-a)
+
+- **No on-disk `MTLBinaryArchive`.** The archive at `cacheURL` described under
+  Pseudocode and in MB-2 is dropped. Pipelines rely on Metal's own shader
+  cache plus an in-process memo keyed by `PipelineKey`. `cacheURL` stays in
+  `MetalBackend.init` as a reserved parameter so callers need not change if an
+  archive returns.
+- **Background compile is deferred to MB-3.** A family's first pipeline
+  compiles on first use for now; compiling off the caller's queue while
+  `supports` excludes the family lands with the first real kernel.
+- **`PipelineKey.validated` bounds the variant** at 64 UTF-8 bytes
+  (`PipelineKey.maxVariantLength`) as well as checking it is an identifier.
+
 ## Open
 
-- **The runner's device.** Unknown until MB-2's first dev run.
+- **The runner's device.** Answered: the macos-15 runner exposes a Metal
+  device (dev CI run 39010063417, where `MetalPipelinesTests` ran).

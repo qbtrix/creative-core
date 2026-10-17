@@ -1,7 +1,8 @@
 // SurfaceTiling.swift: the grid of `tileSize` square tiles a Metal surface is
-// split into, one texture per tile, on the same grid CoreRaster's Tiles.swift
-// lays on a PixelBuffer, so a tile uploads from and downloads to the matching
-// buffer tile. Invariants: the size passes `PixelBuffer.validatedSize`; tiles
+// split into, one texture per tile. The grid math is CoreRaster's
+// (`PixelBuffer.tileCount(covering:)` and `tileRect(column:row:width:height:)`),
+// so a surface tile uploads from and downloads to the matching buffer tile.
+// This file adds the row-major index and `tiles(touching:)`. Invariants: the size passes `PixelBuffer.validatedSize`; tiles
 // are numbered row-major from the top left; the last column and row are
 // clipped to the surface and never 0 px wide, so every pixel lies in exactly
 // one tile; `tiles(touching:)` never traps. Integer math only, no Metal import.
@@ -24,20 +25,16 @@ public struct SurfaceTiling: Equatable, Sendable {
     /// the message of `PixelBuffer.validatedSize` for a side under 1 or a
     /// pixel count over `PixelBuffer.maxPixels`.
     public init(width: Int, height: Int) throws {
-        do {
-            _ = try PixelBuffer.validatedSize(width: width, height: height)
-        } catch RasterError.invalid(let message) {
-            throw RenderError.raster(message)
-        }
+        _ = try Self.mapped { try PixelBuffer.validatedSize(width: width, height: height) }
         self.width = width
         self.height = height
     }
 
     /// The number of tile columns: the width divided by `tileSize`, rounded up.
-    public var columns: Int { (width + Self.tileSize - 1) / Self.tileSize }
+    public var columns: Int { PixelBuffer.tileCount(covering: width) }
 
     /// The number of tile rows: the height divided by `tileSize`, rounded up.
-    public var rows: Int { (height + Self.tileSize - 1) / Self.tileSize }
+    public var rows: Int { PixelBuffer.tileCount(covering: height) }
 
     /// The number of tiles, `columns * rows`; tile indices are `0..<tileCount`.
     public var tileCount: Int { columns * rows }
@@ -49,9 +46,19 @@ public struct SurfaceTiling: Equatable, Sendable {
         guard index >= 0, index < tileCount else {
             throw RenderError.raster("tile index \(index) out of 0..<\(tileCount)")
         }
-        let x = (index % columns) * Self.tileSize
-        let y = (index / columns) * Self.tileSize
-        return TileRect(x: x, y: y, width: min(Self.tileSize, width - x), height: min(Self.tileSize, height - y))
+        return try Self.mapped {
+            try PixelBuffer.tileRect(column: index % columns, row: index / columns, width: width, height: height)
+        }
+    }
+
+    /// Runs a CoreRaster call, rethrowing its `RasterError.invalid` as
+    /// `RenderError.raster` with the same message.
+    private static func mapped<T>(_ body: () throws -> T) throws -> T {
+        do {
+            return try body()
+        } catch RasterError.invalid(let message) {
+            throw RenderError.raster(message)
+        }
     }
 
     /// The indices of the tiles the pixel rect overlaps, ascending. Empty when

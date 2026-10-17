@@ -69,6 +69,9 @@ feature once `main` holds them.
   each, never more than one or two PRs in flight, so the apps stay shippable
   on CPU after every merge. Its `Package.swift` edit (RB-1) is a protected
   path: the supervisor merges that PR.
+- **Runner answer (metal-backend, MB-2).** The macos-15 runner exposes a
+  Metal device: dev CI run 39010063417 ran `MetalPipelinesTests` there, so
+  the parity suite runs on dev's macOS job, not only on the lead's Mac.
 
 ## Issue housekeeping (each lead, stage 0)
 

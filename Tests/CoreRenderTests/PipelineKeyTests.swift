@@ -1,8 +1,8 @@
 // PipelineKeyTests.swift: the identity of one cached Metal pipeline. Equal op
 // and variant hash to one entry; a different variant or op is a different
 // key; `functionName` is the op's raw value with `_variant` when there is
-// one; `validated` keeps identifier variants and throws `RenderError.raster`
-// for anything else; a Codable round trip is exact; and a seeded fuzz over
+// one; `validated` keeps identifier variants of at most 64 bytes and throws
+// `RenderError.raster` for anything else; a Codable round trip is exact; and a seeded fuzz over
 // random Unicode variants never crashes.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
@@ -67,6 +67,27 @@ private struct SplitMix64: RandomNumberGenerator {
     func validatedThrowsRasterForANonIdentifierVariant(variant: String) {
         #expect(throws: RenderError.raster("pipeline variant '\(variant)' must be [A-Za-z0-9_]")) {
             try PipelineKey.validated(op: .blendSeparable, variant: variant)
+        }
+    }
+
+    @Test func validatedBoundsTheVariantAtSixtyFourBytes() throws {
+        #expect(PipelineKey.maxVariantLength == 64)
+        let empty = try PipelineKey.validated(op: .composite, variant: "")
+        #expect(empty.functionName == "composite")
+        let atLimit = String(repeating: "a", count: 64)
+        let key = try PipelineKey.validated(op: .composite, variant: atLimit)
+        #expect(key.variant == atLimit)
+        #expect(throws: RenderError.raster("pipeline variant is 65 bytes, over 64")) {
+            try PipelineKey.validated(op: .composite, variant: String(repeating: "a", count: 65))
+        }
+        // 22 two-byte scalars: 44 bytes, under the bound, so the identifier check rejects it.
+        let accents = String(repeating: "é", count: 22)
+        #expect(throws: RenderError.raster("pipeline variant '\(accents)' must be [A-Za-z0-9_]")) {
+            try PipelineKey.validated(op: .composite, variant: accents)
+        }
+        // 33 two-byte scalars: 33 characters but 66 bytes, so the bound counts bytes.
+        #expect(throws: RenderError.raster("pipeline variant is 66 bytes, over 64")) {
+            try PipelineKey.validated(op: .composite, variant: String(repeating: "é", count: 33))
         }
     }
 
