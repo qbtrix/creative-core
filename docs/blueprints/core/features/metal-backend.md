@@ -270,9 +270,13 @@ GPU path.
   so init adds `.composite` only when `device.readWriteTextureSupport ==
   .tier2` (`compositesInPlace`), not unconditionally. On other Macs the
   dispatcher routes composite to the CPU backend.
-- **`.display`, `.transform` and `.resample` start enabled at init**, with
-  tier-2 `.composite`. While the backend is unhealthy `supports` is empty and
-  each of these ops throws `unsupported(<family>)`, not `deviceLost`.
+- **Every family starts enabled at init.** `MetalBackend.init` enables
+  `.display`, `.transform`, `.resample`, `.adjust` (MB-14), `.blur` (MB-11,
+  MB-12) and `.retouch` (MB-15) on any device, and `.composite`,
+  `.blendSeparable` (MB-6) and `.blendNonSeparable` (MB-10) only on a
+  read-write tier 2 device (`compositesInPlace`). While the backend is
+  unhealthy `supports` is empty and every op throws `unsupported(<family>)`,
+  not `deviceLost`.
 - **MB-3 display tables are constant buffers.** CoreColor's byte rules go up
   as Float thresholds (found by bisection) and a Float P3 matrix in constant
   buffers (`DisplayTable`), not a 1-D table texture. Evicted tiles encode
@@ -326,16 +330,55 @@ GPU path.
   bytes) exceed the device's `maxBufferLength` throws
   `unsupported(.blur)` for `gaussianBlur` and `unsharpMask` alike, as
   resample throws `unsupported(.resample)`, without failing the backend; the
-  caller runs the op on the CPU backend, which has no such limit. (The
-  switch from `raster` to `unsupported` lands with batch r3f1.)
-- **`.blendSeparable` needs read-write tier 2 too.** MB-6 adds
-  `.blendSeparable` only on a tier-2 device (`compositesInPlace`), as MB-4
-  adds `.composite`; elsewhere the dispatcher routes those modes to the CPU.
+  caller runs the op on the CPU backend, which has no such limit.
+- **`.blendSeparable` and `.blendNonSeparable` need read-write tier 2 too.**
+  MB-6 adds `.blendSeparable` and MB-10 adds `.blendNonSeparable` only on a
+  tier-2 device (`compositesInPlace`), as MB-4 adds `.composite`; elsewhere
+  the dispatcher routes those modes to the CPU.
 - **MB-13's curve table is a probed buffer.** Levels, curves and contrast go
   up as `AdjustTable`'s `channel` table, a buffer of the values that
   `CPUBackend.adjusted` gives on a probe row of grey pixels, not a 1-D
   texture of CoreRaster's formulas; exposure and white balance as per-channel
   gains, highlights and shadows as a gain per luminance.
+
+## Deviations (lead, 2026-10-17, slices MB-e and MB-h)
+
+- **MB-9's parity hook is retired, and its file with it.** MB-9 enabled
+  `.blendNonSeparable` for the parity suite through a package hook in
+  `MetalBackend+BlendNonSeparable.swift`; MB-10 enables the family at init on
+  read-write tier 2 and removed the hook, leaving that file empty, so round 4
+  (#348) deletes it. The non-separable modes need no code beyond the shared
+  in-place composite: `compositeKernel(for:)` in
+  `MetalBackend+BlendSeparable.swift` routes them to
+  `Shaders/BlendNonSeparableShader.swift`. MB-5's own hook
+  (`enableSeparableBlendsForParity`), uncalled once MB-6 enabled
+  `.blendSeparable` at init, goes in the same round.
+- **MB-12 added `Shaders/UnsharpShader.swift`**, the `blur_unsharp` kernel,
+  which the MB-12 row does not list. It belongs to MB-12.
+- **MB-15 clones over whole-image buffers, not per tile**, as MB-8 resamples
+  and MB-11 blurs: the source is read like `read` (resident tiles merged with
+  shadows) and packed with the mask's coverage into whole-image buffers, and
+  `retouch_clone` writes each tile of the new surface. An image whose buffers
+  (width x height x 16 bytes) exceed the device's `maxBufferLength` throws
+  `unsupported(.retouch)` without failing the backend; the caller clones on
+  the CPU backend. Unlike resample, blur and unsharp, `clone` takes no
+  `bufferLimit` test hook, so no test drives that throw; it is read from the
+  code.
+- **MB-3 added public API to CoreColor.** `DisplayTransfer.p3FromLinearSRGB`
+  (`Sources/CoreColor/DisplayTransfer.swift`) exposes the linear sRGB to
+  Display P3 matrix the CPU multiplies by, so `DisplayTable` uploads it
+  instead of deriving its own. It is the CoreColor counterpart of CoreRaster's
+  `ResampleFilter.taps` (MB-8).
+- **`unsupported` for a listed family over a device limit.** This feature
+  widened the render-backend contract in `Sources/CoreRender/RenderOp.swift`:
+  a backend may throw `unsupported(<family>)` for a family it lists when the
+  input is over its device limit, with the backend still healthy, and
+  `RenderDispatcher` passes that error on without retrying on its
+  `fallback`; the caller reruns the op on the CPU backend. On Metal that is
+  display, resample, blur (`gaussianBlur` and `unsharpMask`) and retouch
+  (`cloned`) over `maxBufferLength`. The contract text lives in
+  `RenderError.unsupported`'s doc and the `RenderOp.swift` header; this
+  packet records it for render-backend's readers.
 
 ## Open
 
