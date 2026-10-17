@@ -17,7 +17,7 @@ public protocol RenderBackend: Sendable {
     /// The op families this backend implements. An op outside them throws
     /// `RenderError.unsupported`.
     var supports: Set<RenderOp> { get }
-    /// False once the device is lost; the dispatcher then falls back.
+    /// False once the device is lost; routing, as it lands, then falls back.
     var isHealthy: Bool { get }
 
     /// Uploads `buffer` into a new surface the backend holds. Not gated.

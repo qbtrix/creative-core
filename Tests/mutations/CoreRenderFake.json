@@ -22,5 +22,8 @@
    "replacement": "_ = b"},
   {"note": "render error mapping swallows the raster message instead of passing it through", "filter": "RenderBackendFakeTests|SurfaceTilingTests|ParityHarnessTests", "file": "Sources/CoreRender/RenderOp.swift",
    "anchor": "catch let error as RasterError { throw RenderError(error) }",
-   "replacement": "catch is RasterError { throw RenderError.raster(\"\") }"}
+   "replacement": "catch is RasterError { throw RenderError.raster(\"\") }"},
+  {"note": "fake backend checks supports before recording, so an unsupported op leaves no call in the log", "filter": "RenderBackendFakeTests", "file": "Sources/CoreRender/FakeBackend.swift",
+   "anchor": "record(.op(op))\n        guard supports.contains(op) else { throw RenderError.unsupported(op) }",
+   "replacement": "guard supports.contains(op) else { throw RenderError.unsupported(op) }\n        record(.op(op))"}
 ]
