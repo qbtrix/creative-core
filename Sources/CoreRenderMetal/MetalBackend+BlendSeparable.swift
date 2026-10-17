@@ -16,7 +16,7 @@ extension MetalBackend {
         switch RenderOp(compositing: mode) {
         case .composite: return (CompositeShader.key, CompositeShader.source)
         case .blendSeparable: return (BlendSeparableShader.key(mode), BlendSeparableShader.source)
-        case .blendNonSeparable: return nonSeparableKernel(for: mode)
+        case .blendNonSeparable: return (BlendNonSeparableShader.key(mode), BlendNonSeparableShader.source)
         default: throw RenderError.unsupported(RenderOp(compositing: mode))
         }
     }
