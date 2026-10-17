@@ -1,6 +1,7 @@
 // CoreRender: the one RenderBackend contract every app's Model draws through,
-// with the CPU backend (CoreRaster, the pixel reference), the dispatcher that
-// routes each op to a preferred backend or the CPU, and the parity harness.
+// its backends (a fake for tests, and the CPU backend over CoreRaster, the pixel
+// reference, as it lands), the routing between backends as it lands, and the
+// parity harness that measures a backend against the pixel reference.
 // Linux-safe, Foundation only: the Metal backend lives in CoreRenderMetal, and
 // its Linux-safe parts (capabilities, tiling math, cache keys) live here.
 // This file is the target scaffold (render-backend RB-1); the contract is in

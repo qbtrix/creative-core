@@ -1,10 +1,11 @@
 // RenderBackend.swift: the one contract every app's Model draws through. A
 // backend holds images as surfaces and implements some of the `RenderOp`
-// families; the CPU backend (CoreRaster) implements them all and is the pixel
-// reference the others are measured against. Every method that performs an op
-// throws `RenderError.unsupported(op)` when the op's family is not in
-// `supports`, and `RenderError.surfaceMismatch` for a surface it did not make
-// or has released. Parameter ranges are CoreRaster's; a CoreRaster error comes
+// families; a CPU backend over CoreRaster, as it lands, implements them all and
+// is the pixel reference the others are measured against. Every method that
+// performs an op throws `RenderError.unsupported(op)` when the op's family is
+// not in `supports`, and `RenderError.surfaceMismatch` for a surface it did not
+// make or has released, or a handle whose width and height do not match its
+// stored pixels. Parameter ranges are CoreRaster's; a CoreRaster error comes
 // back as `RenderError.raster`.
 import CoreColor
 import CoreRaster

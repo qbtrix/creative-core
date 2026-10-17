@@ -1,6 +1,7 @@
 // RenderBackendFakeTests.swift: render-backend slice RB-a's acceptance. FakeBackend's
-// call log, its gating by op family, its SurfaceStore (round trip, released and foreign
-// surfaces), copies sharing the log, concurrent recording, and the two shared mappings.
+// call log, its gating by op family, its SurfaceStore (round trip, released, foreign and
+// wrong-size surfaces), copies sharing the log, concurrent recording, and the two shared
+// mappings.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -9,20 +10,6 @@ import Foundation
 import CoreRaster
 import CoreRender
 import Testing
-
-/// SplitMix64: tiny, fast, seedable. Same seed, same sequence, on every platform.
-/// A private copy: test targets cannot share files.
-private struct SplitMix64: RandomNumberGenerator {
-    var state: UInt64
-    init(seed: UInt64) { state = seed }
-    mutating func next() -> UInt64 {
-        state &+= 0x9E37_79B9_7F4A_7C15
-        var z = state
-        z = (z ^ (z >> 30)) &* 0xBF58_476D_1CE4_E5B9
-        z = (z ^ (z >> 27)) &* 0x94D0_49BB_1331_11EB
-        return z ^ (z >> 31)
-    }
-}
 
 /// A `width` x `height` buffer of seeded sRGB bytes.
 private func seededBuffer(width: Int, height: Int, seed: UInt64) throws -> PixelBuffer {
@@ -121,6 +108,16 @@ private func seededBuffer(width: Int, height: Int, seed: UInt64) throws -> Pixel
         #expect(throws: RenderError.surfaceMismatch) { try fake.read(ownAsOther) }
         fake.release(ownAsOther)
         #expect(try fake.read(own) == (try PixelBuffer(width: 2, height: 2)), "a foreign-named release frees nothing")
+    }
+
+    @Test func aHandleOfTheWrongSizeThrowsSurfaceMismatch() throws {
+        let fake = FakeBackend(supports: [.composite])
+        let own = try fake.surface(try PixelBuffer(width: 3, height: 2))
+        let wider = RenderSurface(id: own.id, width: own.width + 1, height: own.height, backend: own.backend)
+        #expect(throws: RenderError.surfaceMismatch) { try fake.read(wider) }
+        let taller = RenderSurface(id: own.id, width: own.width, height: own.height + 1, backend: own.backend)
+        #expect(throws: RenderError.surfaceMismatch) { try fake.read(taller) }
+        #expect(try fake.read(own) == (try PixelBuffer(width: 3, height: 2)), "the right size still reads")
     }
 
     @Test func copiesShareTheLogAndTheSurfaces() throws {
