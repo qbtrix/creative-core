@@ -1,0 +1,23 @@
+[
+  {
+    "note": "CPU composite ignores opacity and always draws at full strength",
+    "file": "Sources/CoreRender/CPU/CPUSurface.swift",
+    "anchor": "mode: mode, opacity: opacity)",
+    "replacement": "mode: mode, opacity: 1)",
+    "filter": "CPUBackendTests"
+  },
+  {
+    "note": "CPU display ignores the requested colour space and always encodes sRGB",
+    "file": "Sources/CoreRender/CPU/CPUBackend.swift",
+    "anchor": "try buffer.rgba8(colorSpace: colorSpace)",
+    "replacement": "try buffer.rgba8(colorSpace: .sRGB)",
+    "filter": "CPUBackendTests"
+  },
+  {
+    "note": "CPU release keeps the pixels, so a released surface still reads",
+    "file": "Sources/CoreRender/CPU/CPUSurface.swift",
+    "anchor": "buffers[surface.id] = nil",
+    "replacement": "_ = surface.id",
+    "filter": "CPUBackendTests"
+  }
+]

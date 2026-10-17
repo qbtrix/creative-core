@@ -1,0 +1,18 @@
+{
+  "id": "cpu-backend",
+  "name": "CPU Backend",
+  "description": "The reference RenderBackend: every op runs through CoreRaster, so its pixels are CoreRaster's pixels. Surfaces are PixelBuffers in a locked store keyed by surface id. Display and composite run in RB-3; the other families throw unsupported until RB-4.",
+  "technology": "Swift 6, Foundation",
+  "paths": [
+    "Sources/CoreRender/CPU/"
+  ],
+  "order": 30,
+  "relationships": [
+    {
+      "source": "cpu-backend",
+      "target": "coreraster",
+      "description": "every CPU op calls CoreRaster; CoreRaster's errors map to RenderError.raster",
+      "style": "sync"
+    }
+  ]
+}
