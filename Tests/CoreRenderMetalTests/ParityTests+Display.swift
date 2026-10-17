@@ -1,6 +1,6 @@
 // ParityTests+Display.swift: the display family (MB-3). The sample set, a four-tile image and the same
-// image evicted encode within `ParityTolerance.standard` of the CPU in sRGB and P3, and every byte
-// per channel round-trips. Device-gated; compiled out on Linux.
+// image evicted encode within `ParityTolerance.standard` of the CPU run on the GPU's Float16 pixels, in
+// sRGB and P3, and every byte per channel round-trips. Device-gated; compiled out on Linux.
 #if canImport(Metal)
 import CoreColor
 import CoreRaster
@@ -19,8 +19,9 @@ extension ParityTests {
             images += [("four-tiles", large, false), ("evicted", large, true)]
             for space in PixelBuffer.displayColorSpaces {
                 for (name, image, evict) in images {
-                    let expected = try cpu.display(cpu.surface(image), colorSpace: space)
+                    // The CPU runs on the Float16 pixels the GPU holds: alpha 1e-45 stores as 0 there.
                     let surface = try backend.surface(image)
+                    let expected = try cpu.display(cpu.surface(backend.read(surface)), colorSpace: space)
                     if evict { backend.budgetBytes = 0 }
                     let got = try backend.display(surface, colorSpace: space)
                     backend.release(surface)
