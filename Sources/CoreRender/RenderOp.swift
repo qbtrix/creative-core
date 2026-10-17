@@ -54,7 +54,8 @@ public enum RenderError: Error, Equatable, Sendable {
     /// The op's family is not in the backend's `supports` (RenderDispatcher
     /// sends an op only to a backend that lists it), or this input is over
     /// this backend's device limit (the Metal backend's `maxBufferLength` for
-    /// display, resample, blur and unsharp): run it on the CPU backend, which
+    /// display, resample, blur (gaussianBlur and unsharpMask) and retouch
+    /// (cloned)): run it on the CPU backend, which
     /// has no such limit. The backend stays healthy, and RenderDispatcher
     /// passes this error on without retrying the op on its `fallback`.
     case unsupported(RenderOp)

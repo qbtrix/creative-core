@@ -8,8 +8,8 @@
 // make throws `surfaceMismatch`. The enabled families are display, transform (crop, rotate), resample, blur
 // (blur and unsharp), adjust, retouch (clone through a mask) and, on read-write tier 2, composite,
 // blendSeparable and blendNonSeparable; every one of them throws `unsupported(<family>)` while unhealthy (each checks
-// `effectiveSupports`), and display, resample and retouch also throw it, without failing the backend, when a
-// buffer would exceed `maxBufferLength`. A probe, a command buffer or a texture allocation that fails
+// `effectiveSupports`), and display, resample, blur (gaussianBlur and unsharpMask) and retouch (cloned) also
+// throw it, without failing the backend, when a buffer would exceed `maxBufferLength`. A probe, a command buffer or a texture allocation that fails
 // leaves the backend unhealthy with the reason in `capabilities.lastError` (so `deviceLost` is only ever thrown with `isHealthy` false), and only a
 // `recover` whose probe passes makes it healthy again. No GPU wait or runtime compile of a custom
 // source runs under the lock: `supports` and `isHealthy` answer while a probe is in flight.
@@ -24,7 +24,8 @@ import Metal
 /// resample, blur, unsharp, adjust and clone through a mask run; `.normal`, the separable and the non-separable blend
 /// modes composite on read-write texture tier 2 (elsewhere they throw `RenderError.unsupported`). While the
 /// backend is unhealthy `supports` is empty and every op throws `unsupported(<family>)`, never `deviceLost`;
-/// display, resample and clone also throw it when a buffer would exceed the device's `maxBufferLength`.
+/// display, resample, blur (gaussianBlur and unsharpMask) and retouch (cloned) also throw it, with the backend
+/// still healthy, when a buffer would exceed the device's `maxBufferLength`: run those on the CPU backend.
 /// `supports` tells the dispatcher which run.
 public final class MetalBackend: RenderBackend, @unchecked Sendable {
     /// The system's default GPU, or nil without one; tests gate on `.enabled(if: defaultDevice != nil)`.
@@ -275,13 +276,14 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     /// Frees a surface's textures; an unknown or already released id is a no-op.
     public func release(_ surface: RenderSurface) { withLock { surfaces[surface.id] = nil } }
 
-    /// Display encode through the DisplayTransfer tables (MB-3): see MetalBackend+Display.swift.
+    /// Display encode through the DisplayTransfer tables (MB-3): see MetalBackend+Display.swift. Bytes over this
+    /// GPU's `maxBufferLength` throw `unsupported(.display)`, backend still healthy: run it on the CPU backend.
     public func display(_ s: RenderSurface, colorSpace: ColorSpace) throws -> [UInt8] {
         try encodeDisplay(s, colorSpace: colorSpace)
     }
     /// Composite in place: `.normal` MB-4, the separable modes MB-5, opaque rows blitted MB-6, see
     /// MetalBackend+Composite.swift, +BlendSeparable.swift and +OpaqueRows.swift; the non-separable modes MB-9 and MB-10
-    /// (+BlendNonSeparable.swift). A family not in `supports` throws `unsupported(<family>)`.
+    /// through the same path (`compositeKernel(for:)`). A family not in `supports` throws `unsupported(<family>)`.
     public func composite(_ s: RenderSurface, onto b: inout RenderSurface, x: Int, y: Int,
                           mode: BlendMode, opacity: Float) throws {
         try compositeInPlace(s, onto: b, x: x, y: y, mode: mode, opacity: opacity)
@@ -299,11 +301,13 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     public func resampled(_ s: RenderSurface, width: Int, height: Int, filter: ResampleFilter) throws -> RenderSurface {
         try resample(s, width: width, height: height, filter: filter)
     }
-    /// Two-pass gaussian blur: MB-11 (MetalBackend+Blur.swift); `.blur` is in `supports` since MB-12.
+    /// Two-pass gaussian blur: MB-11 (MetalBackend+Blur.swift); `.blur` is in `supports` since MB-12. A whole-image
+    /// buffer over this GPU's `maxBufferLength` throws `unsupported(.blur)`, backend still healthy: use the CPU backend.
     public func gaussianBlur(_ s: RenderSurface, sigma: Double) throws -> RenderSurface {
         try blur(s, sigma: sigma)
     }
-    /// Unsharp mask over the blur: MB-12 (MetalBackend+Unsharp.swift). Invalid parameters throw the CPU's error.
+    /// Unsharp mask over the blur: MB-12 (MetalBackend+Unsharp.swift). Invalid parameters throw the CPU's error; a
+    /// whole-image buffer over `maxBufferLength` throws `unsupported(.blur)`, backend still healthy: use the CPU backend.
     public func unsharpMask(_ s: RenderSurface, amount: Double, sigma: Double,
                             threshold: Double) throws -> RenderSurface {
         try unsharp(s, amount: amount, sigma: sigma, threshold: threshold)
@@ -312,7 +316,8 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     public func adjusted(_ s: RenderSurface, _ adjustment: ToneAdjustment) throws -> RenderSurface {
         try adjust(s, adjustment)
     }
-    /// Clone through a mask: MB-15 (MetalBackend+Retouch.swift). A mask of another size throws the CPU's error.
+    /// Clone through a mask: MB-15 (MetalBackend+Retouch.swift). A mask of another size throws the CPU's error; a
+    /// whole-image buffer over `maxBufferLength` throws `unsupported(.retouch)`, backend still healthy: use the CPU backend.
     public func cloned(_ s: RenderSurface, offset: (dx: Int, dy: Int), through mask: Mask) throws -> RenderSurface {
         try clone(s, offset: offset, through: mask)
     }
