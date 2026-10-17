@@ -72,3 +72,4 @@ utc	stage	event	ref	note
 2026-10-17T15:40Z	4	anatomy-round	dev f7bdbfe	RB-c round 3: 0 major, 2 minor; gate 1012/1012 PASS, mutations 46/46, budget +0.99%; fixer rbc-anatomy-3 started
 2026-10-17T15:12Z	4	fix-merged	#394 e6c149d	RB-c round 3 fixes merged; round 4 (final) critic + gate 12 on dev 74ce55f started
 2026-10-17T15:17Z	4	gate	dev 74ce55f	gate 12: 1018/1018 CI: PASS; anchors 322; mutations Fake 9/9, CPUBackend 5/5, Ops 13/13, Dispatcher 12/12, Parity 9/9; goldens pass; budget +3.6% under critic load, alone +18.8%/-23.6%/+1.04% (noise, no dispatcher code changed since f7bdbfe: RenderOp doc comment + Metal tables only); Mac confirms
+2026-10-17T15:25Z	4	anatomy-round	dev 74ce55f	RB-c round 4 (cap): 0 major, 2 minor, 3 nits; final fixer rbc-anatomy-4 with feature-done started
