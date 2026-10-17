@@ -19,5 +19,12 @@
     "anchor": "        lastError = nil\n    }\n}",
     "replacement": "    }\n}",
     "filter": "MetalCapabilitiesTests"
+  },
+  {
+    "note": "metal capabilities effective supports ignores health, so a failed backend still gets ops",
+    "file": "Sources/CoreRender/Metal/MetalCapabilities.swift",
+    "anchor": "healthy ? supported : []",
+    "replacement": "supported",
+    "filter": "MetalCapabilitiesTests"
   }
 ]

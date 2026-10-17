@@ -66,7 +66,7 @@ public struct FakeBackend: RenderBackend {
     }
 
     public func display(_ s: RenderSurface, colorSpace: ColorSpace) throws -> [UInt8] {
-        try raster(try input(s, .display).rgba8(colorSpace: colorSpace))
+        try RenderError.mapping { try input(s, .display).rgba8(colorSpace: colorSpace) }
     }
 
     /// Checks both surfaces and the family, then leaves `b` unchanged.
@@ -77,7 +77,7 @@ public struct FakeBackend: RenderBackend {
     }
 
     public func cropped(_ s: RenderSurface, x: Int, y: Int, width: Int, height: Int) throws -> RenderSurface {
-        store.insert(try raster(try input(s, .transform).cropped(x: x, y: y, width: width, height: height)))
+        store.insert(try RenderError.mapping { try input(s, .transform).cropped(x: x, y: y, width: width, height: height) })
     }
 
     public func rotated(_ s: RenderSurface, _ turn: QuarterTurn) throws -> RenderSurface {
@@ -85,7 +85,7 @@ public struct FakeBackend: RenderBackend {
     }
 
     public func resampled(_ s: RenderSurface, width: Int, height: Int, filter: ResampleFilter) throws -> RenderSurface {
-        store.insert(try raster(try input(s, .resample).resized(width: width, height: height, filter: filter)))
+        store.insert(try RenderError.mapping { try input(s, .resample).resized(width: width, height: height, filter: filter) })
     }
 
     // The filter ops: a new surface with `s`'s pixels unchanged.
@@ -112,9 +112,5 @@ public struct FakeBackend: RenderBackend {
         record(.op(op))
         guard supports.contains(op) else { throw RenderError.unsupported(op) }
         return try store.buffer(for: s)
-    }
-
-    private func raster<T>(_ value: @autoclosure () throws -> T) throws -> T {
-        do { return try value() } catch let error as RasterError { throw RenderError(error) }
     }
 }

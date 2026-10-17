@@ -6,7 +6,9 @@ import CoreRaster
 /// SplitMix64: the same seed gives the same sequence on every platform.
 public struct ParityRandom: RandomNumberGenerator, Sendable {
     private var state: UInt64
+    /// A generator whose sequence depends only on `seed`.
     public init(seed: UInt64) { state = seed }
+    /// The next 64 random bits; advances the state.
     public mutating func next() -> UInt64 {
         state &+= 0x9E37_79B9_7F4A_7C15
         var z = state
@@ -18,23 +20,46 @@ public struct ParityRandom: RandomNumberGenerator, Sendable {
 
 /// One `RenderBackend` call with its parameters.
 public enum ParityCall: Equatable, Sendable {
-    case display(ColorSpace), rotated(QuarterTurn), gaussianBlur(sigma: Double), adjusted(ToneAdjustment)
+    /// `display` in the color space, read back as a buffer.
+    case display(ColorSpace)
+    /// `rotated` by the quarter turn.
+    case rotated(QuarterTurn)
+    /// `gaussianBlur` with `sigma` in pixels.
+    case gaussianBlur(sigma: Double)
+    /// `adjusted` by the tone adjustment.
+    case adjusted(ToneAdjustment)
+    /// `composite` of the source onto the backdrop with its top-left at pixel
+    /// (`x`, `y`) of the backdrop, `opacity` from 0 to 1.
     case composite(x: Int, y: Int, mode: BlendMode, opacity: Float)
+    /// `resampled` to `width` x `height` pixels.
     case resampled(width: Int, height: Int, filter: ResampleFilter)
+    /// `cloned`: each masked pixel takes the pixel `dx`, `dy` pixels away in
+    /// the same surface.
     case cloned(dx: Int, dy: Int, mask: Mask)
 }
 
 /// One named input for one op; `backdrop` is set for `.composite` only.
 public struct ParitySample: Equatable, Sendable {
-    public let name: String, call: ParityCall
-    public let source: PixelBuffer, backdrop: PixelBuffer?
+    /// Stable name, unique within the op; goldens are filed under it.
+    public let name: String
+    /// The backend call to make.
+    public let call: ParityCall
+    /// The input surface's pixels.
+    public let source: PixelBuffer
+    /// The surface `composite` draws onto; nil for every other call.
+    public let backdrop: PixelBuffer?
+
+    /// A sample named `name` that makes `call` on `source` (onto `backdrop` for `.composite`).
+    public init(name: String, call: ParityCall, source: PixelBuffer, backdrop: PixelBuffer?) {
+        (self.name, self.call, self.source, self.backdrop) = (name, call, source, backdrop)
+    }
 }
 
 extension ParityHarness {
     /// Every sample for `op`: alpha 0 with color left in the channels, subnormal
     /// alpha, opaque rows and, when one image is placed in another, a source off each edge.
     public static func sampleSet(for op: RenderOp) throws -> [ParitySample] {
-        try raster {
+        try RenderError.mapping {
             let alphas: [Float?] = [nil, 0, 1e-45, nil]
             let sources = try zip(["random", "alpha-zero", "alpha-subnormal", "opaque-rows"], 0...).map { name, i in
                 (name, try seeded(9, 7, seed: 0x9A21 + UInt64(i), alpha: alphas[i], opaqueRows: i == 3))
@@ -73,7 +98,7 @@ extension ParityHarness {
     }
 
     /// `sample` rendered on `backend` and read back, its surfaces released. A
-    /// `.composite` sample without a backdrop throws `RenderError.surfaceMismatch`.
+    /// `.composite` sample without a backdrop throws `RenderError.raster` naming it.
     public static func render(_ sample: ParitySample, on backend: any RenderBackend) throws -> PixelBuffer {
         let s = try backend.surface(sample.source)
         defer { backend.release(s) }
@@ -81,9 +106,11 @@ extension ParityHarness {
         switch sample.call {
         case .display(let space):
             let bytes = try backend.display(s, colorSpace: space)
-            return try raster { try PixelBuffer(rgba8: bytes, width: s.width, height: s.height, colorSpace: space) }
+            return try RenderError.mapping { try PixelBuffer(rgba8: bytes, width: s.width, height: s.height, colorSpace: space) }
         case let .composite(x, y, mode, opacity):
-            guard let backdrop = sample.backdrop else { throw RenderError.surfaceMismatch }
+            guard let backdrop = sample.backdrop else {
+                throw RenderError.raster("composite sample '\(sample.name)' has no backdrop")
+            }
             var target = try backend.surface(backdrop)
             do { try backend.composite(s, onto: &target, x: x, y: y, mode: mode, opacity: opacity) } catch {
                 backend.release(target)

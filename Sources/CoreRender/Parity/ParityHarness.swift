@@ -6,8 +6,17 @@ import CoreRaster
 public struct ParityResult: Equatable, Sendable, CustomStringConvertible {
     /// Both worst deltas are within the tolerance.
     public let passed: Bool
-    public let worstByteDelta: UInt8, worstByteX: Int, worstByteY: Int
-    public let worstLinearDelta: Float, worstLinearX: Int, worstLinearY: Int
+    /// The largest per-channel difference of the 8-bit sRGB display bytes.
+    public let worstByteDelta: UInt8
+    /// The column, then the row, of the first pixel (row-major) with `worstByteDelta`.
+    public let worstByteX: Int, worstByteY: Int
+    /// The largest per-component difference of the linear premultiplied
+    /// Floats, over pixels whose alpha is above 0.01 in either buffer.
+    public let worstLinearDelta: Float
+    /// The column, then the row, of the first pixel (row-major) with `worstLinearDelta`.
+    public let worstLinearX: Int, worstLinearY: Int
+
+    /// One line: pass or FAIL, then each worst delta and its pixel.
 
     public var description: String {
         "\(passed ? "pass" : "FAIL"): bytes \(worstByteDelta) at (\(worstByteX), \(worstByteY)), "
@@ -17,12 +26,18 @@ public struct ParityResult: Equatable, Sendable, CustomStringConvertible {
 
 /// The parity harness: compare, sample sets, rendering on a backend, goldens.
 public enum ParityHarness {
-    /// Compares `a` with `b`. Throws `RenderError.surfaceMismatch` when their sizes differ.
+    /// Compares `a` with `b` twice: their 8-bit sRGB display bytes, and the
+    /// linear premultiplied Floats of every pixel whose alpha is above 0.01 in
+    /// either buffer. Reports each worst delta at the first pixel, row-major,
+    /// that has it; passes when both are within `tolerance`. Throws
+    /// `RenderError.raster` naming both sizes when they differ.
     public static func compare(_ a: PixelBuffer, _ b: PixelBuffer,
                                tolerance: ParityTolerance) throws -> ParityResult {
-        guard a.width == b.width, a.height == b.height else { throw RenderError.surfaceMismatch }
-        let bytesA = try raster { try a.rgba8(colorSpace: .sRGB) }
-        let bytesB = try raster { try b.rgba8(colorSpace: .sRGB) }
+        guard a.width == b.width, a.height == b.height else {
+            throw RenderError.raster("compare sizes differ: \(a.width)x\(a.height) vs \(b.width)x\(b.height)")
+        }
+        let bytesA = try RenderError.mapping { try a.rgba8(colorSpace: .sRGB) }
+        let bytesB = try RenderError.mapping { try b.rgba8(colorSpace: .sRGB) }
         var (worstByte, bytePixel): (UInt8, Int) = (0, 0)
         for (i, (p, q)) in zip(bytesA, bytesB).enumerated() where max(p, q) - min(p, q) > worstByte {
             (worstByte, bytePixel) = (max(p, q) - min(p, q), i / 4)
@@ -30,7 +45,7 @@ public enum ParityHarness {
         var (worstLinear, linearX, linearY): (Float, Int, Int) = (0, 0, 0)
         for y in 0..<a.height {
             for x in 0..<a.width {
-                let (p, q) = try raster { (try a.pixel(x: x, y: y), try b.pixel(x: x, y: y)) }
+                let (p, q) = try RenderError.mapping { (try a.pixel(x: x, y: y), try b.pixel(x: x, y: y)) }
                 guard max(p.a, q.a) > 0.01 else { continue }
                 let delta = max(abs(p.r - q.r), abs(p.g - q.g), abs(p.b - q.b), abs(p.a - q.a))
                 if delta > worstLinear { (worstLinear, linearX, linearY) = (delta, x, y) }
@@ -40,10 +55,5 @@ public enum ParityHarness {
                             worstByteDelta: worstByte, worstByteX: bytePixel % a.width,
                             worstByteY: bytePixel / a.width, worstLinearDelta: worstLinear,
                             worstLinearX: linearX, worstLinearY: linearY)
-    }
-
-    /// Runs `body`, passing a CoreRaster error through as `RenderError.raster`.
-    static func raster<T>(_ body: () throws -> T) throws -> T {
-        do { return try body() } catch RasterError.invalid(let message) { throw RenderError.raster(message) }
     }
 }

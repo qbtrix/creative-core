@@ -16,5 +16,8 @@
    "replacement": ""},
   {"note": "fake composite skips the backdrop check, so a foreign backdrop is accepted", "filter": "RenderBackendFakeTests", "file": "Sources/CoreRender/FakeBackend.swift",
    "anchor": "_ = try store.buffer(for: b)",
-   "replacement": "_ = b"}
+   "replacement": "_ = b"},
+  {"note": "render error mapping swallows the raster message instead of passing it through", "filter": "RenderBackendFakeTests|SurfaceTilingTests|ParityHarnessTests", "file": "Sources/CoreRender/RenderOp.swift",
+   "anchor": "catch let error as RasterError { throw RenderError(error) }",
+   "replacement": "catch is RasterError { throw RenderError.raster(\"\") }"}
 ]

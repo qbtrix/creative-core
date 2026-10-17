@@ -65,6 +65,15 @@ private func seededBuffer(width: Int, height: Int, seed: UInt64) throws -> Pixel
         #expect(RenderError(RasterError.invalid("too big")) == .raster("too big"))
     }
 
+    @Test func mappingRethrowsRasterErrorsAndPassesOthersThrough() throws {
+        var expected = ""
+        do { _ = try PixelBuffer(width: 0, height: 1) } catch let RasterError.invalid(message) { expected = message }
+        #expect(!expected.isEmpty)
+        #expect(throws: RenderError.raster(expected)) { try RenderError.mapping { try PixelBuffer(width: 0, height: 1) } }
+        #expect(throws: RenderError.surfaceMismatch) { try RenderError.mapping { throw RenderError.surfaceMismatch } }
+        #expect(try RenderError.mapping { 7 } == 7)
+    }
+
     @Test func readGivesBackTheBufferAndOpsGiveNewSurfaces() throws {
         let fake = FakeBackend(supports: Set(RenderOp.allCases))
         let buffer = try seededBuffer(width: 6, height: 4, seed: 7)

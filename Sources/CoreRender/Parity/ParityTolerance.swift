@@ -9,6 +9,7 @@ public struct ParityTolerance: Codable, Equatable, Hashable, Sendable {
     /// over pixels whose alpha is above 0.01 in either result.
     public let linear: Float
 
+    /// A tolerance of `bytes` display levels and `linear` per component.
     public init(bytes: UInt8, linear: Float) { (self.bytes, self.linear) = (bytes, linear) }
 
     /// Separable ops: 2 display levels, 1e-3 linear.

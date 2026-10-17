@@ -3,7 +3,8 @@
 // routed to Metal only when it is in `supported` and the backend is `healthy`.
 // Invariants: `supported` only ever grows, and `fail` keeps it (so a status
 // note can still say what would run on a working device); `healthy` and
-// `lastError` move together, `fail` setting both and `recover` clearing both.
+// `lastError` move together, `fail` setting both and `recover` clearing both;
+// `effectiveSupports` is empty while not healthy.
 
 /// The Metal backend's capability and health state, as the dispatcher sees it.
 public struct MetalCapabilities: Equatable, Sendable {
@@ -20,6 +21,13 @@ public struct MetalCapabilities: Equatable, Sendable {
     /// The reason of the last `fail`, nil while healthy. Shown in the
     /// rendering status note so the user can see why the GPU is off.
     public private(set) var lastError: String?
+
+    /// What the backend reports as its `supports`: `supported` while healthy,
+    /// and nothing while not, so the dispatcher sends every op to the CPU
+    /// after a device loss until `recover()`.
+    public var effectiveSupports: Set<RenderOp> {
+        healthy ? supported : []
+    }
 
     /// A healthy backend that supports nothing yet, with no error.
     public init() {

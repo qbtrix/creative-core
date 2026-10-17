@@ -47,4 +47,15 @@ import Testing
         #expect(once == twice)
         #expect(twice.supported == [.blur])
     }
+
+    @Test func failEmptiesEffectiveSupportsAndRecoverRestoresIt() {
+        var capabilities = MetalCapabilities()
+        capabilities.enable(.display)
+        #expect(capabilities.effectiveSupports == [.display])
+        capabilities.fail("x")
+        #expect(capabilities.effectiveSupports.isEmpty, "an unhealthy backend supports nothing")
+        #expect(capabilities.supported == [.display])
+        capabilities.recover()
+        #expect(capabilities.effectiveSupports == [.display])
+    }
 }

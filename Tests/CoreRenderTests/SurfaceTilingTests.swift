@@ -155,4 +155,20 @@ private struct SplitMix64: RandomNumberGenerator {
             #expect(tiling.tiles(touching: x, y: y, width: width, height: height) == expected, "rect (\(x), \(y), \(width)x\(height))")
         }
     }
+
+    @Test func defaultBudgetIsHalfTheWorkingSetButAtLeastOneTile() {
+        let tile = SurfaceTiling.tileSize * SurfaceTiling.tileSize * 8
+        #expect(tile == 524_288)
+        #expect(SurfaceTiling.defaultBudget(workingSet: 0, tileBytes: tile) == tile)
+        #expect(SurfaceTiling.defaultBudget(workingSet: 1, tileBytes: tile) == tile)
+        #expect(SurfaceTiling.defaultBudget(workingSet: 8_000_000_000, tileBytes: tile) == 4_000_000_000)
+        #expect(SurfaceTiling.defaultBudget(workingSet: .max, tileBytes: tile) == Int(UInt64.max / 2))
+    }
+
+    @Test func theLastRowIsClippedToTheSurface() throws {
+        let tiling = try SurfaceTiling(width: 10, height: 300)
+        #expect(tiling.rows == 2)
+        #expect(try tiling.rect(1).height == 44)
+        #expect(try tiling.rect(0).height == 256)
+    }
 }

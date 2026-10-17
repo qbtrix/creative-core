@@ -33,5 +33,26 @@
     "anchor": "return overflow ? bound - 1 : min(end, bound - 1)",
     "replacement": "return overflow ? bound - 1 : min(end + 1, bound - 1)",
     "filter": "SurfaceTilingTests"
+  },
+  {
+    "note": "surface tiling last row is a full tile instead of clipped to the surface (CoreRaster's shared tile rect)",
+    "file": "Sources/CoreRaster/Tiles.swift",
+    "anchor": "height: min(tileSize, height - y)",
+    "replacement": "height: tileSize",
+    "filter": "SurfaceTilingTests|TilesTests"
+  },
+  {
+    "note": "surface tiling default budget drops its one-tile floor",
+    "file": "Sources/CoreRender/Metal/SurfaceTiling.swift",
+    "anchor": "max(Int(clamping: workingSet / 2), tileBytes)",
+    "replacement": "Int(clamping: workingSet / 2)",
+    "filter": "SurfaceTilingTests"
+  },
+  {
+    "note": "surface tiling default budget takes the whole working set instead of half",
+    "file": "Sources/CoreRender/Metal/SurfaceTiling.swift",
+    "anchor": "Int(clamping: workingSet / 2)",
+    "replacement": "Int(clamping: workingSet)",
+    "filter": "SurfaceTilingTests"
   }
 ]
