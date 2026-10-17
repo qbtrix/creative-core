@@ -24,3 +24,4 @@ utc	stage	event	ref	note
 2026-10-17T13:12Z	3	ci-run	dev 9b72477	39031409068 failure: macOS MetalPipelinesTests (#362), Linux green; dev-red #365
 2026-10-17T13:24Z	4	anatomy-round	dev 3be8939	round 1 not clean; minor findings to fixer
 2026-10-17T13:33Z	4	pr-opened	dev 23af67b	#371 RB-a Anatomy round 1 fixes, head 0c9318d
+2026-10-17T13:31Z	4	anatomy-round	dev a6ad242	RB-a round 2 not clean; 2 minor to fixer (#371 merged)
