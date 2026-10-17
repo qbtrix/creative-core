@@ -2,7 +2,7 @@
 
 Issue: #348 · Packet: docs/blueprints/core/features/metal-backend.md
 Run: act-1a14ab2b672-8guo · Resumed: 2026-10-17T16:33Z (fourth run; earlier act-1a149b549c8-v538, act-1a148001532-1w03, act-1a14644b538-njln)
-Stage: 4 fix round r3 running (wf_6419df5b-b06; r3g merged #413); wave 8 done (MB-10 #418 merged; check: composite guard removal is required by enabling the family, body has a stray '---' after Head, cosmetic); dev CI 39051011998 on 1601a97: Linux green, macOS red (ParityTests+Adjust.swift static member without Self., from #405), fix PR #417 open; Belt-Slice-Done MB-c posted
+Stage: 4 round r4 (gate on dev 58ed68f: CI: PASS 1045; mutate running); fix round r3 merged (#410, #411, #413, #416); #417 macOS compile fix merged; MB-10 #418 merged; dev CI 39052919097 running on af0b73e (holds MB-g's last PR #417)
 Base: 4e27e16 (origin/dev)
 Next (for a relaunched lead): gate+mutate on dev (--changed-since 17b2ea5) → critic-panel.js (firstBase 17b2ea5, lenses clarity, correctness, reuse+packet, test oracle) → one fix-batch per slice, disjoint files; build MB-9 then MB-10 (MB-e) and MB-15 (MB-h) alongside; Belt-Slice-Done MB-c/MB-f/MB-g once a dev CI Linux job holding #401..#406 is green; then MB-17 (feature-done) and the contact sheet. PR bodies say Refs #348, never Closes.
 

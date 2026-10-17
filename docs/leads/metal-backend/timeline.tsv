@@ -122,3 +122,5 @@ utc	stage	event	ref	note
 2026-10-17T17:16:00Z	4	dev-mac-red	#417	macOS job fails to compile ParityTests+Adjust.swift (toneAdjustments without Self.); one-line fix PR #417 fast-lane
 2026-10-17T17:16:30Z	5	slice-done	MB-c	Belt-Slice-Done + Mac-Finish-Wanted MB-c, run 39051011998 Linux green
 2026-10-17T17:20:00Z	3	wave8-done	wf_9c58324f-54b	MB-10 #418 merged; check flagged stray --- after Head (cosmetic, merged) and composite guard removal (needed: family now enabled, compositeInPlace gates on effectiveSupports)
+2026-10-17T17:27:00Z	4	fix-done	wf_6419df5b-b06	r3g #413, r3f1 #410, r3f2 #411, r3b #416 all merged, ciPass true
+2026-10-17T17:28:00Z	4	round-start	r4	gate on 58ed68f CI: PASS 1045; mutate --changed-since 17b2ea5 running
