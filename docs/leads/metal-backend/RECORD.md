@@ -2,7 +2,7 @@
 
 Issue: #348 · Packet: docs/blueprints/core/features/metal-backend.md
 Run: act-1a14ab2b672-8guo · Resumed: 2026-10-17T17:00Z (fourth run; earlier act-1a149b549c8-v538, act-1a148001532-1w03, act-1a14644b538-njln)
-Stage: 4 regenerated Anatomy round on 4e27e16: MB-b and MB-d (their 2nd and last fix round; the r2 findings and fixer died with the last session, no branch was pushed) plus first rounds for MB-c, MB-f, MB-g; wave 7 next: MB-9 (MB-e), MB-15 (MB-h)
+Stage: 4 round 3 panel running (wf_224afe04-1a3) on 4e27e16 for MB-b, MB-c, MB-d, MB-f, MB-g; wave 7 building MB-9 and MB-15 (wf_af38a0ca-0df); gate PASS 1037 tests
 Base: 4e27e16 (origin/dev)
 Next (for a relaunched lead): gate+mutate on dev (--changed-since 17b2ea5) → critic-panel.js (firstBase 17b2ea5, lenses clarity, correctness, reuse+packet, test oracle) → one fix-batch per slice, disjoint files; build MB-9 then MB-10 (MB-e) and MB-15 (MB-h) alongside; Belt-Slice-Done MB-c/MB-f/MB-g once a dev CI Linux job holding #401..#406 is green; then MB-17 (feature-done) and the contact sheet. PR bodies say Refs #348, never Closes.
 

@@ -111,3 +111,6 @@ utc	stage	event	ref	note
 2026-10-17T16:29:54Z	3	feature issue reopened	#348	#406 body said Closes #348 and dev is default; reopened; fixer extra now forbids Closes
 2026-10-17T16:29:54Z	4	fix round 2 launched	wf_c70605f7-96e	batches r2b (MB-b, 9 findings) r2d (MB-d, 5) on 4e27e16; last round
 2026-10-17T16:33:27Z	0	stage-start	act-1a14ab2b672-8guo	resumed on dev 4e27e16; lead/metal-backend recreated on dev (history rewritten, no merge base); r2 fixer lost, regenerating round on 4e27e16
+2026-10-17T16:35:29Z	4	gate	scripts/ci 4e27e16	CI: PASS 1037 tests; mutate --changed-since 17b2ea5 running
+2026-10-17T16:35:29Z	4	round3-start	wf_224afe04-1a3	panel on 4e27e16 for MB-b,c,d,f,g (lenses clarity, correctness, reuse+packet, test oracle)
+2026-10-17T16:35:29Z	3	wave7-start	wf_af38a0ca-0df	builders MB-9 (MB-e), MB-15 (MB-h) on 4e27e16
