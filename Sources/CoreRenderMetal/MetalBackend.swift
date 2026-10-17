@@ -293,9 +293,10 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
                             threshold: Double) throws -> RenderSurface {
         throw RenderError.unsupported(.blur)
     }
-    /// Tone adjustments: MB-13 and MB-14. Throws `unsupported(.adjust)`.
+    /// Tone adjustments: exposure, levels and curves (MB-13, MetalBackend+Adjust.swift); the develop
+    /// sliders throw `unsupported(.adjust)` until MB-14, which also enables `.adjust` in `supports`.
     public func adjusted(_ s: RenderSurface, _ adjustment: ToneAdjustment) throws -> RenderSurface {
-        throw RenderError.unsupported(.adjust)
+        try adjust(s, adjustment)
     }
     /// Clone through a mask: MB-15. Throws `unsupported(.retouch)`.
     public func cloned(_ s: RenderSurface, offset: (dx: Int, dy: Int), through mask: Mask) throws -> RenderSurface {
