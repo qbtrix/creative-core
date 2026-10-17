@@ -33,5 +33,12 @@
     "anchor": "ahead.overflow ? Int.max : ahead.partialValue",
     "replacement": "ahead.partialValue",
     "filter": "OnionTests"
+  },
+  {
+    "note": "onion duration guard lets Int.min reach the range",
+    "file": "Sources/FlareCore/Onion.swift",
+    "anchor": "guard durationFrames > 0 else { return [] }",
+    "replacement": "guard durationFrames != 0 else { return [] }",
+    "filter": "OnionTests"
   }
 ]
