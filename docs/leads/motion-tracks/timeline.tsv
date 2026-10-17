@@ -34,3 +34,5 @@ utc	stage	event	ref	note
 2026-10-16T21:30Z	3	stopped	dfb6aa7	third stall; blocked on QB-L5 budget decision; issue labelled needs-human
 2026-10-17T07:00Z	3	stage-start	dev 24fd483	relaunch act-1a149b544ea-emiq; QB-L5 ruled; gap #360 filed; MT-5 building
 2026-10-17T13:08Z	3	heartbeat	dev 3be8939	builders done; reading dev CI 39031409068
+2026-10-17T13:12Z	3	pr-merged	dev 3be8939	MT-5 #363 9b72477 feature-done
+2026-10-17T13:12Z	3	ci-run	dev 9b72477	39031409068 failure: macOS MetalPipelinesTests (#362), Linux green; dev-red #365

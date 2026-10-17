@@ -2,9 +2,9 @@
 
 Issue: #313 · Packet: docs/blueprints/core/features/motion-tracks.md
 Run: act-1a149b544ea-emiq (line lead: render-backend, motion-tracks) · Started: 2026-10-17 (prior runs act-1a1463a91ae-nkkr, act-1a142b4b27e-bv69)
-Stage: 3 wave d (MT-5 building per the supervisor's QB-L5 ruling on #313, 06:06Z)
-Base: 24fd483 (origin/dev)
-Next: MT-5 PR (feature-done, Refs #228) merges; dev CI green; one Anatomy round; contact sheet on #313; then stop (feature is out of the beta cut).
+Stage: 4 Anatomy (all waves merged; MT-5 #363 feature-done)
+Base: 3be8939 (origin/dev)
+Next: one Anatomy round on dev; contact sheet on #313 once a dev CI run holding 9b72477 is green (39031409068 was red on macOS only, MetalPipelinesTests from #362, dev-red #365; Linux green); then stop.
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -13,7 +13,7 @@ Next: MT-5 PR (feature-done, Refs #228) merges; dev CI green; one Anatomy round;
 | MT-2 | a | Lottie opacity and rotation tracks | LottieExporter.swift, LottieTracksTests | LottieTracksTests | FlareLottieTracks.json | #315 | merged |
 | MT-3 | b | Lottie scale tracks, maxBakedKeys | LottieExporter.swift, LottieScaleTrackTests | LottieScaleTrackTests | FlareLottieScale.json | #328 | merged |
 | MT-4 | c | Lottie gradient stop alpha | LottieExporter.swift, LottieGradientAlphaTests | LottieGradientAlphaTests | FlareLottieGradientAlpha.json | #346 (merged 6967968) | merged |
-| MT-5 | d | FlareBudgetTests reference scene; feature-done | FlareBudgetTests.swift | FlareBudgetTests | - | branch motion-tracks/mt-5 | building |
+| MT-5 | d | FlareBudgetTests reference scene; feature-done | FlareBudgetTests.swift | FlareBudgetTests | - | #363 (9b72477) | merged |
 
 ## Rounds
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
@@ -29,5 +29,7 @@ Next: MT-5 PR (feature-done, Refs #228) merges; dev CI green; one Anatomy round;
 - QB-L5 ruling (supervisor, #313 06:06Z): keep the 10 ms budget and the reference scene; disable hitWithinBudget on reference with the reason naming gap #360 (filed, p3); QB-L6..QB-L8 stay asserted. MT-5 carries feature-done and Refs #228 (does not close it).
 
 ## Open
+- Dev CI 39031409068 (9b72477, triggered by feature-done): Linux, Mutation, anchors green; macOS red in MetalPipelinesTests (metal-backend #362, not this feature). Waiting for the next green dev run.
+- QB-L5 hit median measured 10.4-11 ms on the Linux sandbox vs 17 ms on reference; noted for gap #360.
 - Packet says the lead's critic panel is run after the build waves; not yet run.
 - Issue #313 shows state reopened; no contact sheet yet.
