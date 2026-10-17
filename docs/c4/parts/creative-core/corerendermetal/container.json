@@ -11,7 +11,7 @@
     {
       "source": "corerendermetal",
       "target": "corerender",
-      "description": "implements the RenderBackend contract, measured against the CPU backend",
+      "description": "implements the RenderBackend contract, measured against the CPU backend as it lands",
       "style": "sync"
     }
   ]

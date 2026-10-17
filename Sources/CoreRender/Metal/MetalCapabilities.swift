@@ -1,21 +1,21 @@
 // MetalCapabilities.swift: what the Metal backend has proven it can run, and
-// whether it is fit to run it right now. The dispatcher reads both: an op is
-// routed to Metal only when it is in `supported` and the backend is `healthy`.
+// whether it is fit to run it right now. Routing, as it lands, reads both: an
+// op goes to Metal only when it is in `supported` and the backend is `healthy`.
 // Invariants: `supported` only ever grows, and `fail` keeps it (so a status
 // note can still say what would run on a working device); `healthy` and
 // `lastError` move together, `fail` setting both and `recover` clearing both;
 // `effectiveSupports` is empty while not healthy.
 
-/// The Metal backend's capability and health state, as the dispatcher sees it.
+/// The Metal backend's capability and health state, as routing will see it.
 public struct MetalCapabilities: Equatable, Sendable {
-    /// The op families the backend has proven by parity against the CPU. The
-    /// dispatcher routes an op to Metal only when it is here; every other op
-    /// goes to the CPU. Grows one family per slice; `fail` does not shrink it.
+    /// The op families the backend has proven by parity against the CPU.
+    /// Routing, as it lands, sends an op to Metal only when it is here, and
+    /// every other op to the CPU. Grows one family per slice; `fail` does not shrink it.
     public private(set) var supported: Set<RenderOp>
 
     /// False after a device loss or command-buffer error, until `recover()`.
-    /// An unhealthy backend is routed around: the dispatcher sends every op,
-    /// supported or not, to the CPU.
+    /// An unhealthy backend is to be routed around: routing, as it lands,
+    /// sends every op, supported or not, to the CPU.
     public private(set) var healthy: Bool
 
     /// The reason of the last `fail`, nil while healthy. Shown in the
@@ -23,8 +23,8 @@ public struct MetalCapabilities: Equatable, Sendable {
     public private(set) var lastError: String?
 
     /// What the backend reports as its `supports`: `supported` while healthy,
-    /// and nothing while not, so the dispatcher sends every op to the CPU
-    /// after a device loss until `recover()`.
+    /// and nothing while not, so routing, as it lands, sends every op to the
+    /// CPU after a device loss until `recover()`.
     public var effectiveSupports: Set<RenderOp> {
         healthy ? supported : []
     }
@@ -36,14 +36,14 @@ public struct MetalCapabilities: Equatable, Sendable {
         lastError = nil
     }
 
-    /// Marks `op` as proven: the dispatcher may route it to Metal while the
-    /// backend is healthy. Enabling an op twice is the same as once.
+    /// Marks `op` as proven: routing, as it lands, may send it to Metal while
+    /// the backend is healthy. Enabling an op twice is the same as once.
     public mutating func enable(_ op: RenderOp) {
         supported.insert(op)
     }
 
     /// Records a device loss or command-buffer error: the backend turns
-    /// unhealthy with `reason` as `lastError`, so the dispatcher routes
+    /// unhealthy with `reason` as `lastError`, so routing, as it lands, sends
     /// everything to the CPU. `supported` is kept, so the status note can say
     /// what would run once the backend recovers.
     public mutating func fail(_ reason: String) {
