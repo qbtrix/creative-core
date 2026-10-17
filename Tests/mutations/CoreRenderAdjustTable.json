@@ -12,5 +12,12 @@
     "anchor": "let f = v.squareRoot() * Float(n)",
     "replacement": "let f = v * Float(n)",
     "filter": "AdjustTableTests"
+  },
+  {
+    "note": "white balance gains swap red and blue so the temperature slider sign flips",
+    "file": "Sources/CoreRender/Metal/AdjustTable.swift",
+    "anchor": "SIMD3(ys[steps].r, ys[steps].g, ys[steps].b)",
+    "replacement": "SIMD3(ys[steps].b, ys[steps].g, ys[steps].r)",
+    "filter": "AdjustTableTests"
   }
 ]
