@@ -1,8 +1,8 @@
 // ToneAdjustment.swift: the tone adjustments `RenderBackend.adjusted` takes,
 // one case per CoreRaster `PixelBuffer` adjustment method, with the labels,
-// types and defaults of that method, so the CPU backend maps each case to its
-// call with no conversion and the Metal backend has the same parameters to
-// match. Units are CoreRaster's; parameter checks stay in CoreRaster.
+// types and defaults of that method, so a CPU backend, as it lands, can map
+// each case to its call with no conversion and the Metal backend has the same
+// parameters to match. Units are CoreRaster's; parameter checks stay in CoreRaster.
 import CoreRaster
 
 /// One tone adjustment, as CoreRaster's `Adjustments.swift` defines it.

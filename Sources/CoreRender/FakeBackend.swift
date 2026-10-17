@@ -9,7 +9,8 @@
 // Invariants: every method records its call first; an op outside `supports`
 // then throws `unsupported` with the family that gates it; a surface this fake
 // did not make, or released, throws `surfaceMismatch`. Copies share the log
-// and the store, so a copy handed to a dispatcher reports to the test's copy.
+// and the store, so a copy handed to other code, such as routing as it lands,
+// reports to the test's copy.
 
 import CoreColor
 import CoreRaster
