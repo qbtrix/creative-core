@@ -2,9 +2,9 @@
 
 Issue: #348 · Packet: docs/blueprints/core/features/metal-backend.md
 Run: act-1a14ab2b672-8guo · Resumed: 2026-10-17T16:33Z (fourth run; earlier act-1a149b549c8-v538, act-1a148001532-1w03, act-1a14644b538-njln)
-Stage: 5/5 finish: all r4 PRs and MB-17 #427 merged (dev 3094ab1, feature-done); full CI run https://github.com/qbtrix/creative-core/actions/runs/39063037947 queued. Next: Linux green on that run, then Slice-Done and Mac-Finish-Wanted for MB-e/MB-f/MB-h, contact sheet on #348
+Stage: 5/5 finished: every metal-backend PR merged (dev 3094ab1, MB-17 #427 feature-done); Linux green on full CI run https://github.com/qbtrix/creative-core/actions/runs/39063037947; Belt-Slice-Done and Mac-Finish-Wanted posted for MB-e, MB-f, MB-h; Belt-Contact-Sheet posted on #348 (issuecomment-6239763988). Next: Mac finisher verifies MB-a, MB-b, MB-c, MB-d, MB-e, MB-f, MB-g, MB-h
 Base: 4e27e16 (origin/dev)
-Next (for a relaunched lead): wait for wf_649a731c-c00 PRs to merge (round 4 is the last round; no r5) → Belt-Slice-Done MB-e/MB-f once a dev CI Linux job holding #418 and #411 (dev 58ed68f or later) is green → MB-17 (feature-done: background compile + First launch row, fourKCompositeP95Under4ms on, no disabled parity family, supports == all on tier 2, waves.md counts, doc leftovers) → MB-h Slice-Done, contact sheet on #348. PR bodies say Refs #348, never Closes.
+Next: Mac finisher verifies MB-a, MB-b, MB-c, MB-d, MB-e, MB-f, MB-g, MB-h (budgets and parity on the Mac). Lead done; open findings are gap issues #419, #420, #421.
 
 ## Loop
 
@@ -20,12 +20,12 @@ Every PR body: `Belt-Lead: act-1a14ab2b672-8guo`, `Feature: metal-backend`,
 |---|---|---|---|---|---|
 | MB-a | MB-1, MB-2 | render-backend:RB-a (contract types landed as #352) | merged-done; 3 rounds run (round 3: 19 confirmed; majors in #385, docs in #387, rest deferred to MB-17); round 4 pending | 39010063417 | wanted (posted on run 39040738062) |
 | MB-b | MB-3, MB-4 | MB-a | merged-done (#389, #392; fix round 1 #403, #404); fix round 2 regenerating on 4e27e16 | 39043767442 | wanted (39044767871) |
-| MB-c | MB-5, MB-6 | MB-b | merged (#398, #401); Belt-Slice-Done posted (Linux green, run 39051011998); Mac-Finish-Wanted posted | – | – |
+| MB-c | MB-5, MB-6 | MB-b | merged-done (#398, #401) | 39051011998 | wanted (39051011998) |
 | MB-d | MB-7, MB-8 | MB-a | merged-done (#390, #393; fix round 1 #403, #404); fix round 2 regenerating | 39044767871 | wanted (39044767871) |
-| MB-e | MB-9, MB-10 | MB-c | MB-9 merged #408; MB-10 merged #418 (17:18Z); Slice-Done waits on a dev Linux run holding #418 | – | – |
-| MB-f | MB-11, MB-12 | MB-d | merged (#402, #406); Linux green on 39051011998; Slice-Done waits on fix PRs r3f1, r3f2 | – | – |
+| MB-e | MB-9, MB-10 | MB-c | merged-done (#408, #418, r4 fixes) | 39063037947 | wanted (39063037947) |
+| MB-f | MB-11, MB-12 | MB-d | merged-done (#402, #406, r3/r4 fixes) | 39063037947 | wanted (39063037947) |
 | MB-g | MB-13, MB-14 | MB-a | merged (#400, #405, #413, #417); Belt-Slice-Done posted; Mac-Finish-Wanted posted | 39052919097 | wanted |
-| MB-h | MB-15, MB-16, MB-17 | MB-b to MB-g | MB-16 merged #366; MB-15 merged #409; MB-17 last (feature-done) | – | – |
+| MB-h | MB-15, MB-16, MB-17 | MB-b to MB-g | merged-done (#409, #366, #427 feature-done) | 39063037947 | wanted (39063037947) |
 
 ## Tasks
 
