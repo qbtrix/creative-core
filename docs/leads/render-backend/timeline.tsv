@@ -34,3 +34,4 @@ utc	stage	event	ref	note
 2026-10-17T13:47Z	3	pr-merged	dev 4682eee	#377 RB-3 CPU backend (5 mutations caught; replace now used)
 2026-10-17T13:47Z	3	build-wave	dev 4682eee	wave 4: RB-4 and RB-5 builders launched
 2026-10-17T13:47Z	4	anatomy-round	dev 4682eee	RB-a round 4 (final) started: critic and gate
+2026-10-17T13:48Z	4	anatomy-round	dev 4682eee	RB-a round 4 (final) not clean; 1 comment to RB-5 PR; loop ends at 4 rounds
