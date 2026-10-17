@@ -9,7 +9,7 @@ Next: RB-3 builder (CPUBackend on SurfaceStore, base 3be8939); Anatomy round on 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
 |---|---|---|---|---|---|
-| RB-a | RB-1, RB-2a, RB-2b | nothing | Anatomy round 1 not clean; fixer building | – | – |
+| RB-a | RB-1, RB-2a, RB-2b | nothing | round 1 fixes in #371; round 2 after merge | – | – |
 | RB-b | RB-3, RB-4, RB-5 | RB-a | open | – | – |
 | RB-c | RB-6, RB-7 | RB-b (RB-7 only) | open (RB-6 merged) | – | – |
 
@@ -28,7 +28,7 @@ Next: RB-3 builder (CPUBackend on SurfaceStore, base 3be8939); Anatomy round on 
 ## Rounds
 | round | slice | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
 |---|---|---|---|---|---|---|---|---|---|
-| 1 | RB-a | 3be8939 | 962/964; 2 known wall-clock flakes under load (StageBudget hit 11.1 ms, EngineStress 10.2 s), 3 builders running alongside | CoreRenderFake 7/7 | 39031409068 (Linux green) | correctness, rules fit, first-use clarity | 6 minor: size check untested (C1), SurfaceStore.replace dead (C2), C4 and doc text claims CPU backend and dispatcher (R1), 4 private SplitMix64 copies (R2), surfaceMismatch doc misses wrong size (U1); C3 (disabled CPU/dispatcher test files) already decided | fixer PR render-backend/rb-a-anatomy (C1, R1, R2, U1); RB-3 PR (C2) | no |
+| 1 | RB-a | 3be8939 | 962/964; 2 known wall-clock flakes under load (StageBudget hit 11.1 ms, EngineStress 10.2 s), 3 builders running alongside | CoreRenderFake 7/7 | 39031409068 (Linux green) | correctness, rules fit, first-use clarity | 6 minor: size check untested (C1), SurfaceStore.replace dead (C2), C4 and doc text claims CPU backend and dispatcher (R1), 4 private SplitMix64 copies (R2), surfaceMismatch doc misses wrong size (U1); C3 (disabled CPU/dispatcher test files) already decided | #371 (C1, R1, R2, U1; open, fast-lane); RB-3 PR (C2) | no |
 
 ## Decisions
 - Recorder question (asked 02:55Z, no ruling): backends keep the non-mutating protocol and hold storage behind a lock, as MetalBackend on dev (#354) already does. The CPU backend needs the same thing anyway (the packet's CPUSurface is a class), so this is the backend pattern, not a model type. FakeBackend stays a struct as the packet spells it; its call log and surfaces live in a shared reference-typed store. One store type (SurfaceStore) serves the fake and the CPU backend (rule 16).
