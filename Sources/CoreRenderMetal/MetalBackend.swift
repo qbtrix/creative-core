@@ -7,7 +7,7 @@
 // `residentBytes` sums the live surfaces' resident tiles and stays at or under `budgetBytes`
 // after every upload (MetalBackend+Memory.swift), a surface this backend did not make
 // throws `surfaceMismatch`, `.display`, `.transform`, `.resample` and (read-write tier 2) `.composite` and
-// `.blendSeparable` start enabled; every other op (non-separable blends, blur, adjust, retouch) throws
+// `.blendSeparable` and `.adjust` start enabled; every other op (non-separable blends, blur, retouch) throws
 // `unsupported` until its slice, and display and composite throw it while unhealthy; a probe, a command
 // buffer or a texture allocation that fails leaves the backend unhealthy with the reason in
 // `capabilities.lastError` (so `deviceLost` is only ever thrown with `isHealthy` false), and only a
@@ -20,9 +20,9 @@ import CoreRender
 import Foundation
 import Metal
 
-/// The Metal `RenderBackend`: tiled rgba16Float surfaces on one GPU. Display, transform (crop, rotate) and
-/// resample run; `.normal` and the separable blend modes composite on read-write texture tier 2; non-separable
-/// blends, blur, adjust and retouch throw `RenderError.unsupported` until their slices land, and display and
+/// The Metal `RenderBackend`: tiled rgba16Float surfaces on one GPU. Display, transform (crop, rotate),
+/// resample and adjust run; `.normal` and the separable blend modes composite on read-write texture tier 2; non-separable
+/// blends, blur and retouch throw `RenderError.unsupported` until their slices land, and display and
 /// composite throw it while the backend is unhealthy; `supports` tells the dispatcher which run.
 public final class MetalBackend: RenderBackend, @unchecked Sendable {
     /// The system's default GPU, or nil without one; tests gate on `.enabled(if: defaultDevice != nil)`.
@@ -65,6 +65,7 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
             state.enable(.blendSeparable)  // MB-6
         }
         state.enable(.resample)
+        state.enable(.adjust)  // MB-14
     }
 
     /// "Metal (<device name>)": the status note's text and every surface's `backend`.
@@ -302,8 +303,7 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
                             threshold: Double) throws -> RenderSurface {
         throw RenderError.unsupported(.blur)
     }
-    /// Tone adjustments: exposure, levels and curves (MB-13, MetalBackend+Adjust.swift); the develop
-    /// sliders throw `unsupported(.adjust)` until MB-14, which also enables `.adjust` in `supports`.
+    /// Tone adjustments, every case (MB-13, MB-14, MetalBackend+Adjust.swift); `unsupported(.adjust)` while unhealthy.
     public func adjusted(_ s: RenderSurface, _ adjustment: ToneAdjustment) throws -> RenderSurface {
         try adjust(s, adjustment)
     }

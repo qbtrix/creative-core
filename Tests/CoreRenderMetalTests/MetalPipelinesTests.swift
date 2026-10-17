@@ -3,8 +3,8 @@
 // rejected, a missing kernel is caller input (not a device loss), a file at `cacheURL` is never
 // touched, a probe or command-buffer failure fails the backend, `fail` empties `supports`, `recover`
 // restores only once its probe passes, a caller's `display_probe` never replaces the probe, a
-// caller's `display_encode` never replaces the display kernel, `display`, `composite`, crop, rotate and
-// resample refuse while unhealthy (`unsupported` of their family),
+// caller's `display_encode` never replaces the display kernel, `display`, `composite`, crop, rotate,
+// resample and adjust refuse while unhealthy (`unsupported` of their family),
 // and the tile storage mode follows unified memory. Device-gated; compiled out on Linux.
 #if canImport(Metal)
 import CoreRaster
@@ -176,6 +176,7 @@ import Testing
         #expect(throws: RenderError.unsupported(.transform)) { try backend.cropped(surface, x: 0, y: 0, width: 2, height: 2) }
         #expect(throws: RenderError.unsupported(.transform)) { try backend.rotated(surface, .degrees90) }
         #expect(throws: RenderError.unsupported(.resample)) { try backend.resampled(surface, width: 8, height: 6, filter: .bilinear) }
+        #expect(throws: RenderError.unsupported(.adjust)) { try backend.adjusted(surface, .contrast(40)) }
         #expect(backend.pipelineCompileCount == 0, "no GPU work for an unhealthy backend")
     }
 
