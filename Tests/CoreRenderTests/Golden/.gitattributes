@@ -1,0 +1,2 @@
+# Golden pixels are raw RGBA bytes: never diff, merge or convert line endings.
+*.rgba8 binary
