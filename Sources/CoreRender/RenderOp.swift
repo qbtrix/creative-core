@@ -53,7 +53,8 @@ public enum RenderError: Error, Equatable, Sendable {
     /// gave. The backend reports `isHealthy == false` from then on.
     case deviceLost(String)
     /// The surface belongs to another backend (its `backend` is not this
-    /// backend's `name`), or this backend already released it.
+    /// backend's `name`), this backend already released it, or the handle's
+    /// width and height do not match its stored pixels.
     case surfaceMismatch
     /// Invalid input or data, with a message saying which: a CoreRaster error
     /// passed through (from the CPU backend, a buffer read in or out, or a
