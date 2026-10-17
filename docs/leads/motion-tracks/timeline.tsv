@@ -50,3 +50,4 @@ utc	stage	event	ref	note
 2026-10-17T13:55Z	4	pr-merged	dev 3abd592	#378 round 4 fix (2 mutation entries); waiting on dev CI for contact sheet
 2026-10-17T14:05Z	4	gate	dev 07c7a70	993/993 CI: PASS; FlareOnion 6/6, FlareLottieScale 8/8 (with #378)
 2026-10-17T14:06Z	4	heartbeat	dev 07c7a70	waiting for a dev CI run holding 3abd592 for the contact sheet
+2026-10-17T14:24Z	5	heartbeat	dev 8cd012a	waiting on a dev CI run holding 3abd592 with green Linux; newest run 39037816632 is on 4b2aa75
