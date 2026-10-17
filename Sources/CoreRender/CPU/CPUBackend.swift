@@ -8,13 +8,13 @@
 // resample, blur, adjust and retouch, each a new surface through `derived`.
 // Invariants: a surface this backend did not make, has released, or whose
 // size disagrees with its pixels throws `surfaceMismatch`; `composite` blends
-// in place through CoreRaster at the given opacity and stores the result under
-// the backdrop's id, so `read(b)` sees it; every CoreRaster error comes back as
-// `RenderError.raster` through `RenderError.mapping`. Sizes are CoreRaster's
+// through CoreRaster at the given opacity on the backdrop's stored pixels, in
+// place under the store's lock, so `read(b)` sees it; every CoreRaster error
+// comes back as `RenderError.raster` through `RenderError.mapping`. Sizes are CoreRaster's
 // (`PixelBuffer.validatedSize`), so no size arithmetic happens here.
-// Two composites at once onto copies of one backdrop handle keep only one
-// result: each reads, blends and stores the whole backdrop, and the last
-// store wins.
+// Composites onto one backdrop surface run one at a time under the store's
+// lock, and each applies in turn on the result of the one before; every other
+// call on this backend waits while a composite runs.
 import CoreColor
 import CoreRaster
 
@@ -51,14 +51,19 @@ public struct CPUBackend: RenderBackend {
         return try RenderError.mapping { try buffer.rgba8(colorSpace: colorSpace) }
     }
 
-    /// Blends `s` onto `b` with CoreRaster's in-place composite and stores the
-    /// result under `b`'s id. A throw leaves `b`'s stored pixels unchanged.
+    /// Blends `s` onto `b` with CoreRaster's in-place composite, on `b`'s
+    /// stored pixels themselves (`SurfaceStore.update`), so a 12 MP backdrop is
+    /// never copied. `b` keeps its id and size. A bad opacity, or a surface this
+    /// backend cannot resolve, throws before any pixel changes. A result that
+    /// overflows to infinity throws with the rows above it already composited,
+    /// as CoreRaster's `PixelBuffer.composite` does. The store's lock is held
+    /// for the whole blend, so other calls on this backend wait while it runs.
     public func composite(_ s: RenderSurface, onto b: inout RenderSurface, x: Int, y: Int,
                           mode: BlendMode, opacity: Float) throws {
         let source = try input(s, RenderOp(compositing: mode))
-        var backdrop = try store.buffer(for: b)
-        try RenderError.mapping { try backdrop.composite(source, x: x, y: y, mode: mode, opacity: opacity) }
-        try store.replace(b, with: backdrop)
+        try store.update(b) { backdrop in
+            try RenderError.mapping { try backdrop.composite(source, x: x, y: y, mode: mode, opacity: opacity) }
+        }
     }
 
     /// `body` run on `s`'s pixels, gated by `op`, with any CoreRaster error

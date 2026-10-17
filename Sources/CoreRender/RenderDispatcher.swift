@@ -12,10 +12,12 @@
 // made by the other backend is read from its owner and uploaded to the
 // target first, so a fallback never changes a pixel. An uploaded input is
 // released after the op; an uploaded backdrop replaces the caller's handle
-// and the owner's copy is released. A surface neither backend made is passed
+// and the owner's copy is released, unless the backdrop is also the source,
+// which the caller still holds. A surface neither backend made is passed
 // on, and the target throws `surfaceMismatch`. Copies share `lastFallback`.
-// Two composites at once onto copies of one backdrop handle keep only one
-// result, as on the CPU backend.
+// Composites onto one CPU surface run one at a time under the CPU store's
+// lock, and each applies in turn. A backdrop uploaded first becomes a new
+// surface on each call, so composites racing onto it do not combine.
 import CoreColor
 import CoreRaster
 
