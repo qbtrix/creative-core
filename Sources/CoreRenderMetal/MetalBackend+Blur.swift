@@ -27,7 +27,10 @@ extension MetalBackend {
         let table = try BlurTable(sigma: sigma, width: w, height: h)
         if table.isIdentity { return try blurStore(blurAllocate { try MetalSurface(device: device, buffer: image, clock: clock) }, w, h) }
         // A valid image whose buffers exceed this GPU's limit is a device limit, not bad input.
-        guard w * h * 16 <= bufferLimit ?? device.maxBufferLength else { throw RenderError.unsupported(.blur) }
+        guard SurfaceTiling.wholeImageFits(width: w, height: h, bytesPerPixel: 16,
+                                          maxBufferLength: bufferLimit ?? device.maxBufferLength) else {
+            throw RenderError.unsupported(.blur)
+        }
         let (pass, scatter) = try withLock { () throws -> (any MTLComputePipelineState, any MTLComputePipelineState) in
             (try pipelines.pipeline(for: BlurShader.pass, source: BlurShader.source),
              try pipelines.pipeline(for: ResampleShader.scatter, source: ResampleShader.source))

@@ -54,5 +54,26 @@
     "anchor": "Int(clamping: workingSet / 2)",
     "replacement": "Int(clamping: workingSet)",
     "filter": "SurfaceTilingTests"
+  },
+  {
+    "note": "surface tiling whole image fits is off by one at the buffer limit (< for <=)",
+    "file": "Sources/CoreRender/Metal/SurfaceTiling.swift",
+    "anchor": "bytes <= maxBufferLength",
+    "replacement": "bytes < maxBufferLength",
+    "filter": "SurfaceTilingTests"
+  },
+  {
+    "note": "surface tiling whole image fits treats an overflowing byte count as fitting",
+    "file": "Sources/CoreRender/Metal/SurfaceTiling.swift",
+    "anchor": "!pixelsOverflow && !bytesOverflow && bytes",
+    "replacement": "bytes",
+    "filter": "SurfaceTilingTests"
+  },
+  {
+    "note": "surface tiling whole image fits accepts negative sides whose product is positive",
+    "file": "Sources/CoreRender/Metal/SurfaceTiling.swift",
+    "anchor": "guard width >= 0, height >= 0, bytesPerPixel >= 0 else { return false }",
+    "replacement": "",
+    "filter": "SurfaceTilingTests"
   }
 ]

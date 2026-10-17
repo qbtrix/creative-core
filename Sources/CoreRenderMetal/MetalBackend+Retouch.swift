@@ -29,7 +29,8 @@ extension MetalBackend {
         guard dx > -w, dx < w, dy > -h, dy < h else {
             return try retouchStore(retouchAllocate { try MetalSurface(device: device, buffer: image, clock: clock) })
         }
-        guard w * h * 16 <= device.maxBufferLength, w <= Int(Int32.max), h <= Int(Int32.max) else {
+        guard SurfaceTiling.wholeImageFits(width: w, height: h, bytesPerPixel: 16, maxBufferLength: device.maxBufferLength),
+              w <= Int(Int32.max), h <= Int(Int32.max) else {
             throw RenderError.unsupported(.retouch)
         }
         let pipeline = try withLock { try pipelines.pipeline(for: RetouchShader.key, source: RetouchShader.source) }
