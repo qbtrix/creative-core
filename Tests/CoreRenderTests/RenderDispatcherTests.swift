@@ -1,9 +1,8 @@
 // RenderDispatcherTests.swift: render-backend RB-5's acceptance. RenderDispatcher
 // routes by support and health, keeps the last fallback, records none without a
 // preferred backend, moves surfaces between backends, and gives the direct CPU
-// result whenever it falls back. Each pixel check compares against a fresh
-// CPUBackend running the same op, success or error, so it holds before and after
-// the CPU's own families (RB-4) land.
+// result whenever it falls back. Each pixel check expects success and compares
+// the pixels with a fresh CPUBackend running the same op.
 import CoreColor
 import CoreRaster
 import CoreRender
@@ -16,13 +15,6 @@ private func seededBuffer(width: Int, height: Int, seed: UInt64) throws -> Pixel
     return try PixelBuffer(rgba8: bytes, width: width, height: height)
 }
 
-/// What `body` gives: its value, or the RenderError it throws.
-private func outcome<T>(_ body: () throws -> T) -> Result<T, RenderError> {
-    do { return .success(try body()) } catch let error as RenderError { return .failure(error) } catch {
-        return .failure(.raster("not a RenderError: \(error)"))
-    }
-}
-
 /// A fresh CPU backend's composite of `source` onto `backdrop`.
 private func directComposite(_ source: PixelBuffer, onto backdrop: PixelBuffer, mode: BlendMode) throws -> PixelBuffer {
     let cpu = CPUBackend()
@@ -30,6 +22,9 @@ private func directComposite(_ source: PixelBuffer, onto backdrop: PixelBuffer, 
     try cpu.composite(cpu.surface(source), onto: &b, x: 1, y: -1, mode: mode, opacity: 0.37)
     return try cpu.read(b)
 }
+
+private let unsupported = RenderDispatcher.reasonUnsupported
+private let unhealthy = RenderDispatcher.reasonUnhealthy
 
 private func fallback(_ d: RenderDispatcher) -> String? {
     d.lastFallback.map { "\($0.op.rawValue) \($0.reason)" }
@@ -43,11 +38,10 @@ private func fallback(_ d: RenderDispatcher) -> String? {
         #expect(d.backend(for: .composite).name == "fake")
         #expect(d.lastFallback == nil)
         #expect(d.backend(for: .blur).name == "cpu")
-        #expect(d.lastFallback?.op == .blur && d.lastFallback?.reason == "unsupported")
+        #expect(d.lastFallback?.op == .blur && d.lastFallback?.reason == unsupported)
         let s = try fake.surface(buffer)
-        let got = outcome { try d.read(d.gaussianBlur(s, sigma: 1.5)) }
         let cpu = CPUBackend()
-        #expect(got == outcome { try cpu.read(cpu.gaussianBlur(cpu.surface(buffer), sigma: 1.5)) })
+        #expect(try d.read(d.gaussianBlur(s, sigma: 1.5)) == cpu.read(cpu.gaussianBlur(cpu.surface(buffer), sigma: 1.5)))
         #expect(!fake.calls.contains(.op(.blur)))
         #expect(fake.calls.contains(.read(s)))
     }
@@ -57,7 +51,7 @@ private func fallback(_ d: RenderDispatcher) -> String? {
         let d = RenderDispatcher(preferred: fake, fallback: CPUBackend())
         for op in RenderOp.allCases {
             #expect(d.backend(for: op).name == "cpu")
-            #expect(d.lastFallback?.op == op && d.lastFallback?.reason == "unhealthy")
+            #expect(d.lastFallback?.op == op && d.lastFallback?.reason == unhealthy)
         }
         let source = try seededBuffer(width: 4, height: 3, seed: 2)
         let backdrop = try seededBuffer(width: 6, height: 5, seed: 3)
@@ -67,7 +61,7 @@ private func fallback(_ d: RenderDispatcher) -> String? {
         #expect(b.backend == "cpu")
         #expect(try d.read(b) == directComposite(source, onto: backdrop, mode: .multiply))
         #expect(try d.display(fake.surface(source), colorSpace: .displayP3) == source.rgba8(colorSpace: .displayP3))
-        #expect(fallback(d) == "display unhealthy")
+        #expect(fallback(d) == "display \(unhealthy)")
         #expect(!fake.calls.contains { if case .op = $0 { return true } else { return false } })
     }
 
@@ -95,7 +89,7 @@ private func fallback(_ d: RenderDispatcher) -> String? {
         try d.composite(s, onto: &b, x: 1, y: -1, mode: .normal, opacity: 0.37)
         #expect(b.backend == "cpu" && b.width == 6 && b.height == 5)
         #expect(try d.read(b) == directComposite(source, onto: backdrop, mode: .normal))
-        #expect(fallback(d) == "composite unsupported")
+        #expect(fallback(d) == "composite \(unsupported)")
         #expect(fake.calls.contains(.read(s)) && fake.calls.contains(.read(original)))
         #expect(fake.calls.last == .release(original))
         #expect(throws: RenderError.surfaceMismatch) { try fake.read(original) }
@@ -111,10 +105,10 @@ private func fallback(_ d: RenderDispatcher) -> String? {
         _ = d.backend(for: .blur)
         try d.composite(s, onto: &b, x: 0, y: 0, mode: .normal, opacity: 1)
         #expect(fake.calls.contains(.op(.composite)) && b.backend == "fake")
-        #expect(fallback(d) == "blur unsupported")
+        #expect(fallback(d) == "blur \(unsupported)")
         _ = try d.display(s, colorSpace: .sRGB)
-        #expect(fallback(d) == "display unsupported")
-        #expect(fallback(copy) == "display unsupported")
+        #expect(fallback(d) == "display \(unsupported)")
+        #expect(fallback(copy) == "display \(unsupported)")
     }
 
     @Test func aCPUSurfaceHandedToThePreferredBackendIsUploadedThenReleased() throws {

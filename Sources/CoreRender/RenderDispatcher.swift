@@ -3,14 +3,19 @@
 // the preferred backend when it lists the op's family and is healthy, else to
 // the CPU, and the routing never looks at which families the CPU has.
 // Invariants: health is checked before support, so an unhealthy preferred
-// backend gives every op to the CPU with reason "unhealthy"; `lastFallback`
-// keeps the last fallback until the next one replaces it (a success never
-// clears it), and nothing is recorded with no preferred backend; a surface
+// backend gives every op to the CPU with reason `reasonUnhealthy`;
+// `lastFallback` keeps the last fallback until the next one replaces it (a
+// success never clears it), and nothing is recorded with no preferred backend.
+// Health gates routing only: surfaces the preferred backend already made are
+// still read from it and may throw `deviceLost`, and an op whose backend loses
+// health after routing throws instead of retrying on the CPU. A surface
 // made by the other backend is read from its owner and uploaded to the
 // target first, so a fallback never changes a pixel. An uploaded input is
 // released after the op; an uploaded backdrop replaces the caller's handle
 // and the owner's copy is released. A surface neither backend made is passed
 // on, and the target throws `surfaceMismatch`. Copies share `lastFallback`.
+// Two concurrent composites onto copies of the same backdrop handle keep only
+// one result, as on the CPU backend.
 import CoreColor
 import CoreRaster
 
@@ -24,25 +29,38 @@ public struct RenderDispatcher: Sendable {
     private let last = Locked<(op: RenderOp, reason: String)?>(nil)
 
     /// Routes to `preferred` where it can, else to `fallback`; with no
-    /// preferred backend, everything goes to `fallback`.
+    /// preferred backend, everything goes to `fallback`. `preferred.name` must
+    /// differ from `fallback.name`: surfaces are told apart by that name, so
+    /// with the same name every surface is taken as the fallback's and none
+    /// is re-uploaded.
     public init(preferred: (any RenderBackend)?, fallback: CPUBackend) {
         self.preferred = preferred
         self.fallback = fallback
     }
 
-    /// The last op that fell back and why ("unsupported" or "unhealthy"), nil
-    /// until one does. A later op on the preferred backend does not clear it.
+    /// The `lastFallback` reason when the preferred backend does not list the op's family.
+    public static let reasonUnsupported = "unsupported"
+    /// The `lastFallback` reason when the preferred backend is not healthy.
+    public static let reasonUnhealthy = "unhealthy"
+
+    /// The last op that fell back and why (`reasonUnsupported` or
+    /// `reasonUnhealthy`), nil until one does. A later op on the preferred
+    /// backend does not clear it.
     public var lastFallback: (op: RenderOp, reason: String)? { last.withLock { $0 } }
 
     /// The preferred backend when it supports `op` and is healthy, else the
     /// fallback, recording why in `lastFallback` when there is a preferred one.
+    /// Asking alone records it: a call that only checks where `op` would run
+    /// counts as a fallback. Health is read at this call: if the preferred
+    /// backend loses it before the op runs, the op throws and is not retried
+    /// on the CPU, and surfaces it made are still read from it.
     public func backend(for op: RenderOp) -> any RenderBackend {
         guard let preferred else { return fallback }
         let reason: String
         if !preferred.isHealthy {
-            reason = "unhealthy"
+            reason = Self.reasonUnhealthy
         } else if !preferred.supports.contains(op) {
-            reason = "unsupported"
+            reason = Self.reasonUnsupported
         } else {
             return preferred
         }

@@ -10,7 +10,7 @@
    "replacement": "} else if false {"},
   {"note": "dispatcher records a fallback with no preferred backend", "filter": "RenderDispatcherTests", "file": "Sources/CoreRender/RenderDispatcher.swift",
    "anchor": "guard let preferred else { return fallback }",
-   "replacement": "guard let preferred else { last.withLock { $0 = (op, \"unsupported\") }; return fallback }"},
+   "replacement": "guard let preferred else { last.withLock { $0 = (op, Self.reasonUnsupported) }; return fallback }"},
   {"note": "dispatcher skips the re-upload, so a surface of the other backend is handed on as is", "filter": "RenderDispatcherTests", "file": "Sources/CoreRender/RenderDispatcher.swift",
    "anchor": "guard s.backend != target.name, let owner = owner(of: s) else { return (s, false) }",
    "replacement": "guard s.backend == target.name, let owner = owner(of: s) else { return (s, false) }"},
