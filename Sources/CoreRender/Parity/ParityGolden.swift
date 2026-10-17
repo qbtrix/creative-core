@@ -54,7 +54,9 @@ public struct ParityGolden: Equatable, Sendable {
         (self.header, bytes) = (header, [UInt8](data))
     }
 
-    /// The golden as a linear premultiplied buffer, for `compare`.
+    /// The golden as a linear premultiplied buffer, to inspect or crop. Its values are
+    /// off by up to half a display level, so check a result against the golden with
+    /// `ParityHarness.compare(golden:_:)`, not by comparing this buffer in linear.
     public func buffer() throws -> PixelBuffer {
         try RenderError.mapping { try PixelBuffer(rgba8: bytes, width: header.width, height: header.height,
                                                    colorSpace: header.colorSpace) }

@@ -19,5 +19,12 @@
     "anchor": "guard data.count == pixels * 4 else {",
     "replacement": "guard data.count >= pixels * 4 else {",
     "filter": "ParityHarnessTests"
+  },
+  {
+    "note": "golden compare allows one byte more than the tolerance",
+    "file": "Sources/CoreRender/Parity/ParityHarness.swift",
+    "anchor": "passed: worst <= header.tolerance.bytes,",
+    "replacement": "passed: worst <= header.tolerance.bytes + 1,",
+    "filter": "ParityHarnessTests"
   }
 ]

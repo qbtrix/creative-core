@@ -53,7 +53,8 @@ final class SurfaceStore: Sendable {
     /// buffer with no other owner is written without a copy. The buffer leaves
     /// the dictionary for the call and goes back afterwards, even when `body`
     /// throws, keeping whatever `body` wrote before the throw. The lock is held
-    /// for the whole call, so every other call on this store waits for it.
+    /// for the whole call, so every other call on this store waits for it:
+    /// `body` must not call this store, or it deadlocks (see `Locked.withLock`).
     /// Throws `surfaceMismatch` as `buffer(for:)` does, before `body` runs.
     func update(_ surface: RenderSurface, _ body: (inout PixelBuffer) throws -> Void) throws {
         try buffers.withLock { stored in
