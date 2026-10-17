@@ -242,23 +242,34 @@
               {
                 "id": "contract",
                 "name": "Render Contract",
-                "description": "The RenderBackend contract: the op families (RenderOp), the one error type (RenderError), surface handles (RenderSurface), the tone adjustments the adjust op takes (ToneAdjustment) and the RenderBackend protocol. The recording fake is still to come from render-backend RB-2.",
+                "description": "The RenderBackend contract: the op families (RenderOp), the one error type (RenderError), surface handles (RenderSurface), the tone adjustments the adjust op takes (ToneAdjustment), the RenderBackend protocol, the blend-mode-to-family and raster-error mappings every backend shares, the SurfaceStore that holds a backend's PixelBuffers behind one lock, and FakeBackend, the recording test double.",
                 "technology": "Swift 6, Foundation",
                 "paths": [
                   "Sources/CoreRender/CoreRender.swift",
                   "Sources/CoreRender/RenderOp.swift",
                   "Sources/CoreRender/RenderSurface.swift",
                   "Sources/CoreRender/ToneAdjustment.swift",
-                  "Sources/CoreRender/RenderBackend.swift"
+                  "Sources/CoreRender/RenderBackend.swift",
+                  "Sources/CoreRender/SurfaceStore.swift",
+                  "Sources/CoreRender/FakeBackend.swift"
                 ]
               },
               {
                 "id": "metal-support",
                 "name": "Metal Support",
-                "description": "The Metal backend's Linux-safe parts (Sources/CoreRender/Metal): binary16 half-float conversion for filling rgba16Float textures from Float32 buffers and reading them back; MetalCapabilities, the proven op set and health state the dispatcher routes on; SurfaceTiling, the 256 px tile grid a surface's textures follow, with the tiles a rect touches; and PipelineKey, the identity of one cached compute pipeline (op family plus an identifier variant) and the kernel function name it maps to. Pure Swift bit, integer and string math, no Metal import, so it builds, tests and mutates on Linux.",
+                "description": "The Metal backend's Linux-safe parts (Sources/CoreRender/Metal): binary16 half-float conversion for filling rgba16Float textures from Float32 buffers and reading them back; MetalCapabilities, the proven op set and health state the dispatcher routes on; SurfaceTiling, the 256 px tile grid a surface's textures follow, on CoreRaster's shared tile math, with the tiles a rect touches; and PipelineKey, the identity of one cached compute pipeline (op family plus a short identifier variant) and the kernel function name it maps to. Pure Swift bit, integer and string math, no Metal import, so it builds, tests and mutates on Linux.",
                 "technology": "Swift 6, Foundation",
                 "paths": [
                   "Sources/CoreRender/Metal/"
+                ]
+              },
+              {
+                "id": "parity",
+                "name": "Parity Harness",
+                "description": "How one RenderBackend is measured against another (Sources/CoreRender/Parity): ParityTolerance (byte and linear bounds, .standard and .nonSeparable); ParityHarness.compare, which checks two results' sRGB display bytes through CoreRaster's rgba8 and their linear premultiplied Floats over visible pixels and names the worst pixel; the deterministic sample set per RenderOp (seeded buffers plus alpha 0, subnormal alpha, opaque rows and sources off every edge) and rendering a sample on any backend; and golden files (raw rgba8 bytes beside a JSON header), validated as untrusted input.",
+                "technology": "Swift 6, Foundation",
+                "paths": [
+                  "Sources/CoreRender/Parity/"
                 ]
               }
             ]
