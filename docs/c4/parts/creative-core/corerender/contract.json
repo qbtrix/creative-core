@@ -1,7 +1,7 @@
 {
   "id": "contract",
   "name": "Render Contract",
-  "description": "The RenderBackend contract: the op families (RenderOp), the one error type (RenderError), surface handles (RenderSurface), the tone adjustments the adjust op takes (ToneAdjustment), the RenderBackend protocol, the blend-mode-to-family and raster-error mappings every backend shares, the SurfaceStore that holds a backend's PixelBuffers behind one lock, and FakeBackend, the recording test double.",
+  "description": "The RenderBackend contract: the op families (RenderOp), the one error type (RenderError), surface handles (RenderSurface), the tone adjustments the adjust op takes (ToneAdjustment), the RenderBackend protocol, the blend-mode-to-family and raster-error mappings every backend shares, the SurfaceStore that holds a backend's PixelBuffers behind one lock and updates one in place, and FakeBackend, the recording test double.",
   "technology": "Swift 6, Foundation",
   "paths": [
     "Sources/CoreRender/CoreRender.swift",

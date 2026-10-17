@@ -3,8 +3,9 @@
 // composite equal to CoreRaster's for every blend mode at opacities 0, 0.37 and 1
 // with sources off every edge, released, unknown, foreign and mis-sized surfaces,
 // CoreRaster errors passed through, every family supported, and the parity sample
-// set for every family reproduced with zero delta. The store's `replace` size
-// guard, which composite writes back through, is checked directly.
+// set for every family reproduced with zero delta. The store's `update`, which
+// composite blends in place through, is checked directly: a throwing body
+// leaves the buffer stored with what it wrote, and a bad surface never runs it.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -130,18 +131,25 @@ private func seededBuffer(width: Int, height: Int, seed: UInt64) throws -> Pixel
         }
     }
 
-    @Test func storeReplaceRefusesABufferOfAnotherSize() throws {
+    @Test func storeUpdateKeepsTheBufferWhenTheBodyThrows() throws {
         let store = SurfaceStore(backend: "cpu")
         let buffer = try seededBuffer(width: 4, height: 3, seed: 12)
         let s = store.insert(buffer)
-        for (w, h) in [(4, 2), (3, 3), (5, 4)] {
-            let other = try seededBuffer(width: w, height: h, seed: 13)
-            #expect(throws: RenderError.surfaceMismatch) { try store.replace(s, with: other) }
-            #expect(try store.buffer(for: s) == buffer)
+        let red = RGBA(r: 1, g: 0, b: 0, a: 1)
+        #expect(throws: RenderError.surfaceMismatch) {
+            try store.update(s) { pixels in
+                try pixels.setPixel(x: 1, y: 2, red)
+                throw RenderError.surfaceMismatch
+            }
         }
-        let same = try seededBuffer(width: 4, height: 3, seed: 14)
-        try store.replace(s, with: same)
-        #expect(try store.buffer(for: s) == same)
+        var expected = buffer
+        try expected.setPixel(x: 1, y: 2, red)
+        #expect(try store.buffer(for: s) == expected)
+        let wrong = RenderSurface(id: s.id, width: 4, height: 2, backend: "cpu")
+        var ran = false
+        #expect(throws: RenderError.surfaceMismatch) { try store.update(wrong) { _ in ran = true } }
+        #expect(!ran)
+        #expect(try store.buffer(for: s) == expected)
     }
 
     @Test func supportsEveryFamily() {

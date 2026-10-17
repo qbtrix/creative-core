@@ -159,7 +159,7 @@ private func fallback(_ d: RenderDispatcher) -> String? {
         }
     }
 
-    @Test func everyForwarderOnAFakeSurfaceEqualsTheDirectCPUCall() throws {
+    @Test func everySurfaceForwarderOnAFakeSurfaceEqualsTheDirectCPUCall() throws {
         let fake = FakeBackend(supports: [])
         let d = RenderDispatcher(preferred: fake, fallback: CPUBackend())
         let buffer = try seededBuffer(width: 9, height: 7, seed: 12)
@@ -170,8 +170,10 @@ private func fallback(_ d: RenderDispatcher) -> String? {
         let cases: [(RenderOp, Op, Direct)] = [
             (.transform, { try d.cropped($0, x: 2, y: 1, width: 5, height: 4) },
              { try $0.cropped($1, x: 2, y: 1, width: 5, height: 4) }),
+            (.transform, { try d.rotated($0, .degrees270) }, { try $0.rotated($1, .degrees270) }),
             (.resample, { try d.resampled($0, width: 13, height: 4, filter: .lanczos3) },
              { try $0.resampled($1, width: 13, height: 4, filter: .lanczos3) }),
+            (.blur, { try d.gaussianBlur($0, sigma: 0.9) }, { try $0.gaussianBlur($1, sigma: 0.9) }),
             (.blur, { try d.unsharpMask($0, amount: 0.8, sigma: 1.2, threshold: 0.05) },
              { try $0.unsharpMask($1, amount: 0.8, sigma: 1.2, threshold: 0.05) }),
             (.adjust, { try d.adjusted($0, levels) }, { try $0.adjusted($1, levels) }),

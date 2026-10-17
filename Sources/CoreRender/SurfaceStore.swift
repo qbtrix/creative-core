@@ -2,8 +2,9 @@
 // RenderSurface id, and `Locked`, the one lock CoreRender's backends share, so the
 // non-mutating Sendable protocol can hold PixelBuffers (the fake, the CPU backend).
 // Invariants: a surface resolves only when its `backend` is this store's name, its id
-// is live and its size matches; else `RenderError.surfaceMismatch`. `remove` ignores
-// what it cannot find. The lock is a serial DispatchQueue: Dispatch ships with every
+// is live and its size matches; else `RenderError.surfaceMismatch`. `update` writes
+// the stored buffer in place and puts it back even when its body throws. `remove`
+// ignores what it cannot find. The lock is a serial DispatchQueue: Dispatch ships with every
 // Swift toolchain, NSLock is not in FoundationEssentials, and Mutex needs macOS 15.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
@@ -48,16 +49,18 @@ final class SurfaceStore: Sendable {
         try buffers.withLock { try Self.resolve(surface, backend, in: $0) }
     }
 
-    /// Replaces the pixels behind `surface` with `buffer` of the same size, as
-    /// an in-place composite does. Throws `surfaceMismatch` as `buffer(for:)`
-    /// does, and when `buffer`'s size differs from the surface's.
-    func replace(_ surface: RenderSurface, with buffer: PixelBuffer) throws {
-        guard buffer.width == surface.width, buffer.height == surface.height else {
-            throw RenderError.surfaceMismatch
-        }
+    /// Runs `body` on the pixels behind `surface` where they are stored, so a
+    /// buffer with no other owner is written without a copy. The buffer leaves
+    /// the dictionary for the call and goes back afterwards, even when `body`
+    /// throws, keeping whatever `body` wrote before the throw. The lock is held
+    /// for the whole call, so every other call on this store waits for it.
+    /// Throws `surfaceMismatch` as `buffer(for:)` does, before `body` runs.
+    func update(_ surface: RenderSurface, _ body: (inout PixelBuffer) throws -> Void) throws {
         try buffers.withLock { stored in
             _ = try Self.resolve(surface, backend, in: stored)
-            stored[surface.id] = buffer
+            guard var buffer = stored.removeValue(forKey: surface.id) else { throw RenderError.surfaceMismatch }
+            defer { stored[surface.id] = buffer }
+            try body(&buffer)
         }
     }
 
