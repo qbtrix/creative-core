@@ -135,6 +135,21 @@ struct LottieScaleTrackTests {
         #expect(try scale(late, frames: Int.max)["a"] as? Int == 1)
     }
 
+    /// The exporter is public, so an in-memory scene can carry a duration
+    /// validate would reject. The bake falls back to the static frame-0 scale
+    /// instead of trapping on durationFrames - 1.
+    @Test func nonPositiveDurationBakeFallsBackToStatic() throws {
+        let tracks: [String: [Keyframe]] = [
+            "scaleX": [Keyframe(frame: 0, value: 2), Keyframe(frame: 10, value: 3)],
+            "scaleY": [Keyframe(frame: 0, value: 4, easing: .easeIn), Keyframe(frame: 5, value: 5)],
+        ]
+        for frames in [Int.min, -1, 0] {
+            let s = try scale(tracks, frames: frames)
+            #expect(s["a"] as? Int == 0)
+            #expect(s["k"] as? [Double] == [200, 400])
+        }
+    }
+
     @Test func staticScaleKeepsTodaysBytes() throws {
         let text = try exported(["scaleX": [Keyframe(frame: 3, value: 2)]])
         #expect(text.contains(#""s":{"a":0,"k":[200,100]}"#))

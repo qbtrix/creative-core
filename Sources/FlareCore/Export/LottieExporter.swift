@@ -296,11 +296,16 @@ extension LottieProperty where Value == [Double] {
                   zip(xs, ys).allSatisfy({ $0.frame == $1.frame && $0.easing == $1.easing }) {
             self = .animated(try LottieKeyframe.list(xs) { index, key in [try f(key.value), try f(ys[index].value)] })
         } else {
+            // Checked before hi: durationFrames - 1 overflows on Int.min.
+            guard durationFrames > 0 else {
+                self = try still()
+                return
+            }
             let frames = (xs + ys).map(\.frame)
             let lo = max(0, frames.min() ?? 0)
             let hi = min(durationFrames - 1, frames.max() ?? 0)
-            // durationFrames > 0 keeps durationFrames - 1 from overflowing; lo >= 0 keeps hi - lo + 1 in range.
-            guard durationFrames > 0, lo <= hi else {
+            // lo >= 0 keeps hi - lo + 1 in range.
+            guard lo <= hi else {
                 self = try still()
                 return
             }

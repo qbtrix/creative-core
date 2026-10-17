@@ -14,6 +14,13 @@
     "filter": "LottieScaleTrackTests"
   },
   {
+    "note": "lottie scale bake duration guard lets Int.min reach the range",
+    "file": "Sources/FlareCore/Export/LottieExporter.swift",
+    "anchor": "guard durationFrames > 0 else {",
+    "replacement": "guard durationFrames != 0 else {",
+    "filter": "LottieScaleTrackTests"
+  },
+  {
     "note": "lottie scale shared keys ignore easing mismatch",
     "file": "Sources/FlareCore/Export/LottieExporter.swift",
     "anchor": "$0.frame == $1.frame && $0.easing == $1.easing",
