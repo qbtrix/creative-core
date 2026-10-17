@@ -38,4 +38,9 @@ and prints `CI: PASS` or `CI: FAIL`. CI runs the same script on Linux and macOS.
 
 ## License
 
-GPL-3.0. See [LICENSE](LICENSE).
+GPL-3.0. See [LICENSE](LICENSE), with additional terms under its
+section 7 in [ADDITIONAL-TERMS.md](ADDITIONAL-TERMS.md) (notices,
+marking modified versions, no trademark rights). The names and icons are
+covered by [docs/trademark-policy.md](docs/trademark-policy.md). Editions
+and licensing of the suite: `docs/licensing.md` in qbtrix/creative-apps.
+Contributing: [CONTRIBUTING.md](CONTRIBUTING.md).
