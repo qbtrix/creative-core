@@ -1,0 +1,9 @@
+[
+  {
+    "note": "tile map piece clipping runs one column past the source tile's right edge",
+    "file": "Sources/CoreRender/Metal/TileMap.swift",
+    "anchor": "min(sx1, from.x + from.width - 1)",
+    "replacement": "min(sx1, from.x + from.width)",
+    "filter": "TileMapTests"
+  }
+]

@@ -54,6 +54,7 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
         self.cacheURL = cacheURL
         self.budget = SurfaceTiling.defaultBudget(workingSet: device.recommendedMaxWorkingSetSize, tileBytes: Self.tileBytes)
         state.enable(.display)
+        state.enable(.transform)
     }
 
     /// "Metal (<device name>)": the status note's text and every surface's `backend`.
@@ -85,7 +86,7 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     public var pipelineLoadCount: Int { withLock { pipelines.loadCount } }
 
     /// The storage mode of tile textures: `.shared` on a GPU with unified memory, `.managed` on a
-    /// discrete one, where the CPU and GPU keep separate copies. No GPU work writes the tiles yet, so
+    /// discrete one, where the CPU and GPU keep separate copies. Until a GPU write to a tile,
     /// `replace` and `getBytes` see current pixels in either mode; the first slice that encodes GPU
     /// writes to a managed tile must synchronize it with a blit before a CPU read.
     public static func tileStorageMode(unifiedMemory: Bool) -> MTLStorageMode {
@@ -265,13 +266,13 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
                           mode: BlendMode, opacity: Float) throws {
         throw RenderError.unsupported(.composite)
     }
-    /// Crop as a blit: MB-7. Throws `unsupported(.transform)`.
+    /// Crop as blits: MB-7 (MetalBackend+Transform.swift). An invalid rectangle throws the CPU's error.
     public func cropped(_ s: RenderSurface, x: Int, y: Int, width: Int, height: Int) throws -> RenderSurface {
-        throw RenderError.unsupported(.transform)
+        try transformed(s, blit: true) { try TileMap.crop($0, x: x, y: y, width: width, height: height) }
     }
-    /// Quarter turns: MB-7. Throws `unsupported(.transform)`.
+    /// Quarter turns through the rotate kernel: MB-7 (MetalBackend+Transform.swift).
     public func rotated(_ s: RenderSurface, _ turn: QuarterTurn) throws -> RenderSurface {
-        throw RenderError.unsupported(.transform)
+        try transformed(s, blit: false) { TileMap.turn($0, turn) }
     }
     /// Bilinear and lanczos3 resampling: MB-8. Throws `unsupported(.resample)`.
     public func resampled(_ s: RenderSurface, width: Int, height: Int, filter: ResampleFilter) throws -> RenderSurface {
@@ -296,7 +297,7 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     }
 
     /// The one place a `RenderSurface` is built, so a change to its init touches one line.
-    private func handle(id: UUID, width: Int, height: Int) -> RenderSurface {
+    func handle(id: UUID, width: Int, height: Int) -> RenderSurface {
         RenderSurface(id: id, width: width, height: height, backend: name)
     }
 
