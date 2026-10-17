@@ -62,3 +62,4 @@ utc	stage	event	ref	note
 2026-10-17T14:30Z	4	pr	#386	RB-c in-place composite (+RB-b round 4 rows, header wording) opened, head 10d4069; 23/23 changed-since caught; release budget median +1.57% (noisy)
 2026-10-17T14:31Z	4	merge	dev aa5e4d0	#386 merged (in-place composite; RB-b round 4 rows)
 2026-10-17T14:32Z	4	anatomy-round	dev aa5e4d0	RB-c round 1 started: critic and gate (with release goldens and budget)
+2026-10-17T14:55Z	4	anatomy-round	dev aa5e4d0	RB-c round 1: 1 major, 5 minor; gate 999/999 PASS, mutations 39/39; fixer rbc-anatomy-1 started
