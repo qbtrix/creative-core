@@ -12,5 +12,12 @@
     "anchor": "if alphas.contains(where: { $0 < 1 }) {",
     "replacement": "if alphas.contains(where: { $0 <= 1 }) {",
     "filter": "LottieGradientAlphaTests"
+  },
+  {
+    "note": "lottie gradient p counts alpha stops too, not only the color stops",
+    "file": "Sources/FlareCore/Export/LottieExporter.swift",
+    "anchor": "return LottieGradientStops(p: stops.count, k: LottieStatic(flat))",
+    "replacement": "return LottieGradientStops(p: flat.count > 4 * stops.count ? 2 * stops.count : stops.count, k: LottieStatic(flat))",
+    "filter": "LottieGradientAlphaTests"
   }
 ]

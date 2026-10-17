@@ -23,10 +23,15 @@ import Testing
     static let outerInstances = 50
     static let innerLayers = 2
     static let shapesPerInnerLayer = 5
+    /// QB-L5: one hit per pointer move.
     static let hitBudget: Duration = .milliseconds(10)
+    /// QB-L6: the draw list for one frame.
     static let renderListBudget: Duration = .milliseconds(20)
+    /// QB-L7: one drag step, perform and validate.
     static let dragBudget: Duration = .milliseconds(10)
+    /// QB-L8: one SVG frame.
     static let svgBudget: Duration = .seconds(1)
+    /// QB-L8: the 300-frame Lottie export.
     static let lottieBudget: Duration = .seconds(10)
     static let warmUpSteps = 10
     static let dragSteps = 100
