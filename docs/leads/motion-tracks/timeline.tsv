@@ -32,3 +32,4 @@ utc	stage	event	ref	note
 2026-10-16T20:41Z	3	stage-start	9ba4c2b	wave d MT-5 builder started
 2026-10-16T21:02Z	3	stopped	dfb6aa7	MT-5 blocked: QB-L5 hit median 17.2 ms over 10 ms, idle rerun confirms; decision pending
 2026-10-16T21:30Z	3	stopped	dfb6aa7	third stall; blocked on QB-L5 budget decision; issue labelled needs-human
+2026-10-17T07:00Z	3	stage-start	dev 24fd483	relaunch act-1a149b544ea-emiq; QB-L5 ruled; gap #360 filed; MT-5 building
