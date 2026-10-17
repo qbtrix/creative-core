@@ -1,7 +1,7 @@
 {
   "id": "cpu-backend",
   "name": "CPU Backend",
-  "description": "CPUBackend, the CPU RenderBackend and pixel reference (Sources/CoreRender/CPU), supporting every op family: its surfaces are PixelBuffers held in the shared SurfaceStore; surface, read, release, display and in-place composite (every blend mode, gated by its family) are the CoreRaster calls themselves, and crop, rotate, resample, blur, unsharp, each tone adjustment and masked clone (CPUBackend+Ops) each call the CoreRaster method they name and return a new surface. CoreRaster errors map to RenderError.raster with the same message.",
+  "description": "CPUBackend, the CPU RenderBackend and pixel reference (Sources/CoreRender/CPU), supporting every op family: its surfaces are PixelBuffers held in the shared SurfaceStore; surface, read and release go through the SurfaceStore; display and in-place composite (every blend mode, gated by its family) are the CoreRaster calls themselves, and crop, rotate, resample, blur, unsharp, each tone adjustment and masked clone (CPUBackend+Ops) each call the CoreRaster method they name and return a new surface. CoreRaster errors map to RenderError.raster with the same message.",
   "technology": "Swift 6, Foundation",
   "paths": [
     "Sources/CoreRender/CPU/CPUBackend.swift",

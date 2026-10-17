@@ -65,6 +65,16 @@ private func fallback(_ d: RenderDispatcher) -> String? {
         #expect(!fake.calls.contains { if case .op = $0 { return true } else { return false } })
     }
 
+    @Test func anUnhealthyFakeReportsUnhealthyEvenForAnOpItDoesNotSupport() throws {
+        let fake = FakeBackend(supports: [.composite], healthy: false)
+        let d = RenderDispatcher(preferred: fake, fallback: CPUBackend())
+        let buffer = try seededBuffer(width: 5, height: 4, seed: 6)
+        let blurred = try d.gaussianBlur(d.surface(buffer), sigma: 1.5)
+        #expect(blurred.backend == "cpu")
+        #expect(fallback(d) == "blur \(unhealthy)")
+        #expect(fake.calls.isEmpty)
+    }
+
     @Test func noPreferredBackendRoutesToTheCPUWithNoFallback() throws {
         let d = RenderDispatcher(preferred: nil, fallback: CPUBackend())
         for op in RenderOp.allCases { #expect(d.backend(for: op).name == "cpu") }
