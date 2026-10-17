@@ -23,6 +23,9 @@
   {"note": "dispatcher composite keeps the moved backdrop copy when the composite throws", "filter": "RenderDispatcherTests", "file": "Sources/CoreRender/RenderDispatcher.swift",
    "anchor": "if moved { target.release(backdrop) }",
    "replacement": "_ = moved"},
+  {"note": "dispatcher checks support before health, so an unhealthy backend reports unsupported", "filter": "RenderDispatcherTests", "file": "Sources/CoreRender/RenderDispatcher.swift",
+   "anchor": "        if !preferred.isHealthy {\n            reason = Self.reasonUnhealthy\n        } else if !preferred.supports.contains(op) {\n            reason = Self.reasonUnsupported\n        }",
+   "replacement": "        if !preferred.supports.contains(op) {\n            reason = Self.reasonUnsupported\n        } else if !preferred.isHealthy {\n            reason = Self.reasonUnhealthy\n        }"},
   {"note": "dispatcher puts new surfaces on an unhealthy preferred backend", "filter": "RenderDispatcherTests", "file": "Sources/CoreRender/RenderDispatcher.swift",
    "anchor": "if let preferred, preferred.isHealthy { return try preferred.surface(buffer) }",
    "replacement": "if let preferred { return try preferred.surface(buffer) }"}

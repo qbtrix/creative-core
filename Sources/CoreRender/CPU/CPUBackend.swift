@@ -1,7 +1,8 @@
 // CPUBackend.swift: the CPU RenderBackend, the pixel reference every other
 // backend is measured against. Its surfaces are PixelBuffers in a SurfaceStore
-// (one lock, so the protocol stays non-mutating and Sendable), and every op is
-// the CoreRaster call itself, so its pixels equal the direct call with `==`.
+// (one lock, so the protocol stays non-mutating and Sendable): surface, read
+// and release are its insert, lookup and remove, and every other op is the
+// CoreRaster call itself, so its pixels equal the direct call with `==`.
 // This file (render-backend RB-3) covers surface, read, release, display and
 // the compositing families; CPUBackend+Ops.swift (RB-4) holds transform,
 // resample, blur, adjust and retouch, each a new surface through `derived`.
@@ -11,9 +12,9 @@
 // the backdrop's id, so `read(b)` sees it; every CoreRaster error comes back as
 // `RenderError.raster` through `RenderError.mapping`. Sizes are CoreRaster's
 // (`PixelBuffer.validatedSize`), so no size arithmetic happens here.
-// Two composites onto one backdrop at once from two threads keep only one
-// result: a backdrop surface is the caller's `inout` value, written by one
-// caller at a time.
+// Two composites at once onto copies of one backdrop handle keep only one
+// result: each reads, blends and stores the whole backdrop, and the last
+// store wins.
 import CoreColor
 import CoreRaster
 

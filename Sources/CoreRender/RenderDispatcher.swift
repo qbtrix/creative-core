@@ -14,8 +14,8 @@
 // released after the op; an uploaded backdrop replaces the caller's handle
 // and the owner's copy is released. A surface neither backend made is passed
 // on, and the target throws `surfaceMismatch`. Copies share `lastFallback`.
-// Two concurrent composites onto copies of the same backdrop handle keep only
-// one result, as on the CPU backend.
+// Two composites at once onto copies of one backdrop handle keep only one
+// result, as on the CPU backend.
 import CoreColor
 import CoreRaster
 
