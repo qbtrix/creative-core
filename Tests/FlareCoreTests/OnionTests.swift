@@ -57,11 +57,19 @@ import Testing
         }
         #expect(Timeline.onionFrames(at: 10, before: Int.max, after: Int.max, durationFrames: 13)
             == [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12])
-        #expect(Timeline.onionFrames(at: Int.max, before: Int.max, after: 0, durationFrames: 3) == [0, 1, 2])
+        // Counts are capped, so a playhead far past the end shows nothing.
+        #expect(Timeline.onionFrames(at: Int.max, before: Int.max, after: 0, durationFrames: 3) == [])
         #expect(Timeline.onionFrames(at: Int.min, before: 0, after: Int.max, durationFrames: 3) == [])
         #expect(Timeline.onionFrames(at: -1, before: 0, after: Int.max, durationFrames: 3) == [0, 1, 2])
         #expect(Timeline.onionFrames(at: -2, before: Int.max, after: Int.max, durationFrames: 3) == [0, 1, 2])
         #expect(Timeline.onionFrames(at: 2, before: 0, after: Int.max, durationFrames: 5) == [3, 4])
+        // A huge duration with huge counts stays bounded by the cap on each side.
+        let cap = Timeline.maxOnionSkins
+        let huge = Timeline.onionFrames(at: 5_000, before: Int.max, after: Int.max, durationFrames: 1_000_000_000_000)
+        #expect(huge == Array((5_000 - cap)..<5_000) + Array(5_001...(5_000 + cap)))
+        #expect(Timeline.onionFrames(at: 0, before: 0, after: Int.max, durationFrames: Int.max).count == cap)
+        #expect(Timeline.onionFrames(at: cap + 50, before: cap + 5, after: 0, durationFrames: cap + 100).first == 50)
+        #expect(Timeline.onionFrames(at: 0, before: 0, after: cap + 5, durationFrames: cap + 100).last == cap)
     }
 
     @Test func seededPropertyAscendingUniqueInRangeWithoutPlayhead() {

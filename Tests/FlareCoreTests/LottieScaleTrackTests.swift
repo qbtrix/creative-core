@@ -153,4 +153,22 @@ struct LottieScaleTrackTests {
             }
         }
     }
+
+    /// A finite scale that overflows when written as a percent throws the
+    /// typed error, not the encoder's, on every path: static, one track,
+    /// shared keys and the bake.
+    @Test func scaleOverflowingTimes100Throws() {
+        let big = 1e307
+        let ramp = [Keyframe(frame: 0, value: 1), Keyframe(frame: 9, value: 2)]
+        let cases: [[String: [Keyframe]]] = [
+            ["scaleX": [Keyframe(frame: 0, value: big)]],
+            ["scaleY": [Keyframe(frame: 0, value: big)], "scaleX": ramp],
+            ["scaleX": [Keyframe(frame: 0, value: 1), Keyframe(frame: 9, value: big)]],
+            ["scaleX": [Keyframe(frame: 0, value: 1), Keyframe(frame: 9, value: big)], "scaleY": ramp],
+            ["scaleX": [Keyframe(frame: 0, value: 1, easing: .easeIn), Keyframe(frame: 9, value: big)], "scaleY": ramp],
+        ]
+        for tracks in cases {
+            #expect(throws: LottieExportError.nonFiniteValue) { _ = try exported(tracks) }
+        }
+    }
 }

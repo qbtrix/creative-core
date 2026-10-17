@@ -21,17 +21,10 @@
     "filter": "OnionTests"
   },
   {
-    "note": "onion subtract wraps instead of saturating on overflow",
+    "note": "onion drops the maxOnionSkins cap on the before count",
     "file": "Sources/FlareCore/Onion.swift",
-    "anchor": "back.overflow ? Int.min : back.partialValue",
-    "replacement": "back.partialValue",
-    "filter": "OnionTests"
-  },
-  {
-    "note": "onion add wraps instead of saturating on overflow",
-    "file": "Sources/FlareCore/Onion.swift",
-    "anchor": "ahead.overflow ? Int.max : ahead.partialValue",
-    "replacement": "ahead.partialValue",
+    "anchor": "frame.subtractingReportingOverflow(min(max(before, 0), maxOnionSkins))",
+    "replacement": "frame.subtractingReportingOverflow(max(before, 0))",
     "filter": "OnionTests"
   }
 ]

@@ -1,4 +1,4 @@
-// LottieExporter.swift: a scene as a static Lottie JSON document.
+// LottieExporter.swift: a scene as a static or animated Lottie JSON document.
 //
 // Follows the public Lottie format docs. The top level carries `v`, `fr`
 // (fps), `ip`/`op` (frame range), `w`/`h` (canvas size) and `layers`. Each
@@ -15,17 +15,20 @@
 // other axis constant when only one has; shared keyframes when both have keys
 // at the same frames with the same easings; otherwise one linear keyframe per
 // frame, sampled, from the first key to the last within the scene, capped at
-// `maxBakedKeys`. A keyframe has `t`, `s`,
-// and either `h: 1` for hold or `o`/`i` tangents (linear is (0,0)/(1,1); a
-// cubic Bezier gives (x1,y1)/(x2,y2) with x clamped to 0...1 as `Easing` does).
+// `maxBakedKeys`. A keyframe has `t`, `s`, and either `h: 1` for hold or
+// `o`/`i` tangents (linear is (0,0)/(1,1); a cubic Bezier gives (x1,y1)/(x2,y2)
+// with x clamped to 0...1 as `Easing` does).
+//
 // Each shape becomes a group (`gr`) of its subpaths (`sh`), its stroke (`st`)
 // if any, its fill (`fl` for a solid color, `gf` for a gradient) and an
 // identity group transform (`tr`). Each instance becomes a group, above the
 // layer's shapes, holding one group per visible symbol layer sampled at the
-// symbol frame (`Instance.resolve`), each with its own `tr`. A radial gradient's end point is its center moved right by the
-// radius. A gradient's stop alpha is written as `[offset, alpha]` for each stop after the color
-// stops, only when some stop alpha is under 1. Bezier tangents are relative
-// to their vertex; quads are raised to cubics. A non-finite value throws.
+// symbol frame (`Instance.resolve`), each with its own `tr`. A radial
+// gradient's end point is its center moved right by the radius. A gradient's
+// stop alpha is written as `[offset, alpha]` for each stop after the color
+// stops, only when some stop alpha is under 1; `p` stays the color stop count.
+// Bezier tangents are relative to their vertex; quads are raised to cubics.
+// A non-finite value, including one that overflows when scaled, throws.
 // Text is not written yet: a layer with text throws `unsupported("text")`.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
@@ -278,14 +281,17 @@ extension LottieProperty where Value == [Double] {
     init(scaleOf layer: Layer, x0: Double, y0: Double, durationFrames: Int) throws {
         let xs = layer.tracks["scaleX"] ?? []
         let ys = layer.tracks["scaleY"] ?? []
-        let still = Self.fixed(LottieStatic([x0 * 100, y0 * 100]))
-        func f(_ v: Double) throws -> Double { try LottieExporter.finite(v) * 100 }
+        // Checked after the times 100: a finite 1e307 becomes infinity.
+        func f(_ v: Double) throws -> Double { try LottieExporter.finite(v * 100) }
+        func still() throws -> Self { .fixed(LottieStatic([try f(x0), try f(y0)])) }
         if xs.count <= 1, ys.count <= 1 {
-            self = still
+            self = try still()
         } else if ys.count <= 1 {
-            self = .animated(try LottieKeyframe.list(xs) { _, key in [try f(key.value), y0 * 100] })
+            let y = try f(y0)
+            self = .animated(try LottieKeyframe.list(xs) { _, key in [try f(key.value), y] })
         } else if xs.count <= 1 {
-            self = .animated(try LottieKeyframe.list(ys) { _, key in [x0 * 100, try f(key.value)] })
+            let x = try f(x0)
+            self = .animated(try LottieKeyframe.list(ys) { _, key in [x, try f(key.value)] })
         } else if xs.count == ys.count,
                   zip(xs, ys).allSatisfy({ $0.frame == $1.frame && $0.easing == $1.easing }) {
             self = .animated(try LottieKeyframe.list(xs) { index, key in [try f(key.value), try f(ys[index].value)] })
@@ -295,7 +301,7 @@ extension LottieProperty where Value == [Double] {
             let hi = min(durationFrames - 1, frames.max() ?? 0)
             // durationFrames > 0 keeps durationFrames - 1 from overflowing; lo >= 0 keeps hi - lo + 1 in range.
             guard durationFrames > 0, lo <= hi else {
-                self = still
+                self = try still()
                 return
             }
             guard hi - lo + 1 <= LottieExporter.maxBakedKeys else {

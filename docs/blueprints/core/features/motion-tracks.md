@@ -57,7 +57,7 @@ Proven on FlareCore values in `Tests/FlareCoreTests/`:
 
 | Query or output | Empty | Error | Loading |
 |---|---|---|---|
-| `Timeline.onionFrames` | `durationFrames` ≤ 0, or 0 before and 0 after: `[]` | never throws; negative counts count as 0; frames outside `0..<durationFrames` are dropped, not repeated; no count or frame overflows Int | – |
+| `Timeline.onionFrames` | `durationFrames` ≤ 0, or 0 before and 0 after: `[]` | never throws; negative counts count as 0 and counts above `maxOnionSkins` (1,000) as it; frames outside `0..<durationFrames` are dropped, not repeated; no count or frame overflows Int | – |
 | Lottie `ks.o`, `ks.r` | a track with 0 or 1 keys: a static value sampled at frame 0, the same bytes as today | a non-finite value throws `nonFiniteValue`, as today | – |
 | Lottie `ks.s` | both scale tracks with 0 or 1 keys: static, as today | a per-frame bake longer than `LottieExporter.maxBakedKeys` throws `unsupported("scale track")` rather than write a huge file or drop the motion | – |
 | Gradient stops | every stop opaque: no alpha stops, today's bytes | a non-finite alpha throws `nonFiniteValue` | – |
@@ -112,8 +112,9 @@ frame, as today; animated tracks inside symbols are not in this packet.
 ```
 MT-1 onionFrames(frame, before, after, d):
   guard d > 0 else []
-  lo = max(0, frame - max(before, 0))        # saturating subtract and add, so Int.max counts
-  hi = min(d - 1, frame + max(after, 0))     # and Int.min frames never overflow
+  lo = max(0, frame - clamp(before, 0, maxOnionSkins))   # saturating subtract and add, so Int.max
+  hi = min(d - 1, frame + clamp(after, 0, maxOnionSkins)) # counts and Int.min frames never overflow
+                                                          # the 1,000 cap bounds the result in long scenes
   [lo...hi] without frame, ascending; [] when lo > hi
 
 MT-2 LottieLayer: o = LottieScalar(tracks["opacity"], at0:, map: { clamp(v, 0, 1) * 100 })
