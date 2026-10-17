@@ -3,9 +3,10 @@
 // so no `.metal` file or resource bundle is needed. Each pipeline is compiled once per
 // `PipelineKey` and memoised in `states`; later requests for the key reuse it, and Metal's
 // own shader cache speeds the compile across launches. Nothing is read from or written to
-// disk. Invariants: every state in `states` was made on `device`; `compileCount` counts
-// pipelines built from source and `loadCount` requests answered from `states`; a failed
-// compile memoises nothing. Callers hold the backend's lock: nothing here is Sendable or
+// disk. Invariants: every state in `states` and `probeState` was made on `device`; the
+// health probe's pipeline lives only in `probeState`, so no caller key can replace it;
+// `compileCount` counts pipelines built from source and `loadCount` requests answered from
+// a memo; a failed compile memoises nothing. Callers hold the backend's lock: nothing here is Sendable or
 // synchronised.
 #if canImport(Metal)
 import CoreRender
@@ -14,7 +15,9 @@ import Metal
 /// The compute pipelines of one `MetalBackend`, keyed by `PipelineKey` and memoised in
 /// process. Internal: the backend owns one and calls it with its lock held.
 final class MetalPipelines {
-    /// The key of the health probe kernel: `display_probe` in `probeSource`.
+    /// The key of the health probe kernel: `display_probe` in `probeSource`. Its pipeline is
+    /// memoised in `probeState`, apart from `states`, so `preparePipeline(op: .display, variant: "probe")`
+    /// neither replaces the probe nor gets it.
     static let probeKey = PipelineKey(op: .display, variant: "probe")
 
     /// The health probe: doubles each float of buffer 0 in place; `probe()` checks the result.
@@ -33,6 +36,8 @@ final class MetalPipelines {
 
     private let device: any MTLDevice
     private var states: [PipelineKey: any MTLComputePipelineState] = [:]
+    /// The health probe's pipeline, compiled from `probeSource` on first use.
+    private var probeState: (any MTLComputePipelineState)?
 
     init(device: any MTLDevice) {
         self.device = device
@@ -51,18 +56,39 @@ final class MetalPipelines {
         return state
     }
 
-    /// Compiles `source` and builds the pipeline of its kernel `key.functionName`, without
-    /// touching the memo; counts in `compileCount`. Throws `RenderError.deviceLost` when
-    /// `source` has no kernel of that name, and Metal's own error when the source does not
-    /// compile or the pipeline cannot be made.
+    /// The health probe's pipeline: `probeState` (`loadCount`), else `probeSource` compiled
+    /// into it (`compileCount`). Throws as `compile` does, memoising nothing.
+    func probePipeline() throws -> any MTLComputePipelineState {
+        if let state = probeState {
+            loadCount += 1
+            return state
+        }
+        let state = try compile(Self.probeKey, source: Self.probeSource)
+        probeState = state
+        return state
+    }
+
+    /// Builds `source`'s kernel `key.functionName` without touching the memo and counts it in
+    /// `compileCount`. Throws as `build` does.
     func compile(_ key: PipelineKey, source: String) throws -> any MTLComputePipelineState {
+        let state = try Self.build(key, source: source, on: device)
+        noteCompile()
+        return state
+    }
+
+    /// Counts a pipeline built with `build` outside the lock (a custom probe source).
+    func noteCompile() { compileCount += 1 }
+
+    /// Compiles `source` on `device` and builds the pipeline of its kernel `key.functionName`.
+    /// Touches no state, so it runs with the backend's lock free. Throws `RenderError.raster`
+    /// when `source` has no kernel of that name (caller input, not a device loss), and Metal's
+    /// own error when the source does not compile or the pipeline cannot be made.
+    static func build(_ key: PipelineKey, source: String, on device: any MTLDevice) throws -> any MTLComputePipelineState {
         let library = try device.makeLibrary(source: source, options: nil)
         guard let function = library.makeFunction(name: key.functionName) else {
-            throw RenderError.deviceLost("no kernel '\(key.functionName)' in the \(key.op.rawValue) library")
+            throw RenderError.raster("no kernel '\(key.functionName)' in the source for \(key.op.rawValue)")
         }
-        let state = try device.makeComputePipelineState(function: function)
-        compileCount += 1
-        return state
+        return try device.makeComputePipelineState(function: function)
     }
 }
 #endif

@@ -1,8 +1,9 @@
 // MetalPipelinesTests.swift: the pipeline memo and the health wiring on a real device (MB-2):
 // a key compiles once and its memo is reused, another variant compiles again, a bad variant is
-// rejected, a file at `cacheURL` is never touched, a probe or command-buffer failure fails the
-// backend, `fail` empties `supports` and `recover` restores, and the tile storage mode follows
-// unified memory. Device-gated; compiled out on Linux.
+// rejected, a missing kernel is caller input (not a device loss), a file at `cacheURL` is never
+// touched, a probe or command-buffer failure fails the backend, `fail` empties `supports`, `recover`
+// restores only once its probe passes, a caller's `display_probe` never replaces the probe, and
+// the tile storage mode follows unified memory. Device-gated; compiled out on Linux.
 #if canImport(Metal)
 import CoreRender
 import CoreRenderMetal
@@ -77,8 +78,44 @@ import Testing
         #expect(backend.capabilities.supported.isEmpty, "supported is kept as it was")
         try backend.recover()
         #expect(backend.isHealthy && backend.capabilities == MetalCapabilities(), "recover restores the fresh state")
+        #expect(backend.pipelineCompileCount == 1, "recover ran the probe before reporting healthy")
         try backend.probe()
-        #expect(backend.isHealthy, "the new queue runs the probe")
+        #expect(backend.isHealthy && backend.pipelineLoadCount == 1, "the new queue runs the probe")
+    }
+
+    @Test(.enabled(if: MetalBackend.defaultDevice != nil))
+    func recoverStaysUnhealthyWhenItsProbeFails() throws {
+        let backend = try MetalBackend.onDefaultDevice()
+        backend.fail("mock")
+        #expect(throws: RenderError.deviceLost("probe: expected [2.0, 4.0, 6.0, 8.0], got [3.0, 6.0, 9.0, 12.0]")) {
+            try backend.recover(probeSource: Self.wrongProbe)
+        }
+        #expect(!backend.isHealthy && backend.supports.isEmpty, "a failed probe keeps the backend failed")
+        #expect(backend.capabilities.lastError?.hasPrefix("probe: expected") == true)
+        try backend.recover()
+        #expect(backend.isHealthy && backend.capabilities.lastError == nil)
+    }
+
+    @Test(.enabled(if: MetalBackend.defaultDevice != nil))
+    func aMissingKernelIsCallerInputNotADeviceLoss() throws {
+        let backend = try MetalBackend.onDefaultDevice()
+        #expect(throws: RenderError.raster("no kernel 'composite_c' in the source for composite")) {
+            try backend.preparePipeline(op: .composite, variant: "c", source: Self.twoKernels)
+        }
+        #expect(backend.isHealthy && backend.pipelineCompileCount == 0, "nothing compiled, nothing failed")
+        #expect(throws: RenderError.deviceLost("probe: no kernel 'display_probe' in the source for display")) {
+            try backend.probe(source: Self.twoKernels)
+        }
+        #expect(backend.capabilities.lastError == "probe: no kernel 'display_probe' in the source for display")
+    }
+
+    @Test(.enabled(if: MetalBackend.defaultDevice != nil))
+    func aCallersDisplayProbeNeverReplacesTheHealthProbe() throws {
+        let backend = try MetalBackend.onDefaultDevice()
+        try backend.preparePipeline(op: .display, variant: "probe", source: Self.wrongProbe)
+        try backend.probe()
+        #expect(backend.isHealthy, "the probe ran its own kernel, not the caller's")
+        #expect(backend.pipelineCompileCount == 2 && backend.pipelineLoadCount == 0, "two separate memos")
     }
 
     @Test(.enabled(if: MetalBackend.defaultDevice != nil))
@@ -90,6 +127,7 @@ import Testing
         #expect(!backend.isHealthy && backend.supports.isEmpty)
         #expect(backend.capabilities.lastError?.hasPrefix("probe: expected") == true)
         try backend.recover()
+        #expect(backend.isHealthy && backend.pipelineCompileCount == 2, "recover compiled and ran the real probe")
         try backend.probe()
         #expect(backend.isHealthy, "the custom source was never memoised: the real probe passes")
     }

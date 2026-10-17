@@ -1,9 +1,10 @@
 // ParityTests.swift: the parity suite scaffold (metal-backend MB-2): one disabled test per op
 // family, each in its own `ParityTests+<Family>.swift` owned by the slice that lands the family
-// (MB-3 to MB-15). `ParityHarness` (render-backend RB-6: sample sets, `compare` within a
-// `ParityTolerance`, golden read and write) and the CPU goldens (RB-7) plug in here when they
-// exist; until then each body fails on purpose, so a family enabled by mistake fails loudly
-// instead of passing empty. Every real parity test is also
+// (MB-3 to MB-15). Each family's test takes `ParityHarness.sampleSet(for:)`, renders each sample
+// on this backend with `ParityHarness.render` and calls `ParityHarness.compare` within its
+// `ParityTolerance` against the RB-7 CPU goldens (`ParityGolden.read`); all of it is in
+// Sources/CoreRender/Parity, ready to call. Until its slice lands each body fails on purpose, so a
+// family enabled by mistake fails loudly instead of passing empty. Every real parity test is also
 // `.enabled(if: MetalBackend.defaultDevice != nil)`: a runner without a GPU skips it. Compiled
 // out on Linux.
 #if canImport(Metal)

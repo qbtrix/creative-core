@@ -33,7 +33,7 @@ extension PixelBuffer {
 }
 
 extension MetalBackend {
-    /// A backend on the default device with no archive file. Throws `RenderError.deviceLost` without one.
+    /// A backend on the default device (`cacheURL` nil, reserved). Throws `RenderError.deviceLost` without one.
     static func onDefaultDevice() throws -> MetalBackend {
         guard let device = defaultDevice else { throw RenderError.deviceLost("no default device") }
         return try MetalBackend(device: device, cacheURL: nil)
