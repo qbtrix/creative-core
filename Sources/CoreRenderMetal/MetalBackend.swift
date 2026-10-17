@@ -6,8 +6,8 @@
 // never call them with it held). Invariants: `supports` is empty while not healthy,
 // `residentBytes` sums the live surfaces' resident tiles and stays at or under `budgetBytes`
 // after every upload (MetalBackend+Memory.swift), a surface this backend did not make
-// throws `surfaceMismatch`, every op throws `unsupported` until its slice, and a probe that
-// fails leaves the backend unhealthy with the reason in `capabilities.lastError`.
+// throws `surfaceMismatch`, every op throws `unsupported` until its slice, and a probe or a
+// command buffer that fails leaves the backend unhealthy with the reason in `capabilities.lastError`.
 #if canImport(Metal)
 import CoreColor
 import CoreRaster
@@ -23,11 +23,12 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
 
     /// The GPU this backend draws on.
     public let device: any MTLDevice
-    /// Where the pipeline binary archive lives; nil keeps the compiled pipelines in memory only.
+    /// Reserved for an on-disk pipeline cache; unused today. The backend never reads, writes or
+    /// deletes anything at this URL: pipelines are memoised in process and Metal keeps its own shader cache.
     public let cacheURL: URL?
     /// The queue every slice's command buffers go through; `recover` replaces it. Read under the lock.
     private(set) var commandQueue: any MTLCommandQueue
-    /// The compute pipelines, compiled on first use and cached at `cacheURL`. Call under the lock.
+    /// The compute pipelines, compiled once per key and memoised. Call under the lock.
     let pipelines: MetalPipelines
 
     private let lock = NSLock()
@@ -41,11 +42,11 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     private static let tileBytes = SurfaceTiling.tileSize * SurfaceTiling.tileSize * MetalSurface.bytesPerPixel
 
     /// Opens a backend on `device`. Throws `RenderError.deviceLost` when it gives no command
-    /// queue or no binary archive; a cache file at `cacheURL` that Metal rejects is replaced, not thrown.
+    /// queue. `cacheURL` is reserved (see the property) and never touched.
     public init(device: any MTLDevice, cacheURL: URL?) throws {
         self.device = device
         self.commandQueue = try Self.makeQueue(on: device)
-        self.pipelines = try MetalPipelines(device: device, cacheURL: cacheURL)
+        self.pipelines = MetalPipelines(device: device)
         self.cacheURL = cacheURL
         self.budget = max(Int(clamping: device.recommendedMaxWorkingSetSize / 2), Self.tileBytes)
     }
@@ -72,10 +73,50 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     }
     /// `residentBytes` for a caller holding the lock.
     var residentBytesLocked: Int { surfaces.values.reduce(0) { $0 + $1.residentBytes } }
-    /// Pipelines built by compiling shader source since init: 0 after a warm start from `cacheURL`.
+    /// Pipelines built by compiling shader source since init, one per key (plus each custom probe).
     public var pipelineCompileCount: Int { withLock { pipelines.compileCount } }
-    /// Pipelines taken from the binary archive without a compile.
+    /// Pipeline requests answered from the in-process memo without a compile.
     public var pipelineLoadCount: Int { withLock { pipelines.loadCount } }
+
+    /// The storage mode of tile textures: `.shared` on a GPU with unified memory, `.managed` on a
+    /// discrete one, where the CPU and GPU keep separate copies. No GPU work writes the tiles yet, so
+    /// `replace` and `getBytes` see current pixels in either mode; the first slice that encodes GPU
+    /// writes to a managed tile must synchronize it with a blit before a CPU read.
+    public static func tileStorageMode(unifiedMemory: Bool) -> MTLStorageMode {
+        #if os(macOS)
+        return unifiedMemory ? .shared : .managed
+        #else
+        return .shared
+        #endif
+    }
+
+    /// Compiles and memoises the kernel named by `op` and `variant` in `source` (MSL), so the first
+    /// op that needs it does not pay the compile; a key already memoised is not compiled again.
+    /// `variant` may come from outside: it goes through `PipelineKey.validated`. Throws
+    /// `RenderError.raster` for a variant outside `[A-Za-z0-9_]`, `RenderError.deviceLost` when
+    /// `source` has no such kernel, and Metal's error when it does not compile. Never fails the backend.
+    public func preparePipeline(op: RenderOp, variant: String, source: String) throws {
+        let key = try PipelineKey.validated(op: op, variant: variant)
+        _ = try withLock { try pipelines.pipeline(for: key, source: source) }
+    }
+
+    /// Reports a finished command buffer's `status` and `error` (after `waitUntilCompleted` or in a
+    /// completed handler). Anything but `.completed` with no error is a device failure: the backend
+    /// is marked failed with "<label>: ..." (`isHealthy` false, `supports` empty) and
+    /// `RenderError.deviceLost` carries the same reason. Call it with the lock free.
+    public func recordCompletion(status: MTLCommandBufferStatus, error: (any Error)?, label: String) throws {
+        guard let reason = Self.commandBufferFailure(status: status, error: error, label: label) else { return }
+        fail(reason)
+        throw RenderError.deviceLost(reason)
+    }
+
+    /// Why a finished command buffer failed, or nil when it completed cleanly: a non-nil `error`,
+    /// or any `status` other than `.completed`.
+    static func commandBufferFailure(status: MTLCommandBufferStatus, error: (any Error)?, label: String) -> String? {
+        if let error { return "\(label): command buffer failed: \(error)" }
+        guard status == .completed else { return "\(label): command buffer ended with status \(status.rawValue)" }
+        return nil
+    }
 
     /// Changes the capability state under the lock (a slice enables its family; `fail` and `recover`).
     func withCapabilities<R>(_ body: (inout MetalCapabilities) throws -> R) rethrows -> R {
@@ -97,12 +138,14 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     }
 
     /// Runs the probe kernel once (four floats doubled in place) and checks the result. On any
-    /// failure (no command buffer, encoder or buffer, a command-buffer error, or wrong output) the
-    /// backend is marked failed with the reason and `RenderError.deviceLost` carries the same
-    /// reason. The dispatcher or an app calls this after a device-loss notification.
-    public func probe() throws {
+    /// failure (a compile error, no command buffer, encoder or buffer, a command-buffer error, or
+    /// wrong output) the backend is marked failed with the reason and `RenderError.deviceLost`
+    /// carries the same reason. The dispatcher or an app calls this after a device-loss
+    /// notification. `source`, when given, replaces the probe's MSL (it must define
+    /// `display_probe`) and is compiled fresh, never memoised: tests use it to drive the failure path.
+    public func probe(source: String? = nil) throws {
         do {
-            try withLock { try runProbe() }
+            try withLock { try runProbe(source: source) }
         } catch {
             let reason: String
             if case RenderError.deviceLost(let text) = error { reason = text } else { reason = "probe: \(error)" }
@@ -112,8 +155,13 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     }
 
     /// The probe's GPU work; call with the lock held. Throws `RenderError.deviceLost("probe: ...")`.
-    private func runProbe() throws {
-        let pipeline = try pipelines.pipeline(for: MetalPipelines.probeKey, source: MetalPipelines.probeSource)
+    private func runProbe(source: String?) throws {
+        let pipeline: any MTLComputePipelineState
+        if let source {
+            pipeline = try pipelines.compile(MetalPipelines.probeKey, source: source)
+        } else {
+            pipeline = try pipelines.pipeline(for: MetalPipelines.probeKey, source: MetalPipelines.probeSource)
+        }
         let input: [Float] = [1, 2, 3, 4]
         let made = input.withUnsafeBytes { raw -> (any MTLBuffer)? in
             guard let base = raw.baseAddress else { return nil }
@@ -134,7 +182,9 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
         encoder.endEncoding()
         commands.commit()
         commands.waitUntilCompleted()
-        if let error = commands.error { throw RenderError.deviceLost("probe: command buffer failed: \(error)") }
+        if let reason = Self.commandBufferFailure(status: commands.status, error: commands.error, label: "probe") {
+            throw RenderError.deviceLost(reason)
+        }
         let output = Array(UnsafeBufferPointer(
             start: buffer.contents().bindMemory(to: Float.self, capacity: input.count), count: input.count))
         guard output == input.map({ $0 * 2 }) else {
@@ -172,7 +222,7 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     public func display(_ s: RenderSurface, colorSpace: ColorSpace) throws -> [UInt8] {
         throw RenderError.unsupported(.display)
     }
-    /// Composite: MB-4 (`.normal`), MB-5 to MB-10 (blend families). Throws `unsupported(.composite)`.
+    /// Composite. Throws `unsupported(.composite)` until its slice lands.
     public func composite(_ s: RenderSurface, onto b: inout RenderSurface, x: Int, y: Int,
                           mode: BlendMode, opacity: Float) throws {
         throw RenderError.unsupported(.composite)

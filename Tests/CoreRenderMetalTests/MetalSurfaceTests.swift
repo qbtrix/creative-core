@@ -106,6 +106,19 @@ private struct SplitMix64: RandomNumberGenerator {
         }
     }
 
+    /// 65520 and up would encode as a half infinity that cannot read back into a buffer: upload clamps
+    /// to plus or minus 65504, the largest finite half, so the round trip reads instead of throwing.
+    @Test(.enabled(if: MetalBackend.defaultDevice != nil))
+    func outOfHalfRangeComponentsClampAndReadBack() throws {
+        let backend = try Self.backend()
+        var buffer = try PixelBuffer(width: 2, height: 1)
+        try buffer.setPixel(x: 0, y: 0, RGBA(r: 70000, g: -1e9, b: 65520, a: 1))
+        try buffer.setPixel(x: 1, y: 0, RGBA(r: 65504, g: 0.5, b: -65519, a: 0))
+        let back = try backend.read(backend.surface(buffer))
+        #expect(try back.pixel(x: 0, y: 0) == RGBA(r: 65504, g: -65504, b: 65504, a: 1))
+        #expect(try back.pixel(x: 1, y: 0) == RGBA(r: 65504, g: 0.5, b: -65504, a: 0))
+    }
+
     @Test(.enabled(if: MetalBackend.defaultDevice != nil))
     func releasedOrForeignSurfaceIsAMismatch() throws {
         let backend = try Self.backend()
