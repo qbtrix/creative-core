@@ -1,10 +1,15 @@
 {
   "id": "contract",
   "name": "Render Contract",
-  "description": "The RenderBackend contract: ops, surfaces, errors and a recording fake. Today only the module marker; render-backend RB-2 adds the contract.",
+  "description": "The RenderBackend contract: ops, surfaces, tone adjustments, errors and a recording fake that runs only the ops it is given. Linux-safe.",
   "technology": "Swift 6, Foundation",
   "paths": [
-    "Sources/CoreRender/CoreRender.swift"
+    "Sources/CoreRender/CoreRender.swift",
+    "Sources/CoreRender/RenderOp.swift",
+    "Sources/CoreRender/RenderSurface.swift",
+    "Sources/CoreRender/RenderBackend.swift",
+    "Sources/CoreRender/ToneAdjustment.swift",
+    "Sources/CoreRender/FakeBackend.swift"
   ],
   "order": 10
 }

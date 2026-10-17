@@ -1,0 +1,16 @@
+[
+  {
+    "note": "fake backend runs an op it does not list in supports",
+    "file": "Sources/CoreRender/FakeBackend.swift",
+    "anchor": "guard supports.contains(op) else",
+    "replacement": "guard supports.contains(op) || op == .blur else",
+    "filter": "RenderBackendFakeTests"
+  },
+  {
+    "note": "fake backend stops recording the calls it receives",
+    "file": "Sources/CoreRender/FakeBackend.swift",
+    "anchor": "recorded.append(op)",
+    "replacement": "_ = op",
+    "filter": "RenderBackendFakeTests"
+  }
+]
