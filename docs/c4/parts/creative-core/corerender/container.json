@@ -1,7 +1,7 @@
 {
   "id": "corerender",
   "name": "CoreRender library",
-  "description": "Shared render module (Sources/CoreRender): the RenderBackend contract every app's Model draws through, its backends (a fake for tests, and the CPU backend over CoreRaster as it lands), the routing of each op to a backend as it lands, the parity harness, and the Linux-safe parts of the Metal backend (capabilities, tiling math, cache keys). Linux-safe, Foundation only.",
+  "description": "Shared render module (Sources/CoreRender): the RenderBackend contract every app's Model draws through, its backends (a fake for tests, and the CPU backend over CoreRaster, the pixel reference), the routing of each op to a backend as it lands, the parity harness, and the Linux-safe parts of the Metal backend (capabilities, tiling math, cache keys). Linux-safe, Foundation only.",
   "technology": "Swift 6, SwiftPM",
   "tags": [
     "internal"
@@ -11,7 +11,7 @@
     {
       "source": "corerender",
       "target": "coreraster",
-      "description": "backends hold surfaces as CoreRaster pixel buffers and the parity harness compares them; the CPU backend, as it lands, draws through CoreRaster's operations",
+      "description": "backends hold surfaces as CoreRaster pixel buffers and the parity harness compares them; the CPU backend draws through CoreRaster's operations",
       "style": "sync"
     },
     {
