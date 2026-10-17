@@ -48,3 +48,5 @@ utc	stage	event	ref	note
 2026-10-17T14:08Z	4	anatomy-round	dev 5cfdd5c	RB-b round 2 started: critic and gate
 2026-10-17T14:10Z	4	anatomy-round	dev 5cfdd5c	RB-b round 2 not clean (1 major, 2 minor); fixer building
 2026-10-17T14:11Z	4	gate	dev 5cfdd5c	993/993 CI: PASS; render plans 27/27 caught
+2026-10-17T14:14Z	4	merge	dev 658f0c2	RB-7 #382 merged; release budget +218% (backdrop copy); dev CI is debug so unaffected
+2026-10-17T14:17Z	4	fixer	RB-c	in-place composite fixer started (lock held across composite; overflow throw leaves upper rows written, as CoreRaster in-place)

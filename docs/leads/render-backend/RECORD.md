@@ -4,14 +4,14 @@ Issue: #347 · Packet: docs/blueprints/core/features/render-backend.md
 Run: act-1a149b544ea-emiq (line lead: render-backend, motion-tracks) · Started: 2026-10-17 (prior runs act-1a14644b047-dxwc)
 Stage: 3 waves (v3 loop, slices RB-a, RB-b, RB-c)
 Base: 3be8939 (origin/dev)
-Next: RB-b Anatomy round 1 (critic and gate on 07c7a70); RB-7 builder (wave 6, no feature-done label: it goes on the feature's last PR after the RB-b and RB-c loops); Belt-Slice-Done RB-b after a dev CI run holding 07c7a70 has green Linux.
+Next: RB-b round 2 fix PR (rbb-anatomy-2) to merge, then RB-b round 3; RB-c in-place composite fix PR (rbc-composite-in-place, the release budget miss from #382), then RB-c Anatomy round 1; feature-done on the feature's last PR after the loops; Belt-Slice-Done RB-b and RB-c after a dev CI run holding their last PRs has green Linux.
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
 |---|---|---|---|---|---|
 | RB-a | RB-1, RB-2a, RB-2b | nothing | merged-done (loop ended at 4 rounds; last finding rides RB-5) | 39037816632 (4b2aa75, Linux and macOS green) | wanted (issuecomment-6234729253) |
 | RB-b | RB-3, RB-4, RB-5 | RB-a | merged (all tasks on dev 07c7a70); round 1 fixed by #381; round 2 not clean (1 major, 2 minor), fixer building | – | – |
-| RB-c | RB-6, RB-7 | RB-b (RB-7 only) | building (RB-6 merged; RB-7 building) | – | – |
+| RB-c | RB-6, RB-7 | RB-b (RB-7 only) | merged (RB-7 #382, 658f0c2); release budget miss (+218%) being fixed | – | – |
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -23,7 +23,7 @@ Next: RB-b Anatomy round 1 (critic and gate on 07c7a70); RB-7 builder (wave 6, n
 | RB-3 | 2 | CPUBackend: surface, read, release, display, composite in place | Sources/CoreRender/CPU/CPUBackend.swift, Tests/CoreRenderTests/CPUBackendTests.swift, Tests/mutations/CoreRenderCPUBackend.json, cpu-backend.json part | CPUBackendTests | CoreRenderCPUBackend | #377 (4682eee) | merged |
 | RB-4 | 3 | CPUBackend transform, resample, blur, adjust, retouch | Sources/CoreRender/CPU/CPUBackend+Ops.swift, CPUBackendOpsTests, CoreRenderCPUBackendOps.json | CPUBackendOpsTests | CoreRenderCPUBackendOps | #379 (d8067a2; 13 mutations) | merged |
 | RB-5 | 3 | RenderDispatcher routing, health, lastFallback, cross-backend surfaces | Sources/CoreRender/RenderDispatcher.swift, RenderDispatcherTests, CoreRenderDispatcher.json, dispatcher.json part | RenderDispatcherTests | CoreRenderDispatcher | #380 (07c7a70; 9 mutations; carries RB-a round 4 comment fix) | merged |
-| RB-7 | 4 | CPU goldens, RenderBudgetTests, waves.md status; feature-done | Tests/CoreRenderTests/Golden/, CPUGoldenTests, RenderBudgetTests, waves.md | CPUGoldenTests, RenderBudgetTests | none | – | building (no feature-done label; lead adds it to the last PR after the loops) |
+| RB-7 | 4 | CPU goldens, RenderBudgetTests, waves.md status; feature-done | Tests/CoreRenderTests/Golden/, CPUGoldenTests, RenderBudgetTests, waves.md | CPUGoldenTests, RenderBudgetTests | none | #382 | merged 658f0c2; 67 samples in 5 packed goldens (134 per-case files would break the 15-file cap); budget is release-only and measured +218% (CPUBackend.composite copies the 192 MB backdrop): fix PR rbc-composite-in-place building; goldens made on Linux x86_64, macOS zero-delta unverified |
 
 ## Rounds
 | round | slice | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
