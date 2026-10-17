@@ -4,7 +4,8 @@
 // Sendable and every access to mutable state goes through `withLock` (internal, so the
 // extension files of later slices share it; `fail` and `recover` take it themselves, so
 // never call them with it held). Invariants: `supports` is empty while not healthy,
-// `residentBytes` sums the live surfaces' textures, a surface this backend did not make
+// `residentBytes` sums the live surfaces' resident tiles and stays at or under `budgetBytes`
+// after every upload (MetalBackend+Memory.swift), a surface this backend did not make
 // throws `surfaceMismatch`, every op throws `unsupported` until its slice, and a probe that
 // fails leaves the backend unhealthy with the reason in `capabilities.lastError`.
 #if canImport(Metal)
@@ -32,6 +33,12 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     private let lock = NSLock()
     var state = MetalCapabilities()
     var surfaces: [UUID: MetalSurface] = [:]
+    /// `budgetBytes`' storage; read and write under the lock.
+    var budget: Int
+    /// Counts uploads, reads and restores: the `lastUse` stamp. Advance with `tick` under the lock.
+    private var useClock: UInt64 = 0
+    /// One full tile's texture bytes (256 x 256 x 8): the floor of `budgetBytes`.
+    private static let tileBytes = SurfaceTiling.tileSize * SurfaceTiling.tileSize * MetalSurface.bytesPerPixel
 
     /// Opens a backend on `device`. Throws `RenderError.deviceLost` when it gives no command
     /// queue or no binary archive; a cache file at `cacheURL` that Metal rejects is replaced, not thrown.
@@ -40,6 +47,7 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
         self.commandQueue = try Self.makeQueue(on: device)
         self.pipelines = try MetalPipelines(device: device, cacheURL: cacheURL)
         self.cacheURL = cacheURL
+        self.budget = max(Int(clamping: device.recommendedMaxWorkingSetSize / 2), Self.tileBytes)
     }
 
     /// "Metal (<device name>)": the status note's text and every surface's `backend`.
@@ -50,8 +58,20 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     public var supports: Set<RenderOp> { withLock { state.healthy ? state.supported : [] } }
     /// False after a command buffer error or a lost device, until `recover`.
     public var isHealthy: Bool { withLock { state.healthy } }
-    /// Bytes of tile textures held by the live surfaces (8 per pixel).
-    public var residentBytes: Int { withLock { surfaces.values.reduce(0) { $0 + $1.residentBytes } } }
+    /// Bytes of resident tile textures held by the live surfaces (8 per pixel); evicted tiles count 0.
+    public var residentBytes: Int { withLock { residentBytesLocked } }
+    /// The most texture bytes the surfaces keep resident: above it, least recently used tiles move to
+    /// CPU shadows after each upload. Default: half the device's `recommendedMaxWorkingSetSize`, at
+    /// least one full tile (256 x 256 x 8 bytes). Setting it evicts at once (0 shadows every tile); no value fails.
+    public var budgetBytes: Int {
+        get { withLock { budget } }
+        set {
+            withLock { budget = newValue }
+            evictIfNeeded()
+        }
+    }
+    /// `residentBytes` for a caller holding the lock.
+    var residentBytesLocked: Int { surfaces.values.reduce(0) { $0 + $1.residentBytes } }
     /// Pipelines built by compiling shader source since init: 0 after a warm start from `cacheURL`.
     public var pipelineCompileCount: Int { withLock { pipelines.compileCount } }
     /// Pipelines taken from the binary archive without a compile.
@@ -122,19 +142,27 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
         }
     }
 
-    /// Uploads `buffer` as a tiled rgba16Float surface. Throws `RenderError.raster` for a size the
-    /// tiling rejects and `RenderError.deviceLost` when a texture cannot be made.
+    /// Uploads `buffer` as a tiled rgba16Float surface, then evicts least recently used tiles until
+    /// `residentBytes` fits `budgetBytes`. Throws `RenderError.raster` for a size the tiling rejects
+    /// and `RenderError.deviceLost` when a texture cannot be made.
     public func surface(_ buffer: PixelBuffer) throws -> RenderSurface {
-        let stored = try MetalSurface(device: device, buffer: buffer)
+        let clock = withLock { tick() }
+        let stored = try MetalSurface(device: device, buffer: buffer, clock: clock)
         let id = UUID()
         withLock { surfaces[id] = stored }
+        evictIfNeeded()
         return handle(id: id, width: stored.tiling.width, height: stored.tiling.height)
     }
 
-    /// Downloads a surface's pixels as Float32. Throws `RenderError.surfaceMismatch` for a surface
-    /// this backend does not hold and `RenderError.raster` when a value cannot be stored.
+    /// Downloads a surface's pixels as Float32 (evicted tiles come from their shadows) and marks
+    /// every tile of it used. Throws `RenderError.surfaceMismatch` for a surface this backend does
+    /// not hold and `RenderError.raster` when a value cannot be stored.
     public func read(_ surface: RenderSurface) throws -> PixelBuffer {
-        try withLock { try lookup(surface).read() }
+        try withLock {
+            let stored = try lookup(surface)
+            stored.touch(tick())
+            return try stored.read()
+        }
     }
 
     /// Frees a surface's textures; an unknown or already released id is a no-op.
@@ -199,8 +227,11 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
         return queue
     }
 
+    /// The next use-clock value, for `lastUse` stamps; call with the lock held. Wraps at `UInt64.max`.
+    func tick() -> UInt64 { useClock &+= 1; return useClock }
+
     /// Runs `body` with the backend's lock held. The lock is not recursive: `body` must not call
-    /// `withLock`, `withCapabilities`, `fail`, `recover`, `probe` or a public property.
+    /// `withLock`, `withCapabilities`, `fail`, `recover`, `probe`, `evictIfNeeded` or a public property.
     func withLock<R>(_ body: () throws -> R) rethrows -> R {
         lock.lock()
         defer { lock.unlock() }

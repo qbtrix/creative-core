@@ -1,8 +1,11 @@
 // MetalSurface.swift: one RenderSurface's storage: a SurfaceTiling grid of rgba16Float
 // textures (linear, premultiplied, one per tile, row-major) filled from a PixelBuffer
-// through HalfFloat. Invariants: `tiles.count == tiling.tileCount`, tile `i` has the size
-// of `tiling.rect(i)`, `residentBytes` is the sum of width x height x `bytesPerPixel`. No
-// GPU work touches the textures yet (MB-1), so `replace` and `getBytes` need no synchronisation.
+// through HalfFloat; a tile can leave the GPU for a CPU shadow (MB-16, MetalSurface+Eviction.swift).
+// Invariants: `tiles`, `shadows` and `lastUse` have `tiling.tileCount` entries; tile `i` is resident
+// (`tiles[i]` set, `shadows[i]` nil) or shadowed (`tiles[i]` nil, `shadows[i]` sized to `tiling.rect(i)`),
+// never neither; `residentBytes` is width x height x `bytesPerPixel` over the resident tiles. No GPU work
+// writes the textures yet, so `replace` and `getBytes` need no synchronisation and a shadow taken on
+// eviction is current; a slice that encodes GPU work must wait for its command buffer before `download`.
 #if canImport(Metal)
 import CoreRaster
 import CoreRender
@@ -18,16 +21,23 @@ final class MetalSurface {
 
     /// The 256 px tile grid over the surface, row-major.
     let tiling: SurfaceTiling
-    /// One texture per tile, in `tiling` index order, sized to `tiling.rect(i)`.
-    var tiles: [any MTLTexture]
-    /// Bytes the tile textures hold: width x height x `bytesPerPixel` summed over `tiles`. Eviction (MB-16) lowers it.
+    /// The backend's use clock when this surface was uploaded: breaks `lastUse` ties, older first.
+    let created: UInt64
+    /// One texture per tile, in `tiling` index order, sized to `tiling.rect(i)`; nil once evicted.
+    var tiles: [(any MTLTexture)?]
+    /// One tile-sized CPU copy per evicted tile, taken on eviction; nil while the texture is resident.
+    var shadows: [PixelBuffer?]
+    /// Per tile, the backend's use clock at its last upload or read; the LRU key.
+    var lastUse: [UInt64]
+    /// Bytes the resident tile textures hold: width x height x `bytesPerPixel` summed over `tiles`.
     var residentBytes: Int
 
-    /// Uploads `buffer` tile by tile as binary16. Throws `RenderError.raster` for a size the tiling
-    /// rejects, `RenderError.deviceLost` when the device returns no texture.
-    init(device: any MTLDevice, buffer: PixelBuffer) throws {
+    /// Uploads `buffer` tile by tile as binary16 and stamps every tile's `lastUse` with `clock`.
+    /// Throws `RenderError.raster` for a size the tiling rejects, `RenderError.deviceLost` when
+    /// the device returns no texture.
+    init(device: any MTLDevice, buffer: PixelBuffer, clock: UInt64) throws {
         let tiling = try SurfaceTiling(width: buffer.width, height: buffer.height)
-        var tiles: [any MTLTexture] = []
+        var tiles: [(any MTLTexture)?] = []
         tiles.reserveCapacity(tiling.tileCount)
         var bytes = 0
         for index in 0..<tiling.tileCount {
@@ -49,43 +59,63 @@ final class MetalSurface {
                 texture.replace(region: region, mipmapLevel: 0, withBytes: base, bytesPerRow: bytesPerRow)
             }
             tiles.append(texture)
-            bytes += rect.width * rect.height * Self.bytesPerPixel
+            bytes += Self.bytes(of: rect)
         }
         self.tiling = tiling
+        self.created = clock
         self.tiles = tiles
+        self.shadows = Array(repeating: nil, count: tiling.tileCount)
+        self.lastUse = Array(repeating: clock, count: tiling.tileCount)
         self.residentBytes = bytes
     }
 
-    /// Downloads every tile into a new `PixelBuffer` of the surface's size. Throws `RenderError.raster`
-    /// when the buffer rejects the size or a decoded component is not finite: a component at or above
-    /// 65520 in magnitude was encoded as a binary16 infinity on upload, and buffers hold finite values only.
+    /// Every tile into a new `PixelBuffer` of the surface's size: a resident tile is downloaded, an
+    /// evicted one copied from its shadow. Throws `RenderError.raster` when the buffer rejects the
+    /// size or a decoded component is not finite: a component at or above 65520 in magnitude was
+    /// encoded as a binary16 infinity on upload, and buffers hold finite values only.
     func read() throws -> PixelBuffer {
         var buffer = try Self.rethrown { try PixelBuffer(width: tiling.width, height: tiling.height) }
-        for (index, texture) in tiles.enumerated() {
+        // `rect` throws for an index outside the tiling and both arrays have `tileCount` entries,
+        // so the subscripts are in range.
+        for index in 0..<tiling.tileCount {
             let rect = try tiling.rect(index)
-            var halves = [UInt16](repeating: 0, count: rect.width * rect.height * Self.channels)
-            let region = MTLRegionMake2D(0, 0, rect.width, rect.height)
-            let bytesPerRow = rect.width * Self.bytesPerPixel
-            try halves.withUnsafeMutableBytes { raw in
-                guard let base = raw.baseAddress else {
-                    throw RenderError.raster("empty download for tile \(index), \(rect.width)x\(rect.height)")
-                }
-                texture.getBytes(base, bytesPerRow: bytesPerRow, from: region, mipmapLevel: 0)
+            guard let tile = try tiles[index].map({ try Self.download($0, rect: rect, index: index) }) ?? shadows[index] else {
+                throw RenderError.raster("tile \(index) has neither a texture nor a shadow")
             }
-            // `halves` holds exactly `channels` values per pixel of `rect`, so
-            // `offset` stays inside it over the rect's pixels.
-            var offset = 0
-            for y in rect.y..<(rect.y + rect.height) {
-                for x in rect.x..<(rect.x + rect.width) {
-                    let pixel = RGBA(
-                        r: HalfFloat.decode(halves[offset]), g: HalfFloat.decode(halves[offset + 1]),
-                        b: HalfFloat.decode(halves[offset + 2]), a: HalfFloat.decode(halves[offset + 3]))
-                    offset += Self.channels
-                    try Self.rethrown { try buffer.setPixel(x: x, y: y, pixel) }
-                }
+            try Self.rethrown {
+                try buffer.replaceTile(column: index % tiling.columns, row: index / tiling.columns, with: tile)
             }
         }
         return buffer
+    }
+
+    /// The texture bytes of a tile of `rect`'s size.
+    static func bytes(of rect: TileRect) -> Int { rect.width * rect.height * bytesPerPixel }
+
+    /// `texture` (a tile of `rect`'s size) as a new `rect.width` x `rect.height` `PixelBuffer`.
+    /// Throws `RenderError.raster` when a decoded component is not finite (see `read`).
+    static func download(_ texture: any MTLTexture, rect: TileRect, index: Int) throws -> PixelBuffer {
+        var halves = [UInt16](repeating: 0, count: rect.width * rect.height * channels)
+        try halves.withUnsafeMutableBytes { raw in
+            guard let base = raw.baseAddress else {
+                throw RenderError.raster("empty download for tile \(index), \(rect.width)x\(rect.height)")
+            }
+            texture.getBytes(base, bytesPerRow: rect.width * bytesPerPixel,
+                             from: MTLRegionMake2D(0, 0, rect.width, rect.height), mipmapLevel: 0)
+        }
+        var tile = try rethrown { try PixelBuffer(width: rect.width, height: rect.height) }
+        // `halves` holds exactly `channels` values per pixel of `rect`, so `offset` stays inside it.
+        var offset = 0
+        for y in 0..<rect.height {
+            for x in 0..<rect.width {
+                let pixel = RGBA(
+                    r: HalfFloat.decode(halves[offset]), g: HalfFloat.decode(halves[offset + 1]),
+                    b: HalfFloat.decode(halves[offset + 2]), a: HalfFloat.decode(halves[offset + 3]))
+                offset += channels
+                try rethrown { try tile.setPixel(x: x, y: y, pixel) }
+            }
+        }
+        return tile
     }
 
     /// The premultiplied pixels of `rect` in `buffer` as row-major RGBA binary16, `rect.width * rect.height
