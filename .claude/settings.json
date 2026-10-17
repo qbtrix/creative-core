@@ -34,6 +34,16 @@
   },
   "env": {
     "CLAUDE_CODE_DISABLE_ADVISOR_TOOL": "1",
-    "CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS": "4"
-  }
+    "CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS": "4",
+    "CLAUDE_CODE_AUTO_COMPACT_WINDOW": "200000"
+  },
+  "model": "claude-opus-5-5",
+  "promptCacheTtl": "1h",
+  "workflowSizeGuideline": "small",
+  "modelSettings": {
+    "claude-opus-5-5": {
+      "effortLevel": "medium"
+    }
+  },
+  "subagentPromptCacheTtl": "1h"
 }
