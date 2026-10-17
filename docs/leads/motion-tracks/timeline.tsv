@@ -37,3 +37,4 @@ utc	stage	event	ref	note
 2026-10-17T13:12Z	3	pr-merged	dev 3be8939	MT-5 #363 9b72477 feature-done
 2026-10-17T13:12Z	3	ci-run	dev 9b72477	39031409068 failure: macOS MetalPipelinesTests (#362), Linux green; dev-red #365
 2026-10-17T13:24Z	4	anatomy-round	dev 3be8939	round 1 not clean; minor findings to fixer
+2026-10-17T13:27Z	4	pr-merged	dev 23af67b	#370 Anatomy round 1 fixes (scale finite after x100, onion cap 1000, +4 -2 mutations)
