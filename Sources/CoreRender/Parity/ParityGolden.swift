@@ -1,6 +1,7 @@
-// ParityGolden.swift: a golden on disk, `<root>/<op>/<case>.rgba8` (display
-// bytes, row-major, straight alpha) beside `<case>.json`. Golden files are
-// untrusted: every check throws `RenderError.raster` and never traps.
+// ParityGolden.swift: a golden on disk, `<root>/<op>/<name>.rgba8` (display
+// bytes, row-major, straight alpha) beside `<name>.json`; the CPU goldens are
+// packs of samples (ParityPack.swift). Golden files are untrusted: every check
+// throws `RenderError.raster` and never traps.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else

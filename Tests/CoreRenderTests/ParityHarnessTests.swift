@@ -47,18 +47,61 @@ private func fill(_ w: Int, _ h: Int, _ r: Float, _ g: Float, _ b: Float, _ a: F
         #expect(throws: RenderError.self) { try ParityHarness.compare(golden: golden, fill(2, 3, 0, 0, 0, 1)) }
     }
 
-    @Test func cpuResultPassesItsOwnGoldenWhereTheDecodedLinearCompareFails() throws {
+    @Test func goldenCompareEncodesInTheGoldensSpace() throws {
+        let red = try fill(1, 1, 1, 0, 0, 1)
+        let golden = try ParityGolden(red, colorSpace: .displayP3, tolerance: .standard)
+        #expect(try golden.bytes != red.rgba8(colorSpace: .sRGB), "saturated red differs in P3")
+        let result = try ParityHarness.compare(golden: golden, red)
+        #expect(result.passed && result.worstByteDelta == 0, "\(result)")
+        #expect(!"\(result)".contains("linear"), "a golden compare checks bytes only: \(result)")
+    }
+
+    @Test func checkedInBlurGoldensPassWhereTheDecodedLinearCompareFails() throws {
         let cpu = CPUBackend()
+        var linearFailures = 0
         for sample in try ParityHarness.sampleSet(for: .blur) {
+            let golden = try ParityGolden.band(from: CPUGoldenTests.root, op: .blur, sample: sample.name)
             let result = try ParityHarness.render(sample, on: cpu)
-            let golden = try ParityGolden(result, tolerance: .standard)
             #expect(try ParityHarness.compare(golden: golden, result).passed, "\(sample.name)")
+            if try !ParityHarness.compare(golden.buffer(), result, tolerance: .standard).passed { linearFailures += 1 }
         }
         // Linear 0.998 is display byte 255, which decodes to 1: 2e-3 off, over `.standard.linear`.
-        let nearWhite = try fill(1, 1, 0.998, 0.998, 0.998, 1)
-        let golden = try ParityGolden(nearWhite, tolerance: .standard)
-        #expect(try ParityHarness.compare(golden: golden, nearWhite).passed)
-        #expect(try !ParityHarness.compare(golden.buffer(), nearWhite, tolerance: .standard).passed)
+        #expect(linearFailures > 0, "a golden's bytes decoded to linear are off by up to half a level")
+    }
+
+    @Test func pixelsInvisibleInBothCompareOnlyAlpha() throws {
+        let golden = { (bytes: [UInt8]) in
+            try ParityGolden(header: Data(#"{"width":1,"height":1,"colorSpace":"sRGB","tolerance":{"bytes":2,"linear":0.001}}"#.utf8),
+                             bytes: Data(bytes))
+        }
+        let clear = try ParityHarness.compare(golden: golden([255, 255, 0, 0]), fill(1, 1, 0, 0, 0, 0))
+        #expect(clear.passed && clear.worstByteDelta == 0, "\(clear)")
+        let visible = try ParityHarness.compare(golden: golden([255, 255, 0, 1]), fill(1, 1, 0, 0, 0, 1.0 / 255))
+        #expect(!visible.passed && visible.worstByteDelta == 255, "\(visible)")
+        // A real band: blur's alpha-subnormal keeps colour under alpha byte 0; flushed to clear, it passes.
+        let band = try ParityGolden.band(from: CPUGoldenTests.root, op: .blur, sample: "alpha-subnormal")
+        var flushed = band.bytes
+        for i in stride(from: 0, to: flushed.count, by: 4) where flushed[i + 3] == 0 {
+            flushed.replaceSubrange(i..<i + 4, with: [0, 0, 0, 0])
+        }
+        #expect(flushed != band.bytes, "the band has colour under alpha byte 0")
+        let result = try PixelBuffer(rgba8: flushed, width: band.header.width, height: band.header.height)
+        #expect(try ParityHarness.compare(golden: band, result).passed)
+    }
+
+    @Test func aBandIsOneSamplesRowsOfItsPack() throws {
+        let pack = try #require(ParityPack.all.first { $0.ops.contains(.blur) })
+        let bands = try pack.bands()
+        #expect(pack.name == "display-blur-adjust-retouch" && bands.count == 20)
+        #expect(bands.first { $0.op == .blur && $0.sample.name == "alpha-zero" }?.rows == 35..<42)
+        #expect(bands.last?.rows == 133..<140 && bands.last?.op == .retouch)
+        let sample = try #require(try ParityHarness.sampleSet(for: .adjust).first { $0.name == "random" })
+        let golden = try ParityGolden.band(from: CPUGoldenTests.root, op: .adjust, sample: "random")
+        let result = try ParityHarness.render(sample, on: CPUBackend())
+        #expect(try golden.header.height == 7 && golden.bytes == result.rgba8(colorSpace: .sRGB))
+        #expect(throws: RenderError.self) { try ParityGolden.band(from: CPUGoldenTests.root, op: .adjust, sample: "off-left") }
+        #expect(throws: RenderError.self) { try golden.rows(6..<8) }
+        #expect(throws: RenderError.self) { try golden.rows(3..<3) }
     }
 
     @Test func linearBoundCatchesWhatBytesHide() throws {

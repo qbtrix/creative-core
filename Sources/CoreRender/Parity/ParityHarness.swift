@@ -3,6 +3,9 @@
 // pixels (alpha over 0.01 in either result). `compare(golden:_:)` checks a result against a
 // golden in bytes only, encoded as the golden was: a golden's bytes decoded to linear are off
 // by up to half a display level (about 0.0045 near white), more than any linear tolerance.
+// Both compare bytes the same way: where both alpha bytes are 0 the pixel is invisible and only
+// alpha counts, since an alpha under half a level keeps its clamped color (0 or 255) on one
+// backend and is flushed to 0, 0, 0, 0 on another.
 import CoreRaster
 
 /// What `compare` found: the worst deltas and the first pixel with each.
@@ -20,12 +23,13 @@ public struct ParityResult: Equatable, Sendable, CustomStringConvertible {
     public let worstLinearDelta: Float
     /// The column, then the row, of the first pixel (row-major) with `worstLinearDelta`.
     public let worstLinearX: Int, worstLinearY: Int
+    /// True from `compare(golden:_:)`, which checks bytes only.
+    public let bytesOnly: Bool
 
-    /// One line: pass or FAIL, then each worst delta and its pixel.
-
+    /// One line: pass or FAIL, then each worst delta it checked and its pixel.
     public var description: String {
-        "\(passed ? "pass" : "FAIL"): bytes \(worstByteDelta) at (\(worstByteX), \(worstByteY)), "
-            + "linear \(worstLinearDelta) at (\(worstLinearX), \(worstLinearY))"
+        "\(passed ? "pass" : "FAIL"): bytes \(worstByteDelta) at (\(worstByteX), \(worstByteY))"
+            + (bytesOnly ? "" : ", linear \(worstLinearDelta) at (\(worstLinearX), \(worstLinearY))")
     }
 }
 
@@ -55,7 +59,7 @@ public enum ParityHarness {
         return ParityResult(passed: worstByte <= tolerance.bytes && worstLinear <= tolerance.linear,
                             worstByteDelta: worstByte, worstByteX: bytePixel % a.width,
                             worstByteY: bytePixel / a.width, worstLinearDelta: worstLinear,
-                            worstLinearX: linearX, worstLinearY: linearY)
+                            worstLinearX: linearX, worstLinearY: linearY, bytesOnly: false)
     }
 
     /// Compares `result` with `golden` in bytes only: `result` is encoded into
@@ -71,18 +75,22 @@ public enum ParityHarness {
         let (worst, pixel) = worstByteDelta(golden.bytes, bytes)
         return ParityResult(passed: worst <= header.tolerance.bytes, worstByteDelta: worst,
                             worstByteX: pixel % header.width, worstByteY: pixel / header.width,
-                            worstLinearDelta: 0, worstLinearX: 0, worstLinearY: 0)
+                            worstLinearDelta: 0, worstLinearX: 0, worstLinearY: 0, bytesOnly: true)
     }
 
     private static func checkSizes(_ aw: Int, _ ah: Int, _ bw: Int, _ bh: Int) throws {
         guard aw == bw, ah == bh else { throw RenderError.raster("compare sizes differ: \(aw)x\(ah) vs \(bw)x\(bh)") }
     }
 
-    /// The largest per-byte difference and the index of the first pixel with it.
+    /// The largest per-byte difference and the index of the first pixel with it. A pixel whose
+    /// alpha byte is 0 in both is invisible, so only its alpha byte counts (see the file header).
     private static func worstByteDelta(_ a: [UInt8], _ b: [UInt8]) -> (UInt8, Int) {
         var (worst, pixel): (UInt8, Int) = (0, 0)
-        for (i, (p, q)) in zip(a, b).enumerated() where max(p, q) - min(p, q) > worst {
-            (worst, pixel) = (max(p, q) - min(p, q), i / 4)
+        for i in stride(from: 0, to: min(a.count, b.count) - 3, by: 4) {
+            let channels = a[i + 3] == 0 && b[i + 3] == 0 ? 3..<4 : 0..<4
+            for c in channels where max(a[i + c], b[i + c]) - min(a[i + c], b[i + c]) > worst {
+                (worst, pixel) = (max(a[i + c], b[i + c]) - min(a[i + c], b[i + c]), i / 4)
+            }
         }
         return (worst, pixel)
     }
