@@ -26,5 +26,12 @@
     "anchor": "frame.subtractingReportingOverflow(min(max(before, 0), maxOnionSkins))",
     "replacement": "frame.subtractingReportingOverflow(max(before, 0))",
     "filter": "OnionTests"
+  },
+  {
+    "note": "onion add wraps instead of saturating on overflow",
+    "file": "Sources/FlareCore/Onion.swift",
+    "anchor": "ahead.overflow ? Int.max : ahead.partialValue",
+    "replacement": "ahead.partialValue",
+    "filter": "OnionTests"
   }
 ]

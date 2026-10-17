@@ -171,4 +171,17 @@ struct LottieScaleTrackTests {
             #expect(throws: LottieExportError.nonFiniteValue) { _ = try exported(tracks) }
         }
     }
+
+    /// An instance's group transform writes its scale as a percent too, so a
+    /// finite scale that overflows times 100 throws the typed error.
+    @Test func instanceScaleOverflowingTimes100Throws() {
+        let symbol = Symbol(id: "sym", name: "Sym", layers: [Layer(id: "sl", name: "SL")])
+        for transform in [Transform(scaleX: 1e307), Transform(scaleY: 1e307)] {
+            let layer = Layer(id: "a", name: "A", instances: [Instance(symbolID: "sym", transform: transform)])
+            let scene = Scene(id: "s", name: "S", durationFrames: 48, layers: [layer])
+            #expect(throws: LottieExportError.nonFiniteValue) {
+                _ = try LottieExporter.export(scene: scene, symbols: [symbol])
+            }
+        }
+    }
 }
