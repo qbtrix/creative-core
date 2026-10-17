@@ -220,6 +220,12 @@ Crew PRs merge into `dev` at once; `main` moves only when full CI passes on
   that exact SHA. Red: one issue titled "dev is red" (label `dev-red`) names
   the failing jobs and the culprit range `main..<sha>`. The lane keeps
   merging while it is open; the next green run moves `main` and closes it.
+- A PR into `dev` that touches the Metal backend (`Sources/CoreRenderMetal/`,
+  `Sources/CoreRender/Metal/`, `Tests/CoreRenderMetalTests/`) gets one check of
+  its own, `Metal (macOS)` from `.github/workflows/metal-pr.yml`: it builds
+  with tests and runs the Metal tests. The lane waits while it runs and holds
+  the PR while it is red. Linux builds the Metal module empty, so this is the
+  only place a Metal break shows up before `dev`.
 - A human reviews fast-lane merges after the fact and reverts anything wrong.
 
 ## Commands
