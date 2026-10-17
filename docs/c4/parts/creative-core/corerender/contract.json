@@ -1,14 +1,16 @@
 {
   "id": "contract",
   "name": "Render Contract",
-  "description": "The RenderBackend contract: the op families (RenderOp), the one error type (RenderError), surface handles (RenderSurface), the tone adjustments the adjust op takes (ToneAdjustment) and the RenderBackend protocol. The recording fake is still to come from render-backend RB-2.",
+  "description": "The RenderBackend contract: the op families (RenderOp), the one error type (RenderError), surface handles (RenderSurface), the tone adjustments the adjust op takes (ToneAdjustment), the RenderBackend protocol, the blend-mode-to-family and raster-error mappings every backend shares, the SurfaceStore that holds a backend's PixelBuffers behind one lock, and FakeBackend, the recording test double.",
   "technology": "Swift 6, Foundation",
   "paths": [
     "Sources/CoreRender/CoreRender.swift",
     "Sources/CoreRender/RenderOp.swift",
     "Sources/CoreRender/RenderSurface.swift",
     "Sources/CoreRender/ToneAdjustment.swift",
-    "Sources/CoreRender/RenderBackend.swift"
+    "Sources/CoreRender/RenderBackend.swift",
+    "Sources/CoreRender/SurfaceStore.swift",
+    "Sources/CoreRender/FakeBackend.swift"
   ],
   "order": 10
 }
