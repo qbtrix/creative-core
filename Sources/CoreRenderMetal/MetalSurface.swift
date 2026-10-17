@@ -3,9 +3,11 @@
 // through HalfFloat; a tile can leave the GPU for a CPU shadow (MB-16, MetalSurface+Eviction.swift).
 // Invariants: `tiles`, `shadows` and `lastUse` have `tiling.tileCount` entries; tile `i` is resident
 // (`tiles[i]` set, `shadows[i]` nil) or shadowed (`tiles[i]` nil, `shadows[i]` sized to `tiling.rect(i)`),
-// never neither; `residentBytes` is width x height x `bytesPerPixel` over the resident tiles. No GPU work
-// writes the textures yet, so `replace` and `getBytes` need no synchronisation and a shadow taken on
-// eviction is current; a slice that encodes GPU work must wait for its command buffer before `download`.
+// never neither; `residentBytes` is width x height x `bytesPerPixel` over the resident tiles; textures use
+// `MetalBackend.tileStorageMode` (shared on unified memory, managed on a discrete GPU); upload clamps every
+// component to the finite half range, so a tile read back is always finite. No GPU work writes the textures
+// yet, so `replace` and `getBytes` need no synchronisation and a shadow taken on eviction is current; a slice
+// that encodes GPU work must wait for its command buffer (and synchronize a managed tile) before `download`.
 #if canImport(Metal)
 import CoreRaster
 import CoreRender
@@ -18,6 +20,8 @@ final class MetalSurface {
     static let bytesPerPixel = 8
     /// Half floats per pixel (R, G, B, A).
     private static let channels = 4
+    /// The largest finite binary16: upload clamps each component to plus or minus this.
+    private static let halfMax: Float = 65504
 
     /// The 256 px tile grid over the surface, row-major.
     let tiling: SurfaceTiling
@@ -32,9 +36,9 @@ final class MetalSurface {
     /// Bytes the resident tile textures hold: width x height x `bytesPerPixel` summed over `tiles`.
     var residentBytes: Int
 
-    /// Uploads `buffer` tile by tile as binary16 and stamps every tile's `lastUse` with `clock`.
-    /// Throws `RenderError.raster` for a size the tiling rejects, `RenderError.deviceLost` when
-    /// the device returns no texture.
+    /// Uploads `buffer` tile by tile as binary16 (components clamped to +-65504, so no tile holds an
+    /// infinity) and stamps every tile's `lastUse` with `clock`. Throws `RenderError.raster` for a size
+    /// the tiling rejects, `RenderError.deviceLost` when the device returns no texture.
     init(device: any MTLDevice, buffer: PixelBuffer, clock: UInt64) throws {
         let tiling = try SurfaceTiling(width: buffer.width, height: buffer.height)
         var tiles: [(any MTLTexture)?] = []
@@ -45,7 +49,7 @@ final class MetalSurface {
             let halves = try Self.halves(of: buffer, in: rect)
             let descriptor = MTLTextureDescriptor.texture2DDescriptor(
                 pixelFormat: .rgba16Float, width: rect.width, height: rect.height, mipmapped: false)
-            descriptor.storageMode = .shared
+            descriptor.storageMode = MetalBackend.tileStorageMode(unifiedMemory: device.hasUnifiedMemory)
             descriptor.usage = [.shaderRead, .shaderWrite]
             guard let texture = device.makeTexture(descriptor: descriptor) else {
                 throw RenderError.deviceLost("texture allocation failed for \(rect.width)x\(rect.height)")
@@ -71,8 +75,8 @@ final class MetalSurface {
 
     /// Every tile into a new `PixelBuffer` of the surface's size: a resident tile is downloaded, an
     /// evicted one copied from its shadow. Throws `RenderError.raster` when the buffer rejects the
-    /// size or a decoded component is not finite: a component at or above 65520 in magnitude was
-    /// encoded as a binary16 infinity on upload, and buffers hold finite values only.
+    /// size or a decoded component is not finite: upload clamps, so only a value a GPU kernel wrote
+    /// (none yet) can be, and buffers hold finite values only.
     func read() throws -> PixelBuffer {
         var buffer = try Self.rethrown { try PixelBuffer(width: tiling.width, height: tiling.height) }
         // `rect` throws for an index outside the tiling and both arrays have `tileCount` entries,
@@ -119,21 +123,25 @@ final class MetalSurface {
     }
 
     /// The premultiplied pixels of `rect` in `buffer` as row-major RGBA binary16, `rect.width * rect.height
-    /// * channels` values. Throws `RenderError.raster` for a coordinate outside `buffer` (the tiling never does).
+    /// * channels` values, each clamped to +-`halfMax` first (65520 and up would encode as infinity).
+    /// Throws `RenderError.raster` for a coordinate outside `buffer` (the tiling never does).
     private static func halves(of buffer: PixelBuffer, in rect: TileRect) throws -> [UInt16] {
         var halves: [UInt16] = []
         halves.reserveCapacity(rect.width * rect.height * channels)
         for y in rect.y..<(rect.y + rect.height) {
             for x in rect.x..<(rect.x + rect.width) {
                 let pixel = try rethrown { try buffer.pixel(x: x, y: y) }
-                halves.append(HalfFloat.encode(pixel.r))
-                halves.append(HalfFloat.encode(pixel.g))
-                halves.append(HalfFloat.encode(pixel.b))
-                halves.append(HalfFloat.encode(pixel.a))
+                halves.append(half(pixel.r))
+                halves.append(half(pixel.g))
+                halves.append(half(pixel.b))
+                halves.append(half(pixel.a))
             }
         }
         return halves
     }
+
+    /// `value` (finite, as buffers hold) clamped to +-`halfMax`, then encoded as binary16.
+    private static func half(_ value: Float) -> UInt16 { HalfFloat.encode(min(max(value, -halfMax), halfMax)) }
 
     /// Runs `body`, mapping a CoreRaster error to `RenderError.raster` with its message.
     private static func rethrown<R>(_ body: () throws -> R) throws -> R {
