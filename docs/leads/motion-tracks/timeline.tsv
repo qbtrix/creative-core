@@ -51,3 +51,4 @@ utc	stage	event	ref	note
 2026-10-17T14:05Z	4	gate	dev 07c7a70	993/993 CI: PASS; FlareOnion 6/6, FlareLottieScale 8/8 (with #378)
 2026-10-17T14:06Z	4	heartbeat	dev 07c7a70	waiting for a dev CI run holding 3abd592 for the contact sheet
 2026-10-17T14:24Z	5	heartbeat	dev 8cd012a	waiting on a dev CI run holding 3abd592 with green Linux; newest run 39037816632 is on 4b2aa75
+2026-10-17T14:58Z	5	contact-sheet	dev b8d1272	Belt-Contact-Sheet on #313 (CI 39040738062 Linux green); motion-tracks stopped

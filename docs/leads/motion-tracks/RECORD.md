@@ -2,9 +2,9 @@
 
 Issue: #313 · Packet: docs/blueprints/core/features/motion-tracks.md
 Run: act-1a149b544ea-emiq (line lead: render-backend, motion-tracks) · Started: 2026-10-17 (prior runs act-1a1463a91ae-nkkr, act-1a142b4b27e-bv69)
-Stage: 4 Anatomy (all waves merged; MT-5 #363 feature-done)
+Stage: 5 Done (contact sheet posted on #313)
 Base: 3be8939 (origin/dev)
-Next: MT done on dev 3abd592 (#378 round 4 fix merged; mutations FlareOnion 6, FlareLottieScale 8). Contact sheet on #313 once a dev CI run holding 3abd592 has a green Linux job; then stop.
+Next: none. Motion-tracks stopped per the supervisor's ruling. Contact sheet: https://github.com/qbtrix/creative-core/issues/313#issuecomment-6235150001 (dev CI 39040738062 on b8d1272, Linux green, holds 3abd592).
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
