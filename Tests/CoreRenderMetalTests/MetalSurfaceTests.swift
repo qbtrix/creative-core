@@ -86,10 +86,10 @@ private struct SplitMix64: RandomNumberGenerator {
     }
 
     @Test(.enabled(if: MetalBackend.defaultDevice != nil))
-    func freshBackendSupportsOnlyDisplayAndIsHealthy() throws {
+    func freshBackendSupportsLandedFamiliesAndIsHealthy() throws {
         let backend = try Self.backend()
-        #expect(backend.supports == [.display] && backend.isHealthy && backend.residentBytes == 0)
-        #expect(backend.capabilities.supported == [.display] && backend.capabilities.lastError == nil)
+        #expect(backend.isHealthy && backend.residentBytes == 0 && backend.capabilities.lastError == nil)
+        #expect(backend.supports == [.display, .transform], "only the families whose slices landed (MB-3, MB-7)")
         #expect(backend.name.hasPrefix("Metal ("))
     }
 
@@ -101,9 +101,7 @@ private struct SplitMix64: RandomNumberGenerator {
         #expect(throws: RenderError.unsupported(.blur)) {
             try backend.unsharpMask(surface, amount: 1, sigma: 1, threshold: 0)
         }
-        #expect(throws: RenderError.unsupported(.transform)) {
-            try backend.cropped(surface, x: 0, y: 0, width: 2, height: 2)
-        }
+        #expect(throws: RenderError.unsupported(.adjust)) { try backend.adjusted(surface, .contrast(40)) }
     }
 
     /// 65520 and up would encode as a half infinity that cannot read back into a buffer: upload clamps

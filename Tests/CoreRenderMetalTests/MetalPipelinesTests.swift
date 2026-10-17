@@ -70,14 +70,14 @@ import Testing
     @Test(.enabled(if: MetalBackend.defaultDevice != nil))
     func failEmptiesSupportsAndRecoverRestores() throws {
         let backend = try MetalBackend.onDefaultDevice()
-        // No op family is enabled yet, so `supports` is empty either way: the oracle is health and lastError.
-        #expect(backend.isHealthy && backend.capabilities == MetalCapabilities(), "healthy before the failure")
+        let fresh = backend.capabilities
+        #expect(backend.isHealthy && fresh.lastError == nil && !fresh.supported.isEmpty, "healthy before the failure")
         backend.fail("mock")
         #expect(!backend.isHealthy && backend.supports.isEmpty)
         #expect(backend.capabilities.lastError == "mock" && !backend.capabilities.healthy)
-        #expect(backend.capabilities.supported.isEmpty, "supported is kept as it was")
+        #expect(backend.capabilities.supported == fresh.supported, "supported is kept as it was")
         try backend.recover()
-        #expect(backend.isHealthy && backend.capabilities == MetalCapabilities(), "recover restores the fresh state")
+        #expect(backend.isHealthy && backend.capabilities == fresh, "recover restores the fresh state")
         #expect(backend.pipelineCompileCount == 1, "recover ran the probe before reporting healthy")
         try backend.probe()
         #expect(backend.isHealthy && backend.pipelineLoadCount == 1, "the new queue runs the probe")
