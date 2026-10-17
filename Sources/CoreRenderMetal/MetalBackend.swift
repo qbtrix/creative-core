@@ -6,7 +6,7 @@
 // never call them with it held). Invariants: `supports` is empty while not healthy,
 // `residentBytes` sums the live surfaces' resident tiles and stays at or under `budgetBytes`
 // after every upload (MetalBackend+Memory.swift), a surface this backend did not make
-// throws `surfaceMismatch`, `.display`, `.transform` and (read-write tier 2) `.composite` start enabled; every other op throws
+// throws `surfaceMismatch`, `.display`, `.transform` and (read-write tier 2) `.composite` and `.blendSeparable` start enabled; every other op throws
 // `unsupported` until its slice, a probe, a command
 // buffer or a texture allocation that fails leaves the backend unhealthy with the reason in
 // `capabilities.lastError` (so `deviceLost` is only ever thrown with `isHealthy` false), and only a
@@ -42,6 +42,8 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     var budget: Int
     /// Counts uploads, reads and restores: the `lastUse` stamp. Advance with `tick` under the lock.
     private var useClock: UInt64 = 0
+    /// Rows the opaque-row fast path blitted (MB-6, MetalBackend+OpaqueRows.swift); under the lock.
+    var blittedRows = 0
     /// One full tile's texture bytes (256 x 256 x 8): the floor of `budgetBytes`.
     private static let tileBytes = SurfaceTiling.tileSize * SurfaceTiling.tileSize * MetalSurface.bytesPerPixel
 
@@ -55,7 +57,10 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
         self.budget = SurfaceTiling.defaultBudget(workingSet: device.recommendedMaxWorkingSetSize, tileBytes: Self.tileBytes)
         state.enable(.display)
         state.enable(.transform)
-        if Self.compositesInPlace(on: device) { state.enable(.composite) }
+        if Self.compositesInPlace(on: device) {
+            state.enable(.composite)
+            state.enable(.blendSeparable)  // MB-6
+        }
         state.enable(.resample)
     }
 
@@ -265,8 +270,8 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     public func display(_ s: RenderSurface, colorSpace: ColorSpace) throws -> [UInt8] {
         try encodeDisplay(s, colorSpace: colorSpace)
     }
-    /// Composite in place: `.normal` MB-4, the separable modes MB-5 (once `.blendSeparable` is enabled), see
-    /// MetalBackend+Composite.swift and +BlendSeparable.swift. Non-separable modes throw `unsupported(.blendNonSeparable)`.
+    /// Composite in place: `.normal` MB-4, the separable modes MB-5, opaque rows blitted MB-6, see
+    /// MetalBackend+Composite.swift, +BlendSeparable.swift and +OpaqueRows.swift. Non-separable modes throw `unsupported(.blendNonSeparable)`.
     public func composite(_ s: RenderSurface, onto b: inout RenderSurface, x: Int, y: Int,
                           mode: BlendMode, opacity: Float) throws {
         guard RenderOp(compositing: mode) != .blendNonSeparable else { throw RenderError.unsupported(.blendNonSeparable) }

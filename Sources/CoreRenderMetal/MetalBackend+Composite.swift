@@ -60,7 +60,8 @@ extension MetalBackend {
             }
             return targets
         }
-        try encode(plan, textures: textures, targets: targets, opacity: opacity)
+        let split = try opaqueRowSplit(plan.pieces, textures: textures, mode: mode, opacity: opacity)  // MB-6
+        try encode(plan, pieces: split.kernel, blits: split.blits, textures: textures, targets: targets, opacity: opacity)
         do {  // a tile evicted while the GPU wrote it takes its shadow from the written texture
             try withLock {
                 for (index, texture) in targets where plan.backdrop.tiles[index] == nil {
@@ -71,10 +72,10 @@ extension MetalBackend {
         evictIfNeeded()
     }
 
-    /// Runs the plan's kernel over every piece and waits; call with the lock free.
-    private func encode(_ plan: CompositePlan, textures: [Int: any MTLTexture], targets: [Int: any MTLTexture],
-                        opacity: Float) throws {
-        let pairs = try plan.pieces.map { piece in
+    /// Runs the plan's kernel over `pieces`, blits `blits` (MetalBackend+OpaqueRows.swift) and waits; call with the lock free.
+    private func encode(_ plan: CompositePlan, pieces: [TilePiece], blits: [TilePiece], textures: [Int: any MTLTexture],
+                        targets: [Int: any MTLTexture], opacity: Float) throws {
+        let pairs = try pieces.map { piece in
             guard let from = textures[piece.sourceTile], let to = targets[piece.destinationTile] else {
                 throw RenderError.raster("composite: tile \(piece.sourceTile) or \(piece.destinationTile) is missing")
             }
@@ -97,6 +98,7 @@ extension MetalBackend {
             encoder.dispatchThreadgroups(grid, threadsPerThreadgroup: group)
         }
         encoder.endEncoding()
+        try encodeOpaqueRows(blits, textures: textures, targets: targets, on: commands)
         #if os(macOS)
         // A managed tile's CPU copy is stale after GPU writes until synchronized; `read` uses `getBytes`.
         let managed = targets.values.filter { $0.storageMode == .managed }

@@ -1,0 +1,16 @@
+[
+  {
+    "note": "opaque row split treats an alpha at or above 0.999 as opaque",
+    "file": "Sources/CoreRender/Metal/OpaqueRows.swift",
+    "anchor": "try tile.pixel(x: x, y: y) }.a == 1",
+    "replacement": "try tile.pixel(x: x, y: y) }.a >= 0.999",
+    "filter": "OpaqueRowsTests"
+  },
+  {
+    "note": "opaque row run ends one row past the flag change",
+    "file": "Sources/CoreRender/Metal/OpaqueRows.swift",
+    "anchor": "width: piece.width, height: end - start)",
+    "replacement": "width: piece.width, height: end - start + 1)",
+    "filter": "OpaqueRowsTests"
+  }
+]
