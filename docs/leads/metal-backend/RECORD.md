@@ -2,7 +2,7 @@
 
 Issue: #348 · Packet: docs/blueprints/core/features/metal-backend.md
 Run: act-1a14ab2b672-8guo · Resumed: 2026-10-17T16:33Z (fourth run; earlier act-1a149b549c8-v538, act-1a148001532-1w03, act-1a14644b538-njln)
-Stage: 4 fix round r3 running (wf_6419df5b-b06); wave 7 merged (MB-9 #408, MB-15 #409); wave 8 building MB-10 (wf_9c58324f-54b) on 1601a97; dev CI 39051011998 queued on 1601a97 (holds MB-c, MB-f, MB-g, MB-h last PRs)
+Stage: 4 fix round r3 running (wf_6419df5b-b06; r3g merged #413); wave 8 building MB-10 (wf_9c58324f-54b); dev CI 39051011998 on 1601a97: Linux green, macOS red (ParityTests+Adjust.swift static member without Self., from #405), fix PR #417 open; Belt-Slice-Done MB-c posted
 Base: 4e27e16 (origin/dev)
 Next (for a relaunched lead): gate+mutate on dev (--changed-since 17b2ea5) → critic-panel.js (firstBase 17b2ea5, lenses clarity, correctness, reuse+packet, test oracle) → one fix-batch per slice, disjoint files; build MB-9 then MB-10 (MB-e) and MB-15 (MB-h) alongside; Belt-Slice-Done MB-c/MB-f/MB-g once a dev CI Linux job holding #401..#406 is green; then MB-17 (feature-done) and the contact sheet. PR bodies say Refs #348, never Closes.
 
@@ -20,11 +20,11 @@ Every PR body: `Belt-Lead: act-1a14ab2b672-8guo`, `Feature: metal-backend`,
 |---|---|---|---|---|---|
 | MB-a | MB-1, MB-2 | render-backend:RB-a (contract types landed as #352) | merged-done; 3 rounds run (round 3: 19 confirmed; majors in #385, docs in #387, rest deferred to MB-17); round 4 pending | 39010063417 | wanted (posted on run 39040738062) |
 | MB-b | MB-3, MB-4 | MB-a | merged-done (#389, #392; fix round 1 #403, #404); fix round 2 regenerating on 4e27e16 | 39043767442 | wanted (39044767871) |
-| MB-c | MB-5, MB-6 | MB-b | merged (#398, #401); waits on a dev CI run holding #401; first Anatomy round now | – | – |
+| MB-c | MB-5, MB-6 | MB-b | merged (#398, #401); Belt-Slice-Done posted (Linux green, run 39051011998); Mac-Finish-Wanted posted | – | – |
 | MB-d | MB-7, MB-8 | MB-a | merged-done (#390, #393; fix round 1 #403, #404); fix round 2 regenerating | 39044767871 | wanted (39044767871) |
 | MB-e | MB-9, MB-10 | MB-c | MB-9 merged #408; MB-10 building (wave 8) | – | – |
-| MB-f | MB-11, MB-12 | MB-d | merged (#402, #406); waits on dev CI; first Anatomy round now | – | – |
-| MB-g | MB-13, MB-14 | MB-a | merged (#400, #405); waits on dev CI; first Anatomy round now | – | – |
+| MB-f | MB-11, MB-12 | MB-d | merged (#402, #406); Linux green on 39051011998; Slice-Done waits on fix PRs r3f1, r3f2 | – | – |
+| MB-g | MB-13, MB-14 | MB-a | merged (#400, #405); r3g #413 merged; Slice-Done waits on macOS compile fix #417 | – | – |
 | MB-h | MB-15, MB-16, MB-17 | MB-b to MB-g | MB-16 merged #366; MB-15 merged #409; MB-17 last (feature-done) | – | – |
 
 ## Tasks

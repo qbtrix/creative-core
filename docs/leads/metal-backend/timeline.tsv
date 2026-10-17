@@ -119,3 +119,5 @@ utc	stage	event	ref	note
 2026-10-17T16:48:51Z	3	wave7-done	wf_af38a0ca-0df	MB-9 #408 merged, MB-15 #409 merged; both contract ok
 2026-10-17T16:48:51Z	3	wave8-start	wf_9c58324f-54b	builder MB-10 (MB-e) on 1601a97
 2026-10-17T16:51:48Z	4	heartbeat	-	panel r3 done; wave 7 merged; fix r3 (wf_6419df5b-b06) and wave 8 (wf_9c58324f-54b) running; dev CI 39051011998 queued on 1601a97
+2026-10-17T17:16:00Z	4	dev-mac-red	#417	macOS job fails to compile ParityTests+Adjust.swift (toneAdjustments without Self.); one-line fix PR #417 fast-lane
+2026-10-17T17:16:30Z	5	slice-done	MB-c	Belt-Slice-Done + Mac-Finish-Wanted MB-c, run 39051011998 Linux green
