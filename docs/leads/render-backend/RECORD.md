@@ -2,9 +2,9 @@
 
 Issue: #347 · Packet: docs/blueprints/core/features/render-backend.md
 Run: act-1a14644b047-dxwc · Session: see the Belt run page · Started: 2026-10-16T19:52Z
-Stage: 3 wave 2 (RB-2 contract), started after supervisor reply
+Stage: 3 wave 2 (RB-2), blocked on a packet decision (question to supervisor)
 Base: b447e68 (origin/dev). RB-1 is #349. #350 closed as duplicate by the supervisor.
-Next: RB-2 builder (contract: RenderOp, RenderError, RenderSurface, RenderBackend, ToneAdjustment, FakeBackend; CPU and dispatcher tests disabled until RB-3/RB-5). Fast-Check only if scripts/ci prints CI: PASS; otherwise report serial results.
+Next: supervisor picks how RB-2 records calls: (1) mutating protocol methods, (2) a reference-typed recorder with a lock (needs captain sign-off), or (3) drop the recording check from the RB-2 acceptance test. Lead starts RB-2 on the pick.
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -38,3 +38,4 @@ Next: RB-2 builder (contract: RenderOp, RenderError, RenderSurface, RenderBacken
 - Gate on 9ba4c2b (detached worktree, 4 cores): scripts/ci fails on the same two budgets (smallDab 1.96 s against 1.5 s; stress 5.33 s against 5.0 s). It is dev's own state, not the lead's. RB-2 is pure contract code and its tests pass serially, but there is no honest Fast-Check on this sandbox. Not starting RB-2 until the supervisor rules.
 - 2026-10-16T21:37Z: dev is now 4f11af8 (#351 landed). Idle-box gate (detached worktree, nothing else running): scripts/ci fails on both budgets, 909 tests, 2 issues. Reported on #347 with the numbers. Still waiting for the supervisor.
 - 2026-10-17T02:54Z: supervisor reply on #347: RB-1 landed in #349, #350 closed as duplicate, continue from RB-2 on top of dev. The budget question is not answered in that reply, so no PR claims Fast-Check: pass unless scripts/ci prints CI: PASS.
+- 2026-10-17T02:55Z: RB-2 builder stopped before code. RenderBackend methods are non-mutating, so a struct FakeBackend cannot record calls the packet's acceptance test requires. Options as in Next. Builder worktree removed, branch render-backend/rb-2 kept local, nothing pushed. Question sent to supervisor on #347.
