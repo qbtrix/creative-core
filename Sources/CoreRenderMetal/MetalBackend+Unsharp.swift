@@ -1,8 +1,9 @@
 // MetalBackend+Unsharp.swift: unsharp mask (MB-12) in one command buffer on whole-image float4 buffers: `blur_pass`
 // across, then `blur_unsharp` down plus UnsharpRule per premultiplied component, scattered into a new surface.
 // Invariants: `unsupported(.blur)` while unhealthy; invalid parameters throw the CPU's exact error, in its order,
-// before GPU work; a non-finite result throws the CPU's overflow error and stores nothing; over `maxBufferLength`
-// throws `raster` without failing the backend; the lock is free across the GPU wait; a failed command buffer or
+// before GPU work; a non-finite result throws the CPU's overflow error and stores nothing; a valid image whose
+// w x h x 16 bytes are over `maxBufferLength` throws `unsupported(.blur)` without failing the backend (a device
+// limit, not bad input: sharpen it on the CPU backend), as resample does; the lock is free across the GPU wait; a failed command buffer or
 // allocation marks the backend failed and throws `deviceLost`.
 #if canImport(Metal)
 import CoreRaster
@@ -11,8 +12,11 @@ import Foundation
 import Metal
 
 extension MetalBackend {
-    /// `s` sharpened as `CPUBackend.unsharpMask` does, as a new surface.
-    func unsharp(_ s: RenderSurface, amount: Double, sigma: Double, threshold: Double) throws -> RenderSurface {
+    /// `s` sharpened as `CPUBackend.unsharpMask` does, as a new surface. Throws `unsupported(.blur)` while unhealthy
+    /// or, after the parameter checks, when a whole-image buffer would exceed this GPU's `maxBufferLength` (sharpen
+    /// on the CPU backend instead). `bufferLimit`, for tests, stands in for `maxBufferLength` when set.
+    package func unsharp(_ s: RenderSurface, amount: Double, sigma: Double, threshold: Double,
+                         bufferLimit: Int? = nil) throws -> RenderSurface {
         let (image, clock, queue) = try withLock { () throws -> (PixelBuffer, UInt64, any MTLCommandQueue) in
             guard state.effectiveSupports.contains(.blur) else { throw RenderError.unsupported(.blur) }
             let found = (surface: try lookup(s), now: tick())
@@ -22,9 +26,8 @@ extension MetalBackend {
         let rule = try UnsharpRule(amount: amount, threshold: threshold)
         let (w, h) = (image.width, image.height)
         let table = try BlurTable(sigma: sigma, width: w, height: h)
-        guard w * h * 16 <= device.maxBufferLength else {
-            throw RenderError.raster("unsharp: \(w)x\(h) needs buffers over \(device.maxBufferLength) bytes")
-        }
+        // A valid image whose buffers exceed this GPU's limit is a device limit, not bad input.
+        guard w * h * 16 <= bufferLimit ?? device.maxBufferLength else { throw RenderError.unsupported(.blur) }
         let (pass, mask, scatter) = try withLock {
             () throws -> (any MTLComputePipelineState, any MTLComputePipelineState, any MTLComputePipelineState) in
             (try pipelines.pipeline(for: BlurShader.pass, source: BlurShader.source),

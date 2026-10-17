@@ -1,7 +1,8 @@
 // ParityTests+Unsharp.swift: MB-12 enables `ParityTests/unsharp`. An amount, sigma, threshold grid matches the CPU
 // on the GPU's Float16 pixels within `.standard` (sample set, multi-tile source, resident or evicted); a component
 // within 1e-4 of the threshold may fall either side (float32 blur), so there it must be one of the rule's two
-// outcomes, and rare. Invalid parameters and overflow throw the CPU's error; `.blur` is in `supports`. Device-gated.
+// outcomes, and rare. Invalid parameters and overflow throw the CPU's error; `.blur` is in `supports`; an image over
+// the device's buffer limit (forced smaller) throws `unsupported(.blur)` and the backend stays healthy. Device-gated.
 #if canImport(Metal)
 import CoreRaster
 import CoreRender
@@ -88,6 +89,28 @@ extension ParityTests {
             }
         }
         return moved
+    }
+}
+
+extension ParityTests {
+    /// A valid image one byte over the buffer limit throws `unsupported(.blur)` (a device limit: sharpen on the CPU),
+    /// not `raster`; the backend stays healthy; at the limit it runs; invalid parameters still throw the CPU's error.
+    @Test(.enabled(if: MetalBackend.defaultDevice != nil)) func unsharpOverTheDeviceLimit() throws {
+        let metal = try MetalBackend.onDefaultDevice()
+        let (cpu, buffer) = (CPUBackend(), try PixelBuffer.seeded(width: 300, height: 260, seed: 0x5A1F))
+        let source = try metal.surface(buffer)
+        let limit = 300 * 260 * 16
+        #expect(throws: RenderError.unsupported(.blur)) {
+            try metal.unsharp(source, amount: 1, sigma: 1.5, threshold: 0, bufferLimit: limit - 1)
+        }
+        #expect(metal.isHealthy, "a device limit does not fail the backend")
+        _ = try metal.unsharp(source, amount: 1, sigma: 1.5, threshold: 0, bufferLimit: limit)
+        do {
+            _ = try cpu.unsharpMask(cpu.surface(buffer), amount: 1, sigma: 1.5, threshold: -1)
+            Issue.record("the CPU accepts threshold -1")
+        } catch let expected as RenderError {
+            #expect(throws: expected) { try metal.unsharp(source, amount: 1, sigma: 1.5, threshold: -1, bufferLimit: 0) }
+        }
     }
 }
 #endif

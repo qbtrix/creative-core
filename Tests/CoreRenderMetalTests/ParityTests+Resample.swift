@@ -2,7 +2,9 @@
 // within the golden's tolerance. Both filters, up and down, with either axis or both kept at their length (the
 // skipped pass, in both pass orders), match the CPU on the GPU's Float16 pixels within `.standard`, resident or
 // evicted; a 16xN to Nx16 resize whose max(w) x max(h) is over `maxBufferLength` still runs; a constant stays
-// exactly constant; an invalid size throws the CPU backend's error. Skipped without a device; compiled out on Linux.
+// exactly constant; an invalid size throws the CPU backend's error; a size whose largest buffer is over the device's
+// buffer limit (forced smaller) throws `unsupported(.resample)` and the backend stays healthy. Skipped without a
+// device; compiled out on Linux.
 #if canImport(Metal)
 import CoreRaster
 import CoreRender
@@ -78,6 +80,21 @@ extension ParityTests {
                 #expect(try metal.read(got) == PixelBuffer(width: w, height: h, fill: fill), "constant \(filter) to \(w)x\(h)")
             }
         }
+    }
+}
+
+extension ParityTests {
+    /// A valid size whose largest buffer is one pixel over the buffer limit throws `unsupported(.resample)` (a device
+    /// limit: resample on the CPU); the backend stays healthy; at the limit it runs.
+    @Test(.enabled(if: MetalBackend.defaultDevice != nil)) func resampleOverTheDeviceLimit() throws {
+        let metal = try MetalBackend.onDefaultDevice()
+        let source = try metal.surface(PixelBuffer.seeded(width: 300, height: 260, seed: 0x5A1F))
+        let limit = ResampleTable.peakPixels(width: 300, height: 260, newWidth: 520, newHeight: 290) * 16
+        #expect(throws: RenderError.unsupported(.resample)) {
+            try metal.resample(source, width: 520, height: 290, filter: .bilinear, bufferLimit: limit - 16)
+        }
+        #expect(metal.isHealthy, "a device limit does not fail the backend")
+        _ = try metal.resample(source, width: 520, height: 290, filter: .bilinear, bufferLimit: limit)
     }
 }
 #endif

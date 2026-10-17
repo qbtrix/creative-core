@@ -1,7 +1,8 @@
 // ParityTests+Blur.swift: MB-11 enables `ParityTests/blur`. Gaussian blur at sigma 0, 0.5, 3, 20 matches the CPU
 // on the GPU's Float16 pixels within `.standard` on the sample set and a multi-tile source, resident or evicted;
 // sigma 0 is the identity; a constant image stays constant to its corners (clamp-to-edge: a border never reads
-// black); an invalid sigma throws the CPU backend's error; `.blur` is in `supports` (MB-12 added it). Skipped without a device; compiled out on Linux.
+// black); an invalid sigma throws the CPU backend's error; `.blur` is in `supports` (MB-12 added it); an image over
+// the device's buffer limit (forced smaller) throws `unsupported(.blur)` and the backend stays healthy. Skipped without a device; compiled out on Linux.
 #if canImport(Metal)
 import CoreRaster
 import CoreRender
@@ -82,6 +83,28 @@ extension ParityTests {
                 let worst = max(abs(p.r - fill.r), abs(p.g - fill.g), abs(p.b - fill.b), abs(p.a - fill.a))
                 #expect(worst <= 1.0 / 1024, "sigma \(sigma) at (\(x), \(y)) reads \(p), not \(fill)")
             }
+        }
+    }
+}
+
+extension ParityTests {
+    /// A valid image one byte over the buffer limit throws `unsupported(.blur)` (a device limit: blur on the CPU),
+    /// not `raster`; the backend stays healthy; at the limit it runs; an invalid sigma still throws the CPU's error.
+    @Test(.enabled(if: MetalBackend.defaultDevice != nil)) func blurOverTheDeviceLimit() throws {
+        let metal = try MetalBackend.onDefaultDevice()
+        let (cpu, buffer) = (CPUBackend(), try PixelBuffer.seeded(width: 300, height: 260, seed: 0xB1F))
+        let source = try metal.surface(buffer)
+        let limit = 300 * 260 * 16
+        #expect(throws: RenderError.unsupported(.blur)) { try metal.blur(source, sigma: 3, bufferLimit: limit - 1) }
+        #expect(metal.isHealthy, "a device limit does not fail the backend")
+        let got = try metal.read(metal.blur(source, sigma: 3, bufferLimit: limit))
+        let want = try cpu.read(cpu.gaussianBlur(cpu.surface(metal.read(source)), sigma: 3))
+        #expect(try ParityHarness.compare(got, want, tolerance: .standard).passed, "at the limit it blurs")
+        do {
+            _ = try cpu.gaussianBlur(cpu.surface(buffer), sigma: -1)
+            Issue.record("the CPU accepts sigma -1")
+        } catch let expected as RenderError {
+            #expect(throws: expected) { try metal.blur(source, sigma: -1, bufferLimit: 0) }
         }
     }
 }
