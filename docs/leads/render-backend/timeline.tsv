@@ -74,3 +74,4 @@ utc	stage	event	ref	note
 2026-10-17T15:17Z	4	gate	dev 74ce55f	gate 12: 1018/1018 CI: PASS; anchors 322; mutations Fake 9/9, CPUBackend 5/5, Ops 13/13, Dispatcher 12/12, Parity 9/9; goldens pass; budget +3.6% under critic load, alone +18.8%/-23.6%/+1.04% (noise, no dispatcher code changed since f7bdbfe: RenderOp doc comment + Metal tables only); Mac confirms
 2026-10-17T15:25Z	4	anatomy-round	dev 74ce55f	RB-c round 4 (cap): 0 major, 2 minor, 3 nits; final fixer rbc-anatomy-4 with feature-done started
 2026-10-17T15:19Z	4	heartbeat	-	final RB-c fixer rbc-anatomy-4 (feature-done) running
+2026-10-17T15:19Z	4	dev-ci	run 39043767442 on 4c1cd8e	Linux green (holds #394 e6c149d); macOS red only in Metal ParityTests.display() (metal-backend MB-b, #395, other lead; dev-red filed; not ours); Metal compositeNormal() vs CPU goldens passed on macOS. Slice-Done waits for a run holding rbc-anatomy-4
