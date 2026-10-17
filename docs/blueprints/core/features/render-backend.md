@@ -30,7 +30,7 @@ the free functions on `dev` and switches to the in-place one when RT-3 is on
 |---|---|---|---|---|
 | RB-a | The two targets exist and build empty on Linux and macOS, and tests can code against `RenderBackend`, `RenderOp`, `RenderSurface`, `RenderError` and a `FakeBackend` that records calls and supports a chosen op set. | RB-1, RB-2 | `RenderBackendFakeTests` | nothing |
 | RB-b | `CPUBackend` runs every op family through CoreRaster with results equal to the direct call, and `RenderDispatcher` routes each op by capability and health, records the last fallback, and never changes a pixel when it falls back. | RB-3, RB-4, RB-5 | `CPUBackendTests`, `RenderDispatcherTests` | RB-a (RB-3, RB-4, RB-5) |
-| RB-c | The parity harness renders the sample set on any backend, compares two results within a stated tolerance, reads and writes goldens, and the CPU goldens for every family are checked in with the dispatcher's overhead budget. | RB-6, RB-7 | `ParityHarnessTests`, `RenderBudgetTests` | RB-b (RB-6, RB-7) |
+| RB-c | The parity harness renders the sample set on any backend, compares two results within a stated tolerance, reads and writes goldens, and the CPU goldens for every family are checked in with the dispatcher's overhead budget. | RB-6, RB-7 | `ParityHarnessTests`, `CPUGoldenTests`, `RenderBudgetTests` | RB-b (RB-6, RB-7) |
 
 `ui_slice: none`: an engine feature with no screen; its screen is
 creative-apps `canvas-host`.
@@ -107,7 +107,8 @@ an empty module. Products for both; test targets `CoreRenderTests` and
   one backend handed to the other is read and re-uploaded (`surfaceMismatch`
   only when sizes disagree).
 - **Parity compare.** `ParityHarness.compare(a, b, tolerance)`: both as
-  `rgba8(.sRGB)` bytes, max per-channel delta <= `bytes`, and on the linear
+  `rgba8(.sRGB)` bytes, max per-channel delta <= `bytes` (a pixel whose alpha
+  byte is 0 on both sides compares its alpha byte only), and on the linear
   Float buffers max delta <= `linear` for pixels whose alpha > 0.01; returns
   the worst pixel's location for the message.
 - **Goldens.** Packed, one golden per `ParityPack.all` entry:
