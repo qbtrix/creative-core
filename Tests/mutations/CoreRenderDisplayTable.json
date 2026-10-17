@@ -1,0 +1,9 @@
+[
+  {
+    "note": "display table level search counts a threshold only when strictly above it",
+    "file": "Sources/CoreRender/Metal/DisplayTable.swift",
+    "anchor": "if v >= table[base + index + step - 1] { index += step }",
+    "replacement": "if v > table[base + index + step - 1] { index += step }",
+    "filter": "DisplayTableTests"
+  }
+]
