@@ -1,7 +1,9 @@
 // MetalBackend+Resample.swift: resampling (MB-8) as two separable GPU passes of ResampleTable over float4 image
-// buffers in the CPU's pass order, scattered into a new surface. Invariants: an invalid size throws the CPU's error
-// first; buffers over `maxBufferLength` throw `raster` without failing the backend; the lock is free across the GPU
-// wait; a failed command buffer or allocation marks the backend failed and throws `deviceLost`.
+// buffers in the CPU's pass order, scattered into a new surface. Invariants: `unsupported(.resample)` while the
+// backend is unhealthy; an invalid size throws the CPU's error first; a valid size whose largest real buffer
+// (`ResampleTable.peakPixels`) is over `maxBufferLength` throws `unsupported(.resample)` without failing the backend,
+// so the caller resamples on the CPU backend; the lock is free across the GPU wait; a failed command buffer or
+// allocation marks the backend failed and throws `deviceLost`.
 #if canImport(Metal)
 import CoreRaster
 import CoreRender
@@ -9,11 +11,12 @@ import Foundation
 import Metal
 
 extension MetalBackend {
-    /// `s` resampled to `width` x `height` with `filter`, as a new surface.
+    /// `s` resampled to `width` x `height` with `filter`, as a new surface. Throws `unsupported(.resample)` while
+    /// unhealthy or when a buffer would exceed this GPU's `maxBufferLength` (resample on the CPU backend instead).
     func resample(_ s: RenderSurface, width: Int, height: Int, filter: ResampleFilter) throws -> RenderSurface {
         let (image, clock, queue, pass, scatter) = try withLock {
             () throws -> (PixelBuffer, UInt64, any MTLCommandQueue, any MTLComputePipelineState, any MTLComputePipelineState) in
-            guard state.healthy else { throw RenderError.deviceLost(state.lastError ?? "backend unhealthy") }
+            guard state.effectiveSupports.contains(.resample) else { throw RenderError.unsupported(.resample) }
             let stored = try lookup(s)
             _ = try RenderError.mapping { try PixelBuffer.validatedSize(width: width, height: height) }
             let clock = tick()
@@ -25,8 +28,9 @@ extension MetalBackend {
         let (w, h) = (image.width, image.height)
         let across = try ResampleTable(length: w, newLength: width, filter: filter)
         let down = try ResampleTable(length: h, newLength: height, filter: filter)
-        guard max(w, width) * max(h, height) * 16 <= device.maxBufferLength else {
-            throw RenderError.raster("resample: \(w)x\(h) to \(width)x\(height) needs buffers over \(device.maxBufferLength) bytes")
+        // A valid size whose largest buffer exceeds this GPU's limit is a device limit, not bad input.
+        guard ResampleTable.peakPixels(width: w, height: h, newWidth: width, newHeight: height) <= device.maxBufferLength / 16 else {
+            throw RenderError.unsupported(.resample)
         }
         let input = try floatBuffer(w * h)
         let floats = input.contents().bindMemory(to: Float.self, capacity: w * h * 4)

@@ -42,6 +42,18 @@ public enum ResampleFilter: Hashable, Sendable {
     }
 }
 
+extension ResampleFilter {
+    /// The taps `PixelBuffer.resized` uses on an axis resampled from `length`
+    /// to `newLength` pixels: for each output pixel, its clamp-to-edge input
+    /// indices and their weights, normalized in Double to sum to 1. A GPU
+    /// backend uploads these instead of re-deriving them. Empty for a length
+    /// under 1. An unchanged length still gets taps here; `resized` skips it.
+    public func taps(length: Int, newLength: Int) -> [(indices: [Int], weights: [Double])] {
+        guard length >= 1, newLength >= 1 else { return [] }
+        return PixelBuffer.taps(length: length, newLength: newLength, filter: self).map { ($0.indices, $0.weights) }
+    }
+}
+
 /// The input pixels one output pixel reads along one axis, with their
 /// normalized weights.
 struct Taps {
@@ -123,7 +135,7 @@ extension PixelBuffer {
     }
 
     /// The taps of every output pixel along an axis of `length` pixels.
-    private static func taps(length: Int, newLength: Int, filter: ResampleFilter) -> [Taps] {
+    fileprivate static func taps(length: Int, newLength: Int, filter: ResampleFilter) -> [Taps] {
         let scale = Double(length) / Double(newLength)
         let stretch = max(scale, 1)
         let support = filter.radius * stretch

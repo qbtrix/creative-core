@@ -1,5 +1,6 @@
 // TileMapTests.swift: the maps the Metal backend copies by (MB-7) give exactly CoreRaster's `cropped` and
-// `rotated` across tiles, writing every pixel once, and an invalid crop throws the CPU backend's error.
+// `rotated` across tiles, writing every pixel once; an invalid crop throws the CPU backend's error, and a
+// map refuses pieces for a tiling of another size than its source.
 import CoreRaster
 import CoreRender
 import Testing
@@ -56,6 +57,21 @@ import Testing
             let (out, writes) = try Self.apply(TileMap.crop(tiling, x: x, y: y, width: cw, height: ch), to: source)
             #expect(out == (try source.cropped(x: x, y: y, width: cw, height: ch)), "crop \(cw)x\(ch) at (\(x), \(y))")
             #expect(writes.allSatisfy { $0 == 1 })
+        }
+    }
+
+    @Test func piecesRefuseATilingOfAnotherSize() throws {
+        let tiling = try SurfaceTiling(width: 300, height: 200)
+        let maps = [TileMap.turn(tiling, .degrees90), TileMap.turn(tiling, .degrees180),
+                    try TileMap.crop(tiling, x: 10, y: 20, width: 100, height: 50)]
+        for map in maps {
+            #expect(map.sourceWidth == 300 && map.sourceHeight == 200)
+            #expect(try !map.pieces(from: tiling).isEmpty)
+            for (w, h) in [(600, 600), (301, 200), (300, 199), (200, 300)] {
+                #expect(throws: RenderError.raster("tile map made for 300x200, given \(w)x\(h)")) {
+                    try map.pieces(from: SurfaceTiling(width: w, height: h))
+                }
+            }
         }
     }
 

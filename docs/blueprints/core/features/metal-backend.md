@@ -264,6 +264,43 @@ GPU path.
   The two majors shipped in #385 (slice MB-b); the rest are doc and test
   polish for MB-17.
 
+## Deviations (lead, 2026-10-17, slices MB-b and MB-d)
+
+- **`.composite` needs read-write texture tier 2.** MB-4 composites in place,
+  so init adds `.composite` only when `device.readWriteTextureSupport ==
+  .tier2` (`compositesInPlace`), not unconditionally. On other Macs the
+  dispatcher routes composite to the CPU backend.
+- **`.display`, `.transform` and `.resample` start enabled at init**, with
+  tier-2 `.composite`. While the backend is unhealthy `supports` is empty and
+  each of these ops throws `unsupported(<family>)`, not `deviceLost`.
+- **MB-3 display tables are constant buffers.** CoreColor's byte rules go up
+  as Float thresholds (found by bisection) and a Float P3 matrix in constant
+  buffers (`DisplayTable`), not a 1-D table texture. Evicted tiles encode
+  from their shadows on the CPU with `PixelBuffer.rgba8`.
+- **MB-8 resamples whole images, not tiles.** It reads the surface through
+  the CPU into a float4 buffer, runs both separable passes over whole-image
+  buffers in CoreRaster's pass order, and scatters into the new surface's
+  tiles. Its taps are CoreRaster's own (`ResampleFilter.taps`, made public
+  for this), flattened by `ResampleTable`. A valid size whose largest real
+  buffer (`ResampleTable.peakPixels`, at most max(input, output) pixels)
+  exceeds the device's `maxBufferLength` throws `unsupported(.resample)`
+  without failing the backend; the caller resamples on the CPU backend. The
+  CPU backend has no such limit.
+- **Linux-safe helpers not in the Tasks' owned files.** `DisplayTable`
+  (MB-3), `CompositeMap` (MB-4), `TileMap` (MB-7) and `ResampleTable`
+  (MB-8) in `Sources/CoreRender/Metal/`, their `Tests/CoreRenderTests`
+  suites and their `Tests/mutations/CoreRender<Name>.json` plans belong to
+  those tasks. They hold the GPU paths' math so it builds, tests and mutates
+  on Linux.
+- **Parity oracle.** Goldens cover only `sampleSet(for:)` and are byte
+  compares. The wider grids each family promises (sizes, offsets, turns,
+  evicted runs) compare with the CPU backend run on the GPU's Float16 pixels
+  (`cpu.surface(try metal.read(src))`): Float16 storage turns alpha 1e-45
+  into 0 and rounds every value, so a Float32 CPU reference is not
+  bit-comparable. Transform and resample also read their golden bands on the
+  original samples, so upload loss counts there.
+- **Shaders are Swift strings**, as recorded for MB-a.
+
 ## Open
 
 - **The runner's device.** Answered: the macos-15 runner exposes a Metal

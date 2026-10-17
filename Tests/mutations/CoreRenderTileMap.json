@@ -5,5 +5,26 @@
     "anchor": "min(sx1, from.x + from.width - 1)",
     "replacement": "min(sx1, from.x + from.width)",
     "filter": "TileMapTests"
+  },
+  {
+    "note": "tile map crop bounds guard lets a crop run one pixel past the right edge",
+    "file": "Sources/CoreRender/Metal/TileMap.swift",
+    "anchor": "x <= source.width - width, y <= source.height - height else {",
+    "replacement": "x <= source.width - width + 1, y <= source.height - height else {",
+    "filter": "TileMapTests"
+  },
+  {
+    "note": "tile map quarter turn origin starts one row below the source",
+    "file": "Sources/CoreRender/Metal/TileMap.swift",
+    "anchor": "case .degrees90: return TileMap(originX: 0, originY: h - 1,",
+    "replacement": "case .degrees90: return TileMap(originX: 0, originY: h,",
+    "filter": "TileMapTests"
+  },
+  {
+    "note": "tile map pieces accept a tiling of another width than the map's source",
+    "file": "Sources/CoreRender/Metal/TileMap.swift",
+    "anchor": "guard source.width == sourceWidth, source.height == sourceHeight else {",
+    "replacement": "guard source.height == sourceHeight else {",
+    "filter": "TileMapTests"
   }
 ]
