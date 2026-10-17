@@ -6,7 +6,8 @@
 // never call them with it held). Invariants: `supports` is empty while not healthy,
 // `residentBytes` sums the live surfaces' resident tiles and stays at or under `budgetBytes`
 // after every upload (MetalBackend+Memory.swift), a surface this backend did not make
-// throws `surfaceMismatch`, every op throws `unsupported` until its slice, a probe, a command
+// throws `surfaceMismatch`, `.display` is enabled at init (MB-3) and every other op throws
+// `unsupported` until its slice, a probe, a command
 // buffer or a texture allocation that fails leaves the backend unhealthy with the reason in
 // `capabilities.lastError` (so `deviceLost` is only ever thrown with `isHealthy` false), and only a
 // `recover` whose probe passes makes it healthy again. No GPU wait or runtime compile of a custom
@@ -18,8 +19,8 @@ import CoreRender
 import Foundation
 import Metal
 
-/// The Metal `RenderBackend`: tiled rgba16Float surfaces on one GPU. Every op throws
-/// `RenderError.unsupported` until its slice lands; `supports` tells the dispatcher which do not.
+/// The Metal `RenderBackend`: tiled rgba16Float surfaces on one GPU. Display encode runs; every other
+/// op throws `RenderError.unsupported` until its slice lands; `supports` tells the dispatcher which do not.
 public final class MetalBackend: RenderBackend, @unchecked Sendable {
     /// The system's default GPU, or nil without one; tests gate on `.enabled(if: defaultDevice != nil)`.
     public static var defaultDevice: (any MTLDevice)? { MTLCreateSystemDefaultDevice() }
@@ -52,6 +53,7 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
         self.pipelines = MetalPipelines(device: device)
         self.cacheURL = cacheURL
         self.budget = SurfaceTiling.defaultBudget(workingSet: device.recommendedMaxWorkingSetSize, tileBytes: Self.tileBytes)
+        state.enable(.display)
     }
 
     /// "Metal (<device name>)": the status note's text and every surface's `backend`.
@@ -254,9 +256,9 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     /// Frees a surface's textures; an unknown or already released id is a no-op.
     public func release(_ surface: RenderSurface) { withLock { surfaces[surface.id] = nil } }
 
-    /// Display encode through the DisplayTransfer tables: MB-3. Throws `unsupported(.display)`.
+    /// Display encode through the DisplayTransfer tables (MB-3): see MetalBackend+Display.swift.
     public func display(_ s: RenderSurface, colorSpace: ColorSpace) throws -> [UInt8] {
-        throw RenderError.unsupported(.display)
+        try encodeDisplay(s, colorSpace: colorSpace)
     }
     /// Composite. Throws `unsupported(.composite)` until its slice lands.
     public func composite(_ s: RenderSurface, onto b: inout RenderSurface, x: Int, y: Int,
@@ -301,7 +303,7 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     /// The stored surface behind `surface`; call with the lock held. Throws
     /// `RenderError.surfaceMismatch` for another backend's name, an id not held (never made, or released),
     /// or a handle whose width and height differ from the stored tiling, the same checks as `SurfaceStore`.
-    private func lookup(_ surface: RenderSurface) throws -> MetalSurface {
+    func lookup(_ surface: RenderSurface) throws -> MetalSurface {
         guard surface.backend == name, let stored = surfaces[surface.id],
               stored.tiling.width == surface.width, stored.tiling.height == surface.height else {
             throw RenderError.surfaceMismatch

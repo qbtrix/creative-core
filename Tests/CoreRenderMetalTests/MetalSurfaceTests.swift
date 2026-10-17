@@ -1,5 +1,5 @@
 // MetalSurfaceTests.swift: MetalBackend's surfaces on a real device (MB-1): the Float16 round trip,
-// residentBytes, empty supports, unsupported ops, surface mismatches. Device-gated; compiled out on Linux.
+// residentBytes, supports holding only display, unsupported ops, surface mismatches. Device-gated; compiled out on Linux.
 #if canImport(Metal)
 import CoreRaster
 import CoreRender
@@ -86,10 +86,12 @@ private struct SplitMix64: RandomNumberGenerator {
     }
 
     @Test(.enabled(if: MetalBackend.defaultDevice != nil))
-    func freshBackendSupportsNothingAndIsHealthy() throws {
+    func freshBackendSupportsOnlyDisplayAndIsHealthy() throws {
         let backend = try Self.backend()
-        #expect(backend.supports.isEmpty && backend.isHealthy && backend.residentBytes == 0)
-        #expect(backend.capabilities == MetalCapabilities())
+        #expect(backend.supports == [.display] && backend.isHealthy && backend.residentBytes == 0)
+        var expected = MetalCapabilities()
+        expected.enable(.display)
+        #expect(backend.capabilities == expected)
         #expect(backend.name.hasPrefix("Metal ("))
     }
 
