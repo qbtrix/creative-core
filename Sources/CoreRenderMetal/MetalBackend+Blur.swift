@@ -3,7 +3,7 @@
 // resample scatter kernel. Invariants: an invalid sigma throws the CPU backend's exact error before any GPU work;
 // sigma 0 returns a new surface of the source's pixels unchanged; an image over `maxBufferLength` throws `raster`
 // without failing the backend; the source is unchanged; the lock is free across the GPU wait; a failed command
-// buffer or allocation marks the backend failed and throws `deviceLost`. `.blur` stays out of `supports` until MB-12.
+// buffer or allocation marks the backend failed and throws `deviceLost`; `unsupported(.blur)` while unhealthy.
 #if canImport(Metal)
 import CoreRaster
 import CoreRender
@@ -14,7 +14,7 @@ extension MetalBackend {
     /// `s` blurred by a Gaussian of `sigma` pixels, as `CPUBackend.gaussianBlur` does, as a new surface.
     func blur(_ s: RenderSurface, sigma: Double) throws -> RenderSurface {
         let (image, clock, queue) = try withLock { () throws -> (PixelBuffer, UInt64, any MTLCommandQueue) in
-            guard state.healthy else { throw RenderError.deviceLost(state.lastError ?? "backend unhealthy") }
+            guard state.effectiveSupports.contains(.blur) else { throw RenderError.unsupported(.blur) }
             let stored = try lookup(s)
             let clock = tick()
             stored.touch(clock)
