@@ -47,5 +47,12 @@
     "anchor": "item.s = LottieStatic([try f(t.scaleX * 100), try f(t.scaleY * 100)])",
     "replacement": "item.s = LottieStatic([try f(t.scaleX) * 100, try f(t.scaleY) * 100])",
     "filter": "LottieScaleTrackTests"
+  },
+  {
+    "note": "layer scale checks finite before x100",
+    "file": "Sources/FlareCore/Export/LottieExporter.swift",
+    "anchor": "func f(_ v: Double) throws -> Double { try LottieExporter.finite(v * 100) }",
+    "replacement": "func f(_ v: Double) throws -> Double { try LottieExporter.finite(v) * 100 }",
+    "filter": "LottieScaleTrackTests"
   }
 ]
