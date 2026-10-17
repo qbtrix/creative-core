@@ -1,9 +1,23 @@
 [
   {
-    "note": "resample table weights are stored without dividing by their total",
+    "note": "resample table offsets end one tap short of each output's taps",
     "file": "Sources/CoreRender/Metal/ResampleTable.swift",
-    "anchor": "weights.append(contentsOf: row.map { Float($0 / total) })",
-    "replacement": "weights.append(contentsOf: row.map { Float($0) })",
+    "anchor": "offsets.append(Int32(truncatingIfNeeded: indices.count))",
+    "replacement": "offsets.append(Int32(truncatingIfNeeded: indices.count - 1))",
+    "filter": "ResampleTableTests"
+  },
+  {
+    "note": "resample table unchanged length takes the filter taps instead of the identity",
+    "file": "Sources/CoreRender/Metal/ResampleTable.swift",
+    "anchor": "let identity = length == newLength",
+    "replacement": "let identity = false",
+    "filter": "ResampleTableTests"
+  },
+  {
+    "note": "resample peak buffer takes the larger intermediate instead of the pass that runs first",
+    "file": "Sources/CoreRender/Metal/ResampleTable.swift",
+    "anchor": "let intermediate = min(product(newWidth, height), product(width, newHeight))",
+    "replacement": "let intermediate = max(product(newWidth, height), product(width, newHeight))",
     "filter": "ResampleTableTests"
   }
 ]

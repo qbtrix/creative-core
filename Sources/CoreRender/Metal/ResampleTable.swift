@@ -1,15 +1,9 @@
-// ResampleTable.swift: one resample axis's taps as flat arrays the Metal resample kernel uploads (MB-8),
-// built as CoreRaster's `resized` builds them (its taps are internal): clamp-to-edge indices, zero weights
-// dropped, weights normalised in Double and stored as Float; an unchanged length is the identity. Invariants:
-// `offsets` runs from 0 to `indices.count` in `newLength + 1` entries, every output has a tap, every index is
-// in 0..<length, and every Int32 is in range. Linux-safe.
-#if canImport(Glibc)
-import Glibc
-#elseif canImport(Musl)
-import Musl
-#elseif canImport(Darwin)
-import Darwin
-#endif
+// ResampleTable.swift: one resample axis's taps as flat arrays the Metal resample kernel uploads (MB-8):
+// CoreRaster's own `ResampleFilter.taps` (clamp-to-edge indices, zero weights dropped, weights normalised in
+// Double), flattened and stored as Float; an unchanged length is the identity, as `resized` skips that pass.
+// Also the largest float4 buffer a resample allocates, which the backend checks against its device limit.
+// Invariants: `offsets` runs from 0 to `indices.count` in `newLength + 1` entries, every output has a tap,
+// every index is in 0..<length, and every Int32 is in range. Linux-safe.
 import CoreRaster
 
 /// The taps of one axis resampled from `length` to `newLength` pixels: output `i` sums
@@ -25,13 +19,13 @@ public struct ResampleTable: Equatable, Sendable {
         guard length >= 1, newLength >= 1, length <= limit, newLength <= limit else {
             throw RenderError.raster("resample table \(length) to \(newLength): lengths must be in 1...\(limit)")
         }
+        let identity = length == newLength
+        let rows = identity ? (0..<newLength).map { ([$0], [1.0]) } : filter.taps(length: length, newLength: newLength)
         var (offsets, indices, weights): ([Int32], [Int32], [Float]) = ([0], [], [])
         offsets.reserveCapacity(newLength + 1)
-        for i in 0..<newLength {
-            let (taps, row) = length == newLength ? ([i], [1.0]) : Self.taps(i, length, newLength, filter)
-            let total = row.reduce(0, +)
+        for (taps, row) in rows {
             indices.append(contentsOf: taps.map { Int32(truncatingIfNeeded: $0) })
-            weights.append(contentsOf: row.map { Float($0 / total) })
+            weights.append(contentsOf: row.map { Float($0) })
             guard indices.count <= limit else {
                 throw RenderError.raster("resample table \(length) to \(newLength): over \(limit) taps")
             }
@@ -51,18 +45,12 @@ public struct ResampleTable: Equatable, Sendable {
         }
     }
 
-    /// Output `i`'s clamped input pixels and raw non-zero weights; a zero total (unreachable for these
-    /// filters, whose centre tap weighs over 0) falls back to the nearest pixel, as CoreRaster does.
-    private static func taps(_ i: Int, _ length: Int, _ newLength: Int, _ filter: ResampleFilter) -> ([Int], [Double]) {
-        let (scale, radius) = (Double(length) / Double(newLength), filter == .bilinear ? 1.0 : 3.0)
-        let stretch = max(scale, 1), center = (Double(i) + 0.5) * scale - 0.5
-        let low = Int((center - radius * stretch).rounded(.up))
-        var (taps, row): ([Int], [Double]) = ([], [])
-        for j in low...max(low, Int((center + radius * stretch).rounded(.down))) {
-            let d = abs(Double(j) - center) / stretch, t = Double.pi * d
-            let w = d >= radius ? 0 : filter == .bilinear ? 1 - d : d <= 1e-9 ? 1 : radius * sin(t) * sin(t / radius) / (t * t)
-            if w != 0 { taps.append(min(max(j, 0), length - 1)); row.append(w) }
-        }
-        return row.reduce(0, +) == 0 ? ([min(max(Int(center.rounded()), 0), length - 1)], [1]) : (taps, row)
+    /// The most pixels any one buffer of a `width` x `height` to `newWidth` x `newHeight` resample holds:
+    /// the input, the output, or the intermediate of the pass that runs first (the smaller one, as CoreRaster
+    /// orders them), so never more than the larger of input and output. `Int.max` when a product overflows.
+    public static func peakPixels(width: Int, height: Int, newWidth: Int, newHeight: Int) -> Int {
+        let product = { (a: Int, b: Int) in a.multipliedReportingOverflow(by: b).overflow ? Int.max : a * b }
+        let intermediate = min(product(newWidth, height), product(width, newHeight))
+        return max(product(width, height), intermediate, product(newWidth, newHeight))
     }
 }

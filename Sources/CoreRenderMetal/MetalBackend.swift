@@ -288,7 +288,8 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     public func rotated(_ s: RenderSurface, _ turn: QuarterTurn) throws -> RenderSurface {
         try transformed(s, blit: false) { TileMap.turn($0, turn) }
     }
-    /// Bilinear and lanczos3 as two separable passes: MB-8 (MetalBackend+Resample.swift). A bad size throws the CPU's error.
+    /// Bilinear and lanczos3 as two separable passes: MB-8 (MetalBackend+Resample.swift). A bad size throws the CPU's error;
+    /// a valid size whose largest buffer exceeds this GPU's `maxBufferLength` throws `unsupported(.resample)`: use the CPU backend.
     public func resampled(_ s: RenderSurface, width: Int, height: Int, filter: ResampleFilter) throws -> RenderSurface {
         try resample(s, width: width, height: height, filter: filter)
     }

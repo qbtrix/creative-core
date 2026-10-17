@@ -1,5 +1,6 @@
 // MetalBackend+Transform.swift: crop as blits and quarter turns through `transform_rotate` (MB-7), piece
-// by piece from a TileMap into a new surface. Invariants: an invalid crop throws the CPU's exact error;
+// by piece from a TileMap into a new surface. Invariants: `unsupported(.transform)` while the backend is
+// unhealthy (its `supports` is empty), as display does; an invalid crop throws the CPU's exact error;
 // each output pixel is a bit-exact copy of one source half (evicted tiles via a temporary texture); the
 // lock is never held across the GPU wait; a failed command buffer or allocation throws `deviceLost`.
 #if canImport(Metal)
@@ -12,7 +13,7 @@ extension MetalBackend {
     /// Copies `s` into a new surface along `makeMap`'s map: blits when `blit` (a crop), else the kernel.
     func transformed(_ s: RenderSurface, blit: Bool, _ makeMap: (SurfaceTiling) throws -> TileMap) throws -> RenderSurface {
         let (map, pieces, sources, pipeline, queue, clock) = try withLock { () throws -> TransformPlan in
-            guard state.healthy else { throw RenderError.deviceLost(state.lastError ?? "backend unhealthy") }
+            guard state.effectiveSupports.contains(.transform) else { throw RenderError.unsupported(.transform) }
             let stored = try lookup(s)
             let map = try makeMap(stored.tiling)
             let pieces = try map.pieces(from: stored.tiling)

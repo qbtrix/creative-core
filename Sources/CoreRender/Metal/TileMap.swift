@@ -1,7 +1,8 @@
 // TileMap.swift: the pixel map of a crop or quarter turn between tiled surfaces and the tile-to-tile pieces
 // the Metal backend copies (MB-7). Destination (x, y) reads source origin + x * column + y * row (unit axis
 // steps, so the inverse is the transpose). Invariants: a crop passes CoreRaster's `cropped` checks with its
-// messages; every destination pixel lies in exactly one piece, local to its tiles. Integer math, Linux-safe.
+// messages; `pieces` refuses a tiling of another size than the map's source; every destination pixel lies
+// in exactly one piece, local to its tiles. Integer math, Linux-safe.
 import CoreRaster
 
 /// One unit step in source pixels: exactly one of `x` and `y` is plus or minus 1.
@@ -28,6 +29,8 @@ public struct TileMap: Equatable, Hashable, Sendable {
     public let column: PixelStep, row: PixelStep
     /// The destination size in pixels.
     public let width: Int, height: Int
+    /// The size of the source this map was made for.
+    public let sourceWidth: Int, sourceHeight: Int
 
     /// The `width` x `height` region of `source` at (`x`, `y`). Throws `RenderError.raster` with
     /// CoreRaster's messages, size first, then bounds; no subtraction can overflow for any `Int`.
@@ -38,7 +41,7 @@ public struct TileMap: Equatable, Hashable, Sendable {
             throw RenderError.raster("crop \(width)x\(height) at (\(x), \(y)) is outside \(source.width)x\(source.height)")
         }
         return TileMap(originX: x, originY: y, column: PixelStep(x: 1, y: 0), row: PixelStep(x: 0, y: 1),
-                       width: width, height: height)
+                       width: width, height: height, sourceWidth: source.width, sourceHeight: source.height)
     }
 
     /// `source` turned clockwise by `turn`, as CoreRaster's `rotated`: a quarter turn swaps width and height.
@@ -46,9 +49,9 @@ public struct TileMap: Equatable, Hashable, Sendable {
         let (w, h) = (source.width, source.height)
         let step = { (x: Int, y: Int) in PixelStep(x: x, y: y) }
         switch turn {
-        case .degrees90: return TileMap(originX: 0, originY: h - 1, column: step(0, -1), row: step(1, 0), width: h, height: w)
-        case .degrees180: return TileMap(originX: w - 1, originY: h - 1, column: step(-1, 0), row: step(0, -1), width: w, height: h)
-        case .degrees270: return TileMap(originX: w - 1, originY: 0, column: step(0, 1), row: step(-1, 0), width: h, height: w)
+        case .degrees90: return TileMap(originX: 0, originY: h - 1, column: step(0, -1), row: step(1, 0), width: h, height: w, sourceWidth: w, sourceHeight: h)
+        case .degrees180: return TileMap(originX: w - 1, originY: h - 1, column: step(-1, 0), row: step(0, -1), width: w, height: h, sourceWidth: w, sourceHeight: h)
+        case .degrees270: return TileMap(originX: w - 1, originY: 0, column: step(0, 1), row: step(-1, 0), width: h, height: w, sourceWidth: w, sourceHeight: h)
         }
     }
 
@@ -64,8 +67,11 @@ public struct TileMap: Equatable, Hashable, Sendable {
     }
 
     /// Every destination pixel, split by destination tile and then by source tile, one piece per
-    /// overlapping pair. `source` must be the tiling this map was made for.
+    /// overlapping pair. Throws `RenderError.raster` unless `source` is the size this map was made for.
     public func pieces(from source: SurfaceTiling) throws -> [TilePiece] {
+        guard source.width == sourceWidth, source.height == sourceHeight else {
+            throw RenderError.raster("tile map made for \(sourceWidth)x\(sourceHeight), given \(source.width)x\(source.height)")
+        }
         let grid = try SurfaceTiling(width: width, height: height)
         var pieces: [TilePiece] = []
         for d in 0..<grid.tileCount {
