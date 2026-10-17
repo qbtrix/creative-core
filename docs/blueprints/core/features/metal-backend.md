@@ -131,7 +131,7 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
 | MB-13 | – | Exposure, levels, curves (the curve as a 1-D table) on unpremultiplied values; enables `adjust` | `Sources/CoreRenderMetal/Shaders/Adjust.metal`, `Sources/CoreRenderMetal/MetalBackend+Adjust.swift`, `Tests/CoreRenderMetalTests/ParityTests+Adjust.swift` | MB-2 | ~280, 3 |
 | MB-14 | – | White balance, contrast, highlights and shadows; `supports += .adjust` | `Sources/CoreRenderMetal/Shaders/Adjust.metal`, `Sources/CoreRenderMetal/MetalBackend+Adjust.swift`, `Tests/CoreRenderMetalTests/ParityTests+Adjust.swift` | MB-13 | ~220, 3 |
 | MB-15 | – | Clone through a mask; enables `retouch`; `supports += .retouch` | `Sources/CoreRenderMetal/Shaders/Retouch.metal`, `Sources/CoreRenderMetal/MetalBackend+Retouch.swift`, `Tests/CoreRenderMetalTests/ParityTests+Retouch.swift` | MB-4 | ~220, 3 |
-| MB-16 | – | LRU eviction to the shadow under `budgetBytes`; `residentBytes`; `MetalBudgetTests` (release, reported) | `Sources/CoreRenderMetal/MetalSurface+Eviction.swift`, `Tests/CoreRenderMetalTests/MetalTilingTests.swift`, `Tests/CoreRenderMetalTests/MetalBudgetTests.swift` | MB-1 | ~240, 3 |
+| MB-16 | – | LRU eviction to the shadow under `budgetBytes`; `residentBytes`; `MetalBudgetTests` (release, reported; the speed p95 enables with MB-4) | `Sources/CoreRenderMetal/MetalSurface+Eviction.swift`, `Sources/CoreRenderMetal/MetalBackend+Memory.swift`, `Tests/CoreRenderMetalTests/MetalTilingTests.swift`, `Tests/CoreRenderMetalTests/MetalBudgetTests.swift` | MB-1 (memory); MB-4 (speed p95) | ~240, 4 |
 | MB-17 | – | Every family on; the parity counts and the runner answer in `waves.md`; `feature-done` | `docs/blueprints/core/features/waves.md`, `Tests/CoreRenderMetalTests/ParityTests.swift` | MB-3 to MB-16 | ~80, 2 |
 
 ## Build waves
@@ -185,8 +185,8 @@ covered by parity, not mutations.
 | Parity per family | `.standard` 2/255 and 1e-3; `.nonSeparable` 4/255 | `ParityTests/*` |
 | First launch | a cold cache draws on CPU (no stall); compile finishes off the main queue | `MetalPipelinesTests` |
 | Fallback | device loss routes every op to the CPU within one op and records the reason | `MetalCapabilitiesTests`, `RenderDispatcherTests` (render-backend) |
-| Memory | 4K x 20 layers under half the working set; eviction keeps pixels | `MetalTilingTests`, `MetalBudgetTests` (reported) |
-| Speed | 4K composite p95 ≤ 4 ms (Metal) against ≤ 8 ms CPU, reported | `MetalBudgetTests` |
+| Memory | 4K x 20 uploaded layers under half the working set; eviction keeps pixels | `MetalTilingTests`, `MetalBudgetTests` (release only, on the lead's or finisher's Mac; skipped by the debug `scripts/ci`) |
+| Speed | 4K composite p95 ≤ 4 ms (Metal) against ≤ 8 ms CPU, reported | `MetalBudgetTests` (disabled until MB-4; then release only, on the lead's or finisher's Mac) |
 | Linux-safe | `scripts/ci` on Linux builds `CoreRenderMetal` empty and tests `CoreRender/Metal/` with mutations | the Linux CI job |
 
 ## Done check
@@ -226,6 +226,22 @@ GPU path.
   `supports` excludes the family lands with the first real kernel.
 - **`PipelineKey.validated` bounds the variant** at 64 UTF-8 bytes
   (`PipelineKey.maxVariantLength`) as well as checking it is an identifier.
+- **`recover()` keeps the same device.** `device` is fixed at init, so
+  `recover()` makes a new queue on it, runs the probe, and clears the failure
+  only if the probe passes. After a real device loss the app opens a new
+  `MetalBackend` on a new device instead (Pseudocode, "Health").
+- **MB-16 as built.** (1) The Speed row's sample-to-result p95 needs the
+  composite kernel, so `MetalBudgetTests.fourKCompositeP95Under4ms` stays
+  disabled until MB-4 enables it; MB-4 (or MB-17, if MB-4 lands first without
+  it) owns turning it on. (2) The Memory row uploads twenty 4K layers and
+  checks `residentBytes` after each, with no composite between them; the
+  composite variant arrives with the speed test. (3) `MetalBudgetTests` runs
+  only in an optimized build, so dev's debug `scripts/ci` skips it; the lead
+  or the Mac finisher runs it on release and reports it, and MB-h's done check
+  needs that run recorded, not the skipped CI test. (4) The budget lives in
+  `MetalBackend+Memory.swift` and touched `MetalBackend.swift` and
+  `MetalSurface.swift`, not only `MetalSurface+Eviction.swift`; the Tasks row
+  lists the new file.
 
 ## Open
 

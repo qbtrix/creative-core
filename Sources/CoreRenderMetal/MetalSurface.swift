@@ -38,7 +38,8 @@ final class MetalSurface {
 
     /// Uploads `buffer` tile by tile as binary16 (components clamped to +-65504, so no tile holds an
     /// infinity) and stamps every tile's `lastUse` with `clock`. Throws `RenderError.raster` for a size
-    /// the tiling rejects, `RenderError.deviceLost` when the device returns no texture.
+    /// the tiling rejects, `RenderError.deviceLost` when the device returns no texture (the backend
+    /// marks itself failed before passing it on).
     init(device: any MTLDevice, buffer: PixelBuffer, clock: UInt64) throws {
         let tiling = try SurfaceTiling(width: buffer.width, height: buffer.height)
         var tiles: [(any MTLTexture)?] = []
@@ -78,7 +79,7 @@ final class MetalSurface {
     /// size or a decoded component is not finite: upload clamps, so only a value a GPU kernel wrote
     /// (none yet) can be, and buffers hold finite values only.
     func read() throws -> PixelBuffer {
-        var buffer = try Self.rethrown { try PixelBuffer(width: tiling.width, height: tiling.height) }
+        var buffer = try RenderError.mapping { try PixelBuffer(width: tiling.width, height: tiling.height) }
         // `rect` throws for an index outside the tiling and both arrays have `tileCount` entries,
         // so the subscripts are in range.
         for index in 0..<tiling.tileCount {
@@ -86,7 +87,7 @@ final class MetalSurface {
             guard let tile = try tiles[index].map({ try Self.download($0, rect: rect, index: index) }) ?? shadows[index] else {
                 throw RenderError.raster("tile \(index) has neither a texture nor a shadow")
             }
-            try Self.rethrown {
+            try RenderError.mapping {
                 try buffer.replaceTile(column: index % tiling.columns, row: index / tiling.columns, with: tile)
             }
         }
@@ -107,7 +108,7 @@ final class MetalSurface {
             texture.getBytes(base, bytesPerRow: rect.width * bytesPerPixel,
                              from: MTLRegionMake2D(0, 0, rect.width, rect.height), mipmapLevel: 0)
         }
-        var tile = try rethrown { try PixelBuffer(width: rect.width, height: rect.height) }
+        var tile = try RenderError.mapping { try PixelBuffer(width: rect.width, height: rect.height) }
         // `halves` holds exactly `channels` values per pixel of `rect`, so `offset` stays inside it.
         var offset = 0
         for y in 0..<rect.height {
@@ -116,7 +117,7 @@ final class MetalSurface {
                     r: HalfFloat.decode(halves[offset]), g: HalfFloat.decode(halves[offset + 1]),
                     b: HalfFloat.decode(halves[offset + 2]), a: HalfFloat.decode(halves[offset + 3]))
                 offset += channels
-                try rethrown { try tile.setPixel(x: x, y: y, pixel) }
+                try RenderError.mapping { try tile.setPixel(x: x, y: y, pixel) }
             }
         }
         return tile
@@ -130,7 +131,7 @@ final class MetalSurface {
         halves.reserveCapacity(rect.width * rect.height * channels)
         for y in rect.y..<(rect.y + rect.height) {
             for x in rect.x..<(rect.x + rect.width) {
-                let pixel = try rethrown { try buffer.pixel(x: x, y: y) }
+                let pixel = try RenderError.mapping { try buffer.pixel(x: x, y: y) }
                 halves.append(half(pixel.r))
                 halves.append(half(pixel.g))
                 halves.append(half(pixel.b))
@@ -142,10 +143,5 @@ final class MetalSurface {
 
     /// `value` (finite, as buffers hold) clamped to +-`halfMax`, then encoded as binary16.
     private static func half(_ value: Float) -> UInt16 { HalfFloat.encode(min(max(value, -halfMax), halfMax)) }
-
-    /// Runs `body`, mapping a CoreRaster error to `RenderError.raster` with its message.
-    private static func rethrown<R>(_ body: () throws -> R) throws -> R {
-        do { return try body() } catch RasterError.invalid(let message) { throw RenderError.raster(message) }
-    }
 }
 #endif

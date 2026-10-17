@@ -6,8 +6,11 @@
 // never call them with it held). Invariants: `supports` is empty while not healthy,
 // `residentBytes` sums the live surfaces' resident tiles and stays at or under `budgetBytes`
 // after every upload (MetalBackend+Memory.swift), a surface this backend did not make
-// throws `surfaceMismatch`, every op throws `unsupported` until its slice, and a probe or a
-// command buffer that fails leaves the backend unhealthy with the reason in `capabilities.lastError`.
+// throws `surfaceMismatch`, every op throws `unsupported` until its slice, a probe, a command
+// buffer or a texture allocation that fails leaves the backend unhealthy with the reason in
+// `capabilities.lastError` (so `deviceLost` is only ever thrown with `isHealthy` false), and only a
+// `recover` whose probe passes makes it healthy again. No GPU wait or runtime compile of a custom
+// source runs under the lock: `supports` and `isHealthy` answer while a probe is in flight.
 #if canImport(Metal)
 import CoreColor
 import CoreRaster
@@ -48,7 +51,7 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
         self.commandQueue = try Self.makeQueue(on: device)
         self.pipelines = MetalPipelines(device: device)
         self.cacheURL = cacheURL
-        self.budget = max(Int(clamping: device.recommendedMaxWorkingSetSize / 2), Self.tileBytes)
+        self.budget = SurfaceTiling.defaultBudget(workingSet: device.recommendedMaxWorkingSetSize, tileBytes: Self.tileBytes)
     }
 
     /// "Metal (<device name>)": the status note's text and every surface's `backend`.
@@ -56,8 +59,9 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     /// The op families this backend has proven, plus its health and last error.
     public var capabilities: MetalCapabilities { withLock { state } }
     /// `capabilities.supported` while healthy, else empty: the dispatcher drops to CPU on a device loss.
-    public var supports: Set<RenderOp> { withLock { state.healthy ? state.supported : [] } }
-    /// False after a command buffer error or a lost device, until `recover`.
+    public var supports: Set<RenderOp> { withLock { state.effectiveSupports } }
+    /// False after a command buffer error, a failed probe or texture allocation, or a lost device,
+    /// until a `recover` whose probe passes.
     public var isHealthy: Bool { withLock { state.healthy } }
     /// Bytes of resident tile textures held by the live surfaces (8 per pixel); evicted tiles count 0.
     public var residentBytes: Int { withLock { residentBytesLocked } }
@@ -93,8 +97,9 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     /// Compiles and memoises the kernel named by `op` and `variant` in `source` (MSL), so the first
     /// op that needs it does not pay the compile; a key already memoised is not compiled again.
     /// `variant` may come from outside: it goes through `PipelineKey.validated`. Throws
-    /// `RenderError.raster` for a variant outside `[A-Za-z0-9_]`, `RenderError.deviceLost` when
-    /// `source` has no such kernel, and Metal's error when it does not compile. Never fails the backend.
+    /// `RenderError.raster` for a variant outside `[A-Za-z0-9_]` or when `source` has no such
+    /// kernel, and Metal's error when it does not compile. Never fails the backend. The probe's
+    /// pipeline is kept apart, so `.display` with variant "probe" compiles the caller's kernel.
     public func preparePipeline(op: RenderOp, variant: String, source: String) throws {
         let key = try PipelineKey.validated(op: op, variant: variant)
         _ = try withLock { try pipelines.pipeline(for: key, source: source) }
@@ -127,10 +132,15 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     /// `capabilities.lastError` holds `reason`, until `recover`. `capabilities.supported` is kept.
     public func fail(_ reason: String) { withCapabilities { $0.fail(reason) } }
 
-    /// Makes a new command queue on `device` and clears the failure: `isHealthy` true, `lastError` nil.
-    /// Throws `RenderError.deviceLost` when the device gives no queue, leaving the failure in place.
-    public func recover() throws {
+    /// Makes a new command queue on `device`, runs the probe on it and, only if the probe passes,
+    /// installs the queue and clears the failure: `isHealthy` true, `lastError` nil. Throws
+    /// `RenderError.deviceLost` when the device gives no queue (the failure stays in place) or the
+    /// probe fails (the backend is marked failed with the probe's reason, as `probe` does).
+    /// `device` cannot change: after a real device loss, open a new `MetalBackend` on a new device.
+    /// `probeSource` replaces the probe's MSL, as `probe(source:)`'s does; tests use it.
+    public func recover(probeSource: String? = nil) throws {
         let queue = try Self.makeQueue(on: device)
+        try checkedProbe(source: probeSource, on: queue)
         withCapabilities { capabilities in
             commandQueue = queue
             capabilities.recover()
@@ -143,24 +153,43 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     /// carries the same reason. The dispatcher or an app calls this after a device-loss
     /// notification. `source`, when given, replaces the probe's MSL (it must define
     /// `display_probe`) and is compiled fresh, never memoised: tests use it to drive the failure path.
+    /// The lock is held only to read the queue and pipeline: the compile of a custom source and the
+    /// GPU wait run with it free, so `supports` and `isHealthy` answer while the probe runs.
     public func probe(source: String? = nil) throws {
+        try checkedProbe(source: source, on: withLock { commandQueue })
+    }
+
+    /// `runProbe` on `queue`; on any failure marks the backend failed with "probe: ..." and throws
+    /// `RenderError.deviceLost` with that reason. Call with the lock free.
+    private func checkedProbe(source: String?, on queue: any MTLCommandQueue) throws {
         do {
-            try withLock { try runProbe(source: source) }
+            try runProbe(source: source, on: queue)
         } catch {
-            let reason: String
-            if case RenderError.deviceLost(let text) = error { reason = text } else { reason = "probe: \(error)" }
+            let reason = Self.probeReason(error)
             fail(reason)
             throw RenderError.deviceLost(reason)
         }
     }
 
-    /// The probe's GPU work; call with the lock held. Throws `RenderError.deviceLost("probe: ...")`.
-    private func runProbe(source: String?) throws {
+    /// A probe error's text, prefixed "probe: " unless it already is.
+    static func probeReason(_ error: any Error) -> String {
+        let text: String
+        switch error {
+        case RenderError.deviceLost(let message), RenderError.raster(let message): text = message
+        default: text = "\(error)"
+        }
+        return text.hasPrefix("probe: ") ? text : "probe: \(text)"
+    }
+
+    /// The probe's GPU work on `queue`; call with the lock free (it takes it only for the pipeline
+    /// memo and the compile count). Throws `RenderError.deviceLost("probe: ...")`, or the compile's error.
+    private func runProbe(source: String?, on queue: any MTLCommandQueue) throws {
         let pipeline: any MTLComputePipelineState
         if let source {
-            pipeline = try pipelines.compile(MetalPipelines.probeKey, source: source)
+            pipeline = try MetalPipelines.build(MetalPipelines.probeKey, source: source, on: device)
+            withLock { pipelines.noteCompile() }
         } else {
-            pipeline = try pipelines.pipeline(for: MetalPipelines.probeKey, source: MetalPipelines.probeSource)
+            pipeline = try withLock { try pipelines.probePipeline() }
         }
         let input: [Float] = [1, 2, 3, 4]
         let made = input.withUnsafeBytes { raw -> (any MTLBuffer)? in
@@ -168,7 +197,7 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
             return device.makeBuffer(bytes: base, length: raw.count, options: .storageModeShared)
         }
         guard let buffer = made else { throw RenderError.deviceLost("probe: no buffer on \(device.name)") }
-        guard let commands = commandQueue.makeCommandBuffer() else {
+        guard let commands = queue.makeCommandBuffer() else {
             throw RenderError.deviceLost("probe: no command buffer on \(device.name)")
         }
         guard let encoder = commands.makeComputeCommandEncoder() else {
@@ -194,10 +223,17 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
 
     /// Uploads `buffer` as a tiled rgba16Float surface, then evicts least recently used tiles until
     /// `residentBytes` fits `budgetBytes`. Throws `RenderError.raster` for a size the tiling rejects
-    /// and `RenderError.deviceLost` when a texture cannot be made.
+    /// and `RenderError.deviceLost` when a texture cannot be made, after marking the backend failed
+    /// with that reason (a device out of memory routes ops to the CPU until `recover`).
     public func surface(_ buffer: PixelBuffer) throws -> RenderSurface {
         let clock = withLock { tick() }
-        let stored = try MetalSurface(device: device, buffer: buffer, clock: clock)
+        let stored: MetalSurface
+        do {
+            stored = try MetalSurface(device: device, buffer: buffer, clock: clock)
+        } catch RenderError.deviceLost(let reason) {
+            fail(reason)
+            throw RenderError.deviceLost(reason)
+        }
         let id = UUID()
         withLock { surfaces[id] = stored }
         evictIfNeeded()
