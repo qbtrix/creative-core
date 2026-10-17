@@ -2,7 +2,11 @@
 // error type of CoreRender, which CoreRenderMetal shares. A backend lists the
 // families it implements in `supports`; RenderDispatcher, the routing between
 // backends, sends each op only to a backend that lists it, so a backend throws
-// `unsupported` only when it is called directly. Contract types, plus the two
+// `unsupported` for an unlisted family only when it is called directly. A
+// backend may also throw `unsupported` for a listed family when the input is
+// over its device limit; RenderDispatcher passes that error on without
+// retrying, and the caller runs the op on the CPU backend (its `fallback`).
+// Contract types, plus the two
 // mappings every backend shares: a blend mode to the family that gates it, and
 // a CoreRaster error to `RenderError.raster` (`init(_:)` and `mapping`,
 // render-backend RB-2).
@@ -47,8 +51,12 @@ extension RenderOp {
 
 /// What a backend throws. Each case says when; a backend never crashes.
 public enum RenderError: Error, Equatable, Sendable {
-    /// The op's family is not in the backend's `supports`. RenderDispatcher
-    /// sends an op only to a backend that lists it.
+    /// The op's family is not in the backend's `supports` (RenderDispatcher
+    /// sends an op only to a backend that lists it), or this input is over
+    /// this backend's device limit (the Metal backend's `maxBufferLength` for
+    /// display, resample, blur and unsharp): run it on the CPU backend, which
+    /// has no such limit. The backend stays healthy, and RenderDispatcher
+    /// passes this error on without retrying the op on its `fallback`.
     case unsupported(RenderOp)
     /// The GPU stopped answering, with the reason the platform gave: no
     /// command queue, a tile texture it would not allocate (out of memory), a

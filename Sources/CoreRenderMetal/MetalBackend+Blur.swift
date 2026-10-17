@@ -1,8 +1,9 @@
 // MetalBackend+Blur.swift: Gaussian blur (MB-11) as two separable GPU passes of BlurTable over whole-image float4
 // buffers in the CPU's order (across, then down) with clamp-to-edge taps, scattered into a new surface by the
 // resample scatter kernel. Invariants: an invalid sigma throws the CPU backend's exact error before any GPU work;
-// sigma 0 returns a new surface of the source's pixels unchanged; an image over `maxBufferLength` throws `raster`
-// without failing the backend; the source is unchanged; the lock is free across the GPU wait; a failed command
+// sigma 0 returns a new surface of the source's pixels unchanged; a valid image whose w x h x 16 bytes are over
+// `maxBufferLength` throws `unsupported(.blur)` without failing the backend (a device limit, not bad input: blur it
+// on the CPU backend), as resample does; the source is unchanged; the lock is free across the GPU wait; a failed command
 // buffer or allocation marks the backend failed and throws `deviceLost`; `unsupported(.blur)` while unhealthy.
 #if canImport(Metal)
 import CoreRaster
@@ -11,8 +12,10 @@ import Foundation
 import Metal
 
 extension MetalBackend {
-    /// `s` blurred by a Gaussian of `sigma` pixels, as `CPUBackend.gaussianBlur` does, as a new surface.
-    func blur(_ s: RenderSurface, sigma: Double) throws -> RenderSurface {
+    /// `s` blurred by a Gaussian of `sigma` pixels, as `CPUBackend.gaussianBlur` does, as a new surface. Throws
+    /// `unsupported(.blur)` while unhealthy or when a whole-image buffer would exceed this GPU's `maxBufferLength`
+    /// (blur on the CPU backend instead). `bufferLimit`, for tests, stands in for `maxBufferLength` when set.
+    package func blur(_ s: RenderSurface, sigma: Double, bufferLimit: Int? = nil) throws -> RenderSurface {
         let (image, clock, queue) = try withLock { () throws -> (PixelBuffer, UInt64, any MTLCommandQueue) in
             guard state.effectiveSupports.contains(.blur) else { throw RenderError.unsupported(.blur) }
             let stored = try lookup(s)
@@ -23,9 +26,8 @@ extension MetalBackend {
         let (w, h) = (image.width, image.height)
         let table = try BlurTable(sigma: sigma, width: w, height: h)
         if table.isIdentity { return try blurStore(blurAllocate { try MetalSurface(device: device, buffer: image, clock: clock) }, w, h) }
-        guard w * h * 16 <= device.maxBufferLength else {
-            throw RenderError.raster("blur: \(w)x\(h) needs buffers over \(device.maxBufferLength) bytes")
-        }
+        // A valid image whose buffers exceed this GPU's limit is a device limit, not bad input.
+        guard w * h * 16 <= bufferLimit ?? device.maxBufferLength else { throw RenderError.unsupported(.blur) }
         let (pass, scatter) = try withLock { () throws -> (any MTLComputePipelineState, any MTLComputePipelineState) in
             (try pipelines.pipeline(for: BlurShader.pass, source: BlurShader.source),
              try pipelines.pipeline(for: ResampleShader.scatter, source: ResampleShader.source))
