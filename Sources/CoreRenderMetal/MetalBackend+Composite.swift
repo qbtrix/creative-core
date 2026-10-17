@@ -4,7 +4,10 @@
 // backend's checks in its order before any pixel changes; evicted backdrop tiles come back to textures first,
 // a tile evicted after planning (or whose shadow changed) from its current shadow, and the budget holds after on
 // every exit; a source that is the backdrop is read from a snapshot; no GPU wait under the lock; a GPU failure
-// throws `deviceLost`. Not yet held: a tile evicted while the GPU writes it can lose that write (no pin set).
+// throws `deviceLost`; a target tile that leaves while the GPU writes it keeps that write: still evicted, its
+// shadow comes from the written texture; evicted and restored (from a shadow taken before the write), the written
+// texture replaces the restored one. Not held (no pin set): another op that writes such a restored tile inside
+// that GPU window loses its write, since the restored texture it wrote is replaced.
 #if canImport(Metal)
 import CoreRaster
 import CoreRender
@@ -79,10 +82,14 @@ extension MetalBackend {
         do { targets = try resolved.get() } catch RenderError.deviceLost(let reason) { throw compositeLost(reason) }
         let split = try opaqueRowSplit(plan.pieces, textures: textures, mode: mode, opacity: opacity)  // MB-6
         try encode(plan, pieces: split.kernel, blits: split.blits, textures: textures, targets: targets, opacity: opacity)
-        do {  // a tile evicted while the GPU wrote it takes its shadow from the written texture
+        do {  // a target that left while the GPU wrote it: an evicted tile's shadow, or a restored tile, is the written texture
             try withLock {
-                for (index, texture) in targets where plan.backdrop.tiles[index] == nil {
-                    plan.backdrop.shadows[index] = try MetalSurface.download(texture, rect: plan.backdrop.tiling.rect(index), index: index)
+                for (index, texture) in targets {
+                    guard let current = plan.backdrop.tiles[index] else {
+                        plan.backdrop.shadows[index] = try MetalSurface.download(texture, rect: plan.backdrop.tiling.rect(index), index: index)
+                        continue
+                    }
+                    if current !== texture { plan.backdrop.tiles[index] = texture }  // same rect, so residentBytes holds
                 }
             }
         } catch { throw compositeLost("composite: \(error)") }
