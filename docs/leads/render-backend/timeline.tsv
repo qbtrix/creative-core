@@ -55,3 +55,5 @@ utc	stage	event	ref	note
 2026-10-17T14:22Z	4	anatomy-round	dev 8cd012a	RB-b round 3 not clean (1 major, 3 minor); fixer building
 2026-10-17T14:27Z	4	gate	dev 8cd012a	996/997 (EngineStress flake, passes alone); render plans 28/28 caught; 309 anchors
 2026-10-17T14:24Z	4	heartbeat	dev 8cd012a	RB-b round 3 fixer and RB-c in-place fixer building; no dev CI run since 39037816632 (4b2aa75)
+2026-10-17T14:25Z	4	merge	dev b8d1272	RB-b round 3 fix #384 merged (forwarders, self-composite guard; Dispatcher 12/12)
+2026-10-17T14:31Z	4	anatomy-round	dev b8d1272	RB-b round 4 (final) started: critic and gate
