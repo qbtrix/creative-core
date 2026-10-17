@@ -29,3 +29,4 @@ utc	stage	event	ref	note
 2026-10-17T13:45Z	4	pr-merged	dev ff4ae9f	#373 RB-a round 2 fixes
 2026-10-17T13:45Z	4	anatomy-round	dev ff4ae9f	RB-a round 3 started: critic and gate
 2026-10-17T13:37Z	4	anatomy-round	dev ff4ae9f	RB-a round 3 not clean; comment to fixer, replace to RB-3 (round 4 is the last)
+2026-10-17T13:43Z	4	pr-opened	dev	#374 RB-a round 3 fixes (no dispatcher or CPU backend named as present; comments and C4 text only)
