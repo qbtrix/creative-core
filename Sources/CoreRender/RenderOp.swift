@@ -50,8 +50,12 @@ public enum RenderError: Error, Equatable, Sendable {
     /// The op's family is not in the backend's `supports`. RenderDispatcher
     /// sends an op only to a backend that lists it.
     case unsupported(RenderOp)
-    /// The GPU or its command queue is gone, with the reason the platform
-    /// gave. The backend reports `isHealthy == false` from then on.
+    /// The GPU stopped answering, with the reason the platform gave: no
+    /// command queue, a tile texture it would not allocate (out of memory), a
+    /// failed command buffer, or a probe that returned wrong numbers. The
+    /// backend reports `isHealthy == false` from then on. Call the backend's
+    /// `recover` first; only if that throws too is the device gone, and the
+    /// app opens a new backend on a new device.
     case deviceLost(String)
     /// The surface belongs to another backend (its `backend` is not this
     /// backend's `name`), this backend already released it, or the handle's

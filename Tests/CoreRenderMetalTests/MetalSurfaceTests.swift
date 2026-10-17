@@ -129,5 +129,16 @@ private struct SplitMix64: RandomNumberGenerator {
         backend.release(surface)
         #expect(throws: RenderError.surfaceMismatch) { try backend.read(surface) }
     }
+
+    @Test(.enabled(if: MetalBackend.defaultDevice != nil))
+    func handleWithWrongSizeIsAMismatch() throws {
+        let backend = try Self.backend()
+        let surface = try backend.surface(PixelBuffer(width: 3, height: 2))
+        let wider = RenderSurface(id: surface.id, width: 4, height: 2, backend: surface.backend)
+        let taller = RenderSurface(id: surface.id, width: 3, height: 5, backend: surface.backend)
+        #expect(throws: RenderError.surfaceMismatch) { try backend.read(wider) }
+        #expect(throws: RenderError.surfaceMismatch) { try backend.read(taller) }
+        #expect(try backend.read(surface).height == 2, "the true size still reads")
+    }
 }
 #endif
