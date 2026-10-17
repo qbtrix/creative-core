@@ -70,3 +70,4 @@ utc	stage	event	ref	note
 2026-10-17T15:22Z	4	anatomy-fix	dev f7bdbfe	#391 merged (RB-c round 2 fixes); round 3 started: critic and gate 11
 2026-10-17T15:01Z	4	heartbeat	dev f7bdbfe	gate 11 PASS 1012/1012, mutations 46/46, release budget +0.99%; RB-c round 3 critic running
 2026-10-17T15:40Z	4	anatomy-round	dev f7bdbfe	RB-c round 3: 0 major, 2 minor; gate 1012/1012 PASS, mutations 46/46, budget +0.99%; fixer rbc-anatomy-3 started
+2026-10-17T15:12Z	4	fix-merged	#394 e6c149d	RB-c round 3 fixes merged; round 4 (final) critic + gate 12 on dev 74ce55f started
