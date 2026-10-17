@@ -2,7 +2,7 @@
 
 Issue: #348 · Packet: docs/blueprints/core/features/metal-backend.md
 Run: act-1a14ab2b672-8guo · Resumed: 2026-10-17T16:33Z (fourth run; earlier act-1a149b549c8-v538, act-1a148001532-1w03, act-1a14644b538-njln)
-Stage: 4 round r4 fixes open: r4a #422, r4b #426, r4c #425, r4e #424; all four re-gated (CI: PASS) with the stale ParityTests/blendSeparable tail fixed (it expected non-separable modes rejected; dev's Metal (macOS) check failed it); r4d #423 merged; gaps #419-#421 filed; MB-g Slice-Done posted (run 39052919097). Next: MB-17 builder once r4 PRs merge
+Stage: 4 r4: #423, #425 merged (#425 carried the stale blendSeparable fix to dev); #422, #424, #426 open, gated, waiting on the queued Metal (macOS) runner; MB-17 builder running on lead/metal-backend-mb17 from dev. Next: MB-17 PR (feature-done), then Slice-Done MB-e/MB-f/MB-h on a green dev run, contact sheet
 Base: 4e27e16 (origin/dev)
 Next (for a relaunched lead): wait for wf_649a731c-c00 PRs to merge (round 4 is the last round; no r5) → Belt-Slice-Done MB-e/MB-f once a dev CI Linux job holding #418 and #411 (dev 58ed68f or later) is green → MB-17 (feature-done: background compile + First launch row, fourKCompositeP95Under4ms on, no disabled parity family, supports == all on tier 2, waves.md counts, doc leftovers) → MB-h Slice-Done, contact sheet on #348. PR bodies say Refs #348, never Closes.
 
