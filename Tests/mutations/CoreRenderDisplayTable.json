@@ -9,8 +9,22 @@
   {
     "note": "display table P3 matrix is laid out transposed",
     "file": "Sources/CoreRender/Metal/DisplayTable.swift",
-    "anchor": "columns[$0 % 3][$0 / 3]",
-    "replacement": "columns[$0 / 3][$0 % 3]",
+    "anchor": "DisplayTransfer.p3FromLinearSRGB.map { Float($0) }",
+    "replacement": "[0, 3, 6, 1, 4, 7, 2, 5, 8].map { Float(DisplayTransfer.p3FromLinearSRGB[$0]) }",
+    "filter": "DisplayTableTests"
+  },
+  {
+    "note": "display table output fit check refuses a buffer exactly at the device limit",
+    "file": "Sources/CoreRender/Metal/DisplayTable.swift",
+    "anchor": "bytes <= maxBufferLength",
+    "replacement": "bytes < maxBufferLength",
+    "filter": "DisplayTableTests"
+  },
+  {
+    "note": "display table output fit check ignores a byte count overflow",
+    "file": "Sources/CoreRender/Metal/DisplayTable.swift",
+    "anchor": "return !o1 && !o2 && bytes",
+    "replacement": "return !o1 && bytes",
     "filter": "DisplayTableTests"
   }
 ]

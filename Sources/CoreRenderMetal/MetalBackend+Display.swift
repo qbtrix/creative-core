@@ -1,7 +1,9 @@
 // MetalBackend+Display.swift: the display encode (metal-backend MB-3). Resident tiles go through
 // `display_encode` (Shaders/DisplayShader.swift), one dispatch per tile in one command buffer, into one
 // shared byte buffer; evicted tiles encode from their shadows with `PixelBuffer.rgba8`, the CPU path.
-// The lock covers lookup, use stamp, tiles and pipeline (compiled on first use), not the GPU wait.
+// The lock covers lookup, use stamp, tiles and pipeline (compiled on first use), not the GPU wait. Errors
+// follow the CPU's order (surface, then space); an output over `maxBufferLength` is a device limit, so it
+// throws `unsupported(.display)` without failing the backend, and only a nil buffer within it is `lost`.
 #if canImport(Metal)
 import CoreColor
 import CoreRaster
@@ -10,17 +12,22 @@ import Foundation
 import Metal
 
 extension MetalBackend {
-    /// `surface` as straight-alpha bytes in `colorSpace`. Throws `unsupported(.display)` while the
-    /// backend is unhealthy, `RenderError.raster` for a non-display space, `surfaceMismatch`, or
+    /// `surface` as straight-alpha bytes in `colorSpace`. Throws, in this order: `unsupported(.display)` while
+    /// the backend is unhealthy, `surfaceMismatch`, the CPU backend's `RenderError.raster` for a non-display
+    /// space, `unsupported(.display)` (backend still healthy) when the bytes exceed `maxBufferLength`, or
     /// `deviceLost` (backend failed) when the GPU work cannot run or fails.
     func encodeDisplay(_ surface: RenderSurface, colorSpace: ColorSpace) throws -> [UInt8] {
-        let table = try DisplayTable(colorSpace)
         let (tiling, tiles, shadows, pipeline, queue) = try withLock {
             guard state.effectiveSupports.contains(.display) else { throw RenderError.unsupported(.display) }
             let stored = try lookup(surface)
             stored.touch(tick())
             let pipeline = try pipelines.pipeline(for: DisplayShader.key, source: DisplayShader.source)
             return (stored.tiling, stored.tiles, stored.shadows, pipeline, commandQueue)
+        }
+        // After the lookup, as the CPU backend checks the surface before the space; the same error text.
+        let table = try DisplayTable(colorSpace)
+        guard DisplayTable.outputFits(width: tiling.width, height: tiling.height, maxBufferLength: device.maxBufferLength) else {
+            throw RenderError.unsupported(.display)
         }
         guard tiles.count == tiling.tileCount, shadows.count == tiling.tileCount else {
             throw RenderError.raster("display: \(tiles.count) tiles and \(shadows.count) shadows for \(tiling.tileCount)")

@@ -1,5 +1,5 @@
 // CompositeMapTests.swift: the pieces the Metal composite runs over (MB-4) cover exactly the overlap of a
-// source at any offset, each pixel once and read from the right source pixel, so compositing piece by
+// source at any offset, across source tile columns and rows, each pixel once and read from the right source pixel, so compositing piece by
 // piece gives CoreRaster's in-place composite bit for bit; the opacity check throws the CPU backend's error.
 import CoreRaster
 import CoreRender
@@ -38,17 +38,22 @@ import Testing
     }
 
     @Test func piecesCompositeLikeCoreRasterAtEveryEdgeAndCorner() throws {
-        let backdrop = try Self.seeded(300, 270, seed: 0xBAC0), source = try Self.seeded(260, 200, seed: 0x5A11)
-        let offsets = [-130, 20, 170].flatMap { x in [-100, 35, 170].map { (x, $0) } } + [(-259, -199), (299, 269), (0, 0)]
-        for (x, y) in offsets {
+        let backdrop = try Self.seeded(300, 270, seed: 0xBAC0)
+        // 260x200 is one source tile row; 260x300 is two, so its row seam (y + 256) lands inside the backdrop at
+        // y -100 and 10, and every piece below it reads a source tile whose `from.y` is 256.
+        let wide = try Self.seeded(260, 200, seed: 0x5A11), tall = try Self.seeded(260, 300, seed: 0x7A11)
+        let grid = [-130, 20, 170].flatMap { x in [-100, 10, 35, 170].map { (x, $0) } }
+        let cases = [(wide, grid + [(-259, -199), (299, 269), (0, 0)]), (tall, grid + [(-259, -299), (299, 269), (0, -40)])]
+        for (source, offsets) in cases { for (x, y) in offsets {
             let (got, writes) = try Self.apply(source, onto: backdrop, x: x, y: y, opacity: 0.37)
-            #expect(got == (try composite(source, onto: backdrop, x: x, y: y, mode: .normal, opacity: 0.37)), "at (\(x), \(y))")
+            #expect(got == (try composite(source, onto: backdrop, x: x, y: y, mode: .normal, opacity: 0.37)),
+                    "\(source.width)x\(source.height) at (\(x), \(y))")
             let once = (0..<writes.count).allSatisfy { i in
                 let (bx, by) = (i % backdrop.width - x, i / backdrop.width - y)
                 return writes[i] == (bx >= 0 && bx < source.width && by >= 0 && by < source.height ? 1 : 0)
             }
-            #expect(once, "at (\(x), \(y)): every overlap pixel is written once, no other")
-        }
+            #expect(once, "\(source.width)x\(source.height) at (\(x), \(y)): every overlap pixel is written once, no other")
+        } }
     }
 
     @Test func aSourceWhollyOutsideGivesNoPiece() throws {

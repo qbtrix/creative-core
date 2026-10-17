@@ -12,6 +12,7 @@
 //       and `ParityTolerance(bytes: 0, linear: 0)`.
 //   root: Tests/CoreRenderTests/Golden, from #filePath (`deletingLastPathComponent()` twice,
 //         then "CoreRenderTests/Golden"); the goldens are packs of samples (ParityPack.swift).
+//   `expectGoldens(for:on:)` below runs this loop; every family calls it rather than a copy:
 //   for sample in try ParityHarness.sampleSet(for: op):
 //     read and slice: let golden = try ParityGolden.band(from: root, op: op, sample: sample.name)
 //     render:         let result = try ParityHarness.render(sample, on: backend)
@@ -25,6 +26,12 @@
 // `.enabled(if: MetalBackend.defaultDevice != nil)`: a runner without a GPU skips it. Compiled
 // out on Linux.
 #if canImport(Metal)
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import Foundation
+#endif
+import CoreRender
 import CoreRenderMetal
 import Testing
 
@@ -53,6 +60,19 @@ import Testing
         ("adjust", { $0.adjust }),
         ("retouch", { $0.retouch }),
     ]
+
+    /// Tests/CoreRenderTests/Golden, which holds the CPU goldens every family compares with.
+    static let goldenRoot = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+        .appendingPathComponent("CoreRenderTests/Golden")
+
+    /// Every sample of `op`'s set, rendered on `backend` from its original source, matches its golden band.
+    static func expectGoldens(for op: RenderOp, on backend: any RenderBackend) throws {
+        for sample in try ParityHarness.sampleSet(for: op) {
+            let golden = try ParityGolden.band(from: goldenRoot, op: op, sample: sample.name)
+            let result = try ParityHarness.compare(golden: golden, ParityHarness.render(sample, on: backend))
+            #expect(result.passed, "\(op.rawValue)/\(sample.name) golden: \(result)")
+        }
+    }
 
     @Test func familiesAreBoundToTests() {
         #expect(Self.families.count == 11)

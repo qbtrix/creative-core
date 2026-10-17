@@ -13,7 +13,8 @@ public enum CompositeMap {
 
     /// Every backdrop pixel the source covers with its pixel (0, 0) on backdrop pixel (`x`, `y`), split
     /// by backdrop tile (`destinationTile`) and then by source tile, one piece per overlapping pair, in
-    /// ascending backdrop tile order. Empty when the source lies wholly outside the backdrop.
+    /// ascending backdrop tile order. Empty when the source lies wholly outside the backdrop. Throws
+    /// `RenderError.raster` only if a tiling's `rect` fails, an internal inconsistency no valid tiling reaches.
     public static func pieces(source: SurfaceTiling, onto backdrop: SurfaceTiling, x: Int, y: Int) throws -> [TilePiece] {
         // Both bounds are checked before adding, so x + width cannot overflow (CoreRaster's clip).
         guard x < backdrop.width, y < backdrop.height, x > -source.width, y > -source.height else { return [] }

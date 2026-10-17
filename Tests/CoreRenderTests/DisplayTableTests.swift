@@ -1,7 +1,8 @@
 // DisplayTableTests.swift: the Float thresholds the Metal display kernel reads, and `encode`, its
 // Swift mirror: each threshold is the first Float at its level by `DisplayTransfer` itself; sRGB
 // equals `PixelBuffer.rgba8` exactly, P3 within one byte; every byte per channel survives half
-// storage in both spaces; NaN, infinity and short tables stay in range; other spaces throw.
+// storage in both spaces; NaN, infinity and short tables stay in range; other spaces throw the CPU's
+// error; the P3 matrix is CoreColor's; `outputFits` holds at the buffer limit and refuses past it.
 import CoreColor
 import CoreRaster
 import CoreRender
@@ -70,7 +71,35 @@ import Testing
         #expect(encoded == bytes)
     }
 
-    @Test func aSpaceThatIsNotADisplaySpaceThrows() {
-        #expect(throws: RenderError.self) { try DisplayTable(.linearSRGB) }
+    /// The same error value, text included, that `CPUBackend.display` throws for the space.
+    @Test func aSpaceThatIsNotADisplaySpaceThrowsTheCPUError() throws {
+        let cpu = CPUBackend()
+        let surface = try cpu.surface(PixelBuffer(width: 1, height: 1))
+        for space in ColorSpace.allCases where !PixelBuffer.displayColorSpaces.contains(space) {
+            do {
+                _ = try cpu.display(surface, colorSpace: space)
+                Issue.record("the CPU displays in \(space.rawValue)")
+            } catch let expected as RenderError {
+                #expect(throws: expected) { try DisplayTable(space) }
+            }
+        }
+    }
+
+    /// The P3 matrix is CoreColor's own, entry for entry, not a re-derivation of it.
+    @Test func theP3MatrixIsCoreColorsMatrixAsFloat() throws {
+        let matrix = try #require(try DisplayTable(.displayP3).matrix)
+        #expect(matrix == DisplayTransfer.p3FromLinearSRGB.map { Float($0) })
+        #expect(matrix.count == 9)
+    }
+
+    /// Display's device-limit check: 4 bytes per pixel, at or under the limit, never on an overflow.
+    @Test func outputFitsAtTheBufferLimitAndNotPastIt() {
+        #expect(DisplayTable.outputFits(width: 1, height: 1, maxBufferLength: 4))
+        #expect(!DisplayTable.outputFits(width: 1, height: 1, maxBufferLength: 3))
+        #expect(DisplayTable.outputFits(width: 300, height: 270, maxBufferLength: 300 * 270 * 4))
+        #expect(!DisplayTable.outputFits(width: 300, height: 270, maxBufferLength: 300 * 270 * 4 - 1))
+        #expect(!DisplayTable.outputFits(width: 300, height: 271, maxBufferLength: 300 * 270 * 4))
+        #expect(!DisplayTable.outputFits(width: Int.max / 2, height: 3, maxBufferLength: .max), "pixels overflow")
+        #expect(!DisplayTable.outputFits(width: Int.max / 4 + 1, height: 1, maxBufferLength: .max), "bytes overflow")
     }
 }

@@ -19,5 +19,19 @@
     "anchor": "guard (0...1).contains(opacity)",
     "replacement": "guard opacity <= 1",
     "filter": "CompositeMapTests"
+  },
+  {
+    "note": "composite map source tile row offset dropped, so pieces below a source row seam read the wrong rows",
+    "file": "Sources/CoreRender/Metal/CompositeMap.swift",
+    "anchor": "sourceY: iy0 - y - from.y",
+    "replacement": "sourceY: iy0 - y",
+    "filter": "CompositeMapTests"
+  },
+  {
+    "note": "composite map piece clipping ignores the source tile row's top, so rows run past the tile",
+    "file": "Sources/CoreRender/Metal/CompositeMap.swift",
+    "anchor": "min(cy1, y + from.y + from.height)",
+    "replacement": "min(cy1, y + from.height)",
+    "filter": "CompositeMapTests"
   }
 ]
