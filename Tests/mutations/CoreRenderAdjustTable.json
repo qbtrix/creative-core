@@ -33,5 +33,19 @@
     "anchor": "let toward: Float = (out.last ?? edge) < zero ? -1 : 1",
     "replacement": "let toward: Float = (out.last ?? edge) > zero ? -1 : 1",
     "filter": "AdjustTableTests"
+  },
+  {
+    "note": "adjust octave under 2^octaveMin returns f(0) instead of the line to the first entry",
+    "file": "Sources/CoreRender/Metal/AdjustTable.swift",
+    "anchor": "if octave < 0 { return zero + (table[0] - zero) * (a / octaveX(0)) }",
+    "replacement": "if octave < 0 { return zero }",
+    "filter": "AdjustTableTests"
+  },
+  {
+    "note": "adjust octave past 2^octaveMax holds the last entry instead of extending the last interval",
+    "file": "Sources/CoreRender/Metal/AdjustTable.swift",
+    "anchor": "return table[last - 1] + (table[last] - table[last - 1]) * ((a - x0) / (x1 - x0))",
+    "replacement": "return table[last]",
+    "filter": "AdjustTableTests"
   }
 ]

@@ -12,5 +12,19 @@
     "anchor": "width: piece.width, height: end - start)",
     "replacement": "width: piece.width, height: end - start + 1)",
     "filter": "OpaqueRowsTests"
+  },
+  {
+    "note": "opaque row fast path applies near one opacity",
+    "file": "Sources/CoreRender/Metal/OpaqueRows.swift",
+    "anchor": "mode == .normal && opacity == 1",
+    "replacement": "mode == .normal && opacity >= 0.999",
+    "filter": "OpaqueRowsTests"
+  },
+  {
+    "note": "opaque row runs accept more flags than the piece has rows",
+    "file": "Sources/CoreRender/Metal/OpaqueRows.swift",
+    "anchor": "guard opaque.count == piece.height else",
+    "replacement": "guard opaque.count >= piece.height else",
+    "filter": "OpaqueRowsTests"
   }
 ]

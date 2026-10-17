@@ -52,6 +52,20 @@ import Testing
             let v = Float(k) / 100 + 0.003
             #expect(abs(table.apply(v) - (0.1 + 0.8 * v)) < 1e-5, "v \(v): \(table.apply(v))")
         }
+        // The octave edges: under 2^octaveMin (only below 0; 0...1 is the main table) the line from f(0), past
+        // 2^octaveMax the last interval's line.
+        for v: Float in [-1e-9, 0x1p41, -0x1p41] {
+            #expect(abs(table.apply(v) - (0.1 + 0.8 * v)) <= 1e-5 * max(1, abs(v)), "v \(v): \(table.apply(v))")
+        }
+        // Between -2^-24 and 0, through the origin so the step is not lost under f(0)'s rounding: the line from
+        // f(0) to the entry at -2^-24, which moves with v instead of holding f(0).
+        let origin = try AdjustTable(.curves(points: [CurvePoint(x: 0, y: 0), CurvePoint(x: 1, y: 0.8)]))
+        let (zero, edge) = (origin.apply(0), origin.apply(-0x1p-24))
+        #expect(abs(edge - zero) > 0x1p-26, "the entry at -2^-24 differs from f(0)")
+        for v: Float in [-1e-9, -3e-10, -0x1p-30] {
+            let line = zero + (edge - zero) * (-v / 0x1p-24)
+            #expect(abs(origin.apply(v) - line) <= 1e-2 * abs(line - zero), "v \(v): \(origin.apply(v)) vs \(line)")
+        }
         #expect(table.map(RGBA(r: 0.5, g: 0.5, b: 0.5, a: 0)) == .clear, "alpha 0 gives zeros")
     }
 

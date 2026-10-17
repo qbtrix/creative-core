@@ -56,6 +56,7 @@ import Testing
         #expect(runs.allSatisfy { $0.piece.width == 7 && $0.piece.sourceX == 0 })
         #expect(try OpaqueRows.runs(of: piece, opaque: Array(repeating: false, count: 6)).map(\.piece.height) == [6])
         #expect(throws: RenderError.self) { try OpaqueRows.runs(of: piece, opaque: [true]) }
+        #expect(throws: RenderError.self) { try OpaqueRows.runs(of: piece, opaque: Array(repeating: true, count: 7)) }
     }
 
     /// Across tiles and offsets: the runs cover the overlap once, and the opaque rows of CoreRaster's result
