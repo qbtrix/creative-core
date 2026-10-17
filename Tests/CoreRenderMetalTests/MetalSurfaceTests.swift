@@ -1,9 +1,10 @@
 // MetalSurfaceTests.swift: MetalBackend's surfaces on a real device (MB-1): the Float16 round trip,
-// residentBytes, supports holding only display, unsupported ops, surface mismatches. Device-gated; compiled out on Linux.
+// residentBytes, supports holding only the landed families, unsupported ops, surface mismatches. Device-gated; compiled out on Linux.
 #if canImport(Metal)
 import CoreRaster
 import CoreRender
 import CoreRenderMetal
+import Metal
 import Testing
 
 /// SplitMix64, a private copy: test targets cannot share files.
@@ -89,7 +90,8 @@ private struct SplitMix64: RandomNumberGenerator {
     func freshBackendSupportsLandedFamiliesAndIsHealthy() throws {
         let backend = try Self.backend()
         #expect(backend.isHealthy && backend.residentBytes == 0 && backend.capabilities.lastError == nil)
-        #expect(backend.supports == [.display, .transform], "only the families whose slices landed (MB-3, MB-7)")
+        let landed: Set<RenderOp> = backend.device.readWriteTextureSupport == .tier2 ? [.display, .transform, .composite] : [.display, .transform]
+        #expect(backend.supports == landed, "only the families whose slices landed (MB-3, MB-7; MB-4 on read-write tier 2)")
         #expect(backend.name.hasPrefix("Metal ("))
     }
 
