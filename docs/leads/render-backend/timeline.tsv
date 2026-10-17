@@ -41,3 +41,4 @@ utc	stage	event	ref	note
 2026-10-17T13:58Z	3	pr-merged	dev 07c7a70	#380 RB-5 (with RB-a round 4 fix)
 2026-10-17T14:00Z	4	anatomy-round	dev 07c7a70	RB-b round 1 started: critic and gate
 2026-10-17T14:00Z	3	builder-started	RB-7	wave 6, base 07c7a70
+2026-10-17T14:02Z	4	anatomy-round	dev 07c7a70	RB-b round 1 not clean (6 minor); fixer building
