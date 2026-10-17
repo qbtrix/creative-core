@@ -1,0 +1,30 @@
+[
+  {
+    "note": "pipeline key functionName drops the op, so every family's variant names the same kernel",
+    "file": "Sources/CoreRender/Metal/PipelineKey.swift",
+    "anchor": "variant.isEmpty ? op.rawValue : op.rawValue + \"_\" + variant",
+    "replacement": "variant.isEmpty ? op.rawValue : variant",
+    "filter": "PipelineKeyTests"
+  },
+  {
+    "note": "pipeline key functionName drops the separator, so the kernel name runs the op into the variant",
+    "file": "Sources/CoreRender/Metal/PipelineKey.swift",
+    "anchor": "op.rawValue + \"_\" + variant",
+    "replacement": "op.rawValue + variant",
+    "filter": "PipelineKeyTests"
+  },
+  {
+    "note": "pipeline key validated accepts any variant, so a space or an accent reaches the function name",
+    "file": "Sources/CoreRender/Metal/PipelineKey.swift",
+    "anchor": "        default: false\n",
+    "replacement": "        default: true\n",
+    "filter": "PipelineKeyTests"
+  },
+  {
+    "note": "pipeline key validated rejects the underscore, so soft_light cannot be a variant",
+    "file": "Sources/CoreRender/Metal/PipelineKey.swift",
+    "anchor": "case 0x30...0x39, 0x41...0x5A, 0x61...0x7A, 0x5F: true",
+    "replacement": "case 0x30...0x39, 0x41...0x5A, 0x61...0x7A: true",
+    "filter": "PipelineKeyTests"
+  }
+]

@@ -1,7 +1,7 @@
 {
   "id": "metal-support",
   "name": "Metal Support",
-  "description": "The Metal backend's Linux-safe parts (Sources/CoreRender/Metal): binary16 half-float conversion for filling rgba16Float textures from Float32 buffers and reading them back; MetalCapabilities, the proven op set and health state the dispatcher routes on; SurfaceTiling, the 256 px tile grid a surface's textures follow, with the tiles a rect touches; and later pipeline cache keys. Pure Swift bit and integer math, no Metal import, so it builds, tests and mutates on Linux.",
+  "description": "The Metal backend's Linux-safe parts (Sources/CoreRender/Metal): binary16 half-float conversion for filling rgba16Float textures from Float32 buffers and reading them back; MetalCapabilities, the proven op set and health state the dispatcher routes on; SurfaceTiling, the 256 px tile grid a surface's textures follow, with the tiles a rect touches; and PipelineKey, the identity of one cached compute pipeline (op family plus an identifier variant) and the kernel function name it maps to. Pure Swift bit, integer and string math, no Metal import, so it builds, tests and mutates on Linux.",
   "technology": "Swift 6, Foundation",
   "paths": [
     "Sources/CoreRender/Metal/"
