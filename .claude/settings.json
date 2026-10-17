@@ -31,5 +31,9 @@
         ]
       }
     ]
+  },
+  "env": {
+    "CLAUDE_CODE_DISABLE_ADVISOR_TOOL": "1",
+    "CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS": "4"
   }
 }
