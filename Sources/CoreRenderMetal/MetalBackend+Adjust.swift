@@ -1,6 +1,6 @@
 // MetalBackend+Adjust.swift: every `ToneAdjustment` (exposure, levels, curves: MB-13; white balance, contrast,
 // highlights/shadows: MB-14) through `adjust_tone` (Shaders/AdjustShader.swift), tile by tile into a new surface
-// of the same tiling, reading AdjustTable's gains or table. Invariants: `unsupported(.adjust)` while unhealthy;
+// of the same tiling, reading AdjustTable's gains, or its table followed by its two octave tables. Invariants: `unsupported(.adjust)` while unhealthy;
 // invalid parameters throw the CPU backend's error before any GPU work; an evicted source tile is read from its
 // shadow through a temporary texture; the source is unchanged; the lock is free across the GPU wait; a failed
 // command buffer or allocation marks the backend failed.
@@ -40,7 +40,7 @@ extension MetalBackend {
         let output = try adjustAllocate {
             try MetalSurface(device: device, buffer: PixelBuffer(width: tiling.width, height: tiling.height), clock: clock)
         }
-        let values = table.values.isEmpty ? [Float(0)] : table.values
+        let values = table.values.isEmpty ? [Float(0)] : table.values + table.below + table.above
         let made = values.withUnsafeBytes { raw -> (any MTLBuffer)? in
             raw.baseAddress.flatMap { device.makeBuffer(bytes: $0, length: raw.count, options: .storageModeShared) }
         }
@@ -52,8 +52,9 @@ extension MetalBackend {
         encoder.setBuffer(tableBuffer, offset: 0, index: 0)
         let luma = AdjustTable.lumaWeights
         var params = AdjustParams(gainR: table.gains.x, gainG: table.gains.y, gainB: table.gains.z,
-                                  below: table.below, above: table.above, lumaR: luma.x, lumaG: luma.y, lumaB: luma.z,
-                                  n: UInt32(clamping: max(table.values.count - 1, 0)), kind: table.kind.rawValue)
+                                  lumaR: luma.x, lumaG: luma.y, lumaB: luma.z,
+                                  n: UInt32(clamping: max(table.values.count - 1, 0)), kind: table.kind.rawValue,
+                                  outer: UInt32(clamping: min(table.below.count, table.above.count)))
         encoder.setBytes(&params, length: MemoryLayout<AdjustParams>.stride, index: 1)
         let width = max(pipeline.threadExecutionWidth, 1), height = max(pipeline.maxTotalThreadsPerThreadgroup / width, 1)
         for index in 0..<tiling.tileCount {
@@ -96,17 +97,16 @@ extension MetalBackend {
 /// A source tile while an adjustment runs: its resident texture, or its shadow (uploaded to a temporary texture).
 private enum AdjustSource { case texture(any MTLTexture), shadow(PixelBuffer) }
 
-/// `AdjustParams` of AdjustShader.swift: ten 4-byte fields, 40 bytes in both languages.
+/// `AdjustParams` of AdjustShader.swift: nine 4-byte fields, 36 bytes in both languages.
 private struct AdjustParams {
     var gainR: Float
     var gainG: Float
     var gainB: Float
-    var below: Float
-    var above: Float
     var lumaR: Float
     var lumaG: Float
     var lumaB: Float
     var n: UInt32
     var kind: UInt32
+    var outer: UInt32
 }
 #endif

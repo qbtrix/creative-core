@@ -1,7 +1,9 @@
 // AdjustTableTests.swift: the Metal adjust kernel's data (MB-13, MB-14) maps the parity samples as the CPU
 // backend does within `.standard` for every case (develop sliders included), reads a straight curve exactly
 // (table endpoint and square-root index) and extends it along its line, keeps exposure and white balance as
-// their factors, matches contrast and highlights/shadows outside 0...1, and throws the CPU's errors.
+// their factors, matches every case outside 0...1 (levels with a gamma, sRGB levels and curves through the
+// octave tables), builds tables for extreme valid parameters the CPU accepts on 0...1, and throws the CPU's
+// errors.
 import CoreRaster
 import CoreRender
 import Testing
@@ -75,7 +77,7 @@ import Testing
     }
 
     /// Contrast is a line from 0 and 1 outside 0...1, and highlights/shadows a constant gain there: the table
-    /// matches the CPU on far values, so the secant is exact for both (the MB-13 gap does not reach MB-14).
+    /// matches the CPU on far values, for both.
     @Test func developSlidersMatchTheCPUOutsideZeroToOne() throws {
         let cpu = CPUBackend()
         let values: [Float] = [-40, -3, -1, -0.25, -1e-3, 1.001, 1.5, 2, 7, 300]
@@ -93,8 +95,51 @@ import Testing
             }
         }
         let shadows = try AdjustTable(.highlightsShadows(highlights: 0, shadows: 100))
-        #expect(shadows.kind == .luma && shadows.below == 0 && shadows.above == 0)
+        #expect(shadows.kind == .luma && shadows.below.isEmpty && shadows.above.isEmpty)
         #expect(abs(shadows.apply(0) - 2) < 1e-6 && abs(shadows.apply(1) - 1) < 1e-6, "shadows lift the dark end only")
+    }
+
+    /// Levels and curves outside 0...1, bent maps included (a gamma other than 1, a black point below 0,
+    /// sRGB-encoded parameters): the octave tables give the CPU's values within 1e-3.
+    @Test func levelsAndCurvesMatchTheCPUOutsideZeroToOne() throws {
+        let cpu = CPUBackend()
+        let values: [Float] = [-300, -16, -3, -0.5, -0.01, -1e-3, -1e-6, 1.000_01, 1.5, 4, 16, 300, 60_000]
+        var probe = try PixelBuffer(width: values.count, height: 1)
+        for (i, v) in values.enumerated() { try probe.setPixel(x: i, y: 0, RGBA(r: v, g: v, b: v, a: 1)) }
+        let rows = Self.adjustments.filter { if case .exposure = $0 { false } else { true } } + [
+            .levels(inBlack: -0.3, inWhite: 0.7, gamma: 2.2, outBlack: 0.1, outWhite: 0.6),
+            .levels(inBlack: 0.2, inWhite: 0.6, gamma: 1, outBlack: 0.9, outWhite: 0.2, encoding: .sRGB),
+            .curves(points: [CurvePoint(x: 0.1, y: 0.2), CurvePoint(x: 0.6, y: 0.5)], encoding: .sRGB),
+        ]
+        for adjustment in rows {
+            let table = try AdjustTable(adjustment)
+            let want = try cpu.read(cpu.adjusted(cpu.surface(probe), adjustment))
+            for i in values.indices {
+                let (got, w) = (table.map(try probe.pixel(x: i, y: 0)).r, try want.pixel(x: i, y: 0).r)
+                #expect(abs(got - w) <= 1e-3 * max(1, abs(w) / 100), "\(adjustment) at \(values[i]): \(got) vs \(w)")
+            }
+        }
+    }
+
+    /// Exposure near the Float limit and a gamma whose power overflows past 1 are valid on 0...1, where the
+    /// CPU succeeds: the table builds without the CPU's overflow error and matches it there; an octave that
+    /// overflows holds the largest finite Float in the map's direction.
+    @Test func extremeParametersTheCPUAcceptsBuildATable() throws {
+        let cpu = CPUBackend()
+        let grey = try PixelBuffer(width: 1, height: 1, fill: RGBA(r: 0.5, g: 0.5, b: 0.5, a: 1))
+        for adjustment in [ToneAdjustment.exposure(stops: 127.5),
+                           .levels(inBlack: 0, inWhite: 1, gamma: 0.004, outBlack: 0, outWhite: 1),
+                           .levels(inBlack: 0, inWhite: 1, gamma: 0.004, outBlack: 1, outWhite: 0)] {
+            let want = try cpu.read(cpu.adjusted(cpu.surface(grey), adjustment)).pixel(x: 0, y: 0)
+            let table = try AdjustTable(adjustment)
+            let got = table.map(try grey.pixel(x: 0, y: 0))
+            #expect(abs(got.r - want.r) <= 1e-6 * max(1, abs(want.r)), "\(adjustment): \(got) vs \(want)")
+        }
+        let rising = try AdjustTable(.levels(inBlack: 0, inWhite: 1, gamma: 0.004, outBlack: 0, outWhite: 1))
+        let falling = try AdjustTable(.levels(inBlack: 0, inWhite: 1, gamma: 0.004, outBlack: 1, outWhite: 0))
+        #expect(rising.above.count == AdjustTable.octaveCount && rising.above.last == .greatestFiniteMagnitude)
+        #expect(falling.above.last == -.greatestFiniteMagnitude && falling.apply(1e6) < -1e30)
+        #expect(rising.below.allSatisfy { $0 == 0 }, "below inBlack levels give outBlack")
     }
 
     @Test func throwsTheCPUsErrors() throws {

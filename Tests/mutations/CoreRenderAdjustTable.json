@@ -19,5 +19,19 @@
     "anchor": "SIMD3(ys[steps].r, ys[steps].g, ys[steps].b)",
     "replacement": "SIMD3(ys[steps].b, ys[steps].g, ys[steps].r)",
     "filter": "AdjustTableTests"
+  },
+  {
+    "note": "adjust octave table index drops the octaveMin offset so values past 1 read the wrong octave",
+    "file": "Sources/CoreRender/Metal/AdjustTable.swift",
+    "anchor": "let octave = Int((bits >> 23) & 0xFF) - 127 - octaveMin",
+    "replacement": "let octave = Int((bits >> 23) & 0xFF) - 127",
+    "filter": "AdjustTableTests"
+  },
+  {
+    "note": "adjust octave overflow fill points the wrong way for a falling map",
+    "file": "Sources/CoreRender/Metal/AdjustTable.swift",
+    "anchor": "let toward: Float = (out.last ?? edge) < zero ? -1 : 1",
+    "replacement": "let toward: Float = (out.last ?? edge) > zero ? -1 : 1",
+    "filter": "AdjustTableTests"
   }
 ]
