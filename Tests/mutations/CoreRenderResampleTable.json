@@ -1,0 +1,9 @@
+[
+  {
+    "note": "resample table weights are stored without dividing by their total",
+    "file": "Sources/CoreRender/Metal/ResampleTable.swift",
+    "anchor": "weights.append(contentsOf: row.map { Float($0 / total) })",
+    "replacement": "weights.append(contentsOf: row.map { Float($0) })",
+    "filter": "ResampleTableTests"
+  }
+]
