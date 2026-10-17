@@ -2,7 +2,7 @@
 
 Issue: #348 · Packet: docs/blueprints/core/features/metal-backend.md
 Run: act-1a14ab2b672-8guo · Resumed: 2026-10-17T16:33Z (fourth run; earlier act-1a149b549c8-v538, act-1a148001532-1w03, act-1a14644b538-njln)
-Stage: 4/5 r4: #423, #425, #426, #422, #424 merged (dev 7daed62); MB-17 PR #427 (feature-done) rebased on 23615d0, head 0ad86bd, CI: PASS 1048 tests, mutate 8/8 CoreRenderMetalCapabilities, merges clean onto 7daed62, Metal (macOS) green 19:13Z, waiting on the lane sweep. Next: #427 green and merged, then Slice-Done MB-e/MB-f/MB-h on the dev full-CI run, contact sheet
+Stage: 5/5 finish: all r4 PRs and MB-17 #427 merged (dev 3094ab1, feature-done); full CI run https://github.com/qbtrix/creative-core/actions/runs/39063037947 queued. Next: Linux green on that run, then Slice-Done and Mac-Finish-Wanted for MB-e/MB-f/MB-h, contact sheet on #348
 Base: 4e27e16 (origin/dev)
 Next (for a relaunched lead): wait for wf_649a731c-c00 PRs to merge (round 4 is the last round; no r5) → Belt-Slice-Done MB-e/MB-f once a dev CI Linux job holding #418 and #411 (dev 58ed68f or later) is green → MB-17 (feature-done: background compile + First launch row, fourKCompositeP95Under4ms on, no disabled parity family, supports == all on tier 2, waves.md counts, doc leftovers) → MB-h Slice-Done, contact sheet on #348. PR bodies say Refs #348, never Closes.
 

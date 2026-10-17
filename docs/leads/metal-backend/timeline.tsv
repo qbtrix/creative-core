@@ -137,3 +137,4 @@ utc	stage	event	ref	note
 2026-10-17T18:46:00Z	5	wait	lead	#427 Metal (macOS) running since 18:43Z; #424 Metal queued on head 154aa79
 2026-10-17T19:05:00Z	5	fix-done	MB-17	#427 rebased (conflicts in packet, C4 part, BlendSeparable header), head 0ad86bd, CI: PASS; #424 merged 19:03Z
 2026-10-17T19:19:00Z	5	wait	lead	#427 Metal (macOS) green on 0ad86bd (19:05-19:13Z), fast-lane green, waiting on lane sweep to merge
+2026-10-17T19:35:00Z	5	merged	MB-17	#427 merged 3094ab1 (lane swept on body edit; schedule sweeps sparse); full CI run 39063037947 queued on dev
