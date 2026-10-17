@@ -3,24 +3,24 @@
 Issue: #347 · Packet: docs/blueprints/core/features/render-backend.md
 Run: act-1a149b544ea-emiq (line lead: render-backend, motion-tracks) · Started: 2026-10-17 (prior runs act-1a14644b047-dxwc)
 Stage: 3 waves (v3 loop, slices RB-a, RB-b, RB-c)
-Base: 24fd483 (origin/dev)
-Next: wait for RB-2b (FakeBackend + SurfaceStore) and RB-6 (parity harness) PRs to merge; then start RB-3 (CPUBackend on SurfaceStore).
+Base: 3be8939 (origin/dev)
+Next: RB-3 builder (CPUBackend on SurfaceStore, base 3be8939); Anatomy round on slice RB-a; Belt-Slice-Done RB-a once a dev CI run holding 9e910ff has a green Linux job (39031409068 does: Linux green, macOS red on MetalPipelinesTests from #362, dev-red #365).
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
 |---|---|---|---|---|---|
-| RB-a | RB-1, RB-2a, RB-2b | nothing | open (RB-2b building) | – | – |
+| RB-a | RB-1, RB-2a, RB-2b | nothing | built; Anatomy round next | – | – |
 | RB-b | RB-3, RB-4, RB-5 | RB-a | open | – | – |
-| RB-c | RB-6, RB-7 | RB-b (RB-7 only) | open (RB-6 building) | – | – |
+| RB-c | RB-6, RB-7 | RB-b (RB-7 only) | open (RB-6 merged) | – | – |
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
 |---|---|---|---|---|---|---|---|
 | RB-1 | – | targets, Linux-empty Metal module, C4 parts | Package.swift, ... | TargetsTests | none | #349 (human) | merged |
 | RB-2a | – | RenderOp, RenderError, RenderSurface, RenderBackend, ToneAdjustment | Sources/CoreRender/{RenderOp,RenderSurface,RenderBackend,ToneAdjustment}.swift | RenderContractTests | none | #352 (opened by metal-backend lead) | merged |
-| RB-2b | 1 | FakeBackend recording calls; shared locked SurfaceStore | Sources/CoreRender/{FakeBackend,SurfaceStore}.swift, Tests/CoreRenderTests/RenderBackendFakeTests.swift, Tests/mutations/CoreRenderFake.json, corerender C4 part | RenderBackendFakeTests | CoreRenderFake | – | building |
-| RB-6 | 1 | ParityTolerance, ParityHarness (compare, sampleSet, goldens) | Sources/CoreRender/Parity/*, Tests/CoreRenderTests/ParityHarnessTests.swift, Tests/mutations/CoreRenderParity.json, parity.json part | ParityHarnessTests | CoreRenderParity | – | building |
-| RB-3 | 2 | CPUBackend: surface, read, release, display, composite in place | Sources/CoreRender/CPU/CPUBackend.swift, Tests/CoreRenderTests/CPUBackendTests.swift, Tests/mutations/CoreRenderCPUBackend.json, cpu-backend.json part | CPUBackendTests | CoreRenderCPUBackend | – | waits RB-2b |
+| RB-2b | 1 | FakeBackend recording calls; shared locked SurfaceStore | Sources/CoreRender/{FakeBackend,SurfaceStore}.swift, Tests/CoreRenderTests/RenderBackendFakeTests.swift, Tests/mutations/CoreRenderFake.json, corerender C4 part | RenderBackendFakeTests | CoreRenderFake | #361 (9e910ff) | merged |
+| RB-6 | 1 | ParityTolerance, ParityHarness (compare, sampleSet, goldens) | Sources/CoreRender/Parity/*, Tests/CoreRenderTests/ParityHarnessTests.swift, Tests/mutations/CoreRenderParity.json, parity.json part | ParityHarnessTests | CoreRenderParity | #364 (bdbd260) | merged |
+| RB-3 | 2 | CPUBackend: surface, read, release, display, composite in place | Sources/CoreRender/CPU/CPUBackend.swift, Tests/CoreRenderTests/CPUBackendTests.swift, Tests/mutations/CoreRenderCPUBackend.json, cpu-backend.json part | CPUBackendTests | CoreRenderCPUBackend | – | building |
 | RB-4 | 3 | CPUBackend transform, resample, blur, adjust, retouch | Sources/CoreRender/CPU/CPUBackend+Ops.swift, CPUBackendOpsTests, CoreRenderCPUBackendOps.json | CPUBackendOpsTests | CoreRenderCPUBackendOps | – | waits RB-3 |
 | RB-5 | 3 | RenderDispatcher routing, health, lastFallback, cross-backend surfaces | Sources/CoreRender/RenderDispatcher.swift, RenderDispatcherTests, CoreRenderDispatcher.json, dispatcher.json part | RenderDispatcherTests | CoreRenderDispatcher | – | waits RB-3 |
 | RB-7 | 4 | CPU goldens, RenderBudgetTests, waves.md status; feature-done | Tests/CoreRenderTests/Golden/, CPUGoldenTests, RenderBudgetTests, waves.md | CPUGoldenTests, RenderBudgetTests | none | – | waits RB-4, RB-5, RB-6 |
@@ -38,4 +38,6 @@ Next: wait for RB-2b (FakeBackend + SurfaceStore) and RB-6 (parity harness) PRs 
 - gh CLI auth fails; issue and PR work goes through the GitHub MCP tools.
 
 ## Open
+- #369 (metal-backend lead) touched FakeBackend, ParityHarness and RenderError (typed parity errors, RenderError.mapping); builders base on 3be8939 or later.
+- dev-red #365: macOS MetalPipelinesTests binary-archive tests (from #362); #368 dropped the archive. Triage comment posted; not ours to fix.
 - Sandbox gate: two pre-existing wall-clock tests can fail under load on this 4-core box; builders retry on a quiet box and never claim Fast-Check without CI: PASS.
