@@ -61,5 +61,19 @@
     "anchor": "case .rotated(.degrees90), .rotated(.degrees270): return sample.source.width",
     "replacement": "case .rotated(.degrees90), .rotated(.degrees270): return sample.source.height",
     "filter": "ParityHarnessTests|CPUGoldenTests"
+  },
+  {
+    "note": "pack rows refuse a negative lower bound",
+    "file": "Sources/CoreRender/Parity/ParityPack.swift",
+    "anchor": "rows.lowerBound >= 0,",
+    "replacement": "rows.lowerBound >= -1,",
+    "filter": "ParityHarnessTests"
+  },
+  {
+    "note": "golden header accepts a zero linear tolerance",
+    "file": "Sources/CoreRender/Parity/ParityGolden.swift",
+    "anchor": "header.tolerance.linear >= 0 else {",
+    "replacement": "header.tolerance.linear > 0 else {",
+    "filter": "ParityHarnessTests"
   }
 ]

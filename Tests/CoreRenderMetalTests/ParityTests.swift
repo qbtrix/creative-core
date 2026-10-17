@@ -1,10 +1,15 @@
 // ParityTests.swift: the parity suite scaffold (metal-backend MB-2): one disabled test per op
 // family, each in its own `ParityTests+<Family>.swift` owned by the slice that lands the family
 // (MB-3 to MB-15). Recipe, all in Sources/CoreRender/Parity; a family file imports CoreRender
-// (and Foundation, for `URL`) besides CoreRenderMetal and Testing:
-//   op: the family's `RenderOp`, the same name except `compositeNormal` -> `.composite` and
-//       `opaqueRows` -> sample "opaque-rows" of `.composite` only; `unsharp` has no golden yet
-//       (`.blur`'s samples call `gaussianBlur` only).
+// besides CoreRenderMetal and Testing, and gets `URL` the way CLAUDE.md says and the CoreRender
+// tests do: `#if canImport(FoundationEssentials) import FoundationEssentials #else import Foundation #endif`.
+//   op: the family's `RenderOp`, the same name except `compositeNormal` -> `.composite`;
+//       `unsharp` has no golden yet (`.blur`'s samples call `gaussianBlur` only).
+//   opaqueRows skips the loop below: it reads the one band
+//       `ParityGolden.band(from: root, op: .composite, sample: "opaque-rows")`, which is cut at
+//       opacity 0.8 and compares within the golden's own tolerance. Its opacity-1, zero-delta
+//       check renders on a live `CPUBackend` and compares with `ParityHarness.compare(_:_:tolerance:)`
+//       and `ParityTolerance(bytes: 0, linear: 0)`.
 //   root: Tests/CoreRenderTests/Golden, from #filePath (`deletingLastPathComponent()` twice,
 //         then "CoreRenderTests/Golden"); the goldens are packs of samples (ParityPack.swift).
 //   for sample in try ParityHarness.sampleSet(for: op):

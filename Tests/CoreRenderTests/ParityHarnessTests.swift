@@ -105,6 +105,7 @@ private func fill(_ w: Int, _ h: Int, _ r: Float, _ g: Float, _ b: Float, _ a: F
         #expect(throws: RenderError.self) { try ParityGolden.band(from: CPUGoldenTests.root, op: .adjust, sample: "off-left") }
         #expect(throws: RenderError.self) { try golden.rows(6..<8) }
         #expect(throws: RenderError.self) { try golden.rows(3..<3) }
+        #expect(throws: RenderError.self) { try golden.rows(-1..<2) }
     }
 
     @Test func linearBoundCatchesWhatBytesHide() throws {
@@ -168,6 +169,8 @@ private func fill(_ w: Int, _ h: Int, _ r: Float, _ g: Float, _ b: Float, _ a: F
         #expect(throws: RenderError.self) { try ParityGolden.read(from: root, op: .blur, name: "missing") }
         let json = Data(#"{"width":2,"height":1,"colorSpace":"sRGB","tolerance":{"bytes":2,"linear":0.001}}"#.utf8)
         #expect(try ParityGolden(header: json, bytes: Data(count: 8)).bytes.count == 8)
+        let exact = Data(#"{"width":1,"height":1,"colorSpace":"sRGB","tolerance":{"bytes":0,"linear":0}}"#.utf8)
+        #expect(try ParityGolden(header: exact, bytes: Data(count: 4)).header.tolerance == ParityTolerance(bytes: 0, linear: 0))
         for count in [0, 7, 9, 16] {
             #expect(throws: RenderError.self) { try ParityGolden(header: json, bytes: Data(count: count)) }
         }
