@@ -1,7 +1,7 @@
 {
   "id": "metal-backend",
   "name": "Metal Backend",
-  "description": "The Metal RenderBackend: device, queue, tiled surfaces and one kernel family per op. Today only the module marker; metal-backend MB-1 adds the backend.",
+  "description": "The Metal RenderBackend: a device and its command queue, capability state behind one lock, and tiled rgba16Float surfaces (one texture per 256 px tile) uploaded from and downloaded to Float32 pixel buffers through HalfFloat. Every op throws unsupported until its slice lands (display MB-3, composite MB-4, blends MB-5 to MB-10, transform MB-7, resample MB-8, blur MB-11 and MB-12, adjust MB-13 and MB-14, retouch MB-15).",
   "technology": "Swift 6, Metal",
   "paths": [
     "Sources/CoreRenderMetal/"
