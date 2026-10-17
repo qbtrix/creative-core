@@ -2,9 +2,9 @@
 
 Issue: #348 · Packet: docs/blueprints/core/features/metal-backend.md
 Run: act-1a14ab2b672-8guo · Resumed: 2026-10-17T16:33Z (fourth run; earlier act-1a149b549c8-v538, act-1a148001532-1w03, act-1a14644b538-njln)
-Stage: 4 round r4 panel running (wf_0d75f17d-c48; dev 58ed68f: CI: PASS 1045, mutate 63/63); fix round r3 merged (#410, #411, #413, #416); #417 macOS compile fix merged; MB-10 #418 merged; dev CI 39052919097 running on af0b73e (holds MB-g's last PR #417)
+Stage: 4 round r4 fix batches running (wf_649a731c-c00: r4a docs, r4b limit helper, r4c parity goldens, r4d mutations, r4e composite+ParityPack); r4 panel 17 confirmed, not clean; leftovers filed as gap #419, #420, #421; MB-g Belt-Slice-Done + Mac-Finish-Wanted posted (run 39052919097 green on af0b73e)
 Base: 4e27e16 (origin/dev)
-Next (for a relaunched lead): gate+mutate on dev (--changed-since 17b2ea5) → critic-panel.js (firstBase 17b2ea5, lenses clarity, correctness, reuse+packet, test oracle) → one fix-batch per slice, disjoint files; build MB-9 then MB-10 (MB-e) and MB-15 (MB-h) alongside; Belt-Slice-Done MB-c/MB-f/MB-g once a dev CI Linux job holding #401..#406 is green; then MB-17 (feature-done) and the contact sheet. PR bodies say Refs #348, never Closes.
+Next (for a relaunched lead): wait for wf_649a731c-c00 PRs to merge (round 4 is the last round; no r5) → Belt-Slice-Done MB-e/MB-f once a dev CI Linux job holding #418 and #411 (dev 58ed68f or later) is green → MB-17 (feature-done: background compile + First launch row, fourKCompositeP95Under4ms on, no disabled parity family, supports == all on tier 2, waves.md counts, doc leftovers) → MB-h Slice-Done, contact sheet on #348. PR bodies say Refs #348, never Closes.
 
 ## Loop
 
@@ -24,7 +24,7 @@ Every PR body: `Belt-Lead: act-1a14ab2b672-8guo`, `Feature: metal-backend`,
 | MB-d | MB-7, MB-8 | MB-a | merged-done (#390, #393; fix round 1 #403, #404); fix round 2 regenerating | 39044767871 | wanted (39044767871) |
 | MB-e | MB-9, MB-10 | MB-c | MB-9 merged #408; MB-10 merged #418 (17:18Z); Slice-Done waits on a dev Linux run holding #418 | – | – |
 | MB-f | MB-11, MB-12 | MB-d | merged (#402, #406); Linux green on 39051011998; Slice-Done waits on fix PRs r3f1, r3f2 | – | – |
-| MB-g | MB-13, MB-14 | MB-a | merged (#400, #405); r3g #413 merged; Slice-Done waits on macOS compile fix #417 | – | – |
+| MB-g | MB-13, MB-14 | MB-a | merged (#400, #405, #413, #417); Belt-Slice-Done posted; Mac-Finish-Wanted posted | 39052919097 | wanted |
 | MB-h | MB-15, MB-16, MB-17 | MB-b to MB-g | MB-16 merged #366; MB-15 merged #409; MB-17 last (feature-done) | – | – |
 
 ## Tasks
@@ -139,6 +139,7 @@ paths `Sources/CoreRender/Metal/`).
 | MB-a 2 | 9f30aab | CI: PASS | 22/22 (--changed-since 24fd483) | 39031409068 on 9b72477 predates #368 (macOS red, old archive tests); none yet on 9f30aab | clarity, correctness, reuse+packet, test oracle | 15 confirmed, 0 refuted. Majors: deviceLost thrown for a missing kernel and texture allocation failure; recover() marks healthy without probing; 4 copies of a RasterError mapping helper; MB-16 deviations missing from the packet; supports health gate untested | no | fix round 2: #369 (3be8939), #376 (3d20408); Mac-only entries and untested probe-lock/alloc-fail listed in #376 body |
 | MB-a 3 | 658f0c2 | CI: PASS | 75/75 (--changed-since 24fd483) | 39037816632 on 4b2aa75 green incl. macOS (holds #368, #369; not #376); dev-red #357 closed | clarity, correctness, reuse+packet, test oracle | 19 confirmed (3 major), not clean; round3-findings.md | – | fix rounds exhausted (2/2): majors (lookup size check, deviceLost doc) carried into MB-b; #17 already fixed by #383; rest deferred to MB-17 |
 | MB-b,c,d,f,g 3 | 4e27e16 | CI: PASS 1037 tests | 37/37 (--changed-since 17b2ea5) | – | clarity, correctness, reuse+packet, test oracle | 22 confirmed, 1 refuted, not clean (1 blocker: AdjustTable channel extrapolation outside 0...1) | fix batches r3g, r3f1, r3f2, r3b (wf_6419df5b-b06) | MB-b, MB-d: last fix round (2/2); MB-c, MB-f, MB-g: round 1. Deferred to MB-17: stale BlendSeparable docs, tileStorageMode doc, triplicated whole-image pipeline, per-op lost-helper copies, dead code after MB-6, MetalBackend.swift doc for unsupported-over-limit |
+| MB-c,e,f,g,h 4 | 58ed68f | CI: PASS 1045 tests | 63/63 (--changed-since 17b2ea5) | 39052919097 on af0b73e green (Linux, macOS, Mutation) | clarity, correctness, reuse+packet, test oracle | 17 confirmed, not clean (majors: unsupported-list docs, C4 description, limit check x4 without Linux mirror, lifecycle and encoding copies, packet deviations for MB-e/MB-15, parity without CPU goldens) | fix batches r4a-r4e (wf_649a731c-c00); gap #419 (lifecycle helpers), #420 (encoding helpers), #421 (BlurTable reuse) | last round (4/4): open findings go to gap issues; finish anyway |
 
 ## Decisions
 
