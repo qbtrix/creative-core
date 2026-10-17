@@ -19,7 +19,7 @@ Next: round 2 fixer PR merges; round 3 on dev (loop stops at 2 clean rounds or 4
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
 |---|---|---|---|---|---|---|---|---|
 | 1 | 3be8939 | 962/964; 2 known wall-clock flakes under load (StageBudget hit 11.1 ms, EngineStress 10.2 s) | FlareOnion 5/5, FlareLottieTracks 2/2, FlareLottieScale 3/3, FlareLottieGradientAlpha 2/2 | 39031409068 (Linux green, macOS red from #362) | correctness, rules fit, first-use clarity | 4 minor: scale x100 overflows past finite check (a), onion range unbounded for huge durationFrames (b), 3 invariants without mutation entries (c), exporter header says static only (d) | #370 (23af67b) | no |
-| 2 | 23af67b | (gate with fixer PR) | (with fixer PR) | – | round 1 fixes, whole feature, first-use clarity | 3 minor: add-saturation mutant removed in #370 is not equivalent (durationFrames Int.max reachable), group transform scale checks finite before x100 (LottieExporter:401), contract slice omits maxOnionSkins | fixer PR motion-tracks/anatomy-2 | no |
+| 2 | 23af67b | (gate with fixer PR) | (with fixer PR) | – | round 1 fixes, whole feature, first-use clarity | 3 minor: add-saturation mutant removed in #370 is not equivalent (durationFrames Int.max reachable), group transform scale checks finite before x100 (LottieExporter:401), contract slice omits maxOnionSkins | #372 (head 580bbc7, fast-lane) | no |
 
 ## Decisions
 - Packet base was f05665f; dev is at cae920b. MT-1, MT-2, MT-3 were already merged before this lead started, so the lead starts at wave c.
