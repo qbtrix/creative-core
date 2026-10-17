@@ -1,6 +1,7 @@
 // ParityTests+Transform.swift: MB-7 enables `ParityTests/transform` (metal-backend) and owns this file.
 // Each sample's `.transform` golden band (the user's Float32 source, so upload loss counts) matches within
-// the golden's tolerance; `expectGoldenBands` is the recipe loop the resample family shares. Corner and seam crops and the three quarter turns are exact copies (zero delta) of the CPU backend run
+// the golden's tolerance (`expectGoldens`, ParityTests.swift). Corner and seam crops and the three quarter
+// turns are exact copies (zero delta) of the CPU backend run
 // on the Float16 pixels the GPU holds, on the sample set and on a multi-tile source, resident or evicted;
 // an invalid crop throws the CPU backend's error. Skipped without a device; compiled out on Linux.
 #if canImport(Metal)
@@ -19,7 +20,7 @@ extension ParityTests {
         do {
             let metal = try MetalBackend.onDefaultDevice()
             #expect(metal.supports.contains(.transform))
-            try Self.expectGoldenBands(.transform, on: metal)
+            try Self.expectGoldens(for: .transform, on: metal)
             for sample in try ParityHarness.sampleSet(for: .transform) {
                 try Self.expectTransformsExact(sample.source, on: metal, label: sample.name)
             }
@@ -40,17 +41,6 @@ extension ParityTests {
             #expect(metal.isHealthy, "an invalid crop does not fail the backend")
         } catch {
             Issue.record("transform parity threw \(error)")
-        }
-    }
-
-    /// Every sample of `op` rendered on `metal` from its original source matches its checked-in golden band.
-    static func expectGoldenBands(_ op: RenderOp, on metal: MetalBackend) throws {
-        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
-            .appendingPathComponent("CoreRenderTests/Golden")
-        for sample in try ParityHarness.sampleSet(for: op) {
-            let golden = try ParityGolden.band(from: root, op: op, sample: sample.name)
-            let result = try ParityHarness.compare(golden: golden, ParityHarness.render(sample, on: metal))
-            #expect(result.passed, "\(op) \(sample.name) golden: \(result)")
         }
     }
 

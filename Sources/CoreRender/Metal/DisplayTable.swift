@@ -1,8 +1,10 @@
 // DisplayTable.swift: CoreColor's `DisplayTransfer` byte rules as Float thresholds for the Metal display
 // kernel (metal-backend MB-3; GPUs have no Double). Curve entry k - 1 is the least Float whose byte is
 // at least k, by bisection through `DisplayTransfer` itself, so a Float gets exactly the CPU's byte; the
-// alpha half does the same for `DisplayTransfer.byte`. P3 adds the linear sRGB to P3 matrix as Float.
-// `encode` is the kernel in Swift (DisplayShader.swift mirrors it). `level` reads base...base + 254 only.
+// alpha half does the same for `DisplayTransfer.byte`. P3 adds CoreColor's own linear sRGB to P3 matrix
+// (`DisplayTransfer.p3FromLinearSRGB`, the one the CPU multiplies by) as Float. A space other than sRGB
+// or P3 throws the CPU backend's exact error.
+// `outputFits` is display's device-limit check. `encode` is the kernel in Swift (DisplayShader.swift mirrors it). `level` reads base...base + 254 only.
 import CoreColor
 import CoreRaster
 
@@ -20,14 +22,24 @@ public struct DisplayTable: Equatable, Sendable {
     /// Linear sRGB to linear Display P3, row-major, 9 entries; nil for sRGB.
     public let matrix: [Float]?
 
-    /// The table for `space`. Throws `RenderError.raster` for a space other than `.sRGB` or `.displayP3`.
+    /// The table for `space`. Throws `RenderError.raster` for a space other than `.sRGB` or `.displayP3`,
+    /// the same error (and text) `CPUBackend.display` throws through `PixelBuffer.rgba8`.
     public init(_ space: ColorSpace) throws {
         guard PixelBuffer.displayColorSpaces.contains(space) else {
-            throw RenderError.raster("color space \(space.rawValue): display tables must be sRGB or displayP3")
+            throw RenderError.raster("color space \(space.rawValue): display bytes must be sRGB or displayP3")
         }
         self.space = space
         thresholds = Self.shared
-        matrix = space == .displayP3 ? try Self.p3Matrix() : nil
+        matrix = space == .displayP3 ? DisplayTransfer.p3FromLinearSRGB.map { Float($0) } : nil
+    }
+
+    /// True when a `width` x `height` image's display bytes (4 per pixel) fit in one buffer of at most
+    /// `maxBufferLength` bytes. When false the Metal display throws `unsupported(.display)` (a device limit,
+    /// not a device loss) and stays healthy. An overflowing product never fits.
+    public static func outputFits(width: Int, height: Int, maxBufferLength: Int) -> Bool {
+        let (pixels, o1) = width.multipliedReportingOverflow(by: height)
+        let (bytes, o2) = pixels.multipliedReportingOverflow(by: 4)
+        return !o1 && !o2 && bytes <= maxBufferLength
     }
 
     /// One premultiplied pixel as straight-alpha bytes, as the kernel does it: alpha 0 gives zeros, else
@@ -74,18 +86,5 @@ public struct DisplayTable: Equatable, Sendable {
             if Int(rule(Float(bitPattern: mid))) >= k { hi = mid } else { lo = mid + 1 }
         }
         return Float(bitPattern: lo)
-    }
-
-    /// Linear sRGB to linear P3: column c is the linear P3 of the unit linear sRGB color c, through the
-    /// same conversion the CPU's encode uses. Throws `RenderError.raster` if a conversion fails.
-    private static func p3Matrix() throws -> [Float] {
-        let columns = try [Color3(1, 0, 0), Color3(0, 1, 0), Color3(0, 0, 1)].map { unit in
-            let p3: Color3
-            do { p3 = try unit.converted(from: .linearSRGB, to: .displayP3) } catch {
-                throw RenderError.raster("display P3 matrix: \(error)")
-            }
-            return [p3.c0, p3.c1, p3.c2].map { Float(TransferCurve.decode($0)) }
-        }
-        return (0..<9).map { columns[$0 % 3][$0 / 3] }
     }
 }

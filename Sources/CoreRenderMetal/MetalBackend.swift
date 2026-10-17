@@ -1,15 +1,16 @@
-// MetalBackend.swift: the Metal RenderBackend (metal-backend MB-1, MB-2): a device, its
-// command queue, the capability state, the pipeline cache and the live MetalSurfaces keyed
-// by RenderSurface id. Metal's protocols are not Sendable, so the class is @unchecked
-// Sendable and every access to mutable state goes through `withLock` (internal, so the
-// extension files of later slices share it; `fail` and `recover` take it themselves, so
-// never call them with it held). Invariants: `supports` is empty while not healthy,
-// `residentBytes` sums the live surfaces' resident tiles and stays at or under `budgetBytes`
-// after every upload (MetalBackend+Memory.swift), a surface this backend did not make
-// throws `surfaceMismatch`, `.display`, `.transform`, `.resample`, `.blur` and (read-write tier 2) `.composite` and
-// `.blendSeparable` and `.adjust` start enabled; every other op (non-separable blends, retouch) throws
-// `unsupported` until its slice, and the enabled ops throw it while unhealthy; a probe, a command
-// buffer or a texture allocation that fails leaves the backend unhealthy with the reason in
+// MetalBackend.swift: the Metal RenderBackend: a device, its command queue, the capability state, the
+// pipeline cache and the live MetalSurfaces keyed by RenderSurface id; each op family's encode lives in a
+// `MetalBackend+<Family>.swift` extension. Metal's protocols are not Sendable, so the class is @unchecked
+// Sendable and every access to mutable state goes through `withLock` (internal, so the extension files
+// share it; `fail` and `recover` take it themselves, so never call them with it held). Invariants:
+// `supports` is empty while not healthy, `residentBytes` sums the live surfaces' resident tiles and stays
+// at or under `budgetBytes` after every upload (MetalBackend+Memory.swift), a surface this backend did not
+// make throws `surfaceMismatch`. The enabled families are display, transform (crop, rotate), resample, blur
+// (blur and unsharp), adjust and, on read-write tier 2, composite and blendSeparable; every one of them
+// throws `unsupported(<family>)` while unhealthy (each checks `effectiveSupports`), and display and resample
+// also throw it, without failing the backend, when an output buffer would exceed `maxBufferLength`. Every
+// other op (non-separable blends, retouch) throws `unsupported` until its slice. A probe, a command buffer
+// or a texture allocation that fails leaves the backend unhealthy with the reason in
 // `capabilities.lastError` (so `deviceLost` is only ever thrown with `isHealthy` false), and only a
 // `recover` whose probe passes makes it healthy again. No GPU wait or runtime compile of a custom
 // source runs under the lock: `supports` and `isHealthy` answer while a probe is in flight.
@@ -22,8 +23,10 @@ import Metal
 
 /// The Metal `RenderBackend`: tiled rgba16Float surfaces on one GPU. Display, transform (crop, rotate),
 /// resample, blur, unsharp and adjust run; `.normal` and the separable blend modes composite on read-write texture
-/// tier 2; non-separable blends and retouch throw `RenderError.unsupported` until their slices land, and the
-/// running ops throw it while the backend is unhealthy; `supports` tells the dispatcher which run.
+/// tier 2; non-separable blends and retouch throw `RenderError.unsupported` until their slices land. While the
+/// backend is unhealthy `supports` is empty and every op throws `unsupported(<family>)`, never `deviceLost`;
+/// display and resample also throw it when an output buffer would exceed the device's `maxBufferLength`.
+/// `supports` tells the dispatcher which run.
 public final class MetalBackend: RenderBackend, @unchecked Sendable {
     /// The system's default GPU, or nil without one; tests gate on `.enabled(if: defaultDevice != nil)`.
     public static var defaultDevice: (any MTLDevice)? { MTLCreateSystemDefaultDevice() }

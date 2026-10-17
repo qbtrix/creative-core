@@ -41,6 +41,14 @@ public struct DisplayTransfer: Sendable, Hashable {
         tables = Self.shared
     }
 
+    /// The linear sRGB to linear Display P3 matrix, row-major, 9 entries: exactly the
+    /// `Matrix3.p3FromLinearSRGB` that `encode` and `Color3.converted` multiply by, as data
+    /// for another backend (the Metal display table) to reuse rather than derive.
+    public static var p3FromLinearSRGB: [Double] {
+        let m = shared.p3FromLinearSRGB
+        return [m.0, m.1, m.2, m.3, m.4, m.5, m.6, m.7, m.8]
+    }
+
     /// Equals `try Color3(Double(r) / 255, Double(g) / 255, Double(b) / 255)
     /// .converted(from: space, to: .linearSRGB)`.
     @inlinable @inline(__always)

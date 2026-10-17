@@ -13,7 +13,7 @@ extension ParityTests {
     @Test(.enabled(if: MetalBackend.defaultDevice != nil)) func resample() {
         do {
             let metal = try MetalBackend.onDefaultDevice()
-            try Self.expectGoldenBands(.resample, on: metal)
+            try Self.expectGoldens(for: .resample, on: metal)
             for sample in try ParityHarness.sampleSet(for: .resample) {
                 try Self.expectResampleParity(sample.source, sizes: [(13, 5), (4, 3), (9, 3), (13, 7)], on: metal, label: sample.name)
             }

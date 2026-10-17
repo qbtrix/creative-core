@@ -2,7 +2,7 @@
 // the reference it replaces, `Color3.converted` plus the clamp-and-round byte
 // rule, with `==`: every decode byte, seeded triples, a million seeded
 // encodes, both sides of every encode threshold, every bucket index in range
-// after the clamp, NaN and infinities. In an optimized build, every Float in
+// after the clamp, NaN and infinities, the public P3 matrix. In an optimized build, every Float in
 // 0...1 is also checked in sRGB.
 @testable import CoreColor
 import Foundation
@@ -180,6 +180,12 @@ func encodeEqualsReferenceAroundEveryBucketBoundary(_ space: ColorSpace) throws 
     let below: [Double] = [DisplayTransfer.bucketFloor.nextDown, 0, -0.0, -1, -.infinity, .nan,
                            .leastNonzeroMagnitude, -.greatestFiniteMagnitude]
     for v in below { #expect(bucket(v) == 0, "\(v)") }
+}
+
+/// The public matrix is `Matrix3.p3FromLinearSRGB`, row-major, entry for entry.
+@Test func p3FromLinearSRGBIsTheConversionMatrixRowMajor() {
+    let m = Matrix3.p3FromLinearSRGB.m
+    #expect(DisplayTransfer.p3FromLinearSRGB == [m.0, m.1, m.2, m.3, m.4, m.5, m.6, m.7, m.8])
 }
 
 @Test func byteRoundsExactHalvesAwayFromZero() {
