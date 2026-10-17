@@ -287,11 +287,17 @@ GPU path.
   without failing the backend; the caller resamples on the CPU backend. The
   CPU backend has no such limit.
 - **Linux-safe helpers not in the Tasks' owned files.** `DisplayTable`
-  (MB-3), `CompositeMap` (MB-4), `TileMap` (MB-7) and `ResampleTable`
-  (MB-8) in `Sources/CoreRender/Metal/`, their `Tests/CoreRenderTests`
-  suites and their `Tests/mutations/CoreRender<Name>.json` plans belong to
-  those tasks. They hold the GPU paths' math so it builds, tests and mutates
-  on Linux.
+  (MB-3), `CompositeMap` (MB-4), `OpaqueRows` and its `RowRun` (MB-6),
+  `TileMap` (MB-7), `ResampleTable` (MB-8), `BlurTable` (MB-11),
+  `UnsharpRule` (MB-12) and `AdjustTable` (MB-13, MB-14) in
+  `Sources/CoreRender/Metal/`, their `Tests/CoreRenderTests` suites
+  (`<Name>Tests.swift`; `UnsharpRuleTests.swift` for `UnsharpRule`) and their
+  `Tests/mutations/CoreRender<Name>.json` plans (`CoreRenderUnsharp.json` for
+  `UnsharpRule`) belong to those tasks. They hold the GPU paths' math so it
+  builds, tests and mutates on Linux. `ParityPack`
+  (`Sources/CoreRender/Parity/ParityPack.swift`, #399: how the CPU goldens
+  are packed, tested in `CPUGoldenTests` and `ParityHarnessTests`, planted in
+  `CoreRenderParity.json`) belongs to the parity scaffold (MB-2).
 - **Parity oracle.** Goldens cover only `sampleSet(for:)` and are byte
   compares. The wider grids each family promises (sizes, offsets, turns,
   evicted runs) compare with the CPU backend run on the GPU's Float16 pixels
@@ -300,6 +306,36 @@ GPU path.
   bit-comparable. Transform and resample also read their golden bands on the
   original samples, so upload loss counts there.
 - **Shaders are Swift strings**, as recorded for MB-a.
+
+## Deviations (lead, 2026-10-17, slices MB-c, MB-f and MB-g)
+
+- **Helpers outside the owned files.** `OpaqueRows` (MB-6), `BlurTable`
+  (MB-11), `UnsharpRule` (MB-12), `AdjustTable` (MB-13, MB-14) and
+  `ParityPack` are listed, with their suites and plans, in the MB-b/MB-d
+  helpers bullet above.
+- **MB-11 copies the CPU's kernel builder.** CoreRaster's `gaussianKernel`
+  is private, so `BlurTable` builds the same weights itself (2 ceil(3 sigma)
+  + 1 taps of exp(-x^2 / 2 sigma^2), normalised in Double, stored as Float;
+  sigma 0 is the single weight 1) and throws the CPU backend's exact errors.
+  `BlurTableTests` holds it to CoreRaster's output; the GPU uploads these
+  weights, not the CPU builder's.
+- **MB-11 and MB-12 blur whole images, not tiles**, as MB-8 resamples: the
+  surface is read through the CPU into a float4 buffer, both passes run over
+  whole-image buffers, and the result scatters into the new surface's tiles
+  with MB-8's scatter kernel. An input whose buffers (width x height x 16
+  bytes) exceed the device's `maxBufferLength` throws
+  `unsupported(.blur)` for `gaussianBlur` and `unsharpMask` alike, as
+  resample throws `unsupported(.resample)`, without failing the backend; the
+  caller runs the op on the CPU backend, which has no such limit. (The
+  switch from `raster` to `unsupported` lands with batch r3f1.)
+- **`.blendSeparable` needs read-write tier 2 too.** MB-6 adds
+  `.blendSeparable` only on a tier-2 device (`compositesInPlace`), as MB-4
+  adds `.composite`; elsewhere the dispatcher routes those modes to the CPU.
+- **MB-13's curve table is a probed buffer.** Levels, curves and contrast go
+  up as `AdjustTable`'s `channel` table, a buffer of the values that
+  `CPUBackend.adjusted` gives on a probe row of grey pixels, not a 1-D
+  texture of CoreRaster's formulas; exposure and white balance as per-channel
+  gains, highlights and shadows as a gain per luminance.
 
 ## Open
 

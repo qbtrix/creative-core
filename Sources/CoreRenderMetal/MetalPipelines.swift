@@ -7,8 +7,10 @@
 // built-in kernels live only in `states` and the health probe's only in `probeState`, so no
 // caller source (`prepared`, filled by `preparePipeline`) can replace either;
 // `compileCount` counts pipelines built from source and `loadCount` requests answered from
-// a memo; a failed compile memoises nothing. Callers hold the backend's lock: nothing here is Sendable or
-// synchronised.
+// a memo; a failed compile memoises nothing. Every library compiles with `compileOptions()`: IEEE math (no
+// fast math), so the kernels divide, take roots and keep NaN and infinity as the Linux-safe mirrors
+// (DisplayTable, AdjustTable, CompositeMap) do in Swift; the options are not part of `PipelineKey`. Callers
+// hold the backend's lock: nothing here is Sendable or synchronised.
 #if canImport(Metal)
 import CoreRender
 import Metal
@@ -101,11 +103,25 @@ final class MetalPipelines {
     /// when `source` has no kernel of that name (caller input, not a device loss), and Metal's
     /// own error when the source does not compile or the pipeline cannot be made.
     static func build(_ key: PipelineKey, source: String, on device: any MTLDevice) throws -> any MTLComputePipelineState {
-        let library = try device.makeLibrary(source: source, options: nil)
+        let library = try device.makeLibrary(source: source, options: compileOptions())
         guard let function = library.makeFunction(name: key.functionName) else {
             throw RenderError.raster("no kernel '\(key.functionName)' in the source for \(key.op.rawValue)")
         }
         return try device.makeComputePipelineState(function: function)
+    }
+
+    /// New options for every library `build` compiles: Metal's default is fast math (approximate division,
+    /// sqrt and pow, no NaN or infinity), so this turns it off: `mathMode = .safe` and precise FP32 functions
+    /// on macOS 15 and later, `fastMathEnabled = false` (the same two settings) before.
+    static func compileOptions() -> MTLCompileOptions {
+        let options = MTLCompileOptions()
+        if #available(macOS 15.0, iOS 18.0, *) {
+            options.mathMode = .safe
+            options.mathFloatingPointFunctions = .precise
+        } else {
+            options.fastMathEnabled = false
+        }
+        return options
     }
 }
 #endif
