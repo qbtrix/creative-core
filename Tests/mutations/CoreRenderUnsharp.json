@@ -1,0 +1,9 @@
+[
+  {
+    "note": "unsharp rule threshold compares the wrong way",
+    "file": "Sources/CoreRender/Metal/UnsharpRule.swift",
+    "anchor": "guard abs(difference) > threshold",
+    "replacement": "guard abs(difference) < threshold",
+    "filter": "UnsharpRuleTests"
+  }
+]

@@ -1,8 +1,7 @@
 // ParityTests+Blur.swift: MB-11 enables `ParityTests/blur`. Gaussian blur at sigma 0, 0.5, 3, 20 matches the CPU
 // on the GPU's Float16 pixels within `.standard` on the sample set and a multi-tile source, resident or evicted;
 // sigma 0 is the identity; a constant image stays constant to its corners (clamp-to-edge: a border never reads
-// black); an invalid sigma throws the CPU backend's error. `.blur` is not in `supports` yet (MB-12 adds it), so
-// this calls `gaussianBlur` directly. Skipped without a device; compiled out on Linux.
+// black); an invalid sigma throws the CPU backend's error; `.blur` is in `supports` (MB-12 added it). Skipped without a device; compiled out on Linux.
 #if canImport(Metal)
 import CoreRaster
 import CoreRender
@@ -35,7 +34,7 @@ extension ParityTests {
                 }
             }
             #expect(metal.isHealthy, "an invalid sigma does not fail the backend")
-            #expect(!metal.supports.contains(.blur), "MB-12 enables .blur")
+            #expect(metal.supports.contains(.blur), "MB-12 enables .blur")
         } catch {
             Issue.record("blur parity threw \(error)")
         }

@@ -6,9 +6,9 @@
 // never call them with it held). Invariants: `supports` is empty while not healthy,
 // `residentBytes` sums the live surfaces' resident tiles and stays at or under `budgetBytes`
 // after every upload (MetalBackend+Memory.swift), a surface this backend did not make
-// throws `surfaceMismatch`, `.display`, `.transform`, `.resample` and (read-write tier 2) `.composite` and
-// `.blendSeparable` and `.adjust` start enabled; every other op (non-separable blends, blur, retouch) throws
-// `unsupported` until its slice, and display and composite throw it while unhealthy; a probe, a command
+// throws `surfaceMismatch`, `.display`, `.transform`, `.resample`, `.blur` and (read-write tier 2) `.composite` and
+// `.blendSeparable` and `.adjust` start enabled; every other op (non-separable blends, retouch) throws
+// `unsupported` until its slice, and the enabled ops throw it while unhealthy; a probe, a command
 // buffer or a texture allocation that fails leaves the backend unhealthy with the reason in
 // `capabilities.lastError` (so `deviceLost` is only ever thrown with `isHealthy` false), and only a
 // `recover` whose probe passes makes it healthy again. No GPU wait or runtime compile of a custom
@@ -21,9 +21,9 @@ import Foundation
 import Metal
 
 /// The Metal `RenderBackend`: tiled rgba16Float surfaces on one GPU. Display, transform (crop, rotate),
-/// resample and adjust run; `.normal` and the separable blend modes composite on read-write texture tier 2; non-separable
-/// blends, blur and retouch throw `RenderError.unsupported` until their slices land, and display and
-/// composite throw it while the backend is unhealthy; `supports` tells the dispatcher which run.
+/// resample, blur, unsharp and adjust run; `.normal` and the separable blend modes composite on read-write texture
+/// tier 2; non-separable blends and retouch throw `RenderError.unsupported` until their slices land, and the
+/// running ops throw it while the backend is unhealthy; `supports` tells the dispatcher which run.
 public final class MetalBackend: RenderBackend, @unchecked Sendable {
     /// The system's default GPU, or nil without one; tests gate on `.enabled(if: defaultDevice != nil)`.
     public static var defaultDevice: (any MTLDevice)? { MTLCreateSystemDefaultDevice() }
@@ -66,6 +66,7 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
         }
         state.enable(.resample)
         state.enable(.adjust)  // MB-14
+        state.enable(.blur)  // MB-11 blur, MB-12 unsharp
     }
 
     /// "Metal (<device name>)": the status note's text and every surface's `backend`.
@@ -294,14 +295,14 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     public func resampled(_ s: RenderSurface, width: Int, height: Int, filter: ResampleFilter) throws -> RenderSurface {
         try resample(s, width: width, height: height, filter: filter)
     }
-    /// Two-pass gaussian blur: MB-11 (MetalBackend+Blur.swift); `.blur` joins `supports` with MB-12.
+    /// Two-pass gaussian blur: MB-11 (MetalBackend+Blur.swift); `.blur` is in `supports` since MB-12.
     public func gaussianBlur(_ s: RenderSurface, sigma: Double) throws -> RenderSurface {
         try blur(s, sigma: sigma)
     }
-    /// Unsharp mask over the blur: MB-12. Throws `unsupported(.blur)`.
+    /// Unsharp mask over the blur: MB-12 (MetalBackend+Unsharp.swift). Invalid parameters throw the CPU's error.
     public func unsharpMask(_ s: RenderSurface, amount: Double, sigma: Double,
                             threshold: Double) throws -> RenderSurface {
-        throw RenderError.unsupported(.blur)
+        try unsharp(s, amount: amount, sigma: sigma, threshold: threshold)
     }
     /// Tone adjustments, every case (MB-13, MB-14, MetalBackend+Adjust.swift); `unsupported(.adjust)` while unhealthy.
     public func adjusted(_ s: RenderSurface, _ adjustment: ToneAdjustment) throws -> RenderSurface {
