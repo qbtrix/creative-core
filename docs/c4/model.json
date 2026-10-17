@@ -242,16 +242,20 @@
               {
                 "id": "contract",
                 "name": "Render Contract",
-                "description": "The RenderBackend contract: ops, surfaces, errors and a recording fake. Today only the module marker; render-backend RB-2 adds the contract.",
+                "description": "The RenderBackend contract: the op families (RenderOp), the one error type (RenderError), surface handles (RenderSurface), the tone adjustments the adjust op takes (ToneAdjustment) and the RenderBackend protocol. The recording fake is still to come from render-backend RB-2.",
                 "technology": "Swift 6, Foundation",
                 "paths": [
-                  "Sources/CoreRender/CoreRender.swift"
+                  "Sources/CoreRender/CoreRender.swift",
+                  "Sources/CoreRender/RenderOp.swift",
+                  "Sources/CoreRender/RenderSurface.swift",
+                  "Sources/CoreRender/ToneAdjustment.swift",
+                  "Sources/CoreRender/RenderBackend.swift"
                 ]
               },
               {
                 "id": "metal-support",
                 "name": "Metal Support",
-                "description": "The Metal backend's Linux-safe parts (Sources/CoreRender/Metal): binary16 half-float conversion for filling rgba16Float textures from Float32 buffers and reading them back, and later capability state, tile grids and pipeline cache keys. Pure Swift bit math, no Metal import, so it builds, tests and mutates on Linux.",
+                "description": "The Metal backend's Linux-safe parts (Sources/CoreRender/Metal): binary16 half-float conversion for filling rgba16Float textures from Float32 buffers and reading them back; MetalCapabilities, the proven op set and health state the dispatcher routes on; SurfaceTiling, the 256 px tile grid a surface's textures follow, with the tiles a rect touches; and PipelineKey, the identity of one cached compute pipeline (op family plus an identifier variant) and the kernel function name it maps to. Pure Swift bit, integer and string math, no Metal import, so it builds, tests and mutates on Linux.",
                 "technology": "Swift 6, Foundation",
                 "paths": [
                   "Sources/CoreRender/Metal/"
@@ -271,7 +275,7 @@
               {
                 "id": "metal-backend",
                 "name": "Metal Backend",
-                "description": "The Metal RenderBackend: device, queue, tiled surfaces and one kernel family per op. Today only the module marker; metal-backend MB-1 adds the backend.",
+                "description": "The Metal RenderBackend: a device and its command queue, capability state behind one lock (fail and recover, and a health probe that runs one kernel and marks the backend unhealthy on a command-buffer error), tiled rgba16Float surfaces (one texture per 256 px tile) uploaded from and downloaded to Float32 pixel buffers through HalfFloat, and the pipeline cache: MSL compiled at runtime from string constants, keyed by PipelineKey, kept in a binary archive at cacheURL so later launches skip the compile. Every op throws unsupported until its slice lands (display MB-3, composite MB-4, blends MB-5 to MB-10, transform MB-7, resample MB-8, blur MB-11 and MB-12, adjust MB-13 and MB-14, retouch MB-15).",
                 "technology": "Swift 6, Metal",
                 "paths": [
                   "Sources/CoreRenderMetal/"
