@@ -6,12 +6,11 @@
 // `supports` is empty while not healthy, `residentBytes` sums the live surfaces' resident tiles and stays
 // at or under `budgetBytes` after every upload (MetalBackend+Memory.swift), a surface this backend did not
 // make throws `surfaceMismatch`. The enabled families are display, transform (crop, rotate), resample, blur
-// (blur and unsharp), adjust, retouch (clone through a mask) and, on read-write tier 2, composite and
-// blendSeparable; every one of them throws `unsupported(<family>)` while unhealthy (each checks
+// (blur and unsharp), adjust, retouch (clone through a mask) and, on read-write tier 2, composite,
+// blendSeparable and blendNonSeparable; every one of them throws `unsupported(<family>)` while unhealthy (each checks
 // `effectiveSupports`), and display, resample and retouch also throw it, without failing the backend, when a
-// buffer would exceed `maxBufferLength`. Non-separable blends throw `unsupported` until their slice. A probe,
-// a command buffer or a texture allocation that fails leaves the backend unhealthy with the reason in
-// `capabilities.lastError` (so `deviceLost` is only ever thrown with `isHealthy` false), and only a
+// buffer would exceed `maxBufferLength`. A probe, a command buffer or a texture allocation that fails
+// leaves the backend unhealthy with the reason in `capabilities.lastError` (so `deviceLost` is only ever thrown with `isHealthy` false), and only a
 // `recover` whose probe passes makes it healthy again. No GPU wait or runtime compile of a custom
 // source runs under the lock: `supports` and `isHealthy` answer while a probe is in flight.
 #if canImport(Metal)
@@ -22,8 +21,8 @@ import Foundation
 import Metal
 
 /// The Metal `RenderBackend`: tiled rgba16Float surfaces on one GPU. Display, transform (crop, rotate),
-/// resample, blur, unsharp, adjust and clone through a mask run; `.normal` and the separable blend modes composite on
-/// read-write texture tier 2; non-separable blends throw `RenderError.unsupported` until their slices land. While the
+/// resample, blur, unsharp, adjust and clone through a mask run; `.normal`, the separable and the non-separable blend
+/// modes composite on read-write texture tier 2 (elsewhere they throw `RenderError.unsupported`). While the
 /// backend is unhealthy `supports` is empty and every op throws `unsupported(<family>)`, never `deviceLost`;
 /// display, resample and clone also throw it when a buffer would exceed the device's `maxBufferLength`.
 /// `supports` tells the dispatcher which run.
@@ -66,6 +65,7 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
         if Self.compositesInPlace(on: device) {
             state.enable(.composite)
             state.enable(.blendSeparable)  // MB-6
+            state.enable(.blendNonSeparable)  // MB-10
         }
         state.enable(.resample)
         state.enable(.adjust)  // MB-14
@@ -280,10 +280,10 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
         try encodeDisplay(s, colorSpace: colorSpace)
     }
     /// Composite in place: `.normal` MB-4, the separable modes MB-5, opaque rows blitted MB-6, see
-    /// MetalBackend+Composite.swift, +BlendSeparable.swift and +OpaqueRows.swift. Non-separable modes throw `unsupported(.blendNonSeparable)`.
+    /// MetalBackend+Composite.swift, +BlendSeparable.swift and +OpaqueRows.swift; the non-separable modes MB-9 and MB-10
+    /// (+BlendNonSeparable.swift). A family not in `supports` throws `unsupported(<family>)`.
     public func composite(_ s: RenderSurface, onto b: inout RenderSurface, x: Int, y: Int,
                           mode: BlendMode, opacity: Float) throws {
-        guard RenderOp(compositing: mode) != .blendNonSeparable else { throw RenderError.unsupported(.blendNonSeparable) }
         try compositeInPlace(s, onto: b, x: x, y: y, mode: mode, opacity: opacity)
     }
     /// Crop as blits: MB-7 (MetalBackend+Transform.swift). An invalid rectangle throws the CPU's error.

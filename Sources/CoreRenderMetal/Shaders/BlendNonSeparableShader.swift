@@ -1,9 +1,13 @@
-// BlendNonSeparableShader.swift: the four non-separable blend kernels (MB-9), one per mode, each the in-place
+// BlendNonSeparableShader.swift: the four non-separable blend kernels (MB-9, MB-10), one per mode, each the in-place
 // composite of CompositeShader with CoreRaster's B(Cb, Cs) for hue, saturation, color or luminosity
 // (BlendMode.swift: Lum, Sat, SetLum, SetSat and ClipColor in its order of operations, the grey guards included)
 // and CoreRaster's `sourceOver` mix: opacity scales the source first, alpha exactly 0 gives straight colour 0
 // on either side, Cs' = Cs + αb (B - Cs), and the result is clamped to the finite half range. One library
-// holds the four kernels; each mode's pipeline is its own key.
+// holds the four kernels; each mode's pipeline is its own key. ClipColor's edge cases (MB-10) follow the CPU in
+// Float32, test for test and in its order: l, n and x come from the colour SetLum made, the low clip runs only when
+// n < 0 and l > n and the high clip only when x > 1 and x > l (so a grey, max == min, never divides 0 by 0), and
+// the high clip sees the low clip's output with the input's l and x. Lum 0 pulls a low clip to 0 and lum 1 pulls
+// a high clip to 1 exactly, because the numerator multiplies by l and by 1 - l. SetSat leaves a grey black.
 #if canImport(Metal)
 import CoreRaster
 import CoreRender
@@ -27,7 +31,8 @@ enum BlendNonSeparableShader {
     static float ns_min(float3 c) { return min(min(c.r, c.g), c.b); }
     static float ns_max(float3 c) { return max(max(c.r, c.g), c.b); }
     static float ns_sat(float3 c) { return ns_max(c) - ns_min(c); }
-    /// ClipColor: l, n and x come from the input; a grey (l == n or x == l) is left alone, never divided by 0.
+    /// ClipColor: l, n and x come from the input; a grey (l == n or x == l) is left alone, never divided by 0;
+    /// each guard is the CPU's, in its order, so an out-of-range colour clips low first, then high.
     static float3 ns_clip(float3 c) {
         float l = ns_lum(c), n = ns_min(c), x = ns_max(c);
         float3 o = c;
@@ -39,7 +44,7 @@ enum BlendNonSeparableShader {
     /// SetSat: the max channel becomes s, the min 0, the middle keeps its place; a grey becomes black.
     static float3 ns_setSat(float3 c, float s) {
         float n = ns_min(c), x = ns_max(c);
-        if (!(x > n)) { return float3(0.0f); }
+        if (!(x > n)) { return float3(0.0f); }  // max == min: the CPU's guard, no 0 / 0
         return (c - n) * s / (x - n);
     }
     static float3 blend_hue(float3 cb, float3 cs) { return ns_setLum(ns_setSat(cs, ns_sat(cb)), ns_lum(cb)); }
