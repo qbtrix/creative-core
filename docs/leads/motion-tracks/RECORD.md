@@ -4,7 +4,7 @@ Issue: #313 · Packet: docs/blueprints/core/features/motion-tracks.md
 Run: act-1a149b544ea-emiq (line lead: render-backend, motion-tracks) · Started: 2026-10-17 (prior runs act-1a1463a91ae-nkkr, act-1a142b4b27e-bv69)
 Stage: 4 Anatomy (all waves merged; MT-5 #363 feature-done)
 Base: 3be8939 (origin/dev)
-Next: one Anatomy round on dev; contact sheet on #313 once a dev CI run holding 9b72477 is green (39031409068 was red on macOS only, MetalPipelinesTests from #362, dev-red #365; Linux green); then stop.
+Next: fixer PR for round 1 merges; round 2 on dev; contact sheet on #313 once a dev CI run holding 9b72477 is green (39031409068 was red on macOS only, MetalPipelinesTests from #362, dev-red #365; Linux green); then stop.
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -18,7 +18,7 @@ Next: one Anatomy round on dev; contact sheet on #313 once a dev CI run holding 
 ## Rounds
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
 |---|---|---|---|---|---|---|---|---|
-| – | – | – | – | – | – | – | – | – |
+| 1 | 3be8939 | 962/964; 2 known wall-clock flakes under load (StageBudget hit 11.1 ms, EngineStress 10.2 s) | FlareOnion 5/5, FlareLottieTracks 2/2, FlareLottieScale 3/3, FlareLottieGradientAlpha 2/2 | 39031409068 (Linux green, macOS red from #362) | correctness, rules fit, first-use clarity | 4 minor: scale x100 overflows past finite check (a), onion range unbounded for huge durationFrames (b), 3 invariants without mutation entries (c), exporter header says static only (d) | fixer PR motion-tracks/anatomy-1 | no |
 
 ## Decisions
 - Packet base was f05665f; dev is at cae920b. MT-1, MT-2, MT-3 were already merged before this lead started, so the lead starts at wave c.

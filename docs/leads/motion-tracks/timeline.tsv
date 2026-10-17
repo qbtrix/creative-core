@@ -36,3 +36,4 @@ utc	stage	event	ref	note
 2026-10-17T13:08Z	3	heartbeat	dev 3be8939	builders done; reading dev CI 39031409068
 2026-10-17T13:12Z	3	pr-merged	dev 3be8939	MT-5 #363 9b72477 feature-done
 2026-10-17T13:12Z	3	ci-run	dev 9b72477	39031409068 failure: macOS MetalPipelinesTests (#362), Linux green; dev-red #365
+2026-10-17T13:24Z	4	anatomy-round	dev 3be8939	round 1 not clean; minor findings to fixer
