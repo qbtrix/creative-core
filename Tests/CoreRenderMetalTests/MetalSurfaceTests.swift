@@ -89,9 +89,7 @@ private struct SplitMix64: RandomNumberGenerator {
     func freshBackendSupportsOnlyDisplayAndIsHealthy() throws {
         let backend = try Self.backend()
         #expect(backend.supports == [.display] && backend.isHealthy && backend.residentBytes == 0)
-        var expected = MetalCapabilities()
-        expected.enable(.display)
-        #expect(backend.capabilities == expected)
+        #expect(backend.capabilities.supported == [.display] && backend.capabilities.lastError == nil)
         #expect(backend.name.hasPrefix("Metal ("))
     }
 

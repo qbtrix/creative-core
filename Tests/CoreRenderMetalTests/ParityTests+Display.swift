@@ -1,8 +1,6 @@
-// ParityTests+Display.swift: the display family (metal-backend MB-3). The display sample set, a
-// seeded 300 x 260 image spanning four tiles and the same image with every tile evicted encode in
-// sRGB and Display P3 within `ParityTolerance.standard` bytes of the CPU backend's bytes; every byte
-// value per channel uploads and encodes back to itself in both spaces; `.display` is in `supports`.
-// Device-gated; compiled out on Linux.
+// ParityTests+Display.swift: the display family (MB-3). The sample set, a four-tile image and the same
+// image evicted encode within `ParityTolerance.standard` of the CPU in sRGB and P3, and every byte
+// per channel round-trips. Device-gated; compiled out on Linux.
 #if canImport(Metal)
 import CoreColor
 import CoreRaster
@@ -38,8 +36,7 @@ extension ParityTests {
         }
     }
 
-    /// Rows where one channel runs 0...255 (alpha 255; the alpha row has color 255), decoded, uploaded
-    /// and encoded on `backend`: true when every pixel comes back as its bytes (alpha 0 as all zeros).
+    /// True when rows where one channel runs 0...255 upload and encode back to their bytes (alpha 0: zeros).
     static func roundTrip(on backend: MetalBackend, in space: ColorSpace) throws -> Bool {
         var bytes: [UInt8] = []
         for channel in 0..<4 {

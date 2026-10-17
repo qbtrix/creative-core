@@ -1,21 +1,13 @@
-// DisplayShader.swift: the MSL of the display encode kernel (metal-backend MB-3), compiled on first
-// use through `MetalPipelines.pipeline(for:source:)` as `display_encode`. One thread per tile pixel:
-// it reads the rgba16Float tile, writes straight-alpha bytes into one image-sized buffer at the tile's
-// offset, and mirrors `DisplayTable.encode` (CoreRender/Metal/DisplayTable.swift) line for line:
-// alpha 0 gives all zeros, colors are divided by alpha (skipped at alpha 1), Display P3 applies the
-// matrix, then each component counts the curve thresholds and alpha the alpha thresholds, by the same
-// eight-step search, which reads `table[base ... base + 254]` only. Buffers: 0 the output bytes,
-// 1 the 510 `DisplayTable.thresholds`, 2 `DisplayParams`, 3 the 9 matrix entries (identity for sRGB).
+// DisplayShader.swift: the MSL of `display_encode` (metal-backend MB-3), compiled on first use. One
+// thread per tile pixel writes straight-alpha bytes at the tile's offset in the image buffer, mirroring
+// `DisplayTable.encode` line for line. Buffers: 0 the bytes, 1 the 510 thresholds, 2 `DisplayParams`
+// (tile x, tile y, image width, 1 for P3), 3 the 9 matrix entries (identity for sRGB).
 #if canImport(Metal)
 import CoreRender
 
-/// The display kernel's source and pipeline key.
+/// The display kernel's pipeline key and source.
 enum DisplayShader {
-    /// `display_encode`.
     static let key = PipelineKey(op: .display, variant: "encode")
-
-    /// The kernel. `DisplayParams` is four `uint`s: the tile's x and y in the image, the image width
-    /// in pixels (the output row stride) and 1 for Display P3, else 0.
     static let source = """
     #include <metal_stdlib>
     using namespace metal;

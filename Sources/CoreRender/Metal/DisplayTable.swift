@@ -1,15 +1,8 @@
-// DisplayTable.swift: CoreColor's `DisplayTransfer` byte rules as Float thresholds, the table the Metal
-// display kernel reads (metal-backend MB-3). GPUs have no Double, and `DisplayTransfer` buckets Double
-// bit patterns, so the kernel instead counts thresholds: entry k - 1 of the curve half is the smallest
-// non-negative Float whose `DisplayTransfer` byte is at least k, found by bisection on Float bit
-// patterns through `DisplayTransfer` itself, so a Float encodes to exactly the byte the CPU gives it.
-// The alpha half does the same for `DisplayTransfer.byte`. Both spaces share the curve, so they share
-// the thresholds; Display P3 adds the linear sRGB to linear P3 matrix, read back through
-// `Color3.converted` and `TransferCurve.decode`, as Float. `encode` is the kernel in Swift: Linux tests
-// prove it against `PixelBuffer.rgba8`, and the MSL in DisplayShader.swift mirrors it line for line.
-// Invariants: `thresholds` has 2 x 255 entries, each half non-decreasing; `level` reads indices
-// base...base + 254 only, so NaN and anything under the first threshold give 0 and anything at or past
-// the last gives 255.
+// DisplayTable.swift: CoreColor's `DisplayTransfer` byte rules as Float thresholds for the Metal display
+// kernel (metal-backend MB-3; GPUs have no Double). Curve entry k - 1 is the least Float whose byte is
+// at least k, by bisection through `DisplayTransfer` itself, so a Float gets exactly the CPU's byte; the
+// alpha half does the same for `DisplayTransfer.byte`. P3 adds the linear sRGB to P3 matrix as Float.
+// `encode` is the kernel in Swift (DisplayShader.swift mirrors it). `level` reads base...base + 254 only.
 import CoreColor
 import CoreRaster
 
@@ -37,9 +30,8 @@ public struct DisplayTable: Equatable, Sendable {
         matrix = space == .displayP3 ? try Self.p3Matrix() : nil
     }
 
-    /// One premultiplied pixel as straight-alpha display bytes (r, g, b, a), as the kernel encodes it:
-    /// alpha 0 gives all zeros, colors are divided by alpha (skipped at alpha 1), P3 applies `matrix`,
-    /// then each component and the alpha take their `level`.
+    /// One premultiplied pixel as straight-alpha bytes, as the kernel does it: alpha 0 gives zeros, else
+    /// unpremultiply (skipped at alpha 1), apply `matrix`, and take each component's and alpha's `level`.
     public func encode(_ p: RGBA) -> [UInt8] {
         guard p.a != 0 else { return [0, 0, 0, 0] }
         var (r, g, b) = p.a == 1 ? (p.r, p.g, p.b) : (p.r / p.a, p.g / p.a, p.b / p.a)
@@ -51,9 +43,8 @@ public struct DisplayTable: Equatable, Sendable {
                 Self.level(b, thresholds, base: 0), Self.level(p.a, thresholds, base: Self.alphaBase)]
     }
 
-    /// How many of the `levels` thresholds from `base` are at or under `v`, by an eight-step branchless
-    /// search that reads `table[base ... base + 254]` only. NaN compares false, so it gives 0.
-    /// `table` must hold at least `base + levels` entries (`thresholds` with base 0 or `alphaBase`).
+    /// How many of the `levels` thresholds from `base` are at or under `v` (NaN: 0), by an eight-step
+    /// search reading `table[base ... base + 254]` only; 0 when `table` is shorter than that.
     public static func level(_ v: Float, _ table: [Float], base: Int) -> UInt8 {
         guard base >= 0, table.count >= base + levels else { return 0 }
         var index = 0
