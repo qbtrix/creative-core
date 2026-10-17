@@ -104,6 +104,10 @@ private func fill(_ w: Int, _ h: Int, _ r: Float, _ g: Float, _ b: Float, _ a: F
         #expect(try golden.header.height == 7 && golden.bytes == result.rgba8(colorSpace: .sRGB))
         #expect(throws: RenderError.self) { try ParityGolden.band(from: CPUGoldenTests.root, op: .adjust, sample: "off-left") }
         #expect(throws: RenderError.self) { try golden.rows(6..<8) }
+        let blurNames = try ParityHarness.sampleSet(for: .blur).map(\.name)
+        let unknown = #expect(throws: RenderError.self) { try ParityGolden.band(from: CPUGoldenTests.root, op: .blur, sample: "nope") }
+        guard case .raster(let message) = unknown else { Issue.record("not raster: \(String(describing: unknown))"); return }
+        #expect(message.contains("\"nope\"") && blurNames.allSatisfy { message.contains($0) })
         #expect(throws: RenderError.self) { try golden.rows(3..<3) }
         #expect(throws: RenderError.self) { try golden.rows(-1..<2) }
     }

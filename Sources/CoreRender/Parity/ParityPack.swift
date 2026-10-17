@@ -79,16 +79,19 @@ extension ParityGolden {
                             bytes: Array(bytes[start..<rows.upperBound * rowBytes]))
     }
 
-    /// The golden of sample `sample` of `op`: its band of the pack that holds `op`, read from
+    /// The golden of the sample of `op` whose `ParitySample.name` is `sample` (a name, not a
+    /// `ParitySample`: pass `sample.name`): its band of the pack that holds `op`, read from
     /// `root`. Compare a backend's `ParityHarness.render` of that sample with it through
-    /// `ParityHarness.compare(golden:_:)`. Throws `RenderError.raster` when no pack holds `op`
-    /// or `op` has no sample of that name.
+    /// `ParityHarness.compare(golden:_:)`. Throws `RenderError.raster` when no pack holds `op`,
+    /// or when `op` has no sample of that name; that message lists `op`'s sample names.
     public static func band(from root: URL, op: RenderOp, sample: String) throws -> ParityGolden {
         guard let pack = ParityPack.all.first(where: { $0.ops.contains(op) }) else {
             throw RenderError.raster("no golden pack holds \(op.rawValue)")
         }
-        guard let band = try pack.bands().first(where: { $0.op == op && $0.sample.name == sample }) else {
-            throw RenderError.raster("\(op.rawValue) has no sample \"\(sample)\"")
+        let bands = try pack.bands().filter { $0.op == op }
+        guard let band = bands.first(where: { $0.sample.name == sample }) else {
+            let names = bands.map(\.sample.name).joined(separator: ", ")
+            throw RenderError.raster("\(op.rawValue) has no sample \"\(sample)\"; its samples are: \(names)")
         }
         return try pack.read(from: root).rows(band.rows)
     }
