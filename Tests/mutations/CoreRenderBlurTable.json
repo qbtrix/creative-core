@@ -12,5 +12,26 @@
     "anchor": "let radius = (3 * sigma).rounded(.up)",
     "replacement": "let radius = (3 * sigma).rounded(.down)",
     "filter": "BlurTableTests"
+  },
+  {
+    "note": "blur table rejects sigma 0",
+    "file": "Sources/CoreRender/Metal/BlurTable.swift",
+    "anchor": "guard sigma.isFinite, sigma >= 0 else",
+    "replacement": "guard sigma.isFinite, sigma > 0 else",
+    "filter": "BlurTableTests"
+  },
+  {
+    "note": "blur table rejects a radius exactly at the limit",
+    "file": "Sources/CoreRender/Metal/BlurTable.swift",
+    "anchor": "guard radius <= Double(limit) else",
+    "replacement": "guard radius < Double(limit) else",
+    "filter": "BlurTableTests"
+  },
+  {
+    "note": "blur table drifts from CoreRaster when CoreRaster's kernel radius rounds to nearest",
+    "file": "Sources/CoreRaster/Blur.swift",
+    "anchor": "let radius = (3 * sigma).rounded(.up)",
+    "replacement": "let radius = (3 * sigma).rounded()",
+    "filter": "BlurTableTests"
   }
 ]

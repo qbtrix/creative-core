@@ -9,8 +9,16 @@ import CoreRaster
 /// The taps of one axis resampled from `length` to `newLength` pixels: output `i` sums
 /// `weights[k] * input[indices[k]]` for `k` in `offsets[i]..<offsets[i + 1]`.
 public struct ResampleTable: Equatable, Sendable {
-    public let length: Int, newLength: Int
-    public let offsets: [Int32], indices: [Int32], weights: [Float]
+    /// The axis's input length in pixels (at least 1).
+    public let length: Int
+    /// The axis's output length in pixels (at least 1).
+    public let newLength: Int
+    /// Where each output's taps start in `indices` and `weights`: `newLength + 1` entries from 0 to `indices.count`.
+    public let offsets: [Int32]
+    /// The input pixel each tap reads, in 0..<length (clamped to the edge).
+    public let indices: [Int32]
+    /// Each tap's weight; one output's weights sum to 1 before they are rounded to Float.
+    public let weights: [Float]
 
     /// The table for `filter` from `length` to `newLength`. Throws `RenderError.raster` for a length
     /// under 1, or when a length or the tap count does not fit an Int32.

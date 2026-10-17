@@ -1,6 +1,8 @@
 // UnsharpShader.swift: the unsharp MSL (MB-12). `blur_unsharp` finishes MB-11's blur down each column of the buffer
-// BlurShader's `blur_pass` blurred across (same taps and sum) and applies UnsharpRule to every component. One thread
-// per pixel; grids may round up; ResampleShader's `resample_scatter` writes the result to tiles.
+// BlurShader's `blur_pass` blurred across (same taps and sum) and sharpens every component with UnsharpRule's
+// parameters: `sharpen` is UnsharpRule.apply's Float32 rule (strict threshold, fused multiply-add), which
+// UnsharpRuleTests checks on Linux. One thread per pixel; grids may round up; ResampleShader's `resample_scatter`
+// writes the result to tiles.
 #if canImport(Metal)
 import CoreRender
 
@@ -15,7 +17,7 @@ enum UnsharpShader {
     using namespace metal;
     static float sharpen(float x, float b, float amount, float threshold) {
         float d = x - b;
-        return (d > threshold || d < -threshold) ? x + amount * d : x;
+        return (d > threshold || d < -threshold) ? fma(amount, d, x) : x;
     }
     kernel void blur_unsharp(device const float4 *src [[buffer(0)]],
                              device const float4 *across [[buffer(1)]],
