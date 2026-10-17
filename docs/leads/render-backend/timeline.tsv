@@ -75,3 +75,4 @@ utc	stage	event	ref	note
 2026-10-17T15:25Z	4	anatomy-round	dev 74ce55f	RB-c round 4 (cap): 0 major, 2 minor, 3 nits; final fixer rbc-anatomy-4 with feature-done started
 2026-10-17T15:19Z	4	heartbeat	-	final RB-c fixer rbc-anatomy-4 (feature-done) running
 2026-10-17T15:19Z	4	dev-ci	run 39043767442 on 4c1cd8e	Linux green (holds #394 e6c149d); macOS red only in Metal ParityTests.display() (metal-backend MB-b, #395, other lead; dev-red filed; not ours); Metal compositeNormal() vs CPU goldens passed on macOS. Slice-Done waits for a run holding rbc-anatomy-4
+2026-10-17T15:23Z	5	feature-done-merged	#399 fc7d8f7	final RB-c fix merged with feature-done; gate 1018/1018 PASS, anchors 324, Parity 11/11; dev CI dispatched on fc7d8f7
