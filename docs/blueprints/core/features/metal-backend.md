@@ -221,7 +221,7 @@ GPU path.
   cache plus an in-process memo keyed by `PipelineKey`. `cacheURL` stays in
   `MetalBackend.init` as a reserved parameter so callers need not change if an
   archive returns.
-- **Background compile is deferred to MB-17.** A family's first pipeline
+- **Background compile is deferred to MB-17** (built there; see MB-17 as built). A family's first pipeline
   compiles on first use, under the backend's lock; MB-3 shipped that way.
   Compiling off the caller's queue while `supports` excludes the family, and
   the First launch row, move to MB-17. `preparePipeline` builds caller
@@ -379,6 +379,26 @@ GPU path.
   (`cloned`) over `maxBufferLength`. The contract text lives in
   `RenderError.unsupported`'s doc and the `RenderOp.swift` header; this
   packet records it for render-backend's readers.
+- **MB-17 as built.** The background compile is opt-in:
+  `MetalBackend.startingInBackground(device:cacheURL:queue:)` opens a backend
+  as `init` does, puts every family `init` enabled into
+  `MetalCapabilities.compiling` (Linux-safe; `effectiveSupports` is
+  `supported` less `compiling` while healthy, tested in
+  `MetalCapabilitiesTests`, planted in `CoreRenderMetalCapabilities`) and
+  returns without waiting. A dispatch queue (`.userInitiated` by default,
+  never the caller's) then builds each family's built-in pipelines with the
+  lock free, memoises each under the lock without replacing one a first-use
+  op already compiled, and lets the family out of `compiling`, so until then
+  its ops throw `unsupported(<family>)` and the dispatcher draws them on the
+  CPU. A failed compile marks the backend failed ("compile <family>: ...")
+  and still releases the family, so after `recover` it compiles on first use.
+  The plain `init` keeps the synchronous first-use compile, which the
+  existing suites count on. `MetalPipelinesTests` proves the cold start, the
+  off-caller compile and the full `supports` on tier 2; `ParityTests.everyFamilyIsOn`
+  pins the init set (every family on tier 2, all but the three in-place
+  composite families elsewhere). The dead `enableSeparableBlendsForParity`
+  hook is gone, and `recover` now marks the backend failed when the device
+  gives no command queue (round 3 finding 11).
 
 ## Open
 

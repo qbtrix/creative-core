@@ -6,7 +6,9 @@
 // caller's `display_encode` never replaces the display kernel, `display`, `composite`, crop, rotate,
 // resample, adjust, blur, unsharp and clone refuse while unhealthy (`unsupported` of their family),
 // display even for a non-display space, built-in kernels compile without fast math, and the tile
-// storage mode follows unified memory. Device-gated; compiled out on Linux.
+// storage mode follows unified memory, and a background start (MB-17) returns before any compile with
+// every family out of `supports` (its ops `unsupported`, so a dispatcher draws them on the CPU), compiles
+// off the main thread on the queue it is given and ends with every family in. Device-gated; compiled out on Linux.
 #if canImport(Metal)
 import CoreRaster
 import CoreRender
@@ -225,6 +227,31 @@ import Testing
             try backend.recordCompletion(status: .completed, error: RenderError.deviceLost("gone"), label: "probe")
         }
         #expect(!backend.isHealthy && backend.capabilities.lastError?.hasPrefix("probe: command buffer failed") == true)
+    }
+
+    @Test(.enabled(if: MetalBackend.defaultDevice != nil))
+    func aBackgroundStartDrawsOnTheCPUUntilItsCompileLandsOffTheCaller() throws {
+        guard let device = MetalBackend.defaultDevice else { throw RenderError.deviceLost("no default device") }
+        let queue = DispatchQueue(label: "MetalPipelinesTests.compile")
+        queue.suspend()  // holds the compile, so the start provably returned without it
+        let backend = try MetalBackend.startingInBackground(device: device, cacheURL: nil, queue: queue)
+        let cold = backend.capabilities
+        #expect(backend.supports.isEmpty && !cold.supported.isEmpty && cold.compiling == cold.supported)
+        #expect(backend.pipelineCompileCount == 0 && backend.compiledOnMainThread == nil, "nothing compiled before returning")
+        let image = try backend.surface(PixelBuffer.seeded(width: 4, height: 3, seed: 17))
+        #expect(throws: RenderError.unsupported(.display)) { try backend.display(image, colorSpace: .sRGB) }
+        #expect(throws: RenderError.unsupported(.blur)) { try backend.gaussianBlur(image, sigma: 1) }
+        let dispatcher = RenderDispatcher(preferred: backend, fallback: CPUBackend())
+        #expect(dispatcher.backend(for: .display) is CPUBackend, "a cold family draws on the CPU")
+        queue.resume()
+        queue.sync {}  // a serial queue: the compile, queued first, has finished
+        #expect(backend.compiledOnMainThread == false, "the compile ran off the main thread, on the given queue")
+        #expect(backend.isHealthy && backend.capabilities.compiling.isEmpty)
+        #expect(backend.supports == cold.supported && backend.pipelineCompileCount > 0)
+        if device.readWriteTextureSupport == .tier2 { #expect(backend.supports == Set(RenderOp.allCases)) }
+        let compiled = backend.pipelineCompileCount
+        _ = try backend.display(image, colorSpace: .sRGB)
+        #expect(backend.pipelineCompileCount == compiled, "the first display reuses the warmed pipeline")
     }
 
     @Test func tileStorageFollowsUnifiedMemory() {

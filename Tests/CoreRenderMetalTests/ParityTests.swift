@@ -1,7 +1,8 @@
-// ParityTests.swift: the parity suite scaffold (metal-backend MB-2): one disabled test per op
-// family, each in its own `ParityTests+<Family>.swift` owned by the slice that lands the family
-// (MB-3 to MB-15). Recipe, all in Sources/CoreRender/Parity; a family file imports CoreRender
-// besides CoreRenderMetal and Testing, and gets `URL` the way CLAUDE.md says and the CoreRender
+// ParityTests.swift: the parity suite (metal-backend MB-2 scaffold): one test per op family, each in
+// its own `ParityTests+<Family>.swift` owned by the slice that landed the family (MB-3 to MB-15), none
+// disabled since MB-17, and `everyFamilyIsOn`: a fresh backend supports every `RenderOp` on read-write
+// tier 2, and all but the three in-place composite families elsewhere. Recipe, all in
+// Sources/CoreRender/Parity; a family file imports CoreRender besides CoreRenderMetal and Testing, and gets `URL` the way CLAUDE.md says and the CoreRender
 // tests do: `#if canImport(FoundationEssentials) import FoundationEssentials #else import Foundation #endif`.
 //   op: the family's `RenderOp`, the same name except `compositeNormal` -> `.composite`;
 //       `unsharp` has no golden yet (`.blur`'s samples call `gaussianBlur` only).
@@ -21,9 +22,7 @@
 // cover only `sampleSet(for:)`, one fixed set of calls per op; any wider grid a family header promises (other
 // opacities, modes, sigmas, sizes) renders on a live `CPUBackend` too and compares the two with
 // `ParityHarness.compare(_:_:tolerance:)`.
-// Until its slice lands each body fails on purpose, so a
-// family enabled by mistake fails loudly instead of passing empty. Every real parity test is also
-// `.enabled(if: MetalBackend.defaultDevice != nil)`: a runner without a GPU skips it. Compiled
+// Every parity test is `.enabled(if: MetalBackend.defaultDevice != nil)`: a runner without a GPU skips it. Compiled
 // out on Linux.
 #if canImport(Metal)
 #if canImport(FoundationEssentials)
@@ -33,6 +32,7 @@ import Foundation
 #endif
 import CoreRender
 import CoreRenderMetal
+import Metal
 import Testing
 
 @Suite struct ParityTests {
@@ -78,6 +78,14 @@ import Testing
         #expect(Self.families.count == 11)
         #expect(Set(Self.families).count == Self.families.count, "no family is listed twice")
         #expect(Self.tests.map(\.name) == Self.families, "the bound table names every family, in order")
+    }
+
+    @Test(.enabled(if: MetalBackend.defaultDevice != nil)) func everyFamilyIsOn() throws {
+        let metal = try MetalBackend.onDefaultDevice()
+        let inPlace: Set<RenderOp> = [.composite, .blendSeparable, .blendNonSeparable]
+        let all = Set(RenderOp.allCases)
+        let expected = metal.device.readWriteTextureSupport == .tier2 ? all : all.subtracting(inPlace)
+        #expect(metal.supports == expected, "tier 2: every family; elsewhere all but the in-place composites")
     }
 }
 #endif
