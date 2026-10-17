@@ -2,8 +2,10 @@
 // split into, one texture per tile. The grid math is CoreRaster's
 // (`PixelBuffer.tileCount(covering:)` and `tileRect(column:row:width:height:)`),
 // so a surface tile uploads from and downloads to the matching buffer tile.
-// This file adds the row-major index, `tiles(touching:)` and `defaultBudget`, the
-// Metal backend's default memory budget in tile-sized steps. Invariants: the size passes `PixelBuffer.validatedSize`; tiles
+// This file adds the row-major index, `tiles(touching:)`, `defaultBudget`, the
+// Metal backend's default memory budget in tile-sized steps, and `wholeImageFits`,
+// the device buffer-limit check of the ops that stage a whole image in one buffer.
+// Invariants: the size passes `PixelBuffer.validatedSize`; tiles
 // are numbered row-major from the top left; the last column and row are
 // clipped to the surface and never 0 px wide, so every pixel lies in exactly
 // one tile; `tiles(touching:)` never traps. Integer math only, no Metal import.
@@ -57,6 +59,17 @@ public struct SurfaceTiling: Equatable, Sendable {
     /// `tileBytes`, so even a tiny or unknown working set fits one tile.
     public static func defaultBudget(workingSet: UInt64, tileBytes: Int) -> Int {
         max(Int(clamping: workingSet / 2), tileBytes)
+    }
+
+    /// True when a `width` x `height` image of `bytesPerPixel` bytes a pixel fits in one buffer of at most
+    /// `maxBufferLength` bytes. Blur, unsharp and retouch stage the whole image as float4 (16 bytes a pixel) and
+    /// throw their own `unsupported` op (a device limit, not bad input) when this is false. A negative factor
+    /// or an overflowing product never fits, so any `Int` is safe.
+    public static func wholeImageFits(width: Int, height: Int, bytesPerPixel: Int, maxBufferLength: Int) -> Bool {
+        guard width >= 0, height >= 0, bytesPerPixel >= 0 else { return false }
+        let (pixels, pixelsOverflow) = width.multipliedReportingOverflow(by: height)
+        let (bytes, bytesOverflow) = pixels.multipliedReportingOverflow(by: bytesPerPixel)
+        return !pixelsOverflow && !bytesOverflow && bytes <= maxBufferLength
     }
 
     /// The indices of the tiles the pixel rect overlaps, ascending. Empty when

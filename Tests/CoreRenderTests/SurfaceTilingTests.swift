@@ -149,6 +149,31 @@ import Testing
         #expect(SurfaceTiling.defaultBudget(workingSet: .max, tileBytes: tile) == Int(UInt64.max / 2))
     }
 
+    @Test func wholeImageFitsAtTheLimitButNotOneByteUnder() {
+        let limit = 300 * 260 * 16
+        #expect(SurfaceTiling.wholeImageFits(width: 300, height: 260, bytesPerPixel: 16, maxBufferLength: limit))
+        #expect(!SurfaceTiling.wholeImageFits(width: 300, height: 260, bytesPerPixel: 16, maxBufferLength: limit - 1))
+        #expect(SurfaceTiling.wholeImageFits(width: 1024, height: 1024, bytesPerPixel: 16, maxBufferLength: 16 << 20))
+        #expect(!SurfaceTiling.wholeImageFits(width: 1024, height: 1025, bytesPerPixel: 16, maxBufferLength: 16 << 20))
+    }
+
+    @Test func wholeImageFitsNeverFitsAnOverflowOrANegativeSide() {
+        #expect(!SurfaceTiling.wholeImageFits(width: .max, height: 2, bytesPerPixel: 16, maxBufferLength: .max))
+        #expect(!SurfaceTiling.wholeImageFits(width: .max, height: .max, bytesPerPixel: 16, maxBufferLength: .max))
+        #expect(!SurfaceTiling.wholeImageFits(width: Int.max / 16 + 1, height: 1, bytesPerPixel: 16, maxBufferLength: .max))
+        #expect(!SurfaceTiling.wholeImageFits(width: -1, height: -1, bytesPerPixel: 16, maxBufferLength: .max))
+        #expect(!SurfaceTiling.wholeImageFits(width: 1, height: 1, bytesPerPixel: -16, maxBufferLength: .max))
+        var rng = SplitMix64(seed: 0x4B_B0F)
+        for _ in 0..<500 {
+            let w = Int(truncatingIfNeeded: rng.next()), h = Int(truncatingIfNeeded: rng.next())
+            let fits = SurfaceTiling.wholeImageFits(width: w, height: h, bytesPerPixel: 16, maxBufferLength: .max)
+            // Away from the Int.max edge, where Double rounding could decide, the answer is plain arithmetic.
+            let bytes = Double(w) * Double(h) * 16
+            if w < 0 || h < 0 || bytes > Double(Int.max) * 1.5 { #expect(!fits) }
+            else if bytes < Double(Int.max) / 2 { #expect(fits) }
+        }
+    }
+
     @Test func theLastRowIsClippedToTheSurface() throws {
         let tiling = try SurfaceTiling(width: 10, height: 300)
         #expect(tiling.rows == 2)
