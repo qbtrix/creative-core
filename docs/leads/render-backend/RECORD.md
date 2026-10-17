@@ -1,41 +1,41 @@
 # render-backend lead record
 
 Issue: #347 · Packet: docs/blueprints/core/features/render-backend.md
-Run: act-1a14644b047-dxwc · Session: see the Belt run page · Started: 2026-10-16T19:52Z
-Stage: 3 wave 2 (RB-2), blocked on a packet decision (question to supervisor)
-Base: b447e68 (origin/dev). RB-1 is #349. #350 closed as duplicate by the supervisor.
-Next: supervisor picks how RB-2 records calls: (1) mutating protocol methods, (2) a reference-typed recorder with a lock (needs captain sign-off), or (3) drop the recording check from the RB-2 acceptance test. Lead starts RB-2 on the pick.
+Run: act-1a149b544ea-emiq (line lead: render-backend, motion-tracks) · Started: 2026-10-17 (prior runs act-1a14644b047-dxwc)
+Stage: 3 waves (v3 loop, slices RB-a, RB-b, RB-c)
+Base: 24fd483 (origin/dev)
+Next: wait for RB-2b (FakeBackend + SurfaceStore) and RB-6 (parity harness) PRs to merge; then start RB-3 (CPUBackend on SurfaceStore).
+
+## Slices
+| slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
+|---|---|---|---|---|---|
+| RB-a | RB-1, RB-2a, RB-2b | nothing | open (RB-2b building) | – | – |
+| RB-b | RB-3, RB-4, RB-5 | RB-a | open | – | – |
+| RB-c | RB-6, RB-7 | RB-b (RB-7 only) | open (RB-6 building) | – | – |
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
 |---|---|---|---|---|---|---|---|
-| RB-1 | 1 | two targets, Linux-empty Metal module, C4 parts | Package.swift, Sources/CoreRender/CoreRender.swift, Sources/CoreRenderMetal/MetalBackend.swift, Tests/CoreRenderTests/TargetsTests.swift, Tests/CoreRenderMetalTests/TargetsTests.swift, docs/c4/parts/creative-core/corerender/* | TargetsTests | none | – | superseded: RB-1 landed on dev as #349; #350 conflicts (dirty) |
-| RB-2 | 2 | RenderOp, RenderError, RenderSurface, RenderBackend, ToneAdjustment, FakeBackend | Sources/CoreRender/{RenderOp,RenderSurface,RenderBackend,ToneAdjustment,FakeBackend}.swift, Tests/CoreRenderTests/RenderBackendFakeTests.swift | RenderBackendFakeTests | none | – | waiting on RB-1 |
-| RB-3 | 3 | CPUBackend and CPUSurface: surface, read, release, display, composite | Sources/CoreRender/CPU/CPUBackend.swift, Sources/CoreRender/CPU/CPUSurface.swift, Tests/CoreRenderTests/CPUBackendTests.swift, Tests/mutations/CoreRenderCPUBackend.json | CPUBackendTests | CoreRenderCPUBackend | – | waiting on RB-2 |
-| RB-4 | 4 | CPUBackend transform, resample, blur, adjust, retouch | Sources/CoreRender/CPU/CPUBackend+Ops.swift, Tests/CoreRenderTests/CPUBackendOpsTests.swift, Tests/mutations/CoreRenderCPUBackendOps.json | CPUBackendOpsTests | CoreRenderCPUBackendOps | – | waiting on RB-3 |
-| RB-5 | 4 | RenderDispatcher: routing, health, lastFallback, cross-backend surfaces | Sources/CoreRender/RenderDispatcher.swift, Tests/CoreRenderTests/RenderDispatcherTests.swift, Tests/mutations/CoreRenderDispatcher.json | RenderDispatcherTests | CoreRenderDispatcher | – | waiting on RB-3 |
-| RB-6 | 5 | ParityTolerance, ParityHarness (sample sets, compare, golden read/write) | Sources/CoreRender/Parity/*.swift, Tests/CoreRenderTests/ParityHarnessTests.swift, Tests/mutations/CoreRenderParity.json | ParityHarnessTests | CoreRenderParity | – | waiting on RB-4 |
-| RB-7 | 6 | CPU goldens, RenderBudgetTests, waves.md status, feature-done | Tests/CoreRenderTests/Golden/, CPUGoldenTests.swift, RenderBudgetTests.swift, docs/blueprints/core/features/waves.md | CPUGoldenTests, RenderBudgetTests | none | – | waiting on RB-5, RB-6 |
+| RB-1 | – | targets, Linux-empty Metal module, C4 parts | Package.swift, ... | TargetsTests | none | #349 (human) | merged |
+| RB-2a | – | RenderOp, RenderError, RenderSurface, RenderBackend, ToneAdjustment | Sources/CoreRender/{RenderOp,RenderSurface,RenderBackend,ToneAdjustment}.swift | RenderContractTests | none | #352 (opened by metal-backend lead) | merged |
+| RB-2b | 1 | FakeBackend recording calls; shared locked SurfaceStore | Sources/CoreRender/{FakeBackend,SurfaceStore}.swift, Tests/CoreRenderTests/RenderBackendFakeTests.swift, Tests/mutations/CoreRenderFake.json, corerender C4 part | RenderBackendFakeTests | CoreRenderFake | – | building |
+| RB-6 | 1 | ParityTolerance, ParityHarness (compare, sampleSet, goldens) | Sources/CoreRender/Parity/*, Tests/CoreRenderTests/ParityHarnessTests.swift, Tests/mutations/CoreRenderParity.json, parity.json part | ParityHarnessTests | CoreRenderParity | – | building |
+| RB-3 | 2 | CPUBackend: surface, read, release, display, composite in place | Sources/CoreRender/CPU/CPUBackend.swift, Tests/CoreRenderTests/CPUBackendTests.swift, Tests/mutations/CoreRenderCPUBackend.json, cpu-backend.json part | CPUBackendTests | CoreRenderCPUBackend | – | waits RB-2b |
+| RB-4 | 3 | CPUBackend transform, resample, blur, adjust, retouch | Sources/CoreRender/CPU/CPUBackend+Ops.swift, CPUBackendOpsTests, CoreRenderCPUBackendOps.json | CPUBackendOpsTests | CoreRenderCPUBackendOps | – | waits RB-3 |
+| RB-5 | 3 | RenderDispatcher routing, health, lastFallback, cross-backend surfaces | Sources/CoreRender/RenderDispatcher.swift, RenderDispatcherTests, CoreRenderDispatcher.json, dispatcher.json part | RenderDispatcherTests | CoreRenderDispatcher | – | waits RB-3 |
+| RB-7 | 4 | CPU goldens, RenderBudgetTests, waves.md status; feature-done | Tests/CoreRenderTests/Golden/, CPUGoldenTests, RenderBudgetTests, waves.md | CPUGoldenTests, RenderBudgetTests | none | – | waits RB-4, RB-5, RB-6 |
 
 ## Rounds
-| round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
-|---|---|---|---|---|---|---|---|---|
+| round | slice | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
+|---|---|---|---|---|---|---|---|---|---|
 
 ## Decisions
-- Lead loop: v2 with the packet's Slices table (RB-a, RB-b, RB-c) as the release units, per the packet's Open note and the tracker's expected outcome. Per slice: done on a green ci.yml run holding its last PR; at most 2 fix rounds per slice.
-- Branches: RECORD and timeline on lead/render-backend (Belt's status channel). Builder PR branches come from origin/dev, per CLAUDE.md. The session's designated branch claude/render-backend-lead-ivarpe is not used for PRs.
-- Identity: "Prakash Dalai" / 86671543+prakashUXtech@users.noreply.github.com (contract rule 9).
-- Builders are plain subagents with worktree isolation, not the Workflow tool, because the user did not ask for a workflow in their own words. The playbook allows this fallback.
-- Toolchain: cloud-setup.sh installs Swift 6.3.3 (pinned there). scripts/ci runs here once the install finishes.
-- gh CLI auth fails (GH_TOKEN). Issue and PR actions go through the GitHub MCP tools instead.
+- Recorder question (asked 02:55Z, no ruling): backends keep the non-mutating protocol and hold storage behind a lock, as MetalBackend on dev (#354) already does. The CPU backend needs the same thing anyway (the packet's CPUSurface is a class), so this is the backend pattern, not a model type. FakeBackend stays a struct as the packet spells it; its call log and surfaces live in a shared reference-typed store. One store type (SurfaceStore) serves the fake and the CPU backend (rule 16).
+- RB-2 was split: RB-2a (contract types) landed as #352 from the metal-backend lead; RB-2b is FakeBackend.
+- CPU and dispatcher acceptance tests land with their code (RB-3, RB-5) instead of disabled in RB-2: disabled tests cannot compile without the types, and stubs would double RB-2's size. Rule 13 allows "with the slice's first code task".
+- RB-6 runs in wave 1 beside RB-2b: the harness needs only the protocol and CoreRaster, not CPUBackend.
+- Builders are subagents with worktree isolation (no Workflow: the user did not opt in).
+- gh CLI auth fails; issue and PR work goes through the GitHub MCP tools.
 
 ## Open
-- RB-1 touches the protected path Package.swift. The fast lane refuses it. A human must review and merge. Without it, nothing in RB-2..RB-7 can build.
-- Packet Base says origin/dev cae920b; the brief and the live dev are 6967968. The brief's SHA is used.
-- Gate on dev 6967968 (this sandbox, 4 cores): scripts/ci fails in `swift test` at two wall-clock budgets under parallel load: RetouchBoundsTests `smallDabOn12MegapixelsIsFast` (2.1 to 2.6 s against 1.5 s; passes alone at 0.97 s) and EngineStressTests `thousandCommandsNearTheLayerLimitStayInBudget` (5.37 s against 5.0 s). `swift test --no-parallel` passes all 901 tests. GitHub runs for dev are green (cae920b, success). Until the budgets hold here, no PR can honestly carry `Fast-Check: pass`; the sandbox gate is not a substitute for the runner's.
-- RB-1 PR #350 (branch render-backend/rb-1, head 426a411b7c26852ce02c78c46ba11e2a70fcbf82): swift build passes. scripts/ci fails on two budgets. swift test --no-parallel shows 903 tests with one failure: thousandCommandsNearTheLayerLimitStayInBudget at 5.62 s against 5.0 s. So the budget fails serially too, not only under parallel load. Fast-Check is marked "not run". c4-assemble --check reports drift from the new parts; the Generated workflow on dev regenerates model.json.
-- Resume at 2026-10-16T20:2xZ: dev moved to 9ba4c2b. #349 (human) added the RB-1 targets and the render-backend C4 parts, and moved lead.md to the v3 loop. #350 is superseded and conflicts. Its comment says so; not closed, for the captain to close.
-- Gate on 9ba4c2b (detached worktree, 4 cores): scripts/ci fails on the same two budgets (smallDab 1.96 s against 1.5 s; stress 5.33 s against 5.0 s). It is dev's own state, not the lead's. RB-2 is pure contract code and its tests pass serially, but there is no honest Fast-Check on this sandbox. Not starting RB-2 until the supervisor rules.
-- 2026-10-16T21:37Z: dev is now 4f11af8 (#351 landed). Idle-box gate (detached worktree, nothing else running): scripts/ci fails on both budgets, 909 tests, 2 issues. Reported on #347 with the numbers. Still waiting for the supervisor.
-- 2026-10-17T02:54Z: supervisor reply on #347: RB-1 landed in #349, #350 closed as duplicate, continue from RB-2 on top of dev. The budget question is not answered in that reply, so no PR claims Fast-Check: pass unless scripts/ci prints CI: PASS.
-- 2026-10-17T02:55Z: RB-2 builder stopped before code. RenderBackend methods are non-mutating, so a struct FakeBackend cannot record calls the packet's acceptance test requires. Options as in Next. Builder worktree removed, branch render-backend/rb-2 kept local, nothing pushed. Question sent to supervisor on #347.
+- Sandbox gate: two pre-existing wall-clock tests can fail under load on this 4-core box; builders retry on a quiet box and never claim Fast-Check without CI: PASS.
