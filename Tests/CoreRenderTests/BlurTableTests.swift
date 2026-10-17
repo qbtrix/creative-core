@@ -37,6 +37,21 @@ import Testing
         #expect(throws: (any Error).self) { try BlurTable(sigma: 3.4, width: 5, height: 3) }
     }
 
+    /// CoreRaster's blur of a one-pixel impulse is its kernel, so every table weight equals it exactly: the
+    /// table's copy of CoreRaster's private `gaussianKernel` (count, radius rounding, normalisation) cannot drift.
+    @Test func weightsEqualCoreRastersBlurOfAnImpulse() throws {
+        for sigma in Self.sigmas + [0.1, 1.0 / 3, 2.0 / 3, 4.5] {
+            let radius = Int((3 * sigma).rounded(.up))
+            let length = 2 * radius + 3
+            var impulse = try PixelBuffer(width: length, height: 1)
+            try impulse.setPixel(x: length / 2, y: 0, RGBA(r: 1, g: 1, b: 1, a: 1))
+            let blurred = try impulse.gaussianBlur(sigma: sigma)
+            let reds = try (0..<length).map { try blurred.pixel(x: $0, y: 0).r }
+            let table = try BlurTable(sigma: sigma, width: length, height: 1)
+            #expect([0] + table.weights + [0] == reds, "sigma \(sigma)")
+        }
+    }
+
     /// One row through the table equals CoreRaster's blur of a one-pixel-high buffer (the vertical pass there
     /// clamps every tap to row 0 and leaves it unchanged), borders included.
     @Test func matchesCoreRasterOnALine() throws {

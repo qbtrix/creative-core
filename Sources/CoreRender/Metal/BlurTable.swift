@@ -1,6 +1,7 @@
 // BlurTable.swift: the 1-D Gaussian the Metal blur kernel uploads (MB-11), built as CoreRaster's `gaussianBlur`
 // builds its kernel (`gaussianKernel` is private): 2 ceil(3 sigma) + 1 weights exp(-x^2 / 2 sigma^2) normalised
-// in Double and stored as Float, sigma 0 the single weight 1. Invariants: sigma is finite and at least 0 and the
+// in Double and stored as Float, sigma 0 the single weight 1. BlurTableTests pins every weight to CoreRaster's
+// blur of an impulse, so the copy cannot drift from CoreRaster's kernel unnoticed. Invariants: sigma is finite and at least 0 and the
 // radius is at most twice the image's larger side, else it throws the CPU backend's exact error (CoreRaster's
 // message as `RenderError.raster`); the weights are symmetric and sum to 1; `apply` clamps taps to the edge.
 // Linux-safe.
@@ -15,7 +16,9 @@ import Darwin
 /// The Gaussian of `sigma` for a `width` x `height` image: output `i` of a line sums
 /// `weights[k] * line[clamp(i + k - radius)]` for every `k`.
 public struct BlurTable: Equatable, Sendable {
+    /// The Gaussian's standard deviation in pixels, as `gaussianBlur(sigma:)` takes it; 0 is the identity.
     public let sigma: Double
+    /// The 2 ceil(3 sigma) + 1 normalised weights, centre in the middle: one tap per pixel offset from `-radius`.
     public let weights: [Float]
 
     /// Throws `RenderError.raster` with CoreRaster's message for a negative or non-finite sigma, or one whose

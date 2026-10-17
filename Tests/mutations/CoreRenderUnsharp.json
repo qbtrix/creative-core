@@ -2,8 +2,50 @@
   {
     "note": "unsharp rule threshold compares the wrong way",
     "file": "Sources/CoreRender/Metal/UnsharpRule.swift",
-    "anchor": "guard abs(difference) > threshold",
-    "replacement": "guard abs(difference) < threshold",
+    "anchor": "guard difference > limit || difference < -limit else",
+    "replacement": "guard difference < limit && difference > -limit else",
+    "filter": "UnsharpRuleTests"
+  },
+  {
+    "note": "unsharp rule threshold is not strict",
+    "file": "Sources/CoreRender/Metal/UnsharpRule.swift",
+    "anchor": "guard difference > limit || difference < -limit else",
+    "replacement": "guard difference >= limit || difference <= -limit else",
+    "filter": "UnsharpRuleTests"
+  },
+  {
+    "note": "unsharp rule threshold is one Float step over the kernel's Float threshold",
+    "file": "Sources/CoreRender/Metal/UnsharpRule.swift",
+    "anchor": "let (gain, limit) = (Float(amount), Float(threshold))",
+    "replacement": "let (gain, limit) = (Float(amount), Float(threshold).nextUp)",
+    "filter": "UnsharpRuleTests"
+  },
+  {
+    "note": "unsharp rule rounds the product before adding",
+    "file": "Sources/CoreRender/Metal/UnsharpRule.swift",
+    "anchor": "return x.addingProduct(gain, difference)",
+    "replacement": "return x + gain * difference",
+    "filter": "UnsharpRuleTests"
+  },
+  {
+    "note": "unsharp rule accepts an infinite amount",
+    "file": "Sources/CoreRender/Metal/UnsharpRule.swift",
+    "anchor": "guard amount.isFinite else",
+    "replacement": "guard !amount.isNaN else",
+    "filter": "UnsharpRuleTests"
+  },
+  {
+    "note": "unsharp rule rejects a zero threshold",
+    "file": "Sources/CoreRender/Metal/UnsharpRule.swift",
+    "anchor": "guard threshold.isFinite, threshold >= 0 else",
+    "replacement": "guard threshold.isFinite, threshold > 0 else",
+    "filter": "UnsharpRuleTests"
+  },
+  {
+    "note": "unsharp overflow check never throws",
+    "file": "Sources/CoreRender/Metal/UnsharpRule.swift",
+    "anchor": "guard components.allSatisfy(\\.isFinite) else",
+    "replacement": "guard components.allSatisfy(\\.isFinite) || true else",
     "filter": "UnsharpRuleTests"
   }
 ]
