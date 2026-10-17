@@ -5,5 +5,12 @@
     "anchor": "if v >= table[base + index + step - 1] { index += step }",
     "replacement": "if v > table[base + index + step - 1] { index += step }",
     "filter": "DisplayTableTests"
+  },
+  {
+    "note": "display table P3 matrix is laid out transposed",
+    "file": "Sources/CoreRender/Metal/DisplayTable.swift",
+    "anchor": "columns[$0 % 3][$0 / 3]",
+    "replacement": "columns[$0 / 3][$0 % 3]",
+    "filter": "DisplayTableTests"
   }
 ]

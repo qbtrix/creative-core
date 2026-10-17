@@ -6,8 +6,9 @@
 // never call them with it held). Invariants: `supports` is empty while not healthy,
 // `residentBytes` sums the live surfaces' resident tiles and stays at or under `budgetBytes`
 // after every upload (MetalBackend+Memory.swift), a surface this backend did not make
-// throws `surfaceMismatch`, `.display`, `.transform` and (read-write tier 2) `.composite` and `.blendSeparable` start enabled; every other op throws
-// `unsupported` until its slice, a probe, a command
+// throws `surfaceMismatch`, `.display`, `.transform`, `.resample` and (read-write tier 2) `.composite` and
+// `.blendSeparable` start enabled; every other op (non-separable blends, blur, adjust, retouch) throws
+// `unsupported` until its slice, and display and composite throw it while unhealthy; a probe, a command
 // buffer or a texture allocation that fails leaves the backend unhealthy with the reason in
 // `capabilities.lastError` (so `deviceLost` is only ever thrown with `isHealthy` false), and only a
 // `recover` whose probe passes makes it healthy again. No GPU wait or runtime compile of a custom
@@ -19,8 +20,10 @@ import CoreRender
 import Foundation
 import Metal
 
-/// The Metal `RenderBackend`: tiled rgba16Float surfaces on one GPU. Display encode runs; every other
-/// op throws `RenderError.unsupported` until its slice lands; `supports` tells the dispatcher which do not.
+/// The Metal `RenderBackend`: tiled rgba16Float surfaces on one GPU. Display, transform (crop, rotate) and
+/// resample run; `.normal` and the separable blend modes composite on read-write texture tier 2; non-separable
+/// blends, blur, adjust and retouch throw `RenderError.unsupported` until their slices land, and display and
+/// composite throw it while the backend is unhealthy; `supports` tells the dispatcher which run.
 public final class MetalBackend: RenderBackend, @unchecked Sendable {
     /// The system's default GPU, or nil without one; tests gate on `.enabled(if: defaultDevice != nil)`.
     public static var defaultDevice: (any MTLDevice)? { MTLCreateSystemDefaultDevice() }

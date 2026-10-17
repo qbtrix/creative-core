@@ -1,7 +1,14 @@
-// ParityTests+Display.swift: the display family (MB-3). The sample set, a four-tile image and the same
-// image evicted encode within `ParityTolerance.standard` of the CPU run on the GPU's Float16 pixels, in
-// sRGB and P3, and every byte per channel round-trips. Device-gated; compiled out on Linux.
+// ParityTests+Display.swift: the display family (MB-3). The sample set, rendered from the original Float32
+// sources (so upload loss counts), matches the checked-in display goldens within their tolerance; the sample
+// set, a four-tile image and the same image evicted encode within `ParityTolerance.standard` of the CPU run on
+// the GPU's Float16 pixels, in sRGB and P3, and every byte per channel round-trips. `expectGoldens` is the
+// ParityTests.swift recipe, shared with the other families. Device-gated; compiled out on Linux.
 #if canImport(Metal)
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import Foundation
+#endif
 import CoreColor
 import CoreRaster
 import CoreRender
@@ -13,6 +20,7 @@ extension ParityTests {
         do {
             let backend = try MetalBackend.onDefaultDevice()
             #expect(backend.supports.contains(.display))
+            try Self.expectGoldens(for: .display, on: backend)
             let cpu = CPUBackend()
             let large = try PixelBuffer.seeded(width: 300, height: 260, seed: 0xD15A)
             var images = try ParityHarness.sampleSet(for: .display).map { ($0.name, $0.source, false) }
@@ -34,6 +42,19 @@ extension ParityTests {
             }
         } catch {
             Issue.record("display parity threw \(error)")
+        }
+    }
+
+    /// Tests/CoreRenderTests/Golden, which holds the CPU goldens every family compares with.
+    static let goldenRoot = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+        .appendingPathComponent("CoreRenderTests/Golden")
+
+    /// Every sample of `op`'s set, rendered on `backend` from its original source, matches its golden band.
+    static func expectGoldens(for op: RenderOp, on backend: any RenderBackend) throws {
+        for sample in try ParityHarness.sampleSet(for: op) {
+            let golden = try ParityGolden.band(from: goldenRoot, op: op, sample: sample.name)
+            let result = try ParityHarness.compare(golden: golden, ParityHarness.render(sample, on: backend))
+            #expect(result.passed, "\(op.rawValue)/\(sample.name) golden: \(result)")
         }
     }
 

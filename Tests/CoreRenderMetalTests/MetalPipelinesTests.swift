@@ -3,7 +3,7 @@
 // rejected, a missing kernel is caller input (not a device loss), a file at `cacheURL` is never
 // touched, a probe or command-buffer failure fails the backend, `fail` empties `supports`, `recover`
 // restores only once its probe passes, a caller's `display_probe` never replaces the probe, a
-// caller's `display_encode` never replaces the display kernel, `display` refuses while unhealthy,
+// caller's `display_encode` never replaces the display kernel, `display` and `composite` refuse while unhealthy,
 // and the tile storage mode follows unified memory. Device-gated; compiled out on Linux.
 #if canImport(Metal)
 import CoreRaster
@@ -149,6 +149,22 @@ import Testing
         backend.fail("mock")
         #expect(throws: RenderError.unsupported(.display)) { try backend.display(surface, colorSpace: .sRGB) }
         #expect(backend.pipelineCompileCount == 0, "no GPU work for an unhealthy backend")
+    }
+
+    @Test(.enabled(if: MetalBackend.defaultDevice != nil))
+    func compositeRefusesWhileUnhealthy() throws {
+        let backend = try MetalBackend.onDefaultDevice()
+        let source = try backend.surface(PixelBuffer.seeded(width: 4, height: 3, seed: 8))
+        var backdrop = try backend.surface(PixelBuffer.seeded(width: 5, height: 4, seed: 9))
+        let held = try backend.read(backdrop)
+        backend.fail("x")
+        #expect(throws: RenderError.unsupported(.composite)) {
+            try backend.composite(source, onto: &backdrop, x: 0, y: 0, mode: .normal, opacity: 1)
+        }
+        #expect(throws: RenderError.unsupported(.blendSeparable)) {
+            try backend.composite(source, onto: &backdrop, x: 0, y: 0, mode: .multiply, opacity: 1)
+        }
+        #expect(try backend.read(backdrop) == held && backend.pipelineCompileCount == 0, "no GPU work for an unhealthy backend")
     }
 
     @Test(.enabled(if: MetalBackend.defaultDevice != nil))

@@ -5,7 +5,8 @@ import CoreRaster
 
 /// The pieces of a composite of one tiled surface onto another.
 public enum CompositeMap {
-    /// Throws CoreRaster's `RenderError.raster` unless `opacity` is in 0...1 (so not NaN or infinite), as the CPU does.
+    /// Throws `RenderError.raster` with CoreRaster's message unless `opacity` is a finite value in 0...1 (so not NaN
+    /// or infinite), as the CPU backend does.
     public static func validate(opacity: Float) throws {
         guard (0...1).contains(opacity) else { throw RenderError.raster("opacity \(opacity): must be a finite value in 0...1") }
     }
