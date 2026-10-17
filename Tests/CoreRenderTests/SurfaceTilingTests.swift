@@ -2,7 +2,8 @@
 // counts and rects for 4K and for one pixel past a full column, the clipped
 // last tile, `tiles(touching:)` for spanning, corner, outside, empty and
 // extreme rects, the thrown errors, and two seeded property tests: every pixel
-// is in exactly one tile, and `tiles(touching:)` matches a brute-force overlap.
+// is in exactly one tile, and `tiles(touching:)` matches a brute-force overlap;
+// and a seeded check that the grid equals a PixelBuffer's of the same size.
 import CoreRaster
 import CoreRender
 import Testing
@@ -118,6 +119,21 @@ private struct SplitMix64: RandomNumberGenerator {
                 area += rect.width * rect.height
             }
             #expect(area == width * height, "\(width)x\(height): tiles cover the surface once")
+        }
+    }
+
+    @Test func seededSizesLayTheSameGridAsAPixelBuffer() throws {
+        var rng = SplitMix64(seed: 348)
+        for _ in 0..<20 {
+            let width = Int.random(in: 1...700, using: &rng)
+            let height = Int.random(in: 1...700, using: &rng)
+            let tiling = try SurfaceTiling(width: width, height: height)
+            let buffer = try PixelBuffer(width: width, height: height)
+            #expect(tiling.columns == buffer.tileColumns && tiling.rows == buffer.tileRows, "\(width)x\(height)")
+            for index in 0..<tiling.tileCount {
+                let rect = try buffer.tileRect(column: index % tiling.columns, row: index / tiling.columns)
+                #expect(try tiling.rect(index) == rect, "\(width)x\(height) tile \(index)")
+            }
         }
     }
 

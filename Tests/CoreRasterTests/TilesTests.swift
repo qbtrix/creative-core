@@ -1,7 +1,8 @@
 // TilesTests.swift: the PixelBuffer tile grid. Grid counts and clipped edge
 // rects, a seeded read-every-tile/write-every-tile round trip, and rejection
 // of out-of-range indexes and mismatched replacements without changing the
-// buffer.
+// buffer, and the static grid math (`tileCount(covering:)`, `tileRect`) that
+// CoreRender's SurfaceTiling shares.
 import CoreRaster
 import Testing
 
@@ -82,4 +83,17 @@ private func randomBuffer(width: Int, height: Int, _ rng: inout SplitMix64) thro
     let tall = try PixelBuffer(width: 88, height: 45)
     #expect(throws: RasterError.self) { try buffer.replaceTile(column: 2, row: 1, with: tall) }
     #expect(buffer == before)
+}
+
+@Test func staticTileCountRoundsUpAndNeverOverflows() throws {
+    #expect(PixelBuffer.tileCount(covering: 0) == 0)
+    #expect(PixelBuffer.tileCount(covering: -5) == 0)
+    #expect(PixelBuffer.tileCount(covering: 1) == 1)
+    #expect(PixelBuffer.tileCount(covering: 256) == 1)
+    #expect(PixelBuffer.tileCount(covering: 257) == 2)
+    #expect(PixelBuffer.tileCount(covering: Int.max) == (Int.max - 1) / 256 + 1)
+    #expect(try PixelBuffer.tileRect(column: 2, row: 1, width: 600, height: 300) == TileRect(x: 512, y: 256, width: 88, height: 44))
+    #expect(throws: RasterError.invalid("tile (3, 0) is outside the 3x2 tile grid")) {
+        try PixelBuffer.tileRect(column: 3, row: 0, width: 600, height: 300)
+    }
 }

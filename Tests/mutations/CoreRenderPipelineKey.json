@@ -26,5 +26,12 @@
     "anchor": "case 0x30...0x39, 0x41...0x5A, 0x61...0x7A, 0x5F: true",
     "replacement": "case 0x30...0x39, 0x41...0x5A, 0x61...0x7A: true",
     "filter": "PipelineKeyTests"
+  },
+  {
+    "note": "pipeline key validated variant length bound admits 65 bytes, one over the limit",
+    "file": "Sources/CoreRender/Metal/PipelineKey.swift",
+    "anchor": "guard length <= maxVariantLength else {",
+    "replacement": "guard length <= maxVariantLength + 1 else {",
+    "filter": "PipelineKeyTests"
   }
 ]
