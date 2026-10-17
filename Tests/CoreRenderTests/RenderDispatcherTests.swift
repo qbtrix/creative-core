@@ -159,6 +159,48 @@ private func fallback(_ d: RenderDispatcher) -> String? {
         }
     }
 
+    @Test func everyForwarderOnAFakeSurfaceEqualsTheDirectCPUCall() throws {
+        let fake = FakeBackend(supports: [])
+        let d = RenderDispatcher(preferred: fake, fallback: CPUBackend())
+        let buffer = try seededBuffer(width: 9, height: 7, seed: 12)
+        let mask = try Mask.ellipse(width: 9, height: 7, centerX: 4.3, centerY: 3.6, radiusX: 3.2, radiusY: 2.4)
+        let levels = ToneAdjustment.levels(inBlack: 0.05, inWhite: 0.9, gamma: 1.6, outBlack: 0.02, outWhite: 0.95)
+        typealias Op = (RenderSurface) throws -> RenderSurface
+        typealias Direct = (CPUBackend, RenderSurface) throws -> RenderSurface
+        let cases: [(RenderOp, Op, Direct)] = [
+            (.transform, { try d.cropped($0, x: 2, y: 1, width: 5, height: 4) },
+             { try $0.cropped($1, x: 2, y: 1, width: 5, height: 4) }),
+            (.resample, { try d.resampled($0, width: 13, height: 4, filter: .lanczos3) },
+             { try $0.resampled($1, width: 13, height: 4, filter: .lanczos3) }),
+            (.blur, { try d.unsharpMask($0, amount: 0.8, sigma: 1.2, threshold: 0.05) },
+             { try $0.unsharpMask($1, amount: 0.8, sigma: 1.2, threshold: 0.05) }),
+            (.adjust, { try d.adjusted($0, levels) }, { try $0.adjusted($1, levels) }),
+            (.retouch, { try d.cloned($0, offset: (dx: 2, dy: -1), through: mask) },
+             { try $0.cloned($1, offset: (dx: 2, dy: -1), through: mask) }),
+        ]
+        for (op, viaDispatcher, direct) in cases {
+            let cpu = CPUBackend()
+            let result = try viaDispatcher(fake.surface(buffer))
+            #expect(result.backend == "cpu")
+            #expect(try d.read(result) == cpu.read(direct(cpu, cpu.surface(buffer))), "\(op)")
+            #expect(d.lastFallback?.op == op && d.lastFallback?.reason == unsupported, "\(op)")
+        }
+        #expect(!fake.calls.contains { if case .op = $0 { return true } else { return false } })
+    }
+
+    @Test func compositingASurfaceOntoItselfKeepsTheSourceHandle() throws {
+        let fake = FakeBackend(supports: [])
+        let d = RenderDispatcher(preferred: fake, fallback: CPUBackend())
+        let buffer = try seededBuffer(width: 4, height: 3, seed: 13)
+        let s = try fake.surface(buffer)
+        var b = s
+        try d.composite(s, onto: &b, x: 1, y: -1, mode: .screen, opacity: 0.37)
+        #expect(b.backend == "cpu")
+        #expect(try d.read(b) == directComposite(buffer, onto: buffer, mode: .screen))
+        #expect(try d.read(s) == buffer)
+        #expect(!fake.calls.contains(.release(s)))
+    }
+
     @Test func aSurfaceNeitherBackendMadeIsAMismatch() throws {
         let d = RenderDispatcher(preferred: nil, fallback: CPUBackend())
         let stranger = try FakeBackend(name: "other", supports: []).surface(try PixelBuffer(width: 2, height: 2))
