@@ -1,0 +1,5 @@
+utc	stage	event	ref	note
+2026-10-17T00:00Z	0	stage-start	-	setup, verified dev b447e68
+2026-10-17T00:30Z	3	pr-opened	-	RB-2 committed 653c33b on designated branch, not a PR
+2026-10-17T01:00Z	3	gate-run	-	scripts/ci CI: PASS 918 tests on RB-2 content
+2026-10-17T01:10Z	3	stage-end	-	RB-2 done; RB-3 next
