@@ -19,3 +19,4 @@ utc	stage	event	ref	note
 2026-10-17T02:55Z	3	stopped	#347	RB-2 blocked: recording vs non-mutating protocol; asked supervisor
 2026-10-17T03:36Z	3	heartbeat	dev b447e68	RB-2 waiting on supervisor pick (recorder design); metal-backend lead argued for class-based backends, not a ruling
 2026-10-17T07:00Z	3	stage-start	dev 24fd483	relaunch act-1a149b544ea-emiq; RB-2a on dev via #352; wave 1 RB-2b + RB-6 started
+2026-10-17T13:08Z	3	heartbeat	dev 3be8939	builders done; reading dev CI 39031409068
