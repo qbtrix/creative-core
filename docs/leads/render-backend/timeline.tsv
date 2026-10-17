@@ -25,3 +25,4 @@ utc	stage	event	ref	note
 2026-10-17T13:24Z	4	anatomy-round	dev 3be8939	round 1 not clean; minor findings to fixer
 2026-10-17T13:33Z	4	pr-opened	dev 23af67b	#371 RB-a Anatomy round 1 fixes, head 0c9318d
 2026-10-17T13:31Z	4	anatomy-round	dev a6ad242	RB-a round 2 not clean; 2 minor to fixer (#371 merged)
+2026-10-17T13:34Z	4	pr-opened	dev	#373 RB-a round 2 fixes (routing comments, record-first mutation CoreRenderFake#9)
