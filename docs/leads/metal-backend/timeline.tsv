@@ -121,3 +121,4 @@ utc	stage	event	ref	note
 2026-10-17T16:51:48Z	4	heartbeat	-	panel r3 done; wave 7 merged; fix r3 (wf_6419df5b-b06) and wave 8 (wf_9c58324f-54b) running; dev CI 39051011998 queued on 1601a97
 2026-10-17T17:16:00Z	4	dev-mac-red	#417	macOS job fails to compile ParityTests+Adjust.swift (toneAdjustments without Self.); one-line fix PR #417 fast-lane
 2026-10-17T17:16:30Z	5	slice-done	MB-c	Belt-Slice-Done + Mac-Finish-Wanted MB-c, run 39051011998 Linux green
+2026-10-17T17:20:00Z	3	wave8-done	wf_9c58324f-54b	MB-10 #418 merged; check flagged stray --- after Head (cosmetic, merged) and composite guard removal (needed: family now enabled, compositeInPlace gates on effectiveSupports)
