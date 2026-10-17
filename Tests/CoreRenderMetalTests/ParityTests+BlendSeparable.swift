@@ -1,7 +1,7 @@
 // ParityTests+BlendSeparable.swift: MB-5 enables `ParityTests/blendSeparable` (metal-backend) and owns this
 // file. All twelve separable modes at opacities 0, 0.37, 1 on the seeded parity set and on multi-tile sources
-// off every edge match the CPU on the GPU's pixels within `.standard`; non-separable modes still throw
-// `unsupported`. MB-6 enables `.blendSeparable` at init on read-write tier 2, so this runs through the public
+// off every edge match the CPU on the GPU's pixels within `.standard`; MB-10 enables the non-separable modes
+// beside them (their parity is `ParityTests/blendNonSeparable`). MB-6 enables `.blendSeparable` at init on read-write tier 2, so this runs through the public
 // composite path (opaque rows blitted at opacity 1). Skipped without a device; returns early without tier 2.
 #if canImport(Metal)
 import CoreRaster
@@ -32,12 +32,7 @@ extension ParityTests {
                     }
                 }
             }
-            var m = try metal.surface(try PixelBuffer.seeded(width: 5, height: 4, seed: 0x0BAD))
-            let (ms, held) = (m, try metal.read(m))
-            for mode in BlendMode.allCases where RenderOp(compositing: mode) == .blendNonSeparable {
-                #expect(throws: RenderError.unsupported(.blendNonSeparable)) { try metal.composite(ms, onto: &m, x: 0, y: 0, mode: mode, opacity: 1) }
-            }
-            #expect(try metal.read(m) == held, "a rejected composite changes nothing")
+            #expect(metal.supports.contains(.blendNonSeparable), "MB-10 enables the non-separable modes beside these")
             #expect(metal.isHealthy)
         } catch {
             Issue.record("separable blend parity threw \(error)")

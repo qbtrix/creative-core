@@ -1,4 +1,5 @@
-// ParityTests+Blur.swift: MB-11 enables `ParityTests/blur`. Gaussian blur at sigma 0, 0.5, 3, 20 matches the CPU
+// ParityTests+Blur.swift: MB-11 enables `ParityTests/blur`. The sample set, rendered from the original Float32
+// sources (so upload loss counts), matches the checked-in CPU blur goldens within their tolerance. Gaussian blur at sigma 0, 0.5, 3, 20 matches the CPU
 // on the GPU's Float16 pixels within `.standard` on the sample set and a multi-tile source, resident or evicted;
 // sigma 0 is the identity; a constant image stays constant to its corners (clamp-to-edge: a border never reads
 // black); an invalid sigma throws the CPU backend's error; `.blur` is in `supports` (MB-12 added it); an image over
@@ -13,6 +14,7 @@ extension ParityTests {
     @Test(.enabled(if: MetalBackend.defaultDevice != nil)) func blur() {
         do {
             let metal = try MetalBackend.onDefaultDevice()
+            try Self.expectGoldens(for: .blur, on: metal)
             let sigmas = [0, 0.5, 3, 20]
             for sample in try ParityHarness.sampleSet(for: .blur) {
                 try Self.expectBlurParity(sample.source, sigmas: sigmas, on: metal, label: sample.name)

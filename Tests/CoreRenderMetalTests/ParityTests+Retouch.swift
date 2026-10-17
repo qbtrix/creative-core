@@ -1,4 +1,5 @@
-// ParityTests+Retouch.swift: `ParityTests/retouch` (metal-backend MB-15). Clone through rect, ellipse and polygon
+// ParityTests+Retouch.swift: `ParityTests/retouch` (metal-backend MB-15). The sample set, rendered from the original
+// Float32 sources (so upload loss counts), matches the checked-in CPU retouch goldens within their tolerance. Clone through rect, ellipse and polygon
 // masks, with offsets inside the image, partly off each edge and wholly off each edge, matches the CPU on the GPU's
 // Float16 pixels within `.standard` on the parity samples (alpha 0 and 1e-45 included) and on a multi-tile image
 // (300 x 260, wider than one 256 px tile), resident and evicted; the source is unchanged; a mask of another size
@@ -14,6 +15,7 @@ extension ParityTests {
         do {
             let metal = try MetalBackend.onDefaultDevice()
             #expect(metal.supports.contains(.retouch))
+            try Self.expectGoldens(for: .retouch, on: metal)
             for sample in try ParityHarness.sampleSet(for: .retouch) {
                 guard case let .cloned(dx, dy, mask) = sample.call else { continue }
                 let masks = try [("sample", mask)] + Self.cloneMasks(sample.source.width, sample.source.height)
