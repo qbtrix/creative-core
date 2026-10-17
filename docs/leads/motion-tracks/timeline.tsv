@@ -47,3 +47,4 @@ utc	stage	event	ref	note
 2026-10-17T13:47Z	4	pr-merged	dev 3fcc64e	#375 round 3 fix
 2026-10-17T13:47Z	4	anatomy-round	dev 4682eee	round 4 (final) started: critic and gate
 2026-10-17T13:48Z	4	anatomy-round	dev 4682eee	round 4 (final) not clean; 2 missing mutation entries to fixer; loop ends at 4 rounds
+2026-10-17T13:55Z	4	pr-merged	dev 3abd592	#378 round 4 fix (2 mutation entries); waiting on dev CI for contact sheet

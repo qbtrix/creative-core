@@ -4,7 +4,7 @@ Issue: #313 · Packet: docs/blueprints/core/features/motion-tracks.md
 Run: act-1a149b544ea-emiq (line lead: render-backend, motion-tracks) · Started: 2026-10-17 (prior runs act-1a1463a91ae-nkkr, act-1a142b4b27e-bv69)
 Stage: 4 Anatomy (all waves merged; MT-5 #363 feature-done)
 Base: 3be8939 (origin/dev)
-Next: round 2 fixer PR merges; round 3 on dev (loop stops at 2 clean rounds or 4 total); contact sheet on #313 once a dev CI run holding 9b72477 is green (39031409068 was red on macOS only, MetalPipelinesTests from #362, dev-red #365; Linux green); then stop.
+Next: MT done on dev 3abd592 (#378 round 4 fix merged; mutations FlareOnion 6, FlareLottieScale 8). Contact sheet on #313 once a dev CI run holding 3abd592 has a green Linux job; then stop.
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -21,7 +21,7 @@ Next: round 2 fixer PR merges; round 3 on dev (loop stops at 2 clean rounds or 4
 | 1 | 3be8939 | 962/964; 2 known wall-clock flakes under load (StageBudget hit 11.1 ms, EngineStress 10.2 s) | FlareOnion 5/5, FlareLottieTracks 2/2, FlareLottieScale 3/3, FlareLottieGradientAlpha 2/2 | 39031409068 (Linux green, macOS red from #362) | correctness, rules fit, first-use clarity | 4 minor: scale x100 overflows past finite check (a), onion range unbounded for huge durationFrames (b), 3 invariants without mutation entries (c), exporter header says static only (d) | #370 (23af67b) | no |
 | 2 | 23af67b | (gate with fixer PR) | (with fixer PR) | – | round 1 fixes, whole feature, first-use clarity | 3 minor: add-saturation mutant removed in #370 is not equivalent (durationFrames Int.max reachable), group transform scale checks finite before x100 (LottieExporter:401), contract slice omits maxOnionSkins | #372 (merged as e2d3b95) | no |
 | 3 | e2d3b95 | 967/967, CI: PASS | FlareOnion 5/5, FlareLottieTracks 2/2, FlareLottieScale 6/6, FlareLottieGradientAlpha 3/3 | – | round 2 fixes, whole feature, first-use clarity | 1 minor: scale bake computes hi = durationFrames - 1 before its durationFrames > 0 guard (LottieExporter:301), traps on in-memory Int.min; #372 fixes verified | #375 (merged as 3fcc64e) | no |
-| 4 | 4682eee | 978/978, CI: PASS | FlareOnion 5/5, FlareLottieTracks 2/2, FlareLottieScale 7/7, FlareLottieGradientAlpha 3/3 | – | round 3 fix, whole feature, first-use clarity (final round) | 2 minor: Onion.swift:26 duration guard and LottieExporter:285 layer scale finite-after-x100 have no mutation entry; #375 verified (guard order, fallback, mutation real) | fixer building (mutation entries only) | no; loop ends (4 rounds) |
+| 4 | 4682eee | 978/978, CI: PASS | FlareOnion 5/5, FlareLottieTracks 2/2, FlareLottieScale 7/7, FlareLottieGradientAlpha 3/3 | – | round 3 fix, whole feature, first-use clarity (final round) | 2 minor: Onion.swift:26 duration guard and LottieExporter:285 layer scale finite-after-x100 have no mutation entry; #375 verified (guard order, fallback, mutation real) | #378 (3abd592), merged | no; loop ends (4 rounds) |
 
 ## Decisions
 - Packet base was f05665f; dev is at cae920b. MT-1, MT-2, MT-3 were already merged before this lead started, so the lead starts at wave c.
