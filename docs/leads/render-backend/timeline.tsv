@@ -47,3 +47,4 @@ utc	stage	event	ref	note
 2026-10-17T14:08Z	4	pr-merged	dev 5cfdd5c	#381 RB-b round 1 fix
 2026-10-17T14:08Z	4	anatomy-round	dev 5cfdd5c	RB-b round 2 started: critic and gate
 2026-10-17T14:10Z	4	anatomy-round	dev 5cfdd5c	RB-b round 2 not clean (1 major, 2 minor); fixer building
+2026-10-17T14:11Z	4	gate	dev 5cfdd5c	993/993 CI: PASS; render plans 27/27 caught
