@@ -1,0 +1,23 @@
+[
+  {
+    "note": "parity byte bound uses < for <=, so a delta equal to the tolerance fails",
+    "file": "Sources/CoreRender/Parity/ParityHarness.swift",
+    "anchor": "passed: worstByte <= tolerance.bytes &&",
+    "replacement": "passed: worstByte < tolerance.bytes &&",
+    "filter": "ParityHarnessTests"
+  },
+  {
+    "note": "parity alpha gate dropped, so transparent pixels enter the linear check",
+    "file": "Sources/CoreRender/Parity/ParityHarness.swift",
+    "anchor": "guard max(p.a, q.a) > 0.01 else { continue }",
+    "replacement": "guard true else { continue }",
+    "filter": "ParityHarnessTests"
+  },
+  {
+    "note": "parity golden byte-count check accepts more bytes than the header's size",
+    "file": "Sources/CoreRender/Parity/ParityGolden.swift",
+    "anchor": "guard data.count == pixels * 4 else {",
+    "replacement": "guard data.count >= pixels * 4 else {",
+    "filter": "ParityHarnessTests"
+  }
+]

@@ -1,0 +1,10 @@
+{
+  "id": "parity",
+  "name": "Parity Harness",
+  "description": "How one RenderBackend is measured against another (Sources/CoreRender/Parity): ParityTolerance (byte and linear bounds, .standard and .nonSeparable); ParityHarness.compare, which checks two results' sRGB display bytes through CoreRaster's rgba8 and their linear premultiplied Floats over visible pixels and names the worst pixel; the deterministic sample set per RenderOp (seeded buffers plus alpha 0, subnormal alpha, opaque rows and sources off every edge) and rendering a sample on any backend; and golden files (raw rgba8 bytes beside a JSON header), validated as untrusted input.",
+  "technology": "Swift 6, Foundation",
+  "paths": [
+    "Sources/CoreRender/Parity/"
+  ],
+  "order": 30
+}
