@@ -5,5 +5,19 @@
     "anchor": "min(cx1, x + from.x + from.width)",
     "replacement": "min(cx1, x + from.x + from.width + 1)",
     "filter": "CompositeMapTests"
+  },
+  {
+    "note": "composite map wholly-outside guard drops its bottom-edge bound, so a huge y overflows",
+    "file": "Sources/CoreRender/Metal/CompositeMap.swift",
+    "anchor": "guard x < backdrop.width, y < backdrop.height,",
+    "replacement": "guard x < backdrop.width,",
+    "filter": "CompositeMapTests"
+  },
+  {
+    "note": "composite map opacity check lets a negative opacity through",
+    "file": "Sources/CoreRender/Metal/CompositeMap.swift",
+    "anchor": "guard (0...1).contains(opacity)",
+    "replacement": "guard opacity <= 1",
+    "filter": "CompositeMapTests"
   }
 ]

@@ -1,8 +1,10 @@
 // MetalBackend+Composite.swift: composite in place on the backdrop's tiles (MB-4), piece by piece from
 // CompositeMap through `composite_normal` or a separable mode's kernel (MB-5, MetalBackend+BlendSeparable.swift).
-// Invariants: the CPU backend's checks in its order before any pixel changes; evicted backdrop tiles come back
-// to textures first and the budget holds after; a source that is the backdrop is read from a snapshot; no GPU
-// wait under the lock; a GPU failure throws `deviceLost`.
+// Invariants: an unhealthy backend throws `unsupported(family)` like any family outside `supports`; the CPU
+// backend's checks in its order before any pixel changes; evicted backdrop tiles come back to textures first,
+// a tile evicted after planning (or whose shadow changed) from its current shadow, and the budget holds after on
+// every exit; a source that is the backdrop is read from a snapshot; no GPU wait under the lock; a GPU failure
+// throws `deviceLost`. Not yet held: a tile evicted while the GPU writes it can lose that write (no pin set).
 #if canImport(Metal)
 import CoreRaster
 import CoreRender
@@ -14,11 +16,13 @@ extension MetalBackend {
     static func compositesInPlace(on device: any MTLDevice) -> Bool { device.readWriteTextureSupport == .tier2 }
 
     /// Composites `s` over `b` through `mode` with source pixel (0, 0) on backdrop pixel (`x`, `y`), in place, as the CPU does.
-    func compositeInPlace(_ s: RenderSurface, onto b: RenderSurface, x: Int, y: Int, mode: BlendMode, opacity: Float) throws {
+    /// Throws `unsupported(RenderOp(compositing: mode))` when that family is not in `supports` (so while unhealthy).
+    /// `afterStaging` runs with the lock free between planning and resolving the backdrop tiles: a test hook.
+    package func compositeInPlace(_ s: RenderSurface, onto b: RenderSurface, x: Int, y: Int, mode: BlendMode, opacity: Float,
+                                  afterStaging: () -> Void = {}) throws {
         let planned = try withLock { () throws -> CompositePlan? in
-            guard state.healthy else { throw RenderError.deviceLost(state.lastError ?? "backend unhealthy") }
             let family = RenderOp(compositing: mode)
-            guard state.supported.contains(family) else { throw RenderError.unsupported(family) }
+            guard state.effectiveSupports.contains(family) else { throw RenderError.unsupported(family) }
             let (source, backdrop) = (try lookup(s), try lookup(b))
             try CompositeMap.validate(opacity: opacity)
             let pieces = try CompositeMap.pieces(source: source.tiling, onto: backdrop.tiling, x: x, y: y)
@@ -44,22 +48,35 @@ extension MetalBackend {
             return CompositePlan(backdrop: backdrop, pieces: pieces, resident: resident, staged: staged, evicted: evicted, pipeline: pipeline, queue: commandQueue)
         }
         guard let plan = planned else { return }
+        defer { evictIfNeeded() }  // restored tiles leave again on every exit, a throw included
         let textures = try plan.resident.merging(plan.staged.mapValues { try stageTile($0) }) { kept, _ in kept }
         let restored = try plan.evicted.mapValues { try stageTile($0) }
-        let targets = withLock { () -> [Int: any MTLTexture] in
+        afterStaging()
+        let resolved = withLock { () -> Result<[Int: any MTLTexture], any Error> in
             var targets: [Int: any MTLTexture] = [:]
             for index in Set(plan.pieces.map(\.destinationTile)) {
                 if let tile = plan.backdrop.tiles[index] {
                     targets[index] = tile
-                } else if let texture = restored[index], let rect = try? plan.backdrop.tiling.rect(index) {
-                    plan.backdrop.tiles[index] = texture
-                    plan.backdrop.shadows[index] = nil
-                    plan.backdrop.residentBytes += MetalSurface.bytes(of: rect)
-                    targets[index] = texture
+                    continue
                 }
+                // Evicted now: the staged texture if its shadow is unchanged since planning, else the current
+                // shadow (evicted after planning, or rewritten by another op), uploaded here with no GPU wait.
+                guard let shadow = plan.backdrop.shadows[index], let rect = try? plan.backdrop.tiling.rect(index) else { continue }
+                let texture: any MTLTexture
+                if let staged = restored[index], plan.evicted[index] == shadow {
+                    texture = staged
+                } else {
+                    do { texture = try Self.makeTile(shadow, on: device) } catch { return .failure(error) }
+                }
+                plan.backdrop.tiles[index] = texture
+                plan.backdrop.shadows[index] = nil
+                plan.backdrop.residentBytes += MetalSurface.bytes(of: rect)
+                targets[index] = texture
             }
-            return targets
+            return .success(targets)
         }
+        let targets: [Int: any MTLTexture]
+        do { targets = try resolved.get() } catch RenderError.deviceLost(let reason) { throw compositeLost(reason) }
         let split = try opaqueRowSplit(plan.pieces, textures: textures, mode: mode, opacity: opacity)  // MB-6
         try encode(plan, pieces: split.kernel, blits: split.blits, textures: textures, targets: targets, opacity: opacity)
         do {  // a tile evicted while the GPU wrote it takes its shadow from the written texture
@@ -69,7 +86,6 @@ extension MetalBackend {
                 }
             }
         } catch { throw compositeLost("composite: \(error)") }
-        evictIfNeeded()
     }
 
     /// Runs the plan's kernel over `pieces`, blits `blits` (MetalBackend+OpaqueRows.swift) and waits; call with the lock free.
@@ -115,9 +131,15 @@ extension MetalBackend {
 
     /// `pixels` (one tile) as a new tile texture; an allocation failure marks the backend failed. Lock free.
     private func stageTile(_ pixels: PixelBuffer) throws -> any MTLTexture {
-        let tile: (any MTLTexture)?
-        do { tile = try MetalSurface(device: device, buffer: pixels, clock: 0).tiles.first ?? nil } catch RenderError.deviceLost(let reason) { throw compositeLost(reason) }
-        guard let tile else { throw RenderError.raster("composite: empty staged tile") }
+        do { return try Self.makeTile(pixels, on: device) } catch RenderError.deviceLost(let reason) { throw compositeLost(reason) }
+    }
+
+    /// `pixels` (one tile) as a new tile texture, a CPU upload with no GPU wait; safe under the lock. Throws
+    /// `deviceLost` on an allocation failure without failing the backend: the caller does that with the lock free.
+    private static func makeTile(_ pixels: PixelBuffer, on device: any MTLDevice) throws -> any MTLTexture {
+        guard let tile = try MetalSurface(device: device, buffer: pixels, clock: 0).tiles.first ?? nil else {
+            throw RenderError.raster("composite: empty staged tile")
+        }
         return tile
     }
 

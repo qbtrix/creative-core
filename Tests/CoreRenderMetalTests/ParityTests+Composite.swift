@@ -1,6 +1,8 @@
 // ParityTests+Composite.swift: MB-4 enables `ParityTests/compositeNormal` (metal-backend) and owns this file.
+// The `.composite` sample set, rendered from its original Float32 sources, matches the checked-in goldens.
 // `.normal` at opacities 0, 0.37, 1, sources off every edge and corner, wholly outside, alpha 1e-45 and onto
-// itself, resident or evicted, match the CPU on the GPU's pixels within `.standard`. Skipped without a device.
+// itself, resident or evicted, or evicted between planning and encode, match the CPU on the GPU's pixels within
+// `.standard`. Skipped without a device.
 #if canImport(Metal)
 import CoreRaster
 import CoreRender
@@ -14,6 +16,7 @@ extension ParityTests {
             let metal = try MetalBackend.onDefaultDevice()
             #expect(metal.supports.contains(.composite) == (metal.device.readWriteTextureSupport == .tier2), "needs read-write tier 2")
             guard metal.supports.contains(.composite) else { return }
+            try Self.expectGoldens(for: .composite, on: metal)
             for sample in try ParityHarness.sampleSet(for: .composite) {
                 guard let backdrop = sample.backdrop, case let .composite(x, y, .normal, opacity) = sample.call else { continue }
                 try Self.expectComposite(sample.source, onto: backdrop, x: x, y: y, opacity: opacity, on: metal, label: sample.name)
@@ -29,6 +32,7 @@ extension ParityTests {
                 try Self.expectComposite(subnormal, onto: backdrop, x: 20, y: 35, opacity: opacity, on: metal, label: "alpha 1e-45")
                 try Self.expectComposite(backdrop, onto: backdrop, x: 7, y: 5, opacity: opacity, on: metal, label: "onto itself", itself: true)
             }
+            try Self.expectEvictedMidway(source, onto: backdrop, on: metal)
             metal.budgetBytes = 0
             try [(-130, -100), (170, 170)].forEach { try Self.expectComposite(source, onto: backdrop, x: $0.0, y: $0.1, opacity: 0.37, on: metal, label: "evicted") }
             try Self.expectRejections(on: metal)
@@ -57,6 +61,20 @@ extension ParityTests {
         if untouched { #expect(got == heldBackdrop, "\(name): the backdrop is unchanged") }
         let result = try ParityHarness.compare(got, want, tolerance: .standard)
         #expect(result.passed, "\(name): \(result)")
+    }
+
+    /// Every tile evicted after planning (budget 0 from the hook) is restored from its current shadow: the result
+    /// still matches the CPU on the GPU's pixels and the budget holds afterwards.
+    private static func expectEvictedMidway(_ source: PixelBuffer, onto backdrop: PixelBuffer, on metal: MetalBackend) throws {
+        let cpu = CPUBackend()
+        let (target, s) = (try metal.surface(backdrop), try metal.surface(source))
+        defer { metal.release(target); metal.release(s); metal.budgetBytes = Int.max }
+        var expected = try cpu.surface(try metal.read(target))
+        try cpu.composite(try cpu.surface(try metal.read(s)), onto: &expected, x: 20, y: 100, mode: .normal, opacity: 0.37)
+        try metal.compositeInPlace(s, onto: target, x: 20, y: 100, mode: .normal, opacity: 0.37) { metal.budgetBytes = 0 }
+        #expect(metal.residentBytes <= metal.budgetBytes, "restored tiles leave again: \(metal.residentBytes)")
+        let result = try ParityHarness.compare(try metal.read(target), try cpu.read(expected), tolerance: .standard)
+        #expect(result.passed, "evicted between planning and encode: \(result)")
     }
 
     /// A bad opacity throws the CPU's error with the backdrop unchanged; an unlanded family throws `unsupported`.
