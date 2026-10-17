@@ -76,3 +76,4 @@ utc	stage	event	ref	note
 2026-10-17T15:19Z	4	heartbeat	-	final RB-c fixer rbc-anatomy-4 (feature-done) running
 2026-10-17T15:19Z	4	dev-ci	run 39043767442 on 4c1cd8e	Linux green (holds #394 e6c149d); macOS red only in Metal ParityTests.display() (metal-backend MB-b, #395, other lead; dev-red filed; not ours); Metal compositeNormal() vs CPU goldens passed on macOS. Slice-Done waits for a run holding rbc-anatomy-4
 2026-10-17T15:23Z	5	feature-done-merged	#399 fc7d8f7	final RB-c fix merged with feature-done; gate 1018/1018 PASS, anchors 324, Parity 11/11; dev CI dispatched on fc7d8f7
+2026-10-17T15:35Z	5	done	run 39044767871 on fc7d8f7	dev CI all green, main promoted; Belt-Slice-Done RB-b and RB-c (issuecomment-6235773662); Mac-Finish-Wanted RB-c (issuecomment-6235774437); Belt-Contact-Sheet (issuecomment-6235780037); attribution footers stripped from lead comments on #347

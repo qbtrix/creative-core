@@ -2,16 +2,18 @@
 
 Issue: #347 · Packet: docs/blueprints/core/features/render-backend.md
 Run: act-1a149b544ea-emiq (line lead: render-backend, motion-tracks) · Started: 2026-10-17 (prior runs act-1a14644b047-dxwc)
-Stage: 3 waves (v3 loop, slices RB-a, RB-b, RB-c)
+Stage: 5 Done (feature merged-done; contact sheet posted)
 Base: 3be8939 (origin/dev)
-Next: wait for dev CI on fc7d8f7 (feature-done run); Slice-Done RB-b and RB-c when its Linux job is green; Mac-Finish-Wanted RB-c; Belt-Contact-Sheet on #347.
+Next: none. Feature done. Mac finisher owns RB-a release checks, RB-c goldens on macOS and the release budget.
+
+Contact sheet: https://github.com/qbtrix/creative-core/issues/347#issuecomment-6235780037
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
 |---|---|---|---|---|---|
 | RB-a | RB-1, RB-2a, RB-2b | nothing | merged-done (loop ended at 4 rounds; last finding rides RB-5) | 39037816632 (4b2aa75, Linux and macOS green) | wanted (issuecomment-6234729253) |
-| RB-b | RB-4, RB-5 | RB-a | merged; loop ended at 4 rounds (round 4 minor fixed by #386, aa5e4d0); Slice-Done after a dev CI run holding aa5e4d0 has green Linux and dev CI holding it has green Linux | – | – |
-| RB-c | RB-6, RB-7 | RB-b (RB-7 only) | merged (RB-7 #382); in-place composite #386 merged aa5e4d0; round 1 running (release budget median +1.57% over 7 noisy Linux runs, spread -4.7% to +6.1%: Mac confirms) | – | – |
+| RB-b | RB-4, RB-5 | RB-a | merged-done (loop ended at 4 rounds; round 4 minor fixed by #386, aa5e4d0) | 39044767871 (fc7d8f7, all jobs green; issuecomment-6235773662) | – |
+| RB-c | RB-6, RB-7 | RB-b (RB-7 only) | merged-done (loop ended at 4 rounds; round 4 fixed by #399 fc7d8f7, feature-done) | 39044767871 (fc7d8f7, all jobs green; issuecomment-6235773662) | wanted (issuecomment-6235774437): goldens and release budget on macOS |
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
