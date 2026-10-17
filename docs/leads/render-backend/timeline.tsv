@@ -65,3 +65,4 @@ utc	stage	event	ref	note
 2026-10-17T14:55Z	4	anatomy-round	dev aa5e4d0	RB-c round 1: 1 major, 5 minor; gate 999/999 PASS, mutations 39/39; fixer rbc-anatomy-1 started
 2026-10-17T14:42Z	4	heartbeat	dev aa5e4d0	RB-c round 1 fixer running; waiting on its PR and a dev CI run holding aa5e4d0
 2026-10-17T15:00Z	4	anatomy-fix	dev 17b2ea5	#388 merged (RB-c round 1 fixes); round 2 started: critic and gate 10
+2026-10-17T15:08Z	4	anatomy-round	dev 17b2ea5	RB-c round 2: 2 major, 3 minor; gate 1002/1002 PASS, mutations 43/43; fixer rbc-anatomy-2 started
