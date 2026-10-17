@@ -53,9 +53,12 @@ public enum RenderError: Error, Equatable, Sendable {
     /// The GPU stopped answering, with the reason the platform gave: no
     /// command queue, a tile texture it would not allocate (out of memory), a
     /// failed command buffer, or a probe that returned wrong numbers. The
-    /// backend reports `isHealthy == false` from then on. Call the backend's
-    /// `recover` first; only if that throws too is the device gone, and the
-    /// app opens a new backend on a new device.
+    /// backend reports `isHealthy == false` from then on. The Metal backend
+    /// offers `MetalBackend.recover(probeSource:)` on the concrete type (not on
+    /// `RenderBackend` or `RenderDispatcher`): if it throws too, the device is
+    /// gone and the app opens a new backend on a new device. Out of memory is
+    /// the exception: `recover` passes but the upload fails again until the
+    /// app releases surfaces or lowers `MetalBackend.budgetBytes`.
     case deviceLost(String)
     /// The surface belongs to another backend (its `backend` is not this
     /// backend's `name`), this backend already released it, or the handle's

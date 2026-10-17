@@ -2,9 +2,11 @@
 // a key compiles once and its memo is reused, another variant compiles again, a bad variant is
 // rejected, a missing kernel is caller input (not a device loss), a file at `cacheURL` is never
 // touched, a probe or command-buffer failure fails the backend, `fail` empties `supports`, `recover`
-// restores only once its probe passes, a caller's `display_probe` never replaces the probe, and
-// the tile storage mode follows unified memory. Device-gated; compiled out on Linux.
+// restores only once its probe passes, a caller's `display_probe` never replaces the probe, a
+// caller's `display_encode` never replaces the display kernel, `display` refuses while unhealthy,
+// and the tile storage mode follows unified memory. Device-gated; compiled out on Linux.
 #if canImport(Metal)
+import CoreRaster
 import CoreRender
 import CoreRenderMetal
 import Foundation
@@ -116,6 +118,37 @@ import Testing
         try backend.probe()
         #expect(backend.isHealthy, "the probe ran its own kernel, not the caller's")
         #expect(backend.pipelineCompileCount == 2 && backend.pipelineLoadCount == 0, "two separate memos")
+    }
+
+    /// A `display_encode` that writes 255 to every byte, under the display kernel's own key.
+    private static let whiteEncode = """
+    #include <metal_stdlib>
+    using namespace metal;
+    kernel void display_encode(device uchar4 *out [[buffer(0)]], uint id [[thread_position_in_grid]]) {
+        out[id] = uchar4(255);
+    }
+    """
+
+    @Test(.enabled(if: MetalBackend.defaultDevice != nil))
+    func aCallersDisplayEncodeNeverReplacesTheDisplayKernel() throws {
+        let backend = try MetalBackend.onDefaultDevice()
+        try backend.preparePipeline(op: .display, variant: "encode", source: Self.whiteEncode)
+        let image = try PixelBuffer.seeded(width: 9, height: 7, seed: 0xE4C0)
+        let cpu = CPUBackend()
+        let expected = try cpu.display(cpu.surface(image), colorSpace: .sRGB)
+        let got = try backend.display(backend.surface(image), colorSpace: .sRGB)
+        let worst = zip(got, expected).map { abs(Int($0) - Int($1)) }.max() ?? 0
+        #expect(got.count == expected.count && worst <= Int(ParityTolerance.standard.bytes), "worst \(worst)")
+        #expect(backend.pipelineCompileCount == 2, "the caller's kernel and the display kernel, apart")
+    }
+
+    @Test(.enabled(if: MetalBackend.defaultDevice != nil))
+    func displayRefusesWhileUnhealthy() throws {
+        let backend = try MetalBackend.onDefaultDevice()
+        let surface = try backend.surface(PixelBuffer.seeded(width: 4, height: 3, seed: 7))
+        backend.fail("mock")
+        #expect(throws: RenderError.unsupported(.display)) { try backend.display(surface, colorSpace: .sRGB) }
+        #expect(backend.pipelineCompileCount == 0, "no GPU work for an unhealthy backend")
     }
 
     @Test(.enabled(if: MetalBackend.defaultDevice != nil))

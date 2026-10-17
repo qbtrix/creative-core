@@ -53,7 +53,7 @@ final class MetalSurface {
             descriptor.storageMode = MetalBackend.tileStorageMode(unifiedMemory: device.hasUnifiedMemory)
             descriptor.usage = [.shaderRead, .shaderWrite]
             guard let texture = device.makeTexture(descriptor: descriptor) else {
-                throw RenderError.deviceLost("texture allocation failed for \(rect.width)x\(rect.height)")
+                throw RenderError.deviceLost("texture allocation failed for \(rect.width)x\(rect.height) (device out of memory; release surfaces or lower budgetBytes)")
             }
             let region = MTLRegionMake2D(0, 0, rect.width, rect.height)
             let bytesPerRow = rect.width * Self.bytesPerPixel
