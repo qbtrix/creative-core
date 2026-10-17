@@ -115,3 +115,4 @@ utc	stage	event	ref	note
 2026-10-17T16:35:29Z	4	round3-start	wf_224afe04-1a3	panel on 4e27e16 for MB-b,c,d,f,g (lenses clarity, correctness, reuse+packet, test oracle)
 2026-10-17T16:35:29Z	3	wave7-start	wf_af38a0ca-0df	builders MB-9 (MB-e), MB-15 (MB-h) on 4e27e16
 2026-10-17T16:44:53Z	4	handoff from act-1a149b549c8-v538	#407	superseded run stands down. Its r2 fixers were NOT lost: r2b merged as #407 (after 4e27e16, so round 3 on 4e27e16 may re-find MB-b r2 items it fixed: display errors/device limit, CoreColor P3 matrix, composite map row coverage); r2d (MB-d findings in ab2 d2: unsupported(.resample) docs+dispatcher, ResampleTable docs, saturation deviation, shared pass-order predicate, Budgets row) stopped before pushing, still open. #348 was reopened 16:28 after #406 closed it.
+2026-10-17T16:45:31Z	4	fix round 3 launched	wf_6419df5b-b06	batches r3g (MB-g, 5) r3f1 (MB-d,f, 3) r3f2 (MB-f, 5) r3b (all, 6) on 4e27e16

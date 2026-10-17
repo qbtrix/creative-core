@@ -1,8 +1,8 @@
 # metal-backend lead record
 
 Issue: #348 · Packet: docs/blueprints/core/features/metal-backend.md
-Run: act-1a14ab2b672-8guo · Resumed: 2026-10-17T17:00Z (fourth run; earlier act-1a149b549c8-v538, act-1a148001532-1w03, act-1a14644b538-njln)
-Stage: 4 round 3 panel running (wf_224afe04-1a3) on 4e27e16 for MB-b, MB-c, MB-d, MB-f, MB-g; wave 7 building MB-9 and MB-15 (wf_af38a0ca-0df); gate PASS 1037 tests
+Run: act-1a14ab2b672-8guo · Resumed: 2026-10-17T16:33Z (fourth run; earlier act-1a149b549c8-v538, act-1a148001532-1w03, act-1a14644b538-njln)
+Stage: 4 fix round r3 running (wf_6419df5b-b06: r3g, r3f1, r3f2, r3b on 4e27e16); wave 7 building MB-9 and MB-15 (wf_af38a0ca-0df)
 Base: 4e27e16 (origin/dev)
 Next (for a relaunched lead): gate+mutate on dev (--changed-since 17b2ea5) → critic-panel.js (firstBase 17b2ea5, lenses clarity, correctness, reuse+packet, test oracle) → one fix-batch per slice, disjoint files; build MB-9 then MB-10 (MB-e) and MB-15 (MB-h) alongside; Belt-Slice-Done MB-c/MB-f/MB-g once a dev CI Linux job holding #401..#406 is green; then MB-17 (feature-done) and the contact sheet. PR bodies say Refs #348, never Closes.
 
@@ -138,6 +138,7 @@ paths `Sources/CoreRender/Metal/`).
 | MB-a 1 | 603ce57 | two runs FAIL only on smallDabOn12MegapixelsIsFast (CoreRaster budget, under load; the Linux CI job is green on the same SHA); idle rerun pending | 18/18 (--changed-since 6967968) | 39010063417: Linux, Mutation green; macOS red: MetalPipelinesTests coldCache (archive file not written) and corruptArchive (cannot reopen); dev-red #357 | clarity, correctness, reuse+packet, test oracle | 2 blockers (deviceLost path never fails the backend; cacheURL directory deleted), majors: .shared textures on non-Apple GPUs, >=65520 upload then read throws, composite stub family, tile math duplicated, pipeline compile sync, vacuous fail/recover test, PipelineKey bounds, parity list unbound, probe failure path untested, validated unused, docs untrue, waves.md answer missing; CI finding: binary archive not written | batches A (CoreRender), B2 (parity scaffold), B1 (Metal backend, after MB-16) | no |
 | MB-a 2 | 9f30aab | CI: PASS | 22/22 (--changed-since 24fd483) | 39031409068 on 9b72477 predates #368 (macOS red, old archive tests); none yet on 9f30aab | clarity, correctness, reuse+packet, test oracle | 15 confirmed, 0 refuted. Majors: deviceLost thrown for a missing kernel and texture allocation failure; recover() marks healthy without probing; 4 copies of a RasterError mapping helper; MB-16 deviations missing from the packet; supports health gate untested | no | fix round 2: #369 (3be8939), #376 (3d20408); Mac-only entries and untested probe-lock/alloc-fail listed in #376 body |
 | MB-a 3 | 658f0c2 | CI: PASS | 75/75 (--changed-since 24fd483) | 39037816632 on 4b2aa75 green incl. macOS (holds #368, #369; not #376); dev-red #357 closed | clarity, correctness, reuse+packet, test oracle | 19 confirmed (3 major), not clean; round3-findings.md | – | fix rounds exhausted (2/2): majors (lookup size check, deviceLost doc) carried into MB-b; #17 already fixed by #383; rest deferred to MB-17 |
+| MB-b,c,d,f,g 3 | 4e27e16 | CI: PASS 1037 tests | 37/37 (--changed-since 17b2ea5) | – | clarity, correctness, reuse+packet, test oracle | 22 confirmed, 1 refuted, not clean (1 blocker: AdjustTable channel extrapolation outside 0...1) | fix batches r3g, r3f1, r3f2, r3b (wf_6419df5b-b06) | MB-b, MB-d: last fix round (2/2); MB-c, MB-f, MB-g: round 1. Deferred to MB-17: stale BlendSeparable docs, tileStorageMode doc, triplicated whole-image pipeline, per-op lost-helper copies, dead code after MB-6, MetalBackend.swift doc for unsupported-over-limit |
 
 ## Decisions
 
@@ -210,6 +211,7 @@ paths `Sources/CoreRender/Metal/`).
   RB-2 SHA. If RB-2 spells a name differently, the fix is a rename in the rebase, not a redesign.
 
 ## Open
+- 16:44Z handoff: the superseded run's r2b merged as #407 after 4e27e16, so round 3 may repeat MB-b items #407 fixed (display errors and device limit, P3 matrix, composite map rows); r3 fixers branch from the current dev and say so in notes when a finding is already fixed. r2d (MB-d) never pushed; r3f1's unsupported(op) decision covers its resample doc and dispatcher items, and the rest go to MB-17.
 - CI run 39010063417 on 603ce57: the macos-15 runner HAS a Metal device (device-gated suites ran). `waves.md` line to write in the round 1 fix batch. macOS red: the binary archive is not written after a cold compile; `lastCacheError` is swallowed and unexposed, so the cause is unknown until the next macOS run shows it. dev-red #357 names our range; it is this lead's finding (round 1).
 - MB-1b needs from RB-2: a `public init(id:width:height:backend:)` on `RenderSurface` (asked on #347, 05:48Z). `CoreRenderMetal` imports CoreRaster and CoreColor through CoreRender transitively (Package.swift lists only CoreRender); SwiftPM resolves same-package modules, but the Mac finisher checks it. Metal doc caveats for the finisher: `.shared` textures are unavailable on non-Apple-family GPUs; `MTLCreateSystemDefaultDevice` needs Core Graphics linked in a command-line process (tests skip, not fail).
 
