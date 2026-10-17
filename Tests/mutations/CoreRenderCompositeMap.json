@@ -1,0 +1,9 @@
+[
+  {
+    "note": "composite map piece clipping runs one column past the source tile's right edge",
+    "file": "Sources/CoreRender/Metal/CompositeMap.swift",
+    "anchor": "min(cx1, x + from.x + from.width)",
+    "replacement": "min(cx1, x + from.x + from.width + 1)",
+    "filter": "CompositeMapTests"
+  }
+]
