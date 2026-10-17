@@ -5,11 +5,12 @@
 // restores only once its probe passes, a caller's `display_probe` never replaces the probe, a
 // caller's `display_encode` never replaces the display kernel, `display`, `composite`, crop, rotate,
 // resample, adjust, blur, unsharp and clone refuse while unhealthy (`unsupported` of their family),
-// and the tile storage mode follows unified memory. Device-gated; compiled out on Linux.
+// display even for a non-display space, built-in kernels compile without fast math, and the tile
+// storage mode follows unified memory. Device-gated; compiled out on Linux.
 #if canImport(Metal)
 import CoreRaster
 import CoreRender
-import CoreRenderMetal
+@testable import CoreRenderMetal
 import Foundation
 import Metal
 import Testing
@@ -149,7 +150,18 @@ import Testing
         let surface = try backend.surface(PixelBuffer.seeded(width: 4, height: 3, seed: 7))
         backend.fail("mock")
         #expect(throws: RenderError.unsupported(.display)) { try backend.display(surface, colorSpace: .sRGB) }
+        // The CPU checks support before the space, so a non-display space is `unsupported` here too, not `raster`.
+        #expect(throws: RenderError.unsupported(.display)) { try backend.display(surface, colorSpace: .linearSRGB) }
         #expect(backend.pipelineCompileCount == 0, "no GPU work for an unhealthy backend")
+    }
+
+    @Test func builtInKernelsCompileWithoutFastMath() {
+        let options = MetalPipelines.compileOptions()
+        if #available(macOS 15.0, iOS 18.0, *) {
+            #expect(options.mathMode == .safe && options.mathFloatingPointFunctions == .precise)
+        } else {
+            #expect(!options.fastMathEnabled)
+        }
     }
 
     @Test(.enabled(if: MetalBackend.defaultDevice != nil))

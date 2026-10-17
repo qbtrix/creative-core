@@ -5,9 +5,10 @@
 // (`tiles[i]` set, `shadows[i]` nil) or shadowed (`tiles[i]` nil, `shadows[i]` sized to `tiling.rect(i)`),
 // never neither; `residentBytes` is width x height x `bytesPerPixel` over the resident tiles; textures use
 // `MetalBackend.tileStorageMode` (shared on unified memory, managed on a discrete GPU); upload clamps every
-// component to the finite half range, so a tile read back is always finite. No GPU work writes the textures
-// yet, so `replace` and `getBytes` need no synchronisation and a shadow taken on eviction is current; a slice
-// that encodes GPU work must wait for its command buffer (and synchronize a managed tile) before `download`.
+// component to the finite half range. GPU kernels write tiles: composite in place on the backdrop's, the
+// other ops into new surfaces' tiles. Each op waits for its command buffer, and synchronizes a managed tile,
+// before any `download`; a tile evicted while composite writes it in place can be shadowed mid-write, so
+// composite downloads it again once the GPU is done (MetalBackend+Composite.swift).
 #if canImport(Metal)
 import CoreRaster
 import CoreRender
@@ -77,7 +78,7 @@ final class MetalSurface {
     /// Every tile into a new `PixelBuffer` of the surface's size: a resident tile is downloaded, an
     /// evicted one copied from its shadow. Throws `RenderError.raster` when the buffer rejects the
     /// size or a decoded component is not finite: upload clamps, so only a value a GPU kernel wrote
-    /// (none yet) can be, and buffers hold finite values only.
+    /// can be, and buffers hold finite values only.
     func read() throws -> PixelBuffer {
         var buffer = try RenderError.mapping { try PixelBuffer(width: tiling.width, height: tiling.height) }
         // `rect` throws for an index outside the tiling and both arrays have `tileCount` entries,
