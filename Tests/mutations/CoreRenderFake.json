@@ -1,0 +1,20 @@
+[
+  {"note": "fake backend skips the supports check, so it performs ops it does not list", "filter": "RenderBackendFakeTests", "file": "Sources/CoreRender/FakeBackend.swift",
+   "anchor": "guard supports.contains(op) else { throw RenderError.unsupported(op) }",
+   "replacement": "guard supports.contains(op) || true else { throw RenderError.unsupported(op) }"},
+  {"note": "blend family maps luminosity to separable instead of non-separable", "filter": "RenderBackendFakeTests", "file": "Sources/CoreRender/RenderOp.swift",
+   "anchor": "case .hue, .saturation, .color, .luminosity: self = .blendNonSeparable",
+   "replacement": "case .hue, .saturation, .color: self = .blendNonSeparable"},
+  {"note": "surface store remove keeps the buffer, so a released surface still reads", "filter": "RenderBackendFakeTests", "file": "Sources/CoreRender/SurfaceStore.swift",
+   "anchor": "buffers.withLock { _ = $0.removeValue(forKey: surface.id) }",
+   "replacement": "buffers.withLock { _ = $0[surface.id] }"},
+  {"note": "surface store resolve drops the backend name check, so a foreign surface with a known id resolves", "filter": "RenderBackendFakeTests", "file": "Sources/CoreRender/SurfaceStore.swift",
+   "anchor": "guard surface.backend == backend, let buffer = stored[surface.id],",
+   "replacement": "guard let buffer = stored[surface.id],"},
+  {"note": "surface store remove drops the backend name check, so releasing a foreign surface frees another backend's id", "filter": "RenderBackendFakeTests", "file": "Sources/CoreRender/SurfaceStore.swift",
+   "anchor": "guard surface.backend == backend else { return }",
+   "replacement": ""},
+  {"note": "fake composite skips the backdrop check, so a foreign backdrop is accepted", "filter": "RenderBackendFakeTests", "file": "Sources/CoreRender/FakeBackend.swift",
+   "anchor": "_ = try store.buffer(for: b)",
+   "replacement": "_ = b"}
+]
