@@ -43,3 +43,4 @@ utc	stage	event	ref	note
 2026-10-17T13:45Z	4	pr-merged	dev e2d3b95	#372 Anatomy round 2 fixes
 2026-10-17T13:45Z	4	anatomy-round	dev e2d3b95	round 3 started: critic and gate
 2026-10-17T13:36Z	4	anatomy-round	dev e2d3b95	round 3 not clean; 1 minor to fixer (round 4 is the last)
+2026-10-17T13:44Z	4	pr-opened	dev	#375 round 3 fix (scale bake duration guard first, +1 FlareLottieScale entry)
