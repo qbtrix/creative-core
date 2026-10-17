@@ -33,6 +33,34 @@ private func fill(_ w: Int, _ h: Int, _ r: Float, _ g: Float, _ b: Float, _ a: F
         #expect([ParityTolerance.standard, .nonSeparable] == [.init(bytes: 2, linear: 1e-3), .init(bytes: 4, linear: 4e-3)])
     }
 
+    @Test func goldenCompareChecksBytesInTheGoldensSpace() throws {
+        let base = [[UInt8]](repeating: [5, 150, 200, 255], count: 6).flatMap { $0 }
+        let golden = try ParityGolden(PixelBuffer(rgba8: base, width: 3, height: 2), tolerance: .standard)
+        let off = { (delta: UInt8) throws -> ParityResult in
+            var other = base
+            other[20] += delta
+            return try ParityHarness.compare(golden: golden, PixelBuffer(rgba8: other, width: 3, height: 2))
+        }
+        #expect(try off(0).worstByteDelta == 0 && off(2).passed)
+        let three = try off(3)
+        #expect(!three.passed && three.worstByteDelta == 3 && three.worstByteX == 2 && three.worstByteY == 1, "\(three)")
+        #expect(throws: RenderError.self) { try ParityHarness.compare(golden: golden, fill(2, 3, 0, 0, 0, 1)) }
+    }
+
+    @Test func cpuResultPassesItsOwnGoldenWhereTheDecodedLinearCompareFails() throws {
+        let cpu = CPUBackend()
+        for sample in try ParityHarness.sampleSet(for: .blur) {
+            let result = try ParityHarness.render(sample, on: cpu)
+            let golden = try ParityGolden(result, tolerance: .standard)
+            #expect(try ParityHarness.compare(golden: golden, result).passed, "\(sample.name)")
+        }
+        // Linear 0.998 is display byte 255, which decodes to 1: 2e-3 off, over `.standard.linear`.
+        let nearWhite = try fill(1, 1, 0.998, 0.998, 0.998, 1)
+        let golden = try ParityGolden(nearWhite, tolerance: .standard)
+        #expect(try ParityHarness.compare(golden: golden, nearWhite).passed)
+        #expect(try !ParityHarness.compare(golden.buffer(), nearWhite, tolerance: .standard).passed)
+    }
+
     @Test func linearBoundCatchesWhatBytesHide() throws {
         let a = try fill(2, 2, 0.5, 0.5, 0.5, 1)
         var b = a

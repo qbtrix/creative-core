@@ -4,8 +4,10 @@
 // must take at most 2% more than CoreRaster's in-place composite, median of 5
 // runs each. A copy of the backdrop anywhere on the way (the store, the
 // dispatcher) costs far more than 2%. Debug builds skip the suite, as the other
-// release budgets do. The two calls take turns, each on a fresh uniquely owned
-// backdrop made outside the clock, so drift in the machine hits both alike.
+// release budgets do. Each call runs once untimed to warm caches and code, then
+// the two take turns, the direct call first on even rounds and second on odd
+// ones, each on a fresh uniquely owned backdrop made outside the clock, so
+// drift in the machine and the cost of going first hit both alike.
 import CoreRaster
 import CoreRender
 import Testing
@@ -42,17 +44,32 @@ struct RenderBudgetTests {
         defer { dispatcher.release(source) }
         var direct: [Duration] = [], routed: [Duration] = []
         var directResult = lower, routedResult = lower
-        for _ in 0..<5 {
-            // A full-size crop is a new buffer with one owner, so nothing copies on the first write.
-            var backdrop = try lower.cropped(x: 0, y: 0, width: lower.width, height: lower.height)
-            direct.append(try clock.measure { try backdrop.composite(upper, x: 0, y: 0, mode: .normal, opacity: 0.8) })
+        // A full-size crop is a new buffer with one owner, so nothing copies on the first write.
+        let fresh = { try lower.cropped(x: 0, y: 0, width: lower.width, height: lower.height) }
+        let runDirect = {
+            var backdrop = try fresh()
+            let time = try clock.measure { try backdrop.composite(upper, x: 0, y: 0, mode: .normal, opacity: 0.8) }
             directResult = backdrop
-            var target = try dispatcher.surface(lower.cropped(x: 0, y: 0, width: lower.width, height: lower.height))
-            routed.append(try clock.measure {
+            return time
+        }
+        let runRouted = {
+            var target = try dispatcher.surface(fresh())
+            defer { dispatcher.release(target) }
+            let time = try clock.measure {
                 try dispatcher.composite(source, onto: &target, x: 0, y: 0, mode: .normal, opacity: 0.8)
-            })
+            }
             routedResult = try dispatcher.read(target)
-            dispatcher.release(target)
+            return time
+        }
+        _ = try (runDirect(), runRouted())
+        for round in 0..<5 {
+            if round % 2 == 0 {
+                direct.append(try runDirect())
+                routed.append(try runRouted())
+            } else {
+                routed.append(try runRouted())
+                direct.append(try runDirect())
+            }
         }
         let (d, r) = (direct.sorted()[2], routed.sorted()[2])
         let overhead = (r / d - 1) * 100

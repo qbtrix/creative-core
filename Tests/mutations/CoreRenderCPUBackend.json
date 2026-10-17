@@ -12,6 +12,6 @@
    "anchor": "try RenderError.mapping { try backdrop.composite(source, x: x, y: y, mode: mode, opacity: opacity) }",
    "replacement": "try backdrop.composite(source, x: x, y: y, mode: mode, opacity: opacity)"},
   {"note": "store update drops the buffer when the body throws", "filter": "CPUBackendTests", "file": "Sources/CoreRender/SurfaceStore.swift",
-   "anchor": "            defer { stored[surface.id] = buffer }",
-   "replacement": "            // put-back removed"}
+   "anchor": "            defer { stored[surface.id] = buffer }\n            try body(&buffer)",
+   "replacement": "            try body(&buffer)\n            stored[surface.id] = buffer"}
 ]
