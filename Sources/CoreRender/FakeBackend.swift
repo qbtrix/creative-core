@@ -1,5 +1,5 @@
-// FakeBackend.swift: a RenderBackend test double for contract tests and, as it
-// lands, the routing between backends. It supports the op families it is
+// FakeBackend.swift: a RenderBackend test double for contract tests and
+// RenderDispatcher, the routing between backends. It supports the op families it is
 // given, records every call in order, and holds real PixelBuffers in a
 // SurfaceStore so `read(surface(b))` is `b`. It is not a pixel reference: crop,
 // rotate and resample give
@@ -9,7 +9,7 @@
 // Invariants: every method records its call first; an op outside `supports`
 // then throws `unsupported` with the family that gates it; a surface this fake
 // did not make, or released, throws `surfaceMismatch`. Copies share the log
-// and the store, so a copy handed to other code, such as routing as it lands,
+// and the store, so a copy handed to other code, such as RenderDispatcher,
 // reports to the test's copy.
 
 import CoreColor
@@ -34,7 +34,7 @@ public struct FakeBackend: RenderBackend {
     /// The families the fake performs; any other op throws `unsupported`.
     public var supports: Set<RenderOp>
     /// What `isHealthy` reports. An unhealthy fake still performs every op it
-    /// supports when called directly; only routing, as it lands, reads its health.
+    /// supports when called directly; only RenderDispatcher reads its health.
     public var healthy: Bool
     public var isHealthy: Bool { healthy }
 

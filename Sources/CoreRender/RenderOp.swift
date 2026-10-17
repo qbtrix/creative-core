@@ -1,7 +1,7 @@
 // RenderOp.swift: the op families a RenderBackend may support, and the one
 // error type of CoreRender, which CoreRenderMetal shares. A backend lists the
-// families it implements in `supports`; routing between backends, as it lands,
-// sends each op only to a backend that lists it, so a backend throws
+// families it implements in `supports`; RenderDispatcher, the routing between
+// backends, sends each op only to a backend that lists it, so a backend throws
 // `unsupported` only when it is called directly. Contract types, plus the two
 // mappings every backend shares: a blend mode to the family that gates it, and
 // a CoreRaster error to `RenderError.raster` (`init(_:)` and `mapping`,
@@ -9,7 +9,7 @@
 import CoreRaster
 
 /// One family of render operations. A backend declares the families it
-/// implements; routing, as it lands, sends an op only to a backend that lists
+/// implements; RenderDispatcher sends an op only to a backend that lists
 /// its family. The raw value is the case name, for logs and goldens.
 public enum RenderOp: String, CaseIterable, Codable, Sendable {
     /// `display`: a surface to sRGB or Display P3 bytes for the screen.
@@ -47,8 +47,8 @@ extension RenderOp {
 
 /// What a backend throws. Each case says when; a backend never crashes.
 public enum RenderError: Error, Equatable, Sendable {
-    /// The op's family is not in the backend's `supports`. Routing between
-    /// backends, as it lands, sends an op only to a backend that lists it.
+    /// The op's family is not in the backend's `supports`. RenderDispatcher
+    /// sends an op only to a backend that lists it.
     case unsupported(RenderOp)
     /// The GPU or its command queue is gone, with the reason the platform
     /// gave. The backend reports `isHealthy == false` from then on.

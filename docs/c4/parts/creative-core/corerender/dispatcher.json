@@ -1,0 +1,10 @@
+{
+  "id": "dispatcher",
+  "name": "Render Dispatcher",
+  "description": "RenderDispatcher, the routing between backends: each op goes to the preferred backend when it supports the op's family and is healthy, else to the CPU backend, recording the last fallback (op family and reason, unsupported or unhealthy). A surface made by the other backend is read and re-uploaded to the routed backend first, so a fallback never changes a pixel.",
+  "technology": "Swift 6, Foundation",
+  "paths": [
+    "Sources/CoreRender/RenderDispatcher.swift"
+  ],
+  "order": 17
+}
