@@ -10,7 +10,7 @@ Next: RB-4 and RB-5 builders (wave 4, base 4682eee); RB-b Anatomy after RB-5 mer
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
 |---|---|---|---|---|---|
 | RB-a | RB-1, RB-2a, RB-2b | nothing | merged-done (loop ended at 4 rounds; last finding rides RB-5) | 39037816632 (4b2aa75, Linux and macOS green) | wanted (issuecomment-6234729253) |
-| RB-b | RB-3, RB-4, RB-5 | RB-a | building (RB-3 merged; RB-4, RB-5 building) | – | – |
+| RB-b | RB-3, RB-4, RB-5 | RB-a | building (RB-3 merged; RB-4 #379 open; RB-5 building) | – | – |
 | RB-c | RB-6, RB-7 | RB-b (RB-7 only) | open (RB-6 merged) | – | – |
 
 ## Tasks
@@ -21,7 +21,7 @@ Next: RB-4 and RB-5 builders (wave 4, base 4682eee); RB-b Anatomy after RB-5 mer
 | RB-2b | 1 | FakeBackend recording calls; shared locked SurfaceStore | Sources/CoreRender/{FakeBackend,SurfaceStore}.swift, Tests/CoreRenderTests/RenderBackendFakeTests.swift, Tests/mutations/CoreRenderFake.json, corerender C4 part | RenderBackendFakeTests | CoreRenderFake | #361 (9e910ff) | merged |
 | RB-6 | 1 | ParityTolerance, ParityHarness (compare, sampleSet, goldens) | Sources/CoreRender/Parity/*, Tests/CoreRenderTests/ParityHarnessTests.swift, Tests/mutations/CoreRenderParity.json, parity.json part | ParityHarnessTests | CoreRenderParity | #364 (bdbd260) | merged |
 | RB-3 | 2 | CPUBackend: surface, read, release, display, composite in place | Sources/CoreRender/CPU/CPUBackend.swift, Tests/CoreRenderTests/CPUBackendTests.swift, Tests/mutations/CoreRenderCPUBackend.json, cpu-backend.json part | CPUBackendTests | CoreRenderCPUBackend | #377 (4682eee) | merged |
-| RB-4 | 3 | CPUBackend transform, resample, blur, adjust, retouch | Sources/CoreRender/CPU/CPUBackend+Ops.swift, CPUBackendOpsTests, CoreRenderCPUBackendOps.json | CPUBackendOpsTests | CoreRenderCPUBackendOps | – | building |
+| RB-4 | 3 | CPUBackend transform, resample, blur, adjust, retouch | Sources/CoreRender/CPU/CPUBackend+Ops.swift, CPUBackendOpsTests, CoreRenderCPUBackendOps.json | CPUBackendOpsTests | CoreRenderCPUBackendOps | #379 (head 0303227; 323 lines, 6 files; 13 mutations caught) | open, fast-lane |
 | RB-5 | 3 | RenderDispatcher routing, health, lastFallback, cross-backend surfaces | Sources/CoreRender/RenderDispatcher.swift, RenderDispatcherTests, CoreRenderDispatcher.json, dispatcher.json part | RenderDispatcherTests | CoreRenderDispatcher | – | building |
 | RB-7 | 4 | CPU goldens, RenderBudgetTests, waves.md status; feature-done | Tests/CoreRenderTests/Golden/, CPUGoldenTests, RenderBudgetTests, waves.md | CPUGoldenTests, RenderBudgetTests | none | – | waits RB-4, RB-5, RB-6 |
 

@@ -36,3 +36,4 @@ utc	stage	event	ref	note
 2026-10-17T13:47Z	4	anatomy-round	dev 4682eee	RB-a round 4 (final) started: critic and gate
 2026-10-17T13:48Z	4	anatomy-round	dev 4682eee	RB-a round 4 (final) not clean; 1 comment to RB-5 PR; loop ends at 4 rounds
 2026-10-17T13:58Z	3	slice-done	RB-a	Belt-Slice-Done and Mac-Finish-Wanted on #347 (run 39037816632, 4b2aa75)
+2026-10-17T14:00Z	3	pr-opened	#379	RB-4 CPU ops (Slice RB-b), body verified
