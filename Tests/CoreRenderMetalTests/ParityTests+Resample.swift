@@ -1,10 +1,74 @@
-// ParityTests+Resample.swift: MB-8 enables `ParityTests/resample` (metal-backend) and owns this file. It will
-// compare both filters up and down at 5 sizes within `.standard`, and show that a constant image stays constant.
+// ParityTests+Resample.swift: MB-8 enables `ParityTests/resample`. Both filters, up and down at 5 sizes, match
+// the CPU on the GPU's Float16 pixels within `.standard`, resident or evicted; a constant stays exactly constant;
+// an invalid size throws the CPU backend's error. Skipped without a device; compiled out on Linux.
 #if canImport(Metal)
+import CoreRaster
+import CoreRender
 import CoreRenderMetal
 import Testing
 
 extension ParityTests {
-    @Test(.disabled("waits on MB-8")) func resample() { #expect(Bool(false), "waits on MB-8") }
+    @Test(.enabled(if: MetalBackend.defaultDevice != nil)) func resample() {
+        do {
+            let metal = try MetalBackend.onDefaultDevice()
+            for sample in try ParityHarness.sampleSet(for: .resample) {
+                try Self.expectResampleParity(sample.source, sizes: [(13, 5), (4, 3)], on: metal, label: sample.name)
+            }
+            let tiled = try PixelBuffer.seeded(width: 300, height: 270, seed: 0x5A3E)
+            let sizes = [(1, 1), (37, 23), (150, 300), (301, 269), (520, 290)]
+            try Self.expectResampleParity(tiled, sizes: sizes, on: metal, label: "300x270")
+            let constant = try PixelBuffer(width: 300, height: 270, fill: RGBA(r: 0.25, g: 0.5, b: 0.125, a: 0.75))
+            try Self.expectConstant(constant, sizes: sizes, on: metal)
+            metal.budgetBytes = 0
+            try Self.expectResampleParity(tiled, sizes: [(37, 23), (520, 290)], on: metal, label: "300x270 evicted")
+            try Self.expectConstant(constant, sizes: [(150, 300)], on: metal)
+            let (cpu, small) = (CPUBackend(), try PixelBuffer(width: 6, height: 4))
+            let (m, c) = (try metal.surface(small), try cpu.surface(small))
+            for (w, h) in [(0, 4), (4, 0), (-3, 2), (Int.max, 2), (PixelBuffer.maxPixels, 2)] {
+                do {
+                    _ = try cpu.resampled(c, width: w, height: h, filter: .bilinear)
+                    Issue.record("the CPU accepts \(w)x\(h)")
+                } catch let expected as RenderError {
+                    #expect(throws: expected) { try metal.resampled(m, width: w, height: h, filter: .bilinear) }
+                }
+            }
+            #expect(metal.isHealthy, "an invalid size does not fail the backend")
+        } catch {
+            Issue.record("resample parity threw \(error)")
+        }
+    }
+
+    /// Both filters of `buffer` at each size equal the CPU's on the GPU's pixels within `.standard`.
+    private static func expectResampleParity(_ buffer: PixelBuffer, sizes: [(Int, Int)], on metal: MetalBackend,
+                                             label: String) throws {
+        let cpu = CPUBackend()
+        let source = try metal.surface(buffer)
+        defer { metal.release(source) }
+        let held = try metal.read(source)
+        let reference = try cpu.surface(held)
+        for filter in [ResampleFilter.bilinear, .lanczos3] {
+            for (w, h) in sizes {
+                let got = try metal.resampled(source, width: w, height: h, filter: filter)
+                defer { metal.release(got) }
+                let result = try ParityHarness.compare(try metal.read(got), try cpu.read(cpu.resampled(reference, width: w, height: h, filter: filter)), tolerance: .standard)
+                #expect(result.passed, "\(label) \(filter) to \(w)x\(h): \(result)")
+            }
+        }
+        #expect(try metal.read(source) == held, "\(label): the source is unchanged")
+    }
+
+    /// A constant image (every value exact in Float16) resamples to exactly the same constant.
+    private static func expectConstant(_ buffer: PixelBuffer, sizes: [(Int, Int)], on metal: MetalBackend) throws {
+        let source = try metal.surface(buffer)
+        defer { metal.release(source) }
+        let fill = try buffer.pixel(x: 0, y: 0)
+        for filter in [ResampleFilter.bilinear, .lanczos3] {
+            for (w, h) in sizes {
+                let got = try metal.resampled(source, width: w, height: h, filter: filter)
+                defer { metal.release(got) }
+                #expect(try metal.read(got) == PixelBuffer(width: w, height: h, fill: fill), "constant \(filter) to \(w)x\(h)")
+            }
+        }
+    }
 }
 #endif
