@@ -69,6 +69,7 @@ public struct RenderDispatcher: Sendable {
     }
 
     /// Uploads `buffer` to the preferred backend while it is healthy, else to the CPU.
+    /// Placement ignores `supports`; ops the preferred backend lacks re-upload to the CPU.
     public func surface(_ buffer: PixelBuffer) throws -> RenderSurface {
         if let preferred, preferred.isHealthy { return try preferred.surface(buffer) }
         return try fallback.surface(buffer)
@@ -90,7 +91,8 @@ public struct RenderDispatcher: Sendable {
     }
 
     /// Composites on the routed backend. When `b` was made by the other
-    /// backend, `b` becomes the routed backend's copy and the old one is released.
+    /// backend, `b` becomes the routed backend's copy and the old one is released,
+    /// unless it is also `s`, which the caller still holds.
     public func composite(_ s: RenderSurface, onto b: inout RenderSurface, x: Int, y: Int,
                           mode: BlendMode, opacity: Float) throws {
         let original = b
@@ -104,7 +106,7 @@ public struct RenderDispatcher: Sendable {
             throw error
         }
         b = result
-        if moved { release(original) }
+        if moved, original != s { release(original) }
     }
 
     public func cropped(_ s: RenderSurface, x: Int, y: Int, width: Int, height: Int) throws -> RenderSurface {

@@ -18,8 +18,11 @@
    "anchor": "defer { if uploaded { target.release(input) } }",
    "replacement": "defer { _ = uploaded }"},
   {"note": "dispatcher composite keeps the owner's copy of a moved backdrop", "filter": "RenderDispatcherTests", "file": "Sources/CoreRender/RenderDispatcher.swift",
-   "anchor": "if moved { release(original) }",
+   "anchor": "if moved, original != s { release(original) }",
    "replacement": "_ = original"},
+  {"note": "dispatcher composite releases the moved backdrop even when it is also the source", "filter": "RenderDispatcherTests", "file": "Sources/CoreRender/RenderDispatcher.swift",
+   "anchor": "if moved, original != s { release(original) }",
+   "replacement": "if moved { release(original) }"},
   {"note": "dispatcher composite keeps the moved backdrop copy when the composite throws", "filter": "RenderDispatcherTests", "file": "Sources/CoreRender/RenderDispatcher.swift",
    "anchor": "if moved { target.release(backdrop) }",
    "replacement": "_ = moved"},
@@ -28,5 +31,8 @@
    "replacement": "        if !preferred.supports.contains(op) {\n            reason = Self.reasonUnsupported\n        } else if !preferred.isHealthy {\n            reason = Self.reasonUnhealthy\n        }"},
   {"note": "dispatcher puts new surfaces on an unhealthy preferred backend", "filter": "RenderDispatcherTests", "file": "Sources/CoreRender/RenderDispatcher.swift",
    "anchor": "if let preferred, preferred.isHealthy { return try preferred.surface(buffer) }",
-   "replacement": "if let preferred { return try preferred.surface(buffer) }"}
+   "replacement": "if let preferred { return try preferred.surface(buffer) }"},
+  {"note": "dispatcher routes resample under the transform family", "filter": "RenderDispatcherTests", "file": "Sources/CoreRender/RenderDispatcher.swift",
+   "anchor": "try run(.resample, s) { try $0.resampled(",
+   "replacement": "try run(.transform, s) { try $0.resampled("}
 ]
