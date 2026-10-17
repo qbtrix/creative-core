@@ -1,7 +1,6 @@
 // SurfaceStore.swift: the pixels behind one backend's surfaces, keyed by
 // RenderSurface id, and `Locked`, the one lock CoreRender's backends share, so the
-// non-mutating Sendable protocol can hold PixelBuffers (the fake, and the CPU
-// backend as it lands).
+// non-mutating Sendable protocol can hold PixelBuffers (the fake, the CPU backend).
 // Invariants: a surface resolves only when its `backend` is this store's name, its id
 // is live and its size matches; else `RenderError.surfaceMismatch`. `remove` ignores
 // what it cannot find. The lock is a serial DispatchQueue: Dispatch ships with every

@@ -1,0 +1,17 @@
+[
+  {"note": "cpu backend release keeps the buffer, so a released surface still reads", "filter": "CPUBackendTests", "file": "Sources/CoreRender/CPU/CPUBackend.swift",
+   "anchor": "        store.remove(surface)",
+   "replacement": "        _ = surface"},
+  {"note": "cpu backend composite ignores opacity and blends at full strength", "filter": "CPUBackendTests", "file": "Sources/CoreRender/CPU/CPUBackend.swift",
+   "anchor": "mode: mode, opacity: opacity) }",
+   "replacement": "mode: mode, opacity: 1) }"},
+  {"note": "cpu backend composite never writes back, so read returns the stale backdrop", "filter": "CPUBackendTests", "file": "Sources/CoreRender/CPU/CPUBackend.swift",
+   "anchor": "        try store.replace(b, with: backdrop)",
+   "replacement": "        _ = backdrop"},
+  {"note": "cpu backend composite drops the raster mapping, so a raw raster error escapes", "filter": "CPUBackendTests", "file": "Sources/CoreRender/CPU/CPUBackend.swift",
+   "anchor": "try RenderError.mapping { try backdrop.composite(source, x: x, y: y, mode: mode, opacity: opacity) }",
+   "replacement": "try backdrop.composite(source, x: x, y: y, mode: mode, opacity: opacity)"},
+  {"note": "surface store replace drops the height check, so a buffer of another height is stored", "filter": "CPUBackendTests", "file": "Sources/CoreRender/SurfaceStore.swift",
+   "anchor": "guard buffer.width == surface.width, buffer.height == surface.height else {",
+   "replacement": "guard buffer.width == surface.width else {"}
+]

@@ -1,0 +1,10 @@
+{
+  "id": "cpu-backend",
+  "name": "CPU Backend",
+  "description": "CPUBackend, the CPU RenderBackend and pixel reference (Sources/CoreRender/CPU): its surfaces are PixelBuffers held in the shared SurfaceStore, and surface, read, release, display and in-place composite (every blend mode, gated by its family) are the CoreRaster calls themselves, with CoreRaster errors mapped to RenderError.raster. Transform, resample, blur, adjust and retouch throw unsupported until render-backend RB-4.",
+  "technology": "Swift 6, Foundation",
+  "paths": [
+    "Sources/CoreRender/CPU/CPUBackend.swift"
+  ],
+  "order": 15
+}
