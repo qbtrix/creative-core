@@ -1,20 +1,21 @@
 // ParityTests+BlendSeparable.swift: MB-5 enables `ParityTests/blendSeparable` (metal-backend) and owns this
 // file. All twelve separable modes at opacities 0, 0.37, 1 on the seeded parity set and on multi-tile sources
 // off every edge match the CPU on the GPU's pixels within `.standard`; non-separable modes still throw
-// `unsupported`. `.blendSeparable` is off at init until MB-6, so the test turns it on through the parity hook.
-// Skipped without a device; returns early without read-write tier 2.
+// `unsupported`. MB-6 enables `.blendSeparable` at init on read-write tier 2, so this runs through the public
+// composite path (opaque rows blitted at opacity 1). Skipped without a device; returns early without tier 2.
 #if canImport(Metal)
 import CoreRaster
 import CoreRender
 import CoreRenderMetal
+import Metal
 import Testing
 
 extension ParityTests {
     @Test(.enabled(if: MetalBackend.defaultDevice != nil)) func blendSeparable() {
         do {
             let metal = try MetalBackend.onDefaultDevice()
-            #expect(!metal.supports.contains(.blendSeparable), "MB-6 enables the family at init, not MB-5")
-            guard metal.enableSeparableBlendsForParity() else { return }
+            #expect(metal.supports.contains(.blendSeparable) == (metal.device.readWriteTextureSupport == .tier2), "MB-6, on tier 2")
+            guard metal.supports.contains(.blendSeparable) else { return }
             let modes = BlendMode.allCases.filter { RenderOp(compositing: $0) != .blendNonSeparable }
             #expect(modes.count == 12)
             let samples = try ParityHarness.sampleSet(for: .blendSeparable)
