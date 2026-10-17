@@ -2,9 +2,9 @@
 
 Issue: #347 · Packet: docs/blueprints/core/features/render-backend.md
 Run: act-1a14644b047-dxwc · Session: see the Belt run page · Started: 2026-10-16T19:52Z
-Stage: 3 wave 2 (RB-2 contract), held on the gate question
-Base: 9ba4c2b (origin/dev; RB-1 landed as #349)
-Next: supervisor rules on the budget tests (no ruling on #347 yet). dev is 90924cb (generated model only, after 4f11af8). On a ruling, lead starts RB-2 from origin/dev.
+Stage: 3 wave 2 (RB-2 contract), started after supervisor reply
+Base: b447e68 (origin/dev). RB-1 is #349. #350 closed as duplicate by the supervisor.
+Next: RB-2 builder (contract: RenderOp, RenderError, RenderSurface, RenderBackend, ToneAdjustment, FakeBackend; CPU and dispatcher tests disabled until RB-3/RB-5). Fast-Check only if scripts/ci prints CI: PASS; otherwise report serial results.
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -37,3 +37,4 @@ Next: supervisor rules on the budget tests (no ruling on #347 yet). dev is 90924
 - Resume at 2026-10-16T20:2xZ: dev moved to 9ba4c2b. #349 (human) added the RB-1 targets and the render-backend C4 parts, and moved lead.md to the v3 loop. #350 is superseded and conflicts. Its comment says so; not closed, for the captain to close.
 - Gate on 9ba4c2b (detached worktree, 4 cores): scripts/ci fails on the same two budgets (smallDab 1.96 s against 1.5 s; stress 5.33 s against 5.0 s). It is dev's own state, not the lead's. RB-2 is pure contract code and its tests pass serially, but there is no honest Fast-Check on this sandbox. Not starting RB-2 until the supervisor rules.
 - 2026-10-16T21:37Z: dev is now 4f11af8 (#351 landed). Idle-box gate (detached worktree, nothing else running): scripts/ci fails on both budgets, 909 tests, 2 issues. Reported on #347 with the numbers. Still waiting for the supervisor.
+- 2026-10-17T02:54Z: supervisor reply on #347: RB-1 landed in #349, #350 closed as duplicate, continue from RB-2 on top of dev. The budget question is not answered in that reply, so no PR claims Fast-Check: pass unless scripts/ci prints CI: PASS.
