@@ -1,4 +1,6 @@
-// ParityTests+Adjust.swift: `ParityTests/adjust` (metal-backend MB-13, MB-14). Exposure at -2, 0 and +2 EV,
+// ParityTests+Adjust.swift: `ParityTests/adjust` (metal-backend MB-13, MB-14). The sample set, rendered from the
+// original Float32 sources (so upload loss counts), matches the checked-in CPU adjust goldens within their tolerance.
+// Exposure at -2, 0 and +2 EV,
 // levels with black, white and gamma points and curves through 3 and 5 points, in linear and sRGB encodings,
 // and the develop rows (white balance warm, cool and tinted; contrast at -100, 0 and +100; a highlights/shadows
 // grid over -100, 0 and +100) match the CPU on the GPU's Float16 pixels within `.standard` on the parity samples
@@ -26,6 +28,7 @@ extension ParityTests {
     @Test(.enabled(if: MetalBackend.defaultDevice != nil)) func adjust() {
         do {
             let metal = try MetalBackend.onDefaultDevice()
+            try Self.expectGoldens(for: .adjust, on: metal)
             try Self.expectAdjustParity(Self.toneAdjustments, on: metal)
             let (cpu, small) = (CPUBackend(), try PixelBuffer(width: 6, height: 4))
             let (m, c) = (try metal.surface(small), try cpu.surface(small))

@@ -1,5 +1,6 @@
 // ParityTests+BlendNonSeparable.swift: MB-9 enables `ParityTests/blendNonSeparable` (metal-backend) and owns
-// this file. Hue, saturation, color and luminosity at opacities 0, 0.37, 1 on the seeded parity set, on a
+// this file. With tier 2, the sample set, rendered from the original Float32 sources (so upload loss counts),
+// matches the checked-in CPU goldens within their `.nonSeparable` tolerance. Hue, saturation, color and luminosity at opacities 0, 0.37, 1 on the seeded parity set, on a
 // multi-tile source off every edge and (MB-10) on the clip-colour edge rows (lum 0 and 1, greys, pure black and
 // white, saturated primaries over grey, opaque and at alpha 0.6) match the CPU on the GPU's pixels within
 // `.nonSeparable` through the public `composite`, which MB-10 enables at init on read-write tier 2; without
@@ -26,6 +27,7 @@ extension ParityTests {
                 #expect(try metal.read(m) == held, "a rejected composite changes nothing")
                 return
             }
+            try Self.expectGoldens(for: .blendNonSeparable, on: metal)
             let (edgeSource, edgeBackdrop) = try ClipColorEdges.pairs()
             let samples = try ParityHarness.sampleSet(for: .blendNonSeparable)
             let (backdrop, source) = (try PixelBuffer.seeded(width: 300, height: 270, seed: 0xB1E1), try PixelBuffer.seeded(width: 260, height: 200, seed: 0x5E9B))
