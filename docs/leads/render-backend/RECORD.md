@@ -4,12 +4,12 @@ Issue: #347 · Packet: docs/blueprints/core/features/render-backend.md
 Run: act-1a149b544ea-emiq (line lead: render-backend, motion-tracks) · Started: 2026-10-17 (prior runs act-1a14644b047-dxwc)
 Stage: 3 waves (v3 loop, slices RB-a, RB-b, RB-c)
 Base: 3be8939 (origin/dev)
-Next: RB-4 and RB-5 builders (wave 4, base 4682eee); RB-a Anatomy round 4 (final); then RB-b Anatomy after RB-5; RB-7 feature-done after RB-6 and RB-5.
+Next: RB-4 and RB-5 builders (wave 4, base 4682eee); RB-b Anatomy after RB-5 merges; RB-7 feature-done after RB-5 and RB-6; RB-a merged-done, Mac finisher wanted.
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
 |---|---|---|---|---|---|
-| RB-a | RB-1, RB-2a, RB-2b | nothing | loop ended (4 rounds); last finding rides RB-5; Slice-Done waits for a dev CI run with green Linux | – | – |
+| RB-a | RB-1, RB-2a, RB-2b | nothing | merged-done (loop ended at 4 rounds; last finding rides RB-5) | 39037816632 (4b2aa75, Linux and macOS green) | wanted (issuecomment-6234729253) |
 | RB-b | RB-3, RB-4, RB-5 | RB-a | building (RB-3 merged; RB-4, RB-5 building) | – | – |
 | RB-c | RB-6, RB-7 | RB-b (RB-7 only) | open (RB-6 merged) | – | – |
 
