@@ -1,0 +1,23 @@
+[
+  {
+    "note": "metal capabilities fail clears supported, so the status note cannot say what would run",
+    "file": "Sources/CoreRender/Metal/MetalCapabilities.swift",
+    "anchor": "        lastError = reason\n",
+    "replacement": "        lastError = reason\n        supported = []\n",
+    "filter": "MetalCapabilitiesTests"
+  },
+  {
+    "note": "metal capabilities fail leaves healthy true, so the dispatcher keeps routing to a dead device",
+    "file": "Sources/CoreRender/Metal/MetalCapabilities.swift",
+    "anchor": "        healthy = false\n",
+    "replacement": "        healthy = true\n",
+    "filter": "MetalCapabilitiesTests"
+  },
+  {
+    "note": "metal capabilities recover keeps lastError, so the status note still shows a stale failure",
+    "file": "Sources/CoreRender/Metal/MetalCapabilities.swift",
+    "anchor": "        lastError = nil\n    }\n}",
+    "replacement": "    }\n}",
+    "filter": "MetalCapabilitiesTests"
+  }
+]

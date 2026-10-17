@@ -1,0 +1,37 @@
+[
+  {
+    "note": "surface tiling column count rounds down, so the last partial column is lost",
+    "file": "Sources/CoreRender/Metal/SurfaceTiling.swift",
+    "anchor": "public var columns: Int { (width + Self.tileSize - 1) / Self.tileSize }",
+    "replacement": "public var columns: Int { width / Self.tileSize }",
+    "filter": "SurfaceTilingTests"
+  },
+  {
+    "note": "surface tiling rect accepts index == tileCount (<= for <), a tile past the last",
+    "file": "Sources/CoreRender/Metal/SurfaceTiling.swift",
+    "anchor": "guard index >= 0, index < tileCount else {",
+    "replacement": "guard index >= 0, index <= tileCount else {",
+    "filter": "SurfaceTilingTests"
+  },
+  {
+    "note": "surface tiling last column is a full tile instead of clipped to the surface",
+    "file": "Sources/CoreRender/Metal/SurfaceTiling.swift",
+    "anchor": "width: min(Self.tileSize, width - x)",
+    "replacement": "width: Self.tileSize",
+    "filter": "SurfaceTilingTests"
+  },
+  {
+    "note": "surface tiling tiles(touching:) drops the last overlapped column",
+    "file": "Sources/CoreRender/Metal/SurfaceTiling.swift",
+    "anchor": "for column in firstColumn...lastColumn {",
+    "replacement": "for column in firstColumn..<lastColumn {",
+    "filter": "SurfaceTilingTests"
+  },
+  {
+    "note": "surface tiling tiles(touching:) treats a rect ending on a tile edge as touching the next tile",
+    "file": "Sources/CoreRender/Metal/SurfaceTiling.swift",
+    "anchor": "return overflow ? bound - 1 : min(end, bound - 1)",
+    "replacement": "return overflow ? bound - 1 : min(end + 1, bound - 1)",
+    "filter": "SurfaceTilingTests"
+  }
+]
