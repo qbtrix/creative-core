@@ -49,7 +49,36 @@ private func fill(_ w: Int, _ h: Int, _ r: Float, _ g: Float, _ b: Float, _ a: F
         let a = try fill(2, 1, 0.9, 0.1, 0.4, 0), b = try fill(2, 1, 0, 0.7, 0, 0)
         let result = try ParityHarness.compare(a, b, tolerance: .standard)
         #expect(result.passed && result.worstLinearDelta == 0, "\(result)")
-        #expect(throws: RenderError.surfaceMismatch) { try ParityHarness.compare(a, fill(1, 2, 0, 0, 0, 1), tolerance: .standard) }
+        let message = rasterMessage { _ = try ParityHarness.compare(a, fill(1, 2, 0, 0, 0, 1), tolerance: .standard) }
+        #expect(message.contains("2x1") && message.contains("1x2"), "\(message)")
+    }
+
+    @Test func aCompositeSampleWithoutABackdropThrowsNamingIt() throws {
+        let sample = ParitySample(name: "lonely", call: .composite(x: 0, y: 0, mode: .normal, opacity: 1),
+                                  source: try fill(1, 1, 0, 0, 0, 1), backdrop: nil)
+        let message = rasterMessage { _ = try ParityHarness.render(sample, on: FakeBackend(supports: [.composite])) }
+        #expect(message.contains("lonely") && message.contains("backdrop"), "\(message)")
+    }
+
+    @Test func goldenErrorsSayWhatFailed() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("parity-\(UUID().uuidString)")
+        let missing = rasterMessage { _ = try ParityGolden.read(from: root, op: .display, name: "random") }
+        #expect(missing.contains("display/random.json"), "\(missing)")
+        let undecodable = rasterMessage { _ = try ParityGolden(header: Data("{}".utf8), bytes: Data()) }
+        #expect(undecodable.hasPrefix("golden header does not decode: ") && undecodable.count > 31, "\(undecodable)")
+        let header = { (space: String, linear: String) in
+            Data(#"{"width":1,"height":1,"colorSpace":"\#(space)","tolerance":{"bytes":2,"linear":\#(linear)}}"#.utf8)
+        }
+        let space = rasterMessage { _ = try ParityGolden(header: header("oklab", "0"), bytes: Data(count: 4)) }
+        #expect(space.contains("color space") && space.contains("oklab"), "\(space)")
+        let tolerance = rasterMessage { _ = try ParityGolden(header: header("sRGB", "-1"), bytes: Data(count: 4)) }
+        #expect(tolerance.contains("tolerance.linear -1.0"), "\(tolerance)")
+    }
+
+    /// The message of the `RenderError.raster` that `body` throws, or "" when it throws nothing.
+    private func rasterMessage(_ body: () throws -> Void) -> String {
+        do { try body() } catch RenderError.raster(let message) { return message } catch { return "other: \(error)" }
+        return ""
     }
 
     @Test func goldenRoundTripsThroughFilesAndChecksItsByteCount() throws {

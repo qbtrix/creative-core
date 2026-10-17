@@ -25,7 +25,7 @@ public struct SurfaceTiling: Equatable, Sendable {
     /// the message of `PixelBuffer.validatedSize` for a side under 1 or a
     /// pixel count over `PixelBuffer.maxPixels`.
     public init(width: Int, height: Int) throws {
-        _ = try Self.mapped { try PixelBuffer.validatedSize(width: width, height: height) }
+        _ = try RenderError.mapping { try PixelBuffer.validatedSize(width: width, height: height) }
         self.width = width
         self.height = height
     }
@@ -46,19 +46,16 @@ public struct SurfaceTiling: Equatable, Sendable {
         guard index >= 0, index < tileCount else {
             throw RenderError.raster("tile index \(index) out of 0..<\(tileCount)")
         }
-        return try Self.mapped {
+        return try RenderError.mapping {
             try PixelBuffer.tileRect(column: index % columns, row: index / columns, width: width, height: height)
         }
     }
 
-    /// Runs a CoreRaster call, rethrowing its `RasterError.invalid` as
-    /// `RenderError.raster` with the same message.
-    private static func mapped<T>(_ body: () throws -> T) throws -> T {
-        do {
-            return try body()
-        } catch RasterError.invalid(let message) {
-            throw RenderError.raster(message)
-        }
+    /// The Metal backend's default memory budget: half the device's
+    /// recommended working set, but never less than one full tile of
+    /// `tileBytes`, so even a tiny or unknown working set fits one tile.
+    public static func defaultBudget(workingSet: UInt64, tileBytes: Int) -> Int {
+        max(Int(clamping: workingSet / 2), tileBytes)
     }
 
     /// The indices of the tiles the pixel rect overlaps, ascending. Empty when

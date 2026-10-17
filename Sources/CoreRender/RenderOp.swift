@@ -4,7 +4,7 @@
 // backend that lists it, so a backend throws `unsupported` only when the
 // dispatcher was bypassed. Contract types, plus the two mappings every backend
 // shares: a blend mode to the family that gates it, and a CoreRaster error to
-// `RenderError.raster` (render-backend RB-2).
+// `RenderError.raster` (`init(_:)` and `mapping`, render-backend RB-2).
 import CoreRaster
 
 /// One family of render operations. A backend declares the families it
@@ -55,8 +55,11 @@ public enum RenderError: Error, Equatable, Sendable {
     /// The surface belongs to another backend (its `backend` is not this
     /// backend's `name`), or this backend already released it.
     case surfaceMismatch
-    /// A CoreRaster error, its message passed through, from the CPU backend
-    /// or from a backend that reads a buffer in or out.
+    /// Invalid input or data, with a message saying which: a CoreRaster error
+    /// passed through (from the CPU backend, a buffer read in or out, or a
+    /// parity compare of two sizes), a rejected argument (a pipeline variant,
+    /// a tile index, a golden name, a malformed parity sample), an unreadable
+    /// or malformed golden file, or a broken internal invariant of a backend.
     case raster(String)
 }
 
@@ -66,5 +69,11 @@ extension RenderError {
         switch error {
         case .invalid(let message): self = .raster(message)
         }
+    }
+
+    /// Runs `body`, rethrowing any CoreRaster error as `RenderError(_:)`, so
+    /// every backend and helper maps raster errors the same way.
+    public static func mapping<T>(_ body: () throws -> T) throws -> T {
+        do { return try body() } catch let error as RasterError { throw RenderError(error) }
     }
 }
