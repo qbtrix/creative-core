@@ -1,0 +1,112 @@
+utc	stage	event	ref	note
+2026-10-16T19:51Z	0	stage-start	6967968ed037539869535c4c22fefeab7cc8ea32	base verified; lead/metal-backend created
+2026-10-16T19:53Z	1	stage-end	docs/blueprints/core/features/metal-backend.md	packet read; 17 tasks copied to RECORD.md
+2026-10-16T19:53Z	2	stage-end	-	waves 1-7 planned as the packet lists them
+2026-10-16T19:55Z	0	stopped	#347	dependency render-backend open, no CoreRender targets on dev; commented on #348
+2026-10-16T20:40Z	2	stage-end	#349	unblocked: targets and v3 rules on dev 9ba4c2b; RECORD moved to v3 shape (slices, stubs, plans)
+2026-10-16T20:42Z	3	heartbeat	#347	wave 1 (MB-1) waits on render-backend RB-2 (RenderOp, RenderError); Swift 6.3.3 installing
+2026-10-16T20:46Z	2	heartbeat	-	builder briefs for MB-1a and MB-1b written; gate running on dev 9ba4c2b; waiting on RB-2
+2026-10-16T20:52Z	4	gate-run	9ba4c2b	scripts/ci on dev 9ba4c2b: CI: PASS, 903 tests in 97 suites, 40 s test wall clock; budget tests hold on this box
+2026-10-16T21:05Z	3	stage-start	MB-1a-half	wave 1 starts with the RB-2-free piece: HalfFloat builder in a worktree; SurfaceTiling and MetalCapabilities wait on RB-2
+2026-10-16T21:19Z	3	pr-opened	#351	MB-1a-half HalfFloat, head 52ce7e9, Mutate 6/6; builder gate red on smallDabOn12MegapixelsIsFast budget (CoreRaster, untouched)
+2026-10-16T21:24Z	3	gate-run	52ce7e9	lead rerun of scripts/ci on #351 head: FAIL, same budget test at 1.65 s vs 1.5 s thread CPU; one more idle rerun in progress
+2026-10-16T21:29Z	3	gate-run	52ce7e9	idle rerun of scripts/ci on #351 head: CI: PASS, 909 tests; dab budget 0.74 s; PR body moved to Fast-Check: pass
+2026-10-16T21:23Z	3	pr-merged	#351	MB-1a-half HalfFloat merged by the lane; dev now 4f11af8bf5a9cad4eec9576e101081118400b8c9
+2026-10-16T21:50Z	3	heartbeat	#347	RB-2 still held at render-backend (its idle gate fails budgets; ours passes); no ruling yet; nothing RB-2-free left in MB-a
+2026-10-16T22:11Z	3	heartbeat	#347	no ruling on budgets, RB-2 still held; dev 90924cb (generated model only); waiting
+2026-10-16T22:33Z	3	heartbeat	#347	no ruling, RB-2 still held at render-backend (last commit 22:08Z); dev unchanged at 90924cb; waiting
+2026-10-16T22:55Z	3	heartbeat	#347	no ruling, RB-2 still held (render-backend heartbeat 22:39Z); dev unchanged at 90924cb; waiting
+2026-10-16T23:17Z	3	heartbeat	#348	no ruling, RB-2 still held (render-backend heartbeat 23:10Z); dev unchanged; status comment posted on #348 with the two unblock paths
+2026-10-16T23:39Z	3	heartbeat	#347	no ruling, RB-2 still held (render-backend heartbeat 23:10Z); dev unchanged at 90924cb; waiting
+2026-10-17T00:01Z	3	heartbeat	#347	no ruling, RB-2 still held (render-backend heartbeat 23:41Z); dev unchanged at 90924cb; waiting
+2026-10-17T00:22Z	3	heartbeat	#347	no ruling, RB-2 still held (render-backend heartbeat 00:11Z); dev unchanged at 90924cb; waiting
+2026-10-17T00:44Z	3	heartbeat	#347	no ruling, RB-2 still held (render-backend heartbeat 00:42Z); dev unchanged at 90924cb; waiting
+2026-10-17T00:50Z	3	heartbeat	#347	Belt nudge received (last heartbeat 00:44Z); no ruling, RB-2 still held (render-backend heartbeat 00:42Z); dev unchanged at 90924cb; waiting
+2026-10-17T01:06Z	3	heartbeat	#347	no ruling, RB-2 still held (render-backend heartbeat 00:42Z); dev unchanged at 90924cb; waiting
+2026-10-17T01:23Z	3	heartbeat	#347	no ruling, RB-2 still held (render-backend heartbeat 01:13Z); dev unchanged at 90924cb; waiting
+2026-10-17T01:39Z	3	heartbeat	#347	no ruling, RB-2 still held (render-backend heartbeat 01:13Z); dev unchanged at 90924cb; waiting
+2026-10-17T01:56Z	3	heartbeat	#347	no ruling, RB-2 still held (render-backend heartbeat 01:51Z); dev unchanged at 90924cb; waiting
+2026-10-17T02:13Z	3	heartbeat	#347	no ruling, RB-2 still held (render-backend heartbeat 01:51Z); dev unchanged at 90924cb; waiting
+2026-10-17T02:30Z	3	heartbeat	#347	supervisor (02:19Z) told render-backend to continue from RB-2 on top of dev; no RB-2 PR yet (render-backend heartbeat 01:51Z); dev b447e68 (#307 docs); waiting for RB-2
+2026-10-17T02:47Z	3	heartbeat	#347	RB-2 go-ahead given 02:19Z but no RB-2 PR yet (render-backend heartbeat 01:51Z); dev b447e68; waiting
+2026-10-17T03:05Z	3	heartbeat	#347	render-backend started RB-2 at 02:54Z then stopped on a FakeBackend recorder design question (02:55Z); data point posted on #347 (MetalBackend is a final class per the packet); no RB-2 PR; dev b447e68
+2026-10-17T03:25Z	3	stopped	#348	run ends at its 8 h wall clock; MB-a has HalfFloat merged (#351), rest waits on render-backend RB-2 (blocked on a supervisor pick since 02:55Z); resume brief in RECORD.md Next
+2026-10-17T04:05Z	3	stage-start	#348	run act-1a148001532-1w03 resumed at dev b447e68; RB-2 still absent; pre-building MB-1a-rest and MB-1b against the packet contracts, PRs wait on RB-2
+2026-10-17T04:10Z	3	heartbeat	lead/metal-backend-mb-1a-rest	MB-1a-rest pre-built on 0ee4e5d (shim be80f86): 20 tests pass, mutate 5/5 + 3/3 caught, 395 lines; PR waits on RB-2
+2026-10-17T05:42Z	3	heartbeat	#347	session rate-limited 04:17Z to 05:40Z; RB-2 still absent (render-backend last commit 03:36Z); MB-1a-rest pre-built; MB-1b builder resuming
+2026-10-17T05:48Z	3	heartbeat	lead/metal-backend-mb-1b	MB-1b pre-built on 249386a (every Metal API verified against Apple docs); 464 changed lines, trimming under the 400 cap; RB-2 still absent
+2026-10-17T05:58Z	3	heartbeat	lead/metal-backend-mb-1b	MB-1b trimmed to 375 changed lines on 362a89c; both wave 1 branches ready; RB-2 still absent from dev
+2026-10-17T06:02Z	3	heartbeat	#347	RB-2 still absent, render-backend silent since 03:36Z; lead builds the RB-2 contract types PR itself (announced on #347 and #348)
+2026-10-17T06:10Z	3	pr-opened	#352	RB-2 contract types verbatim from the render-backend packet, head 019238d, scripts/ci CI: PASS (914 tests), fast-lane
+2026-10-17T06:06Z	3	pr-merged	#352	RB-2 contract types merged by the lane; dev now 3a65725; wave 1 unblocked
+2026-10-17T06:14Z	3	pr-opened	#353	MB-1a-rest SurfaceTiling and MetalCapabilities, head 0481fb2, scripts/ci CI: PASS (928 tests), Mutate 5/5 + 3/3, fast-lane
+2026-10-17T06:11Z	3	pr-merged	#353	MB-1a-rest merged by the lane; dev now e13b76d; MB-1b rebasing for its gate
+2026-10-17T06:24Z	3	pr-opened	#354	MB-1b MetalBackend and MetalSurface, head 91f9173, scripts/ci CI: PASS (928 tests, second run; first run failed only the CoreRaster dab budget), fast-lane
+2026-10-17T06:30Z	3	stage-start	wave 2	MB-2a (PipelineKey) and MB-2b (pipeline cache, health probe, parity scaffold) builders launched; MB-16 after MB-2b
+2026-10-17T06:32Z	3	pr-merged	#354	MB-1b merged by the lane; dev now 4938e94; wave 1 complete (MB-1 done; slice MB-a needs MB-2)
+2026-10-17T06:23Z	3	pr-opened	#355	MB-2a PipelineKey, head dfb9819, scripts/ci CI: PASS (935 tests), Mutate 4/4, fast-lane
+2026-10-17T06:23Z	3	pr-merged	#355	MB-2a PipelineKey merged by the lane; dev now af429e4
+2026-10-17T06:26Z	3	heartbeat	lead/metal-backend-mb-2b	MB-2b built (ba9b744, 348 lines, APIs verified), gate running on its dev rebase; MB-16 builder launched from its head
+2026-10-17T06:28Z	3	pr-opened	#356	MB-2b pipeline cache, health probe, parity scaffold; head 2f79e71, scripts/ci CI: PASS (935 tests, second run), fast-lane
+2026-10-17T06:29Z	3	pr-merged	#356	MB-2b merged by the lane; dev now 603ce57; slice MB-a tasks all merged
+2026-10-17T06:29Z	4	stage-start	MB-a	Anatomy round 1 on dev 603ce57: gate, mutate --changed-since 6967968, critic panel
+2026-10-17T06:33Z	4	gate-run	603ce57	round MB-a 1: mutate 18/18 caught; scripts/ci failed only the CoreRaster dab budget under load, rerun in progress; 4 critics running
+2026-10-17T06:39Z	4	heartbeat	MB-a	round 1: 3 of 4 critics reported (clarity 2 blockers, correctness 3 majors, reuse 5 majors); test-oracle lens and MB-16 builder still running; gate rerun pending an idle box
+2026-10-17T06:41Z	4	ci-run	39010063417	dev 603ce57: Linux, Mutation green; macOS red (MetalPipelinesTests: archive not written after cold compile); runner has a Metal device; dev-red #357
+2026-10-17T06:41Z	4	stage-end	MB-a	Belt-Slice-Done: MB-a posted on #348 (merged-done); Mac-Finish-Wanted posted; macOS failure is round 1 finding
+2026-10-17T06:44Z	4	round-findings	MB-a 1	all 4 critics in; fix batches A (CoreRender) and B2 (parity scaffold) launched; B1 (Metal backend) after MB-16; decision: drop the on-disk binary archive
+2026-10-17T06:46Z	3	heartbeat	lead/metal-backend-mb-16	MB-16 built (43c0a9d, 387 lines, Swift 6 type-checked against a stub Metal module); gate running on its dev rebase
+2026-10-17T11:56Z	4	stage-start	#348	run act-1a149b549c8-v538 resumed at dev 24fd483; round MB-a 1 fix batches restart (B2 and MB-16 branches built, batch A and B1 to build)
+2026-10-17T11:58Z	4	build	#348	MB-16 rebased 6986da2 (gating), r1-b2 rebased c5d33ca, builders A and B1 launched
+2026-10-17T12:38Z	4	pr-merged	#362	fix batch A (tile math reuse, PipelineKey bound, cache decision)
+2026-10-17T12:38Z	4	heartbeat	lead/metal-backend-mb-16	MB-16 CI: PASS at 6986da2; B1 built fb8c648
+2026-10-17T12:44Z	4	pr-opened	#366	MB-16 LRU tile eviction (Slice MB-h)
+2026-10-17T12:44Z	4	pr-opened	#367	B2 parity stubs per family, bound table (Slice MB-a)
+2026-10-17T12:46:48Z	4	B1 rebased; Mac-only plan dropped (Linux mutation would escape); gating	2a42c23	#366 #367 merged, dev 4d6b112
+2026-10-17T12:48:24Z	4	B1 PR opened, fast-lane	#368	head 2a42c23, footer stripped
+2026-10-17T12:49:11Z	4	#368 merged; round 2 MB-a started	9f30aab	gate + mutation running
+2026-10-17T12:51:33Z	4	round 2 MB-a gate PASS, mutation 22/22; panel launched	9f30aab	wf_33b8fc19-fb6
+2026-10-17T12:55:47Z	4	round 2 MB-a panel not clean, 15 confirmed	wf_33b8fc19-fb6	fix round 2 R2-A launched, R2-B after
+2026-10-17T13:37:00Z	4	R2-A PR merged	#369	3be8939, CI: PASS, mutation 17/17, 15 files +214/-54
+2026-10-17T13:37:30Z	4	R2-B launched	ff4ae9f	Metal fixes + wiring
+2026-10-17T14:17:00Z	4	R2-B PR merged; fix round 2 done	#376	3d20408, CI: PASS (one smallDab flake rerun), Metal-only mutations in body
+2026-10-17T14:17:30Z	4	round 3 MB-a started	658f0c2	gate + mutation + panel
+2026-10-17T14:22:30Z	4	round 3 MB-a gate PASS, mutation 75/75; panel launched	658f0c2	wf_e31b722f-5ca
+2026-10-17T14:24:00Z	3	wave 3a launched (MB-3, MB-7)	wf_0f5897de-978	base 8cd012a, 2 builders
+2026-10-17T14:25:00Z	4	round 3 MB-a panel done: 19 confirmed, not clean	wf_e31b722f-5ca	fix rounds exhausted; majors carried to MB-b, rest deferred to MB-17
+2026-10-17T14:27:00Z	3	MB-b carry PR merged	#385	8236a78: lookup size check, deviceLost doc (round 3 majors)
+2026-10-17T14:32:00Z	3	docs deviations PR opened	#387	c191285, shaders as Swift strings, round 3 findings 7/14/15
+2026-10-17T14:48:18Z	3	#387 merged; Mac-Finish-Wanted MB-a posted	#387	run 39040738062 green incl. macOS
+2026-10-17T14:48:18Z	3	wave 3a merged: MB-3 #389, MB-7 #390	wf_0f5897de-978	check: MB-3 mutation plan in its own file (ok), test-file scope noted in body
+2026-10-17T14:48:18Z	3	wave 3b launched (MB-4, MB-8)	wf_dcddf178-fdc	base ff0feed, 2 builders
+2026-10-17T14:54:37Z	4	round 4 MB-a gate PASS (1007 tests), mutation 80/80; panel launched	ff0feed	wf_d494e85c-7db (last round for MB-a)
+2026-10-17T15:04:18Z	4	round 4 MB-a not clean: 10 confirmed (1 blocker fixed by #390, 1 major); MB-a loop ends (4/4)	wf_d494e85c-7db	round4-findings.md
+2026-10-17T15:04:18Z	4	carry PR branch pushed (findings 0,2,3,4,9); gate rerun waiting on load (EngineStress flake x2)	lead/metal-backend-carry-r4	4540c8e
+2026-10-17T15:10:18Z	3	wave 3b done: MB-4 #392 merged; MB-8 #393 footer stripped, rebased over #392 (both sides kept), gate PASS, Head f79116e	wf_dcddf178-fdc	#392 #393
+2026-10-17T15:10:18Z	4	carry PR #395 opened (Slice MB-b), gate PASS after load wait, fast-lane	#395	4540c8e
+2026-10-17T15:14:03Z	4	wave 4 launched (MB-13 MB-g, MB-5 MB-c)	wf_28098218-2e8	74ce55f
+2026-10-17T15:14:03Z	5	dev run 39043767442 Linux green, macOS red: ParityTests/display alpha-subnormal 255 (oracle on Float32, GPU stores Float16)	#396	4c1cd8e
+2026-10-17T15:14:03Z	5	Belt-Slice-Done MB-b posted; Mac-Finish-Wanted waits on fix	#348	6235561226
+2026-10-17T15:14:03Z	6	MB-b fix round 1: display parity compares on GPU's Float16 pixels; gate running	lead/metal-backend-mb3fix	-
+2026-10-17T15:14:47Z	6	MB-b fix PR #397 opened (fast-lane, footer stripped), gate PASS	#397	1f4451f
+2026-10-17T15:18:38Z	6	MB-b fix #397 merged; waiting on a dev CI run with green macOS for Mac-Finish-Wanted MB-b	#397	-
+2026-10-17T15:26:54Z	6	MB-13 #400 rebased fba4d9a, gate PASS, trailers reordered; merged cbc5e46	#400	cbc5e46
+2026-10-17T15:26:54Z	4	wave 5 launched (wf_dfe4950a-375: MB-6 MB-c, MB-11 MB-f, base fc7d8f7)	wf_dfe4950a-375	-
+2026-10-17T15:26:54Z	7	dev CI 39044767871 running on fc7d8f7 (holds 74ce55f, #397, #398)	39044767871	-
+2026-10-17T15:28:46Z	7	dev CI 39044767871 green (Linux, macOS, Mutation) on fc7d8f7; Belt-Slice-Done MB-d, Mac-Finish-Wanted MB-d, Mac-Finish-Wanted MB-b posted, footers stripped	39044767871	fc7d8f7
+2026-10-17T15:41:04Z	4	wave 5 done: MB-6 #401 merged (MB-c built); MB-11 #402 conflicted in C4 parts, rebased keeping both, gate PASS 1029 tests, mutate 2/2, Head moved	#402	06a4ac9
+2026-10-17T15:44:38Z	4	MB-11 #402 merged 0161e91 (MB-f half built)	#402	0161e91
+2026-10-17T15:44:38Z	4	round 1 MB-b+MB-d gate PASS (1018 tests) on fc7d8f7, mutation 18/18; panel launched	fc7d8f7	wf_bdd8e87c-e78
+2026-10-17T15:46:49Z	4	heartbeat: round 1 MB-b+MB-d panel still running; wave 6 (MB-14, MB-12) args ready on 0161e91	wf_bdd8e87c-e78	-
+2026-10-17T15:51:30Z	anatomy	round1-not-clean	wf_bdd8e87c-e78	MB-b/MB-d panel: 16 confirmed (6 major)
+2026-10-17T15:51:30Z	fix	round1-launched	wf_708a5529-109	fix batches r1b (MB-b) and r1d (MB-d); findings 10/11 deferred to MB-17
+2026-10-17T16:01:00Z	fix	heartbeat	wf_708a5529-109	fix round 1 fixers still working
+2026-10-17T16:05:08Z	fix	round1-merged	#403 #404	MB-b fixes #403 (ae1fd2c), MB-d fixes #404 (3fb39e1); lost-write pin set deferred to MB-17
+2026-10-17T16:05:08Z	anatomy	round2-gate	3fb39e1	MB-b/MB-d round 2 gate + mutate running
+2026-10-17T16:05:08Z	build	wave6-launched	wf_d49f1c18-bad	MB-14 (MB-g), MB-12 (MB-f) on 3fb39e1
+2026-10-17T16:06:52Z	anatomy	round2-panel	wf_468f9c33-6ef	gate PASS (1032 tests), mutate 14/14 on 3fb39e1; panel launched, same 4 lenses
+2026-10-17T16:13:33Z	anatomy	round2-not-clean	wf_468f9c33-6ef	MB-b/MB-d: 14 confirmed (2 major: unsupported doc vs device limit; CompositeMap multi-row untested); fix round 2 batches ready (ab2/b2.json, ab2/d2.json), launch after wave 6 frees builders; #13 precise-math display to Mac finisher/MB-17
+2026-10-17T16:15:08Z	build	heartbeat	wf_d49f1c18-bad	wave 6 builders working; fix round 2 queued
+2026-10-17T16:29:54Z	3	wave 6 merged	#405 628145b, #406 4e27e16	MB-14 (MB-g), MB-12 (MB-f); body of #406 fixed (Refs, trailer order, footer)
+2026-10-17T16:29:54Z	3	feature issue reopened	#348	#406 body said Closes #348 and dev is default; reopened; fixer extra now forbids Closes
+2026-10-17T16:29:54Z	4	fix round 2 launched	wf_c70605f7-96e	batches r2b (MB-b, 9 findings) r2d (MB-d, 5) on 4e27e16; last round
