@@ -2,7 +2,7 @@
 
 Issue: #348 · Packet: docs/blueprints/core/features/metal-backend.md
 Run: act-1a14ab2b672-8guo · Resumed: 2026-10-17T16:33Z (fourth run; earlier act-1a149b549c8-v538, act-1a148001532-1w03, act-1a14644b538-njln)
-Stage: 4 round r4 fix batches running (wf_649a731c-c00: r4a docs, r4b limit helper, r4c parity goldens, r4d mutations, r4e composite+ParityPack); r4 panel 17 confirmed, not clean; leftovers filed as gap #419, #420, #421; MB-g Belt-Slice-Done + Mac-Finish-Wanted posted (run 39052919097 green on af0b73e)
+Stage: 4 round r4 fixes open: r4a #422, r4b #426 (finished by lead: CI: PASS 1047, mutate 11/11), r4c #425, r4e #424; r4d #423 merged; gaps #419-#421 filed; MB-g Slice-Done posted (run 39052919097). Next: MB-17 builder once r4 PRs merge
 Base: 4e27e16 (origin/dev)
 Next (for a relaunched lead): wait for wf_649a731c-c00 PRs to merge (round 4 is the last round; no r5) → Belt-Slice-Done MB-e/MB-f once a dev CI Linux job holding #418 and #411 (dev 58ed68f or later) is green → MB-17 (feature-done: background compile + First launch row, fourKCompositeP95Under4ms on, no disabled parity family, supports == all on tier 2, waves.md counts, doc leftovers) → MB-h Slice-Done, contact sheet on #348. PR bodies say Refs #348, never Closes.
 

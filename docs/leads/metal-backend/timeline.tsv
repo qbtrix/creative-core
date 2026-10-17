@@ -128,3 +128,5 @@ utc	stage	event	ref	note
 2026-10-17T17:36:00Z	4	panel-done	wf_0d75f17d-c48	r4: 17 confirmed, not clean
 2026-10-17T17:37:00Z	4	fix-start	wf_649a731c-c00	r4a-r4e; gaps #419 #420 #421 filed
 2026-10-17T17:39:00Z	4	slice-done	MB-g	run 39052919097 green; Mac-Finish-Wanted posted
+2026-10-17T17:47:00Z	4	fix-done	wf_649a731c-c00	r4a #422, r4c #425, r4d #423, r4e #424; r4b stopped before gate
+2026-10-17T17:51:00Z	4	fix-done	r4b	lead finished r4b: CI: PASS 1047, mutate 11/11, PR #426
