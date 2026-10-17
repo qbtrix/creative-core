@@ -132,3 +132,5 @@ utc	stage	event	ref	note
 2026-10-17T17:51:00Z	4	fix-done	r4b	lead finished r4b: CI: PASS 1047, mutate 11/11, PR #426
 2026-10-17T17:58:00Z	4	fix-done	lead	Metal (macOS) red on #422: stale blendSeparable tail; fixed eca4f02, ported to #424 #425 #426, all CI: PASS
 2026-10-17T18:14:00Z	5	build-start	MB-17	builder on lead/metal-backend-mb17; #425 merged 17:57Z
+2026-10-17T18:30:00Z	5	build-done	MB-17	#427 opened feature-done, head 7a8f1f6; #422 merged 18:26Z, #426 18:21Z
+2026-10-17T18:40:00Z	4	fix-start	r4e	#424 Metal red on resample 16x400000 lanczos3 (not in diff); rebased on dev, head 154aa79, CI: PASS, check rerunning
