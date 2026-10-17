@@ -31,3 +31,6 @@ utc	stage	event	ref	note
 2026-10-17T13:37Z	4	anatomy-round	dev ff4ae9f	RB-a round 3 not clean; comment to fixer, replace to RB-3 (round 4 is the last)
 2026-10-17T13:43Z	4	pr-opened	dev	#374 RB-a round 3 fixes (no dispatcher or CPU backend named as present; comments and C4 text only)
 2026-10-17T13:44Z	4	pr-merged	dev 4b2aa75	#374 RB-a round 3 comment fix; round 4 (last) waits for RB-3 to settle SurfaceStore.replace
+2026-10-17T13:47Z	3	pr-merged	dev 4682eee	#377 RB-3 CPU backend (5 mutations caught; replace now used)
+2026-10-17T13:47Z	3	build-wave	dev 4682eee	wave 4: RB-4 and RB-5 builders launched
+2026-10-17T13:47Z	4	anatomy-round	dev 4682eee	RB-a round 4 (final) started: critic and gate
