@@ -26,7 +26,7 @@ extension ParityTests {
     @Test(.enabled(if: MetalBackend.defaultDevice != nil)) func adjust() {
         do {
             let metal = try MetalBackend.onDefaultDevice()
-            try Self.expectAdjustParity(toneAdjustments, on: metal)
+            try Self.expectAdjustParity(Self.toneAdjustments, on: metal)
             let (cpu, small) = (CPUBackend(), try PixelBuffer(width: 6, height: 4))
             let (m, c) = (try metal.surface(small), try cpu.surface(small))
             for bad in [ToneAdjustment.exposure(stops: .nan), .levels(inBlack: 0.5, inWhite: 0.5, gamma: 1, outBlack: 0, outWhite: 1),
