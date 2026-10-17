@@ -118,19 +118,19 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
 |---|---|---|---|---|---|
 | MB-1 | – | `MetalCapabilities`, `SurfaceTiling` (Linux-safe, with mutations); `MetalBackend` with device, queue, `MetalSurface` upload and download; `supports` empty | `Sources/CoreRender/Metal/MetalCapabilities.swift`, `Sources/CoreRender/Metal/SurfaceTiling.swift`, `Tests/CoreRenderTests/MetalCapabilitiesTests.swift`, `Tests/CoreRenderTests/SurfaceTilingTests.swift`, `Tests/mutations/CoreRenderMetalCapabilities.json`, `Tests/mutations/CoreRenderSurfaceTiling.json`, `Sources/CoreRenderMetal/MetalBackend.swift`, `Sources/CoreRenderMetal/MetalSurface.swift`, `Tests/CoreRenderMetalTests/MetalSurfaceTests.swift`, `docs/c4/parts/creative-core/corerender/metal-support.json`, `docs/c4/parts/creative-core/corerendermetal/metal-backend.json` | – | ~380, 11 |
 | MB-2 | – | `PipelineKey` and the `MTLBinaryArchive` cache; health probe and `fail`/`recover` wiring; `ParityTests` scaffold, every family disabled; the runner-device answer in `waves.md` | `Sources/CoreRender/Metal/PipelineKey.swift`, `Sources/CoreRenderMetal/MetalPipelines.swift`, `Tests/CoreRenderMetalTests/MetalPipelinesTests.swift`, `Tests/CoreRenderMetalTests/ParityTests.swift`, `Tests/mutations/CoreRenderMetalCapabilities.json`, `docs/blueprints/core/features/waves.md` | MB-1 | ~300, 6 |
-| MB-3 | – | Display kernel over the `DisplayTransfer` table texture; enables `ParityTests/display`; `supports += .display` | `Sources/CoreRenderMetal/Shaders/Display.metal`, `Sources/CoreRenderMetal/MetalBackend+Display.swift`, `Tests/CoreRenderMetalTests/ParityTests+Display.swift` | MB-2 | ~220, 3 |
-| MB-4 | – | `.normal` composite with opacity and offsets, in place on the backdrop's tiles; enables `compositeNormal`; `supports += .composite` | `Sources/CoreRenderMetal/Shaders/Composite.metal`, `Sources/CoreRenderMetal/MetalBackend+Composite.swift`, `Tests/CoreRenderMetalTests/ParityTests+Composite.swift` | MB-2 | ~260, 3 |
-| MB-5 | – | The twelve separable modes as kernel variants; enables `blendSeparable` | `Sources/CoreRenderMetal/Shaders/BlendSeparable.metal`, `Sources/CoreRenderMetal/MetalBackend+BlendSeparable.swift`, `Tests/CoreRenderMetalTests/ParityTests+BlendSeparable.swift` | MB-4 | ~300, 3 |
+| MB-3 | – | Display kernel over the `DisplayTransfer` table texture; enables `ParityTests/display`; `supports += .display` | `Sources/CoreRenderMetal/Shaders/DisplayShader.swift`, `Sources/CoreRenderMetal/MetalBackend+Display.swift`, `Tests/CoreRenderMetalTests/ParityTests+Display.swift` | MB-2 | ~220, 3 |
+| MB-4 | – | `.normal` composite with opacity and offsets, in place on the backdrop's tiles; enables `compositeNormal`; `supports += .composite` | `Sources/CoreRenderMetal/Shaders/CompositeShader.swift`, `Sources/CoreRenderMetal/MetalBackend+Composite.swift`, `Tests/CoreRenderMetalTests/ParityTests+Composite.swift` | MB-2 | ~260, 3 |
+| MB-5 | – | The twelve separable modes as kernel variants; enables `blendSeparable` | `Sources/CoreRenderMetal/Shaders/BlendSeparableShader.swift`, `Sources/CoreRenderMetal/MetalBackend+BlendSeparable.swift`, `Tests/CoreRenderMetalTests/ParityTests+BlendSeparable.swift` | MB-4 | ~300, 3 |
 | MB-6 | – | Opaque-row fast path (a blit when the source row is opaque at opacity 1) with equal pixels; `supports += .blendSeparable` | `Sources/CoreRenderMetal/MetalBackend+OpaqueRows.swift`, `Tests/CoreRenderMetalTests/ParityTests+OpaqueRows.swift` | MB-5 | ~160, 2 |
-| MB-7 | – | Crop and quarter turns as blits and a rotate kernel; enables `transform`; `supports += .transform` | `Sources/CoreRenderMetal/Shaders/Transform.metal`, `Sources/CoreRenderMetal/MetalBackend+Transform.swift`, `Tests/CoreRenderMetalTests/ParityTests+Transform.swift` | MB-2 | ~220, 3 |
-| MB-8 | – | Bilinear and lanczos3 as two separable passes with clamp-to-edge taps and normalised weights; enables `resample`; `supports += .resample` | `Sources/CoreRenderMetal/Shaders/Resample.metal`, `Sources/CoreRenderMetal/MetalBackend+Resample.swift`, `Tests/CoreRenderMetalTests/ParityTests+Resample.swift` | MB-2 | ~300, 3 |
-| MB-9 | – | Hue, saturation, color, luminosity with Lum, Sat, SetLum, SetSat, ClipColor; enables `blendNonSeparable` at `.nonSeparable` | `Sources/CoreRenderMetal/Shaders/BlendNonSeparable.metal`, `Sources/CoreRenderMetal/MetalBackend+BlendNonSeparable.swift`, `Tests/CoreRenderMetalTests/ParityTests+BlendNonSeparable.swift` | MB-5 | ~280, 3 |
-| MB-10 | – | ClipColor edge cases (lum at 0 and 1, grey sources) in Float32 math inside the kernel; `supports += .blendNonSeparable` | `Sources/CoreRenderMetal/Shaders/BlendNonSeparable.metal`, `Tests/CoreRenderMetalTests/ParityTests+BlendNonSeparable.swift` | MB-9 | ~120, 2 |
-| MB-11 | – | Gaussian blur, two passes, the CPU's kernel builder uploaded as weights; enables `blur` | `Sources/CoreRenderMetal/Shaders/Blur.metal`, `Sources/CoreRenderMetal/MetalBackend+Blur.swift`, `Tests/CoreRenderMetalTests/ParityTests+Blur.swift` | MB-8 | ~240, 3 |
+| MB-7 | – | Crop and quarter turns as blits and a rotate kernel; enables `transform`; `supports += .transform` | `Sources/CoreRenderMetal/Shaders/TransformShader.swift`, `Sources/CoreRenderMetal/MetalBackend+Transform.swift`, `Tests/CoreRenderMetalTests/ParityTests+Transform.swift` | MB-2 | ~220, 3 |
+| MB-8 | – | Bilinear and lanczos3 as two separable passes with clamp-to-edge taps and normalised weights; enables `resample`; `supports += .resample` | `Sources/CoreRenderMetal/Shaders/ResampleShader.swift`, `Sources/CoreRenderMetal/MetalBackend+Resample.swift`, `Tests/CoreRenderMetalTests/ParityTests+Resample.swift` | MB-2 | ~300, 3 |
+| MB-9 | – | Hue, saturation, color, luminosity with Lum, Sat, SetLum, SetSat, ClipColor; enables `blendNonSeparable` at `.nonSeparable` | `Sources/CoreRenderMetal/Shaders/BlendNonSeparableShader.swift`, `Sources/CoreRenderMetal/MetalBackend+BlendNonSeparable.swift`, `Tests/CoreRenderMetalTests/ParityTests+BlendNonSeparable.swift` | MB-5 | ~280, 3 |
+| MB-10 | – | ClipColor edge cases (lum at 0 and 1, grey sources) in Float32 math inside the kernel; `supports += .blendNonSeparable` | `Sources/CoreRenderMetal/Shaders/BlendNonSeparableShader.swift`, `Tests/CoreRenderMetalTests/ParityTests+BlendNonSeparable.swift` | MB-9 | ~120, 2 |
+| MB-11 | – | Gaussian blur, two passes, the CPU's kernel builder uploaded as weights; enables `blur` | `Sources/CoreRenderMetal/Shaders/BlurShader.swift`, `Sources/CoreRenderMetal/MetalBackend+Blur.swift`, `Tests/CoreRenderMetalTests/ParityTests+Blur.swift` | MB-8 | ~240, 3 |
 | MB-12 | – | Unsharp mask over the blur; `supports += .blur` | `Sources/CoreRenderMetal/MetalBackend+Unsharp.swift`, `Tests/CoreRenderMetalTests/ParityTests+Unsharp.swift` | MB-11 | ~140, 2 |
-| MB-13 | – | Exposure, levels, curves (the curve as a 1-D table) on unpremultiplied values; enables `adjust` | `Sources/CoreRenderMetal/Shaders/Adjust.metal`, `Sources/CoreRenderMetal/MetalBackend+Adjust.swift`, `Tests/CoreRenderMetalTests/ParityTests+Adjust.swift` | MB-2 | ~280, 3 |
-| MB-14 | – | White balance, contrast, highlights and shadows; `supports += .adjust` | `Sources/CoreRenderMetal/Shaders/Adjust.metal`, `Sources/CoreRenderMetal/MetalBackend+Adjust.swift`, `Tests/CoreRenderMetalTests/ParityTests+Adjust.swift` | MB-13 | ~220, 3 |
-| MB-15 | – | Clone through a mask; enables `retouch`; `supports += .retouch` | `Sources/CoreRenderMetal/Shaders/Retouch.metal`, `Sources/CoreRenderMetal/MetalBackend+Retouch.swift`, `Tests/CoreRenderMetalTests/ParityTests+Retouch.swift` | MB-4 | ~220, 3 |
+| MB-13 | – | Exposure, levels, curves (the curve as a 1-D table) on unpremultiplied values; enables `adjust` | `Sources/CoreRenderMetal/Shaders/AdjustShader.swift`, `Sources/CoreRenderMetal/MetalBackend+Adjust.swift`, `Tests/CoreRenderMetalTests/ParityTests+Adjust.swift` | MB-2 | ~280, 3 |
+| MB-14 | – | White balance, contrast, highlights and shadows; `supports += .adjust` | `Sources/CoreRenderMetal/Shaders/AdjustShader.swift`, `Sources/CoreRenderMetal/MetalBackend+Adjust.swift`, `Tests/CoreRenderMetalTests/ParityTests+Adjust.swift` | MB-13 | ~220, 3 |
+| MB-15 | – | Clone through a mask; enables `retouch`; `supports += .retouch` | `Sources/CoreRenderMetal/Shaders/RetouchShader.swift`, `Sources/CoreRenderMetal/MetalBackend+Retouch.swift`, `Tests/CoreRenderMetalTests/ParityTests+Retouch.swift` | MB-4 | ~220, 3 |
 | MB-16 | – | LRU eviction to the shadow under `budgetBytes`; `residentBytes`; `MetalBudgetTests` (release, reported; the speed p95 enables with MB-4) | `Sources/CoreRenderMetal/MetalSurface+Eviction.swift`, `Sources/CoreRenderMetal/MetalBackend+Memory.swift`, `Tests/CoreRenderMetalTests/MetalTilingTests.swift`, `Tests/CoreRenderMetalTests/MetalBudgetTests.swift` | MB-1 (memory); MB-4 (speed p95) | ~240, 4 |
 | MB-17 | – | Every family on; the parity counts and the runner answer in `waves.md`; `feature-done` | `docs/blueprints/core/features/waves.md`, `Tests/CoreRenderMetalTests/ParityTests.swift` | MB-3 to MB-16 | ~80, 2 |
 
@@ -160,7 +160,7 @@ covered by parity, not mutations.
 
 | id | test | fails when | mutations (plan: label → filter) |
 |---|---|---|---|
-| MB-1 | `MetalCapabilitiesTests`: `enable` then `fail` gives `supported` kept and `healthy` false; `recover` restores; `SurfaceTilingTests`: 4096 x 2160 gives 17 x 9 tiles, the last column 0 px wide never exists, `tiles(touching:)` on a rect spanning two tiles gives both; `MetalSurfaceTests` (macOS, device): `read(surface(b))` within 1e-3 of `b` for 20 seeded buffers (Float16 round trip), `residentBytes` equals tiles x bytes | tiling is off by one or a round trip loses more than Float16 | `CoreRenderMetalCapabilities`: `fail` clears `supported` → `MetalCapabilitiesTests`; `CoreRenderSurfaceTiling`: `<=` for `<` on the last tile → `SurfaceTilingTests` |
+| MB-1 | `MetalCapabilitiesTests`: `enable` then `fail` gives `supported` kept and `healthy` false; `recover` restores; `SurfaceTilingTests`: 4096 x 2160 gives 16 x 9 tiles (4096 is exactly 16 columns; 4097 adds a 1 px 17th), the last column 0 px wide never exists, `tiles(touching:)` on a rect spanning two tiles gives both; `MetalSurfaceTests` (macOS, device): `read(surface(b))` within 1e-3 of `b` for 20 seeded buffers (Float16 round trip), `residentBytes` equals tiles x bytes | tiling is off by one or a round trip loses more than Float16 | `CoreRenderMetalCapabilities`: `fail` clears `supported` → `MetalCapabilitiesTests`; `CoreRenderSurfaceTiling`: `<=` for `<` on the last tile → `SurfaceTilingTests` |
 | MB-2 | `MetalPipelinesTests`: a cold cache compiles and writes the archive; a warm start loads without compiling (a counter); a corrupt archive recompiles and rewrites; `fail` after a mocked command-buffer error turns `isHealthy` false and `supports` empty; `ParityTests` scaffold lists every family disabled with "waits on MB-n" | the cache is ignored, or an error leaves `supports` on | `CoreRenderMetalCapabilities`: `recover` keeps `lastError` → `MetalCapabilitiesTests`; `PipelineKey` ignores `variant` in `==` → `MetalPipelinesTests` |
 | MB-3 | `ParityTests/display`: the display golden set in sRGB and P3 within 2/255; every byte value per channel round-trips | the table or the rounding differs | none: shader |
 | MB-4 | `ParityTests/compositeNormal`: opacities 0, 0.37, 1, sources off every edge and corner, wholly outside, alpha 1e-45 source; within `.standard` | an edge pixel or an alpha guard differs | none: shader |
@@ -239,9 +239,27 @@ GPU path.
   only in an optimized build, so dev's debug `scripts/ci` skips it; the lead
   or the Mac finisher runs it on release and reports it, and MB-h's done check
   needs that run recorded, not the skipped CI test. (4) The budget lives in
-  `MetalBackend+Memory.swift` and touched `MetalBackend.swift` and
-  `MetalSurface.swift`, not only `MetalSurface+Eviction.swift`; the Tasks row
-  lists the new file.
+  three places: `budgetBytes` in `MetalBackend.swift`, its default formula in
+  `SurfaceTiling.defaultBudget` (Linux-safe, tested in `SurfaceTilingTests`,
+  mutated in `CoreRenderSurfaceTiling`), and eviction in
+  `MetalBackend+Memory.swift` and `MetalSurface+Eviction.swift`.
+- **Shaders are Swift strings, not `.metal` files.** Each family's MSL is a
+  `static let source` in `Sources/CoreRenderMetal/Shaders/<Name>Shader.swift`,
+  compiled at runtime with `makeLibrary(source:)` through `MetalPipelines`,
+  as MB-2 built the probe. A `.metal` file would need the Metal toolchain at
+  build time and a resources entry in `Package.swift`. The Tasks rows name
+  the Swift files.
+- **MB-1's tile count.** 4096 x 2160 gives 16 x 9 tiles, not 17 x 9: 4096 is
+  exactly 16 columns of 256. `SurfaceTilingTests` asserts 16 x 9, and 4097
+  adds a 1 px 17th column.
+- **MB-2's `PipelineKey` mutation.** `PipelineKey` uses synthesized
+  `Hashable`, so "`==` ignores `variant`" has no anchor to plant. The
+  key-equality test lives in `PipelineKeyTests`, and `CoreRenderPipelineKey`
+  plants the `functionName` and `validated` mutations instead.
+- **Round 3 findings for MB-a** (19 confirmed, fix rounds exhausted) are listed
+  in `docs/leads/metal-backend/round3-findings.md` on `lead/metal-backend`.
+  The two majors shipped in #385 (slice MB-b); the rest are doc and test
+  polish for MB-17.
 
 ## Open
 

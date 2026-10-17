@@ -2,7 +2,8 @@
 // split into, one texture per tile. The grid math is CoreRaster's
 // (`PixelBuffer.tileCount(covering:)` and `tileRect(column:row:width:height:)`),
 // so a surface tile uploads from and downloads to the matching buffer tile.
-// This file adds the row-major index and `tiles(touching:)`. Invariants: the size passes `PixelBuffer.validatedSize`; tiles
+// This file adds the row-major index, `tiles(touching:)` and `defaultBudget`, the
+// Metal backend's default memory budget in tile-sized steps. Invariants: the size passes `PixelBuffer.validatedSize`; tiles
 // are numbered row-major from the top left; the last column and row are
 // clipped to the surface and never 0 px wide, so every pixel lies in exactly
 // one tile; `tiles(touching:)` never traps. Integer math only, no Metal import.
