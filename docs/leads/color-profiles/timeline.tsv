@@ -103,3 +103,4 @@ utc	stage	event	ref	note
 2026-10-18T20:03Z	-	heartbeat	-	waiting
 2026-10-18T20:08Z	5	heartbeat	-	CP-10 waits LC-10
 2026-10-18T20:21Z	-	heartbeat	-	waiting
+2026-10-18T20:35Z	5	dispatch	CP-10	CP-10 feature-done fixer dispatched on d715348 (wf_7a90a943-a4e)
