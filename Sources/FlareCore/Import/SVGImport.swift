@@ -89,26 +89,45 @@ struct SVGReader {
     func positive(_ value: String?) -> Double? { value.flatMap { SVGStyle.length($0, of: 0) }.flatMap { $0 > 0 ? $0 : nil } }
 
     /// The shapes and texts of node `i` and its subtree, placed by `parent` times its own transform.
+    /// Groups are walked depth first with an explicit stack: recursing `maxDepth` deep overflows
+    /// the 512 KB stack of a secondary thread on macOS.
     mutating func draw(_ i: Int, _ parent: Matrix, _ inherited: SVGStyle) throws -> ([Shape], [TextShape]) {
-        let node = nodes[i]
         let silent: Set = ["#text", "title", "desc", "metadata", "linearGradient", "radialGradient", "clipPath", "stop"]
-        guard !silent.contains(node.name) else { return ([], []) }
-        let ctm = parent * (try transform(node.attributes["transform"]))
-        let style = inherited.applying(node.attributes)
-        if node.attributes["clip-path"] != nil { count("clip-path") }
-        switch node.name {
-        case "g", "a", "svg", "defs":
-            var out: ([Shape], [TextShape]) = ([], [])
-            for child in node.children {
-                let (shapes, texts) = try draw(child, ctm, style)
-                out.0 += shapes
-                out.1 += texts
+        // Each open group: its node, transform and style, its next child, and what its children drew.
+        var open: [(node: Int, ctm: Matrix, style: SVGStyle, next: Int, out: ([Shape], [TextShape]))] = []
+        var pending: (i: Int, parent: Matrix, inherited: SVGStyle)? = (i, parent, inherited)
+        while true {
+            var drawn: ([Shape], [TextShape]) = ([], [])
+            if let (i, parent, inherited) = pending {
+                pending = nil
+                let node = nodes[i]
+                if !silent.contains(node.name) {
+                    let ctm = parent * (try transform(node.attributes["transform"]))
+                    let style = inherited.applying(node.attributes)
+                    if node.attributes["clip-path"] != nil { count("clip-path") }
+                    switch node.name {
+                    case "g", "a", "svg", "defs": open.append((i, ctm, style, 0, ([], []))); continue
+                    default:
+                        if let local = try outline(node) {
+                            if !local.elements.isEmpty {
+                                drawn.0 = [Shape(points: [], fill: fill(style), path: local.transformed(by: ctm), stroke: stroke(style, ctm))]
+                            }
+                        } else { count(node.name) }
+                    }
+                }
+            } else if let top = open.indices.last {
+                let children = nodes[open[top].node].children
+                if open[top].next < children.count {
+                    pending = (children[open[top].next], open[top].ctm, open[top].style)
+                    open[top].next += 1
+                    continue
+                }
+                let done = open.removeLast()
+                if nodes[done.node].name != "defs" { drawn = done.out }
             }
-            return node.name == "defs" ? ([], []) : out
-        default:
-            guard let local = try outline(node) else { count(node.name); return ([], []) }
-            guard !local.elements.isEmpty else { return ([], []) }
-            return ([Shape(points: [], fill: fill(style), path: local.transformed(by: ctm), stroke: stroke(style, ctm))], [])
+            guard let top = open.indices.last else { return drawn }
+            open[top].out.0 += drawn.0
+            open[top].out.1 += drawn.1
         }
     }
 
