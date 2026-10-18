@@ -56,3 +56,4 @@ Next: VI-5 building, VI-7 building; Anatomy round 2 verdicts pending; Slice-Done
 - 2026-10-18T15:17:10Z VI R2-2 #512 merged 14:59Z (n1, n8/15 closed). macOS SIGBUS on deep recursion (Lottie maxDepth 250 on 512 KB thread stacks, #453): fixer R2-3 launched.
 - 2026-10-18T15:24:19Z VI-5 #517 (read SVG documents) merged 5dfa965; VI-5 second PR in progress.
 - 2026-10-18T15:40Z heartbeat: checking merges, dev CI and agents.
+- 2026-10-18T15:43Z incident: the disk filled up at about 15:39Z. I deleted the .build caches of finished worktrees and told the running agents to rerun any gate that failed. No dev CI run newer than 364 yet. #518 (LC R2-2) needs a rebase onto 168c73d.
