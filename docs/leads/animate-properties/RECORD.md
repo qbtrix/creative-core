@@ -9,10 +9,10 @@ Next: AP-7 (Lottie) and AP-8 (SVG) building (wf_a5b3a585-9ef). Fix batch ap-r1 f
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
 |---|---|---|---|---|---|
-| AP-a | AP-1, AP-2 | engine-contracts:EC-f | open | | |
+| AP-a | AP-1, AP-2 | engine-contracts:EC-f | merged-done | 39118832683 | |
 | AP-cmd | AP-3, AP-4 | AP-a; path-geometry:PG-edit (AP-4) | open | | |
-| AP-sample | AP-5, AP-6 | AP-a | open | | |
-| AP-export | AP-7, AP-8 | AP-sample | open | | |
+| AP-sample | AP-5, AP-6 | AP-a | merged (5430f32); waits a dev run with it | | |
+| AP-export | AP-7, AP-8 | AP-sample | building (wf_a5b3a585-9ef) | | |
 | AP-z | AP-9, AP-10 | AP-cmd, AP-export | open | | |
 
 ## Tasks
