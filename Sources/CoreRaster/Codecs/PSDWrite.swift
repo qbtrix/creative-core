@@ -1,4 +1,5 @@
-// PSDWrite.swift: saves a `LayeredImage` as an 8- or 16-bit RGB PSD, from the
+// PSDWrite.swift: saves a `LayeredImage` as an 8- or 16-bit RGB PSD (grayscale
+// when its profile is gray), from the
 // published PSD file format specification, so that `PSD.read` reopens it
 // equal. Sections in file order: header, empty colour mode data, image
 // resources (the profile as resource 1039), the layer and mask section (records bottom to top, then each
@@ -7,7 +8,8 @@
 // mode, without masks, clipping or group blending).
 // Invariants a writer must keep:
 // - Nothing is written until the whole image is validated: bits per channel 8
-//   or 16, a profile the ICC writer takes and that is not gray, every opacity and mask default
+//   or 16, a profile the ICC writer takes, with a gray one every layer and the
+//   composite neutral (equal stored samples), every opacity and mask default
 //   finite in 0...1, every layer and mask side within `PSD.maxSide` and its
 //   bounds within Int32, the canvas and every layer and mask within
 //   `PSD.maxTotalPixels`, at most `PSD.maxLayers` records. Each failure
@@ -46,30 +48,33 @@ extension PSD {
             return record
         }
         let composite = try image.composite ?? flattened(items, width: image.width, height: image.height)
+        let gray = image.profile?.isGray == true
+        let channels = try records.map { try $0.channelData(depth, gray: gray) }
+        let planes = try depth.colorPlanes(composite, gray: gray, "the composite")
+        let colors = gray ? 1 : 3
 
         var w = PSDByteWriter()
         w.ascii("8BPS")
         w.u16(1)
         w.bytes += [0, 0, 0, 0, 0, 0]
-        w.u16(records.isEmpty ? 3 : 4)
+        w.u16(UInt16(records.isEmpty ? colors : colors + 1))
         try w.length(image.height)
         try w.length(image.width)
         w.u16(UInt16(depth.rawValue))
-        w.u16(3) // RGB
+        w.u16(gray ? 1 : 3) // grayscale or RGB
         w.u32(0) // colour mode data
         try w.length(resources.count)
         w.bytes += resources
         try w.sized { section in
             try section.sized(pad: 2) { info in
                 info.i16(Int16(truncatingIfNeeded: -records.count)) // negative: the merged alpha is transparency
-                let channels = try records.map { try $0.channelData(depth) }
                 for (record, data) in zip(records, channels) { try record.write(data, into: &info) }
                 for data in channels { for (_, bytes) in data { info.bytes += bytes } }
             }
             section.u32(0) // global layer mask info
         }
-        let planes = depth.colorPlanes(composite)
-        w.bytes += try rle(Array(planes.prefix(records.isEmpty ? 3 : 4)), width: image.width * depth.bytes)
+        let merged = Array(planes.prefix(colors)) + (records.isEmpty ? [] : [planes[colors]])
+        w.bytes += try rle(merged, width: image.width * depth.bytes)
         return Data(w.bytes)
     }
 
@@ -231,11 +236,14 @@ private struct PSDOutRecord {
         }
     }
 
-    /// Each channel's id and RLE bytes at `depth`: transparency, red, green, blue, then the mask.
-    func channelData(_ depth: PSDDepth) throws -> [(id: Int16, bytes: [UInt8])] {
-        guard let layer else { return try [-1, 0, 1, 2].map { ($0, try PSD.rle([], width: 0)) } }
-        let planes = depth.colorPlanes(layer.pixels), width = layer.pixels.width * depth.bytes
-        var channels = try [(-1, 3), (0, 0), (1, 1), (2, 2)].map { (id: Int16($0.0), bytes: try PSD.rle([planes[$0.1]], width: width)) }
+    /// Each channel's id and RLE bytes at `depth`: transparency, red, green, blue (or grey alone
+    /// when `gray`), then the mask.
+    func channelData(_ depth: PSDDepth, gray: Bool) throws -> [(id: Int16, bytes: [UInt8])] {
+        let ids: [(Int16, Int)] = gray ? [(-1, 1), (0, 0)] : [(-1, 3), (0, 0), (1, 1), (2, 2)]
+        guard let layer else { return try ids.map { ($0.0, try PSD.rle([], width: 0)) } }
+        let planes = try depth.colorPlanes(layer.pixels, gray: gray, "layer \"\(layer.name)\"")
+        let width = layer.pixels.width * depth.bytes
+        var channels = try ids.map { (id: $0.0, bytes: try PSD.rle([planes[$0.1]], width: width)) }
         if let m = layer.mask?.mask {
             channels.append((-2, try PSD.rle([depth.maskPlane(m)], width: m.width * depth.bytes)))
         }

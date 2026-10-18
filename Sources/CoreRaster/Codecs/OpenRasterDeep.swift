@@ -7,8 +7,8 @@
 //   reports 16 when any of them says 16, else 8.
 // - Profile. `profile.icc` at the archive root holds `ColorProfile.iccData()`;
 //   other readers ignore the unknown entry. The reader reads it back with
-//   `ColorProfile(iccData:)` within `maxProfileBytes`, and an `extra` entry
-//   may not use its path.
+//   `ColorProfile(iccData:)` within `maxProfileBytes`, dropping a profile it
+//   refuses, and an `extra` entry may not use its path.
 // An 8-bit image without a profile writes exactly the bytes it did before.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
@@ -31,11 +31,13 @@ extension OpenRaster {
     }
 
     /// The `profile.icc` entry as a profile, nil without one. Throws `tooLarge`
-    /// over `maxProfileBytes` and `damaged` for bytes ICC read refuses.
+    /// over `maxProfileBytes`. A profile `ColorProfile(iccData:)` refuses
+    /// (LUT-based, CMYK, a printer class, damaged bytes) is dropped: the file
+    /// opens with no profile, as it did before profiles were read.
     static func profile(_ entries: [String: Data]) throws -> ColorProfile? {
         guard let bytes = entries[profilePath] else { return nil }
         guard bytes.count <= maxProfileBytes else { throw CodecError.tooLarge("\(profilePath) is \(bytes.count) bytes") }
-        do { return try ColorProfile(iccData: bytes) } catch { throw CodecError.damaged("\(profilePath): \(error)") }
+        return try? ColorProfile(iccData: bytes)
     }
 
     /// The depth every PNG is encoded at and the `profile.icc` bytes (nil
@@ -48,8 +50,6 @@ extension OpenRaster {
         }
         guard extra[profilePath] == nil else { throw CodecError.unsupported("extra entry \(profilePath) collides with a standard entry") }
         guard let profile = image.profile else { return (image.bitsPerChannel, nil) }
-        do { return (image.bitsPerChannel, try profile.iccData()) } catch {
-            throw CodecError.unsupported("the colour profile \"\(profile.name)\": \(error)")
-        }
+        return (image.bitsPerChannel, try CodecError.profileData(profile))
     }
 }

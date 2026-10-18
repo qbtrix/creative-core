@@ -10,7 +10,13 @@ import Foundation
 /// Turns PNG bytes into a `PixelBuffer` and back. Implementations throw
 /// `CodecError.pixelCodec` for bytes they cannot read.
 public protocol PixelCodec: Sendable {
+    /// PNG bytes as premultiplied linear Float32 pixels. Must read 8- and
+    /// 16-bit PNGs.
     func decodePNG(_ data: Data) throws -> PixelBuffer
+    /// `buffer` (premultiplied linear light) as a PNG. `bitsPerChannel` is 8
+    /// or 16: write the PNG's samples at that depth and record it as the
+    /// IHDR bit depth (byte 24), which `OpenRaster.read` uses to report the
+    /// image's depth. Throw `CodecError.pixelCodec` for any other value.
     func encodePNG(_ buffer: PixelBuffer, bitsPerChannel: Int) throws -> Data
 }
 

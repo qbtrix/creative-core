@@ -1,7 +1,7 @@
 // ORA 16-bit layers and the profile.icc entry (colour-profiles CP-8): 16-bit
 // layers round-trip exactly through the raw PixelCodec at 16 bits, the profile
 // reads back, an 8-bit file without a profile is byte-for-byte what it was
-// before, and a damaged or oversized profile entry throws a CodecError.
+// before, a profile ICC read refuses is dropped and an oversized entry throws.
 import CoreColor
 import CoreRaster
 import Foundation
@@ -68,7 +68,11 @@ import Testing
             files[OpenRaster.profilePath] = profile
             return try ZipStore.archive(files, first: "mimetype")
         }
-        #expect(throws: CodecError.self) { try OpenRaster.read(ora(icc.prefix(100)), pixels: RawPixelCodec()) }
+        let plain = try OpenRaster.read(ora(Data()), pixels: RawPixelCodec())
+        for refused in try [icc.prefix(100)] + refusedProfiles().map({ Data($0) }) {
+            let back = try OpenRaster.read(ora(Data(refused)), pixels: RawPixelCodec())
+            #expect(back.profile == nil && back.nodes == plain.nodes, "a profile ICC read refuses is dropped, as PSD drops it")
+        }
         #expect(throws: CodecError.tooLarge("profile.icc is \(OpenRaster.maxProfileBytes + 1) bytes")) {
             try OpenRaster.read(ora(icc + Data(count: OpenRaster.maxProfileBytes + 1 - icc.count)), pixels: RawPixelCodec())
         }
