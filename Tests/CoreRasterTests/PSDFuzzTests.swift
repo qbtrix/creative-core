@@ -24,7 +24,7 @@ func fuzz(_ cases: [Data], _ open: (Data) throws -> Void) {
 }
 
 @Suite struct PSDFuzzTests {
-    @Test(.disabled("waits on LC-4")) func thousandMutationsThrowOrOpen() {
+    @Test func thousandMutationsThrowOrOpen() {
         let seeds = [PSDFile.layers(width: 120, height: 80).data, PSDFile.gray.data, PSDFile.nested.data]
         fuzz(mutations(of: seeds, count: 1_000, seed: 0x95D)) { _ = try PSD.read($0) }
     }
