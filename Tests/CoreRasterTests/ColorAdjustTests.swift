@@ -170,4 +170,14 @@ enum ToneCheck {
         #expect(throws: RasterError.self) { try b.hueSaturation(hue: 0, saturation: 0, lightness: .nan) }
         #expect(throws: RasterError.self) { try b.hsl(HSLAdjustment(greens: HSLShift(hue: .nan))) }
     }
+
+    /// Out-of-range sliders throw; an `HSLShift` component is clamped to -100...100.
+    @Test func rangesCheckedOrClamped() throws {
+        let b = try ToneCheck.seeded(width: 4, height: 4, seed: 0xA5, opaque: true)
+        #expect(throws: RasterError.self) { try b.vibrance(101) }
+        #expect(throws: RasterError.self) { try b.hueSaturation(hue: 181, saturation: 0, lightness: 0) }
+        #expect(throws: RasterError.self) { try b.hueSaturation(hue: 0, saturation: -101, lightness: 0) }
+        let over = try b.hsl(HSLAdjustment(greens: HSLShift(hue: 150, saturation: -300, lightness: 120)))
+        #expect(over == (try b.hsl(HSLAdjustment(greens: HSLShift(hue: 100, saturation: -100, lightness: 100)))))
+    }
 }
