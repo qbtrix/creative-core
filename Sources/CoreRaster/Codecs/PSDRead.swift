@@ -160,9 +160,9 @@ extension PSD {
     }
 
     /// Encoded 8-bit sRGB to linear light.
-    private static let linear: [Float] = (0..<256).map { Float(TransferCurve.decode(Double($0) / 255)) }
+    static let linear: [Float] = (0..<256).map { Float(TransferCurve.decode(Double($0) / 255)) }
 
-    private static let blendModes: [String: BlendMode] = [
+    static let blendModes: [String: BlendMode] = [
         "norm": .normal, "mul ": .multiply, "scrn": .screen, "over": .overlay, "dark": .darken, "lite": .lighten,
         "div ": .colorDodge, "idiv": .colorBurn, "hLit": .hardLight, "sLit": .softLight, "diff": .difference,
         "smud": .exclusion, "hue ": .hue, "sat ": .saturation, "colr": .color, "lum ": .luminosity]
