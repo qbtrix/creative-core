@@ -52,6 +52,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 |---|---|---|---|---|---|---|---|---|---|
 
 ## Decisions
+- AC-3 (head 352eb29): no scale-only resampled fast path (resized edge-extends, which would break outside-is-transparent); downscale widens the kernel per axis for any shrink below 1 by the source step, capped at source size, so pure rotation is not blurred. Fast paths: identity, whole-pixel translation, quarter turns and mirrors. AC-3 removed its rows from AffineStubTests.
 - engine-contracts is satisfied on the base: `AffineMatrix`, `FlipAxis`, `CanvasAnchor`, the `affine` family, `CPUBackend+Affine.swift` and `Samples+Affine.swift` are in code at a8a08d25.
 - Added AC-0 (rule 18): the packet's contract slice names signatures that don't exist yet, so the checks-first suites couldn't compile; AC-0 declares them as stubs and AC-3/4/5 fill the bodies without changing signatures.
 - AC-1 waits on AC-0 and AC-2 (its suites call the stubs and the fixtures), so it is wave 2.
