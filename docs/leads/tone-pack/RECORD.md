@@ -2,9 +2,9 @@
 
 Issue: #432 · Packet: docs/blueprints/core/features/tone-pack.md
 Run: act-1a150bfbcf7-sfwy · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
-Stage: 3 wave 1
-Base: a8a08d25e34e119dd399ede9d77880a2d16bc04b
-Next: wave 1 builders running (TP-0, TP-2); then wave 2 once they merge
+Stage: 3 wave 2
+Base: 15e96dd47c720025f5ae49b3649608deb65ab216
+Next: wave 2 builder running (TP-1 checks-first suites); then wave 3 once it merges
 
 Line lead for #434, #433 and #432 (rule 19); one wave plan across the three
 features, bookkeeping per feature. Packet v3 (has a Slices table).
@@ -12,9 +12,9 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 ## Tasks
 | id | wave | slice | behavior | files | test | mutation | PR | state |
 |---|---|---|---|---|---|---|---|---|
-| TP-0 | 1 | TP-a | Stubs for the contract slice's signatures (rule 18): the 13 ops, `CubeLUT.parse`, `AutoTone`; throwing ones throw `RasterError.invalid("not built")`, `inverted()` returns self | `Sources/CoreRaster/Tone/{ColorAdjust,ColorMix,ColorMap,CubeLUT,AutoTone}.swift`, `Tests/CoreRasterTests/ToneStubTests.swift` | `ToneStubTests` | none (no invariant) | | planned |
-| TP-2 | 1 | TP-a | Reference colours, `.cube` fixtures (identity 17³, warm 33³, five damaged) generated as text in code, the cast photo | `Tests/CoreRasterTests/ToneFixtures.swift` | every fixture parses or fails as labelled (checked in TP-5) | none | | planned |
-| TP-1 | 2 | TP-a | Checks first: six suites disabled by name | `Tests/CoreRasterTests/{ColorAdjust,ColorMix,ColorMap,ColorLUT,AutoTone}Tests.swift`, `Tests/CoreRenderTests/CPUColorTests.swift` | suites compile, disabled | none | | planned |
+| TP-0 | 1 | TP-a | Stubs for the contract slice's signatures (rule 18): the 13 ops, `CubeLUT.parse`, `AutoTone`; throwing ones throw `RasterError.invalid("not built")`, `inverted()` returns self | `Sources/CoreRaster/Tone/{ColorAdjust,ColorMix,ColorMap,CubeLUT,AutoTone}.swift`, `Tests/CoreRasterTests/ToneStubTests.swift` | `ToneStubTests` | none (no invariant) | #561 | merged |
+| TP-2 | 1 | TP-a | Reference colours, `.cube` fixtures (identity 17³, warm 33³, five damaged) generated as text in code, the cast photo | `Tests/CoreRasterTests/ToneFixtures.swift` | every fixture parses or fails as labelled (checked in TP-5) | none | #569 | merged |
+| TP-1 | 2 | TP-a | Checks first: six suites disabled by name | `Tests/CoreRasterTests/{ColorAdjust,ColorMix,ColorMap,ColorLUT,AutoTone}Tests.swift`, `Tests/CoreRenderTests/CPUColorTests.swift` | suites compile, disabled | none | | building |
 | TP-3 | 3 | TP-mix | `vibrance`, `hueSaturation`, `hsl`; turns on `ColorAdjustTests` | `Sources/CoreRaster/Tone/ColorAdjust.swift`, its tests, `Tests/mutations/CoreRaster.ColorAdjust.json` | `ColorAdjustTests` | 3 (packet) | | planned |
 | TP-4 | 3 | TP-mix | `blackAndWhite`, `channelMixer`, `colorBalance`; turns on `ColorMixTests` | `Sources/CoreRaster/Tone/ColorMix.swift`, its tests, `Tests/mutations/CoreRaster.ColorMix.json` | `ColorMixTests` | 3 (packet) | | planned |
 | TP-5 | 3 | TP-map | `gradientMap`, LUT apply, `CubeLUT.parse` + fuzz, `posterized`, `thresholded`, `inverted`; turns on `ColorMapTests`, `ColorLUTTests` | `Sources/CoreRaster/Tone/ColorMap.swift`, `Sources/CoreRaster/Tone/CubeLUT.swift`, both tests, `Tests/mutations/CoreRaster.ColorMap.json`, `Tests/mutations/CoreRaster.CubeLUT.json` | `ColorMapTests`, `ColorLUTTests` | 5 (packet) | | planned |

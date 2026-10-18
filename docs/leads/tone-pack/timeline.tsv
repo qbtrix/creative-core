@@ -5,3 +5,7 @@ utc	stage	event	ref	note
 2026-10-18T20:46Z	2	stage-start	plan	combined wave plan across #434 #433 #432
 2026-10-18T20:48Z	2	stage-end		plan recorded
 2026-10-18T20:48Z	3	wave-start	W1	TP-0, TP-2 launched on a8a08d25
+2026-10-18T22:02Z	3	pr-merged	#561	task TP-0
+2026-10-18T22:02Z	3	pr-merged	#569	task TP-2
+2026-10-18T22:03Z	3	wave-end	W1	all wave 1 PRs merged
+2026-10-18T22:03Z	3	wave-start	W2	TP-1 on dev 15e96dd4
