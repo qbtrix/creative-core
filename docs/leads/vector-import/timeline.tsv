@@ -66,3 +66,4 @@ utc	stage	event	ref	note
 20:01Z	relaunch	VI-8 builder still stalled at 20:00 (no change since 18:38); stopped and relaunched a finisher on the same worktree
 20:21Z	merged	VI-8 #556 merged ce06d88 (round trip every export fixture, exporter writes shapes top-first, mutations 2/2). Release budgets miss on Linux: SVG 2.1 MB ~180 ms vs 150, Lottie 5.3 MB ~480 ms vs 250; launching reader perf fixer R3-3 before VI-9.
 20:21Z	launch	R3-3 reader perf fixer on lead/vector-import-R3-3
+20:22Z	heartbeat	heartbeat: R3-3 reader perf fixer working; VI-9 waits on it
