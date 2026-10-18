@@ -63,11 +63,18 @@
     "filter": "TrackCommandsTests.missingShapeRefused"
   },
   {
-    "note": "a colour command reports a missing text target as a missing shape",
+    "note": "a colour command checks a text target against the layer's shapes",
     "file": "Sources/FlareCore/TrackCommands.swift",
-    "anchor": "if case .text(let index) = target { throw CommandError.invalidIndex(index) }",
+    "anchor": "case .text: layer.texts.indices.contains(index)",
+    "replacement": "case .text: layer.shapes.indices.contains(index)",
+    "filter": "TrackCommandsTests.missingTextIsShapeNotFound"
+  },
+  {
+    "note": "a colour key drag merge keeps the first step's value",
+    "file": "Sources/FlareCore/TrackCommands.swift",
+    "anchor": "(value, easing) = (next.value, next.easing)",
     "replacement": "",
-    "filter": "TrackCommandsTests.missingTextIsInvalidIndex"
+    "filter": "TrackCommandsTests.mergeOnlySameKey"
   },
   {
     "note": "a colour key remove leaves an empty track instead of dropping it",

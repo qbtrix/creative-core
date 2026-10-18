@@ -76,8 +76,8 @@ public enum CommandError: Error, Equatable, Sendable {
     /// Scene duration must be >= 0 frames.
     case invalidDuration(Int)
     /// A shape index missing from a layer, or a text index missing from a
-    /// layer's texts in a text command. A colour track command's
-    /// `.text(index:)` target throws `invalidIndex` instead.
+    /// layer's texts (text commands, and a colour track command's
+    /// `.text(index:)` target).
     case shapeNotFound(Int)
     /// The layer is locked, so its shapes and keyframes cannot be edited.
     case layerLocked(String)
@@ -126,9 +126,8 @@ public enum CommandError: Error, Equatable, Sendable {
     /// (MoveGuide, RemoveGuide, AddGuide undo), a swatch position
     /// (RemoveSwatch undo), a transition index (UpdateTransition,
     /// RemoveTransition), a state machine position (RemoveStateMachine undo),
-    /// 0 for an empty layer list (ConvertToSymbol), or a colour track
-    /// command's `.text(index:)` target missing from the layer's texts. A
-    /// shape index missing from a layer throws `shapeNotFound` instead.
+    /// or 0 for an empty layer list (ConvertToSymbol). A shape or text index
+    /// missing from a layer throws `shapeNotFound` instead.
     case invalidIndex(Int)
     /// `undo` was called on a command that never executed.
     case notExecuted
