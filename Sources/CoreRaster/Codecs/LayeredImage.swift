@@ -30,6 +30,10 @@ public struct LayeredImage: Equatable, Sendable {
     /// The embedded colour profile; nil when the file has none or embeds one
     /// `ColorProfile(iccData:)` refuses (the readers then open the image
     /// without it). PSD writes a grayscale file for a gray profile.
+    /// The pixels are the file's numbers decoded with the sRGB curve, not with
+    /// this profile's curves; convert them with
+    /// `PixelBuffer.converted(from: profile, to:)`, which undoes that decode,
+    /// not with `ProfileTransform.applyLinear` directly.
     public var profile: ColorProfile?
 
     public init(width: Int, height: Int, nodes: [LayerNode] = [],

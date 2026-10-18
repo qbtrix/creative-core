@@ -37,7 +37,7 @@ extension PixelBuffer {
     /// Output is premultiplied linear light in the same convention. Alpha is
     /// unchanged, alpha 0 pixels are copied as they are, and out-of-gamut values
     /// stay unclamped. For example
-    /// `layered.composite?.converted(from: layered.profile ?? .sRGB, to: .linearSRGB)`.
+    /// `try layered.composite?.converted(from: layered.profile ?? .sRGB, to: .linearSRGB)`.
     /// Throws `RasterError.invalid` when the profiles cannot form a transform or
     /// a converted component is not finite.
     public func converted(from source: ColorProfile, to target: ColorProfile) throws(RasterError) -> PixelBuffer {
