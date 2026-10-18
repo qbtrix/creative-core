@@ -203,6 +203,12 @@ import Testing
     func missingShapeRefused() throws {
         var engine = CommandEngine(document: Fixtures.document())
         #expect(throws: CommandError.shapeNotFound(5)) { try engine.perform(key(0, Self.red, .linear, .fill(shape: 5))) }
+        #expect(throws: CommandError.shapeNotFound(5)) {
+            try engine.perform(RemoveColorKeyframe(owner: Self.owner, layerID: "ball", target: .fill(shape: 5), frame: 0))
+        }
+        #expect(throws: CommandError.shapeNotFound(5)) {
+            try engine.perform(MoveColorKeyframes(owner: Self.owner, layerID: "ball", target: .fill(shape: 5), frames: [], by: 1))
+        }
         #expect(engine.document == Fixtures.document())
     }
 
@@ -218,6 +224,31 @@ import Testing
             try engine.perform(RemoveColorKeyframe(owner: Self.owner, layerID: "ball", target: .text(index: 3), frame: 0))
         }
         #expect(engine.document == start)
+    }
+
+    /// Removing a track's last key removes the track (nil, never []), and undo restores it.
+    @Test
+    func removingLastKeyDropsTrack() throws {
+        var engine = CommandEngine(document: Fixtures.document())
+        try engine.perform(key(0, Self.red))
+        let keyed = engine.document
+        try engine.perform(RemoveColorKeyframe(owner: Self.owner, layerID: "ball", target: .fill(shape: 0), frame: 0))
+        #expect(fills(engine) == nil)
+        try engine.undo()
+        #expect(engine.document == keyed)
+    }
+
+    /// Removing a key at a frame with no key is refused by name, with or without a track.
+    @Test
+    func removeMissingKeyRefused() throws {
+        var engine = CommandEngine(document: Fixtures.document())
+        let remove = RemoveColorKeyframe(owner: Self.owner, layerID: "ball", target: .fill(shape: 0), frame: 5)
+        #expect(throws: CommandError.keyframeNotFound(property: "fill.0", frame: 5)) { try engine.perform(remove) }
+        #expect(engine.document == Fixtures.document())
+        try engine.perform(key(0, Self.red))
+        let keyed = engine.document
+        #expect(throws: CommandError.keyframeNotFound(property: "fill.0", frame: 5)) { try engine.perform(remove) }
+        #expect(engine.document == keyed)
     }
 
     /// Moving no keys on a target with no track changes nothing and still undoes.
