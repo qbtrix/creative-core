@@ -15,3 +15,4 @@ utc	stage	event	ref	note
 2026-10-18T09:51Z	3	pr-opened	#463	AP-2 PR f5cda84 (checks first + tracks.flare fixture, contract check ok)
 2026-10-18T09:51Z	3	pr-merged	#463	AP-2 merged 9e826ac; AP-a tasks all merged; Belt-Slice-Done after Linux green
 2026-10-18T09:51Z	3	stage-start	AP-3,AP-5,AP-6	wave 3 on 9e826ac; AP-4 waits on path-geometry PG-edit (#430 open)
+2026-10-18T09:53Z	-	heartbeat	-	waiting
