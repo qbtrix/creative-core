@@ -55,6 +55,24 @@ func seededSamples(_ seed: UInt64) -> (Int16, Int, Int) -> UInt16 {
 /// FNV-1a, 64-bit: a fingerprint of bytes this suite pins.
 func fnv1a(_ data: Data) -> UInt64 { data.reduce(0xcbf2_9ce4_8422_2325) { ($0 ^ UInt64($1)) &* 0x100_0000_01b3 } }
 
+/// A gray profile: the D50 white and one gamma curve.
+let grayProfile = ColorProfile(name: "g", isGray: true, toXYZD50: [0.9642, 1, 0.8249], curves: [.gamma(2.2)])
+
+/// ICC bytes `ColorProfile(iccData:)` refuses: a printer-class gray profile, an RGB one whose
+/// colourant tags are renamed to LUT tags (so it has A2B0 and no rXYZ, gXYZ or bXYZ), and junk.
+func refusedProfiles() throws -> [[UInt8]] {
+    var printer = [UInt8](try grayProfile.iccData())
+    printer.replaceSubrange(12..<16, with: Array("prtr".utf8))
+    var lut = [UInt8](try ColorProfile.displayP3.iccData())
+    let tags = Int(lut[128]) << 24 | Int(lut[129]) << 16 | Int(lut[130]) << 8 | Int(lut[131])
+    let renames = ["rXYZ": "A2B0", "gXYZ": "B2A0", "bXYZ": "zzzz"]
+    for t in 0..<tags {
+        let at = 132 + t * 12
+        if let new = renames[String(decoding: lut[at..<at + 4], as: UTF8.self)] { lut.replaceSubrange(at..<at + 4, with: Array(new.utf8)) }
+    }
+    return [printer, lut, Array(repeating: 0x41, count: 200)]
+}
+
 @Suite struct PSDDeepTests {
     @Test func bigEndianSamples() throws {
         let file = deepPSD { id, x, _ in id == -1 ? 0xFFFF : id == -2 ? 0x8001 : [0x1234, 0xFE01, 0x00FF][Int(id)] &+ UInt16(x) }
@@ -100,6 +118,30 @@ func fnv1a(_ data: Data) -> UInt64 { data.reduce(0xcbf2_9ce4_8422_2325) { ($0 ^ 
         #expect(try PSD.read(deepPSD(resources: psdResource(1005, [1]), sample: seededSamples(2))).profile == nil)
     }
 
+    @Test func grayProfileRoundTrips() throws {
+        let icc = try grayProfile.iccData()
+        let image = try PSD.read(deepPSD(gray: true, resources: psdResource(1039, [UInt8](icc)), sample: seededSamples(8)))
+        #expect(try image.profile == ColorProfile(iccData: icc) && image.profile?.isGray == true)
+        let written = try PSD.write(image)
+        #expect([UInt8](written)[24...25] == [0, 1], "a gray profile writes a grayscale file")
+        #expect(try PSD.read(written) == image)
+        var tinted = image
+        tinted.composite = try PixelBuffer(width: 6, height: 4, fill: RGBA(r: 0.5, g: 0.25, b: 0.5, a: 1))
+        #expect(throws: CodecError.unsupported("the composite is not grey, so it cannot be saved with a gray colour profile")) {
+            try PSD.write(tinted)
+        }
+    }
+
+    @Test func unreadableProfileStillOpens() throws {
+        for gray in [false, true] {
+            let plain = try PSD.read(deepPSD(gray: gray, sample: seededSamples(10)))
+            for icc in try refusedProfiles() {
+                let image = try PSD.read(deepPSD(gray: gray, resources: psdResource(1039, icc), sample: seededSamples(10)))
+                #expect(image == plain && image.profile == nil, "gray \(gray): the refused profile is dropped")
+            }
+        }
+    }
+
     @Test func eightBitFilesUnchanged() throws {
         // Fingerprints of `PSD.write(PSD.read(fixture))` taken before 16-bit and profiles landed.
         let pinned: [String: UInt64] = ["layers.psd": 11_087_232_683_054_317_720, "gray.psd": 6_822_470_606_584_803_039,
@@ -123,12 +165,8 @@ func fnv1a(_ data: Data) -> UInt64 { data.reduce(0xcbf2_9ce4_8422_2325) { ($0 ^ 
         long.replaceSubrange(8..<12, with: [0x7F, 0xFF, 0xFF, 0xFF])
         #expect(kind(psdError(deepPSD(resources: long, sample: seededSamples(5)))) == "damaged", "a resource longer than its section")
         #expect(kind(psdError(deepPSD(resources: [0x38, 0x42, 0x49, 0x4D, 0x04], sample: seededSamples(5)))) == "damaged", "a cut resource header")
-        let junk = deepPSD(resources: psdResource(1039, Array(repeating: 0x41, count: 200)), sample: seededSamples(5))
-        #expect(kind(psdError(junk)) == "unsupported", "a profile ICC read refuses")
         var short = PSDFile.gray; short.depth = 16
         #expect(kind(psdError(short.data)) == "damaged", "8-bit sized planes in a 16-bit file")
-        let grayProfile = ColorProfile(name: "g", isGray: true, toXYZD50: [0.9642, 1, 0.8249], curves: [.gamma(2.2)])
-        #expect(throws: CodecError.self, "a gray profile on an RGB file") { try PSD.write(LayeredImage(width: 1, height: 1, profile: grayProfile)) }
         let icc = [UInt8](try ColorProfile.displayP3.iccData())
         let seeds = [deepPSD(rle: true, resources: psdResource(1039, icc), sample: seededSamples(6)),
                      deepPSD(gray: true, resources: psdResource(1005, [7], name: "x"), sample: seededSamples(7))]

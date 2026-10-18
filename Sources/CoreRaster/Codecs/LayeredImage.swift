@@ -23,10 +23,13 @@ public struct LayeredImage: Equatable, Sendable {
     public var composite: PixelBuffer?
     /// Bits per channel of the file's samples: 8 (0...255) or 16 (0...65535).
     /// Pixels in memory are Float32 whatever this is; it records the depth the
-    /// file was read at and the depth a writer saves. Only 8 is read and
-    /// written for now.
+    /// file was read at and the depth a writer saves. 8 or 16; PSD and
+    /// OpenRaster read and write both, and a writer throws
+    /// `CodecError.unsupported` for any other value.
     public var bitsPerChannel: Int
-    /// The embedded colour profile; nil when the file has none.
+    /// The embedded colour profile; nil when the file has none or embeds one
+    /// `ColorProfile(iccData:)` refuses (the readers then open the image
+    /// without it). PSD writes a grayscale file for a gray profile.
     public var profile: ColorProfile?
 
     public init(width: Int, height: Int, nodes: [LayerNode] = [],

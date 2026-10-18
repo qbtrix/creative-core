@@ -3,8 +3,10 @@
 // (16-bit ones big-endian); RLE runs over row bytes. The ICC profile is image
 // resource 1039 (`8BIM`, id, Pascal name and data, each padded to even).
 // Invariants: a plane holds `count * bytes` bytes before any sample is read;
-// every resource length is checked against its section, and a profile the
-// ICC reader refuses throws `unsupported`; 8-bit output is byte-for-byte the
+// every resource length is checked against its section (`damaged`), and a
+// profile the ICC reader refuses is dropped, so the file opens without one;
+// a gray profile writes a grayscale file, and a pixel whose stored red, green
+// and blue differ then throws `unsupported`; 8-bit output is byte-for-byte the
 // old one; 16-bit output reopens == (nearest sample after unpremultiplying).
 import CoreColor
 #if canImport(FoundationEssentials)
@@ -61,6 +63,16 @@ enum PSDDepth: Int, Sendable {
         }
         return planes
     }
+    /// `colorPlanes`, folded to grey and alpha when `gray`. A pixel whose stored
+    /// red, green and blue samples differ cannot be grey, so it throws `unsupported`.
+    func colorPlanes(_ buffer: PixelBuffer, gray: Bool, _ what: String) throws -> [[UInt8]] {
+        let planes = colorPlanes(buffer)
+        guard gray else { return planes }
+        guard planes[0] == planes[1], planes[1] == planes[2] else {
+            throw CodecError.unsupported("\(what) is not grey, so it cannot be saved with a gray colour profile")
+        }
+        return [planes[0], planes[3]]
+    }
     /// A mask's coverage as one plane, `bytes` per sample.
     func maskPlane(_ mask: Mask) -> [UInt8] {
         var plane = [UInt8](repeating: 0, count: mask.width * mask.height * bytes)
@@ -87,7 +99,9 @@ extension PSD {
     }
 
     /// The profile in an image resources section (resource 1039), or nil when it has none.
-    /// Other resources are skipped by length; a truncated block throws `damaged`.
+    /// Other resources are skipped by length; a truncated block throws `damaged`. A profile
+    /// `ColorProfile(iccData:)` refuses (LUT-based, CMYK, a printer class, damaged bytes) is
+    /// dropped: the file opens with no profile, as it did before profiles were read.
     static func profile(in resources: inout ByteReader) throws -> ColorProfile? {
         var profile: ColorProfile?
         while !resources.isAtEnd {
@@ -99,27 +113,29 @@ extension PSD {
             var block = try resources.reader(size)
             try resources.skip(min(size % 2, resources.remaining)) // data pads to even; a last block may not
             guard signature == Array("8BIM".utf8), id == 1039 else { continue }
-            let icc = Data(try block.bytes(size))
-            do { profile = try ColorProfile(iccData: icc) } catch {
-                throw CodecError.unsupported("the embedded colour profile: \(error)")
-            }
+            profile = try? ColorProfile(iccData: Data(try block.bytes(size)))
         }
         return profile
     }
 
     /// The image resources section's contents for `profile`: empty for nil, else resource 1039 holding its ICC bytes.
-    /// The file is RGB, so a gray profile throws `unsupported`, as does one the ICC writer refuses.
+    /// A profile the ICC writer refuses throws `unsupported`.
     static func imageResources(_ profile: ColorProfile?) throws -> [UInt8] {
         guard let profile else { return [] }
-        guard !profile.isGray else { throw CodecError.unsupported("gray colour profile \"\(profile.name)\" on an RGB file") }
-        let icc: Data
-        do { icc = try profile.iccData() } catch {
-            throw CodecError.unsupported("colour profile \"\(profile.name)\": \(error)")
-        }
+        let icc = try CodecError.profileData(profile)
         var w = PSDByteWriter()
         w.ascii("8BIM"); w.u16(1039); w.bytes += [0, 0] // an empty name, padded to even
         try w.length(icc.count)
         w.bytes += icc + (icc.count % 2 == 1 ? [0] : [])
         return w.bytes
+    }
+}
+
+extension CodecError {
+    /// `profile.iccData()`, or `unsupported` naming the profile and the ICC writer's reason.
+    static func profileData(_ profile: ColorProfile) throws -> Data {
+        do { return try profile.iccData() } catch let ColorError.invalid(why) {
+            throw CodecError.unsupported("the colour profile \"\(profile.name)\": \(why)")
+        }
     }
 }
