@@ -2,9 +2,9 @@
 
 Issue: #441 · Packet: docs/blueprints/core/features/color-profiles.md
 Run: act-1a14ddaebc8-nwqn · Session: line lead (engine-contracts, animate-properties, color-profiles) · Started: 2026-10-18T07:15Z
-Stage: 4 Anatomy round 1 running (dev ca537c1; gate CI: PASS; mutation all caught)
+Stage: 4 Anatomy round 1 done, not clean (13 confirmed, 1 refuted); fix batches cp1-a, cp1-b, cp1-c running (base ca537c1)
 Base: 9d01972365f04da4fe6074e9bdd56ceab5b616a8
-Next: Anatomy round 1 on the CP-icc/CP-convert surface. CP-7/CP-8 wait on layered-codecs LC-write.
+Next: fix PRs for round 1 merge, then Anatomy round 2. CP-7/CP-8 wait on layered-codecs LC-write.
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -45,3 +45,8 @@ Next: Anatomy round 1 on the CP-icc/CP-convert surface. CP-7/CP-8 wait on layere
 ## Open
 - From engine-contracts round 2 (finding #10): ICCShapeTests never asserts the Display P3 colourants (ColorProfile.swift:58, :80). CP-5's sRGB→P3 test must cover them.
 - CP-deep (CP-7, CP-8) waits on layered-codecs:LC-write. LC-a merged as #446.
+
+## Anatomy
+| round | dev sha | gate | mutation | critics | confirmed | fixes |
+|---|---|---|---|---|---|---|
+| 1 | ca537c1 | CI: PASS | 12/12 (ICCRead, ICCWrite, ProfileTransform, ProfileConvert) | clarity, contract, compat, robustness, tests | 13 (4 major) | cp1-a (CP-icc docs, exact built-in round trip, gray target), cp1-b (ICC read class/version/para guards), cp1-c (convert honours tone curves, typed throws) |
