@@ -35,6 +35,7 @@ Next: AP-1 PR merges, then AP-2 (checks first)
 
 ## Decisions
 - "line N" in the wave column is the line lead's shared wave number (engine-contracts wave N runs beside it).
+- AP-1 (#457) check flags accepted: (1) the five stub commands have no UndoPropertyTests step, because they throw `not built` and the packet gives undoSteps to AP-2/AP-3, which add the steps when the commands work; (2) it touched CommandFuzzTests, CommandRegistryTests and TrackCommandsTests to register the new ids and keep the gate green (TrackCommandsTests was pre-allowed). 340 lines, 7 files.
 
 ## Open
 - AP-4 waits on path-geometry:PG-edit (#430: no PR yet). AP-cmd and AP-z wait with it.
