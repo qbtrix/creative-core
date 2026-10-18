@@ -2,9 +2,9 @@
 
 Issue: #442 · Packet: docs/blueprints/core/features/animate-properties.md
 Run: act-1a14ddaebc8-nwqn · Session: line lead (engine-contracts, animate-properties, color-profiles) · Started: 2026-10-18T07:15Z
-Stage: 3 line wave 3
+Stage: 3 line wave 4 (AP-7, AP-8 building) + fixes from engine-contracts round 3
 Base: 9d01972365f04da4fe6074e9bdd56ceab5b616a8
-Next: AP-1 PR merges, then AP-2 (checks first)
+Next: AP-7 (Lottie) and AP-8 (SVG) building (wf_a5b3a585-9ef). Fix batch ap-r1 for routed findings #1, #8, #11. AP-4 waits on path-geometry PG-edit (#430); AP-9, AP-10 after.
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -34,6 +34,8 @@ Next: AP-1 PR merges, then AP-2 (checks first)
 |---|---|---|---|---|---|---|---|---|
 
 ## Decisions
+- Merged: AP-1 #457, AP-2 #463, AP-6 #464, AP-5 #477, AP-3 #479 (d7ad60b).
+- engine-contracts round 3 (f7413a6) routed 3 findings here: #1 (major) TrackCommands.notBuilt throws invalidDocument with an internal task id; #8 (major) no test that easing shapes the morph; #11 (minor) quad-to-cubic elevation untested. Fixer ap-r1 takes them; files kept disjoint from AP-7/AP-8.
 - dev CI 39118832683 on 0660756: Linux green. AP-a merged-done.
 - #461 (e158c87) amended brief rule 9: a message starting `Belt released this run.` means stop at once; every other chat message still never stops the lead. Applied to this run.
 - "line N" in the wave column is the line lead's shared wave number (engine-contracts wave N runs beside it).

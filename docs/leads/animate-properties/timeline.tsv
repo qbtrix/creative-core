@@ -27,3 +27,4 @@ utc	stage	event	ref	note
 2026-10-18T11:11Z	3	pr-merged	#479	AP-3 merged d7ad60b
 2026-10-18T11:11Z	3	stage-start	wf_a5b3a585-9ef	line wave: AP-7, AP-8 launched on d7ad60b (AP-5, AP-6 merged); AP-cmd waits AP-4 on path-geometry:PG-edit
 2026-10-18T11:12Z	3	stage-end	wf_eb9bfb60-c8c	wave 3 checks: AP-5 ok; AP-3 touched CommandRegistryTests/TrackShapeTests minimally (pre-allowed in extra, explained) accepted; AP-6 body footer rule stripped via MCP
+2026-10-18T11:18Z	4	round3-triage	f7413a6	14 confirmed, routed
