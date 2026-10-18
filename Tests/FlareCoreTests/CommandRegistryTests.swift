@@ -15,7 +15,8 @@ import Testing
     /// command that no family lists, a family missing from the registry, or an
     /// id listed under the wrong family fails the tests. A family with its own
     /// test file keeps its list there, so a new command touches only its
-    /// family's two files; a new family adds one line here.
+    /// family's two files (ids, samples and undo steps); a new family adds
+    /// one line here and one in `samples()`.
     static let familyIDs: [[String]] = [
         ["layer.add", "layer.remove", "layer.rename",
          "keyframe.set", "keyframe.move", "keyframe.remove", "shape.add"],
@@ -59,6 +60,9 @@ import Testing
             + MachineStateCommandTests.registrySamples()
             + TransitionCommandTests.registrySamples()
             + MachineInputCommandTests.registrySamples()
+            + MaskCommandsTests.registrySamples()
+            + TextStyleCommandsTests.registrySamples()
+            + TrackCommandsTests.registrySamples()
     }
 
     /// The text fixture plus a second, empty scene, unused symbol "spark",
