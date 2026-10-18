@@ -17,3 +17,4 @@ utc	stage	event	ref	note
 2026-10-18T09:51Z	3	stage-start	AP-3,AP-5,AP-6	wave 3 on 9e826ac; AP-4 waits on path-geometry PG-edit (#430 open)
 2026-10-18T09:53Z	-	heartbeat	-	waiting
 2026-10-18T10:11Z	-	heartbeat	-	waiting
+2026-10-18T10:20Z	3	pr-merged	#464	AP-6 merged 0660756
