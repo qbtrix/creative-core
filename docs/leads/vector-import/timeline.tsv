@@ -12,3 +12,4 @@ utc	stage	event	ref	note
 2026-10-18T11:56:24Z	3	builder-start	VI-3	under flock gate
 2026-10-18T11:56:24Z	3	builder-start	VI-4	under flock gate
 2026-10-18T11:56:24Z	3	builder-start	VI-6	under flock gate
+2026-10-18T11:56:59Z	3	heartbeat	-	wave 3 building; round-1 mutations running
