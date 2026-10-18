@@ -66,3 +66,4 @@ utc	stage	event	ref	note
 2026-10-18T14:37Z	-	heartbeat	-	waiting
 2026-10-18T14:40Z	4	round4-start	0a3c7f3 #508	r3-b merged; round 4 gate on 0a3c7f3
 2026-10-18T14:52Z	anatomy	ci	39137019273	dev CI: Linux green, macOS red (Metal resample SIGBUS, EngineStress 5.007s); #507 metal fix merged, run 39137820117 next; noted on #453
+2026-10-18T14:55Z	-	heartbeat	-	waiting
