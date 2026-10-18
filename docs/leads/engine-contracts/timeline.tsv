@@ -2,3 +2,4 @@ utc	stage	event	ref	note
 2026-10-18T07:15Z	0	stage-start	-	line lead start, base 9d01972
 2026-10-18T07:16Z	3	stage-start	wave-1	EC-1, EC-6 building (workflow wf_ab639acd-799)
 2026-10-18T07:35Z	-	heartbeat	-	waiting
+2026-10-18T07:36Z	3	pr-merged	#443	wave 1
