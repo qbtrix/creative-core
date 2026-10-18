@@ -3,3 +3,6 @@ utc	stage	event	ref	note
 2026-10-18T07:22Z	2	plan	-	line wave plan across preview-cache, vector-import, layered-codecs
 2026-10-18T07:22Z	3	wave1-start	-	builders launched
 2026-10-18T07:23Z	1	base-gate	9d01972	scripts/ci CI: PASS on base (2m38s)
+2026-10-18T10:01Z	3	pr-merged	#449	VI-1 83b20aa
+2026-10-18T10:01Z	3	dep-met	EC-f	#444 #447 #448
+2026-10-18T10:01Z	3	stage-start	wave2	VI-2 at 9e826ac
