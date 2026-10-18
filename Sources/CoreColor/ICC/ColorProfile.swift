@@ -2,8 +2,7 @@
 // (RGB or gray, from the ICC.1 specification), and the three built-in
 // profiles. Colourants are in the PCS, XYZ relative to D50, already adapted
 // (the `chad` step) so a transform needs no second adaptation. Reading is in
-// ICCRead.swift; writing lands in ICCWrite.swift (CP-4) and until then throws
-// `ColorError.invalid("not built: CP-4")`.
+// ICCRead.swift, writing in ICCWrite.swift.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -44,9 +43,10 @@ public struct ColorProfile: Hashable, Sendable {
         self = try ICCRead.profile(iccData)
     }
 
-    /// Writes a v4 profile: `mluc` description, D50 `wtpt`, `chad`, colourants and curves.
+    /// Writes a v4 profile: `mluc` description, D50 `wtpt`, `chad`, colourants and curves (gray: its
+    /// white in `wtpt` and `kTRC`). A value that does not fit its ICC field throws `.invalid`.
     public func iccData() throws(ColorError) -> Data {
-        throw ColorError.invalid("not built: CP-4")
+        try ICCWrite.profile(self)
     }
 
     /// IEC 61966-2-1 sRGB as ICC `para` function type 3.

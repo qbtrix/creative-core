@@ -15,9 +15,9 @@ import Foundation
     #expect(throws: ColorError.self) { try ColorProfile(iccData: Data()) }
 }
 
-@Test func writeStubThrowsNotBuilt() {
+@Test func writeIsBuiltForTheBuiltIns() {
     for profile in [ColorProfile.sRGB, .displayP3, .linearSRGB] {
-        #expect(throws: ColorError.invalid("not built: CP-4")) { try profile.iccData() }
+        #expect(throws: Never.self) { try profile.iccData() }
     }
 }
 

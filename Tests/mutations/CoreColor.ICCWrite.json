@@ -1,0 +1,16 @@
+[
+  {
+    "note": "icc write padding skipped, so tags and the size leave 4-byte alignment",
+    "file": "Sources/CoreColor/ICC/ICCWrite.swift",
+    "anchor": "body += bytes + [UInt8](repeating: 0, count: (4 - bytes.count % 4) % 4)",
+    "replacement": "body += bytes",
+    "filter": "ICCWriteTests/sizeMultipleOfFour"
+  },
+  {
+    "note": "icc write chad omitted from an adapted RGB profile",
+    "file": "Sources/CoreColor/ICC/ICCWrite.swift",
+    "anchor": "tags.append((\"chad\", try sf32([c.0, c.1, c.2, c.3, c.4, c.5, c.6, c.7, c.8])))",
+    "replacement": "_ = c",
+    "filter": "ICCWriteTests/roundTripsAdapted"
+  }
+]
