@@ -1,0 +1,23 @@
+[
+  {
+    "note": "motion blur takes ceil(distance) samples instead of ceil(distance) + 1, so a 9 px blur spreads over 9 columns, caught by BlurFamilyTests.motionSpreadsTen",
+    "file": "Sources/CoreRaster/Effects/BlurFamily.swift",
+    "anchor": "let count = Int(steps) + 1",
+    "replacement": "let count = Int(steps)",
+    "filter": "BlurFamilyTests"
+  },
+  {
+    "note": "motion blur sums colour as straight alpha and premultiplies it again by the mean alpha, so a transparent neighbour darkens the edge, caught by BlurFamilyTests.noBleedFromTransparent",
+    "file": "Sources/CoreRaster/Effects/BlurFamily.swift",
+    "anchor": "out[o] = Float(r * k); out[o + 1] = Float(g * k); out[o + 2] = Float(b * k); out[o + 3] = Float(a * k)",
+    "replacement": "out[o] = Float(r * k * a * k); out[o + 1] = Float(g * k * a * k); out[o + 2] = Float(b * k * a * k); out[o + 3] = Float(a * k)",
+    "filter": "BlurFamilyTests"
+  },
+  {
+    "note": "motion blur treats the angle in degrees as radians, so 180 and 270 run diagonally, caught by BlurFamilyTests.horizontalSpreadsColumns",
+    "file": "Sources/CoreRaster/Effects/BlurFamily.swift",
+    "anchor": "let radians = degrees * .pi / 180",
+    "replacement": "let radians = degrees",
+    "filter": "BlurFamilyTests"
+  }
+]

@@ -1,5 +1,5 @@
 // BlurFamilyTests.swift: effects-engine FX-3's acceptance, written first (FX-1),
-// disabled until FX-3 builds `boxBlurred` and `motionBlurred`: zero is identity,
+// on since FX-3 built `boxBlurred` and `motionBlurred`: zero is identity,
 // energy is kept, motion runs along its angle in degrees, transparency never
 // tints an edge, bad parameters throw. `EffectFuzz` serves every effects suite.
 import CoreRaster
@@ -40,13 +40,13 @@ enum EffectFuzz {
         return b
     }
 
-    @Test(.disabled("waits on FX-3")) func zeroIsIdentity() throws {
+    @Test func zeroIsIdentity() throws {
         let b = try EffectFixtures.noisyStep(width: 12, height: 9)
         #expect(try b.boxBlurred(radius: 0) == b)
         for degrees in [0.0, 33, 90, 270] { #expect(try b.motionBlurred(degrees: degrees, distance: 0) == b) }
     }
 
-    @Test(.disabled("waits on FX-3")) func boxKeepsEnergy() throws {
+    @Test func boxKeepsEnergy() throws {
         let disc = try EffectFixtures.disc(size: 64, radius: 16)
         let before = try EffectFixtures.alphaSum(disc)
         for radius in [1.0, 2.5, 4] {
@@ -56,7 +56,7 @@ enum EffectFuzz {
         }
     }
 
-    @Test(.disabled("waits on FX-3")) func motionSpreadsTen() throws {
+    @Test func motionSpreadsTen() throws {
         let line = try EffectFixtures.verticalLine(width: 32, height: 16, x: 16)
         let blurred = try line.motionBlurred(degrees: 0, distance: 9)
         let occupied = try EffectFixtures.occupied(blurred)
@@ -66,14 +66,14 @@ enum EffectFuzz {
         #expect(abs(try EffectFixtures.alphaSum(blurred) - 16) <= 16e-4)
     }
 
-    @Test(.disabled("waits on FX-3")) func horizontalSpreadsColumns() throws {
+    @Test func horizontalSpreadsColumns() throws {
         for (degrees, alongX) in [(0.0, true), (180, true), (90, false), (270, false)] {
             let o = try EffectFixtures.occupied(dot().motionBlurred(degrees: degrees, distance: 9))
             #expect(alongX ? o.rows == [16] && o.columns.count == 10 : o.columns == [16] && o.rows.count == 10, "\(degrees)")
         }
     }
 
-    @Test(.disabled("waits on FX-3")) func noBleedFromTransparent() throws {
+    @Test func noBleedFromTransparent() throws {
         var half = try PixelBuffer(width: 24, height: 12)
         for y in 0..<12 { for x in 0..<12 { try half.setPixel(x: x, y: y, red) } }
         for blurred in [try half.boxBlurred(radius: 3), try half.motionBlurred(degrees: 0, distance: 7)] {
@@ -86,7 +86,7 @@ enum EffectFuzz {
         }
     }
 
-    @Test(.disabled("waits on FX-3")) func overCapThrows() throws {
+    @Test func overCapThrows() throws {
         let b = try dot(width: 8, height: 8, x: 4, y: 4)
         for bad in [2_000.0, 1_000.5, -1, .nan, .infinity] {
             #expect(throws: RasterError.self) { try b.boxBlurred(radius: bad) }
@@ -95,7 +95,7 @@ enum EffectFuzz {
         #expect(throws: RasterError.self) { try b.motionBlurred(degrees: .nan, distance: 3) }
     }
 
-    @Test(.disabled("waits on FX-3")) func fuzzNeverCrashes() throws {
+    @Test func fuzzNeverCrashes() throws {
         var rng = SplitMix64(seed: 0xB1_0F)
         let input = try dot(width: 8, height: 8, x: 3, y: 5)
         for _ in 0..<200 {

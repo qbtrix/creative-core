@@ -10,8 +10,6 @@ import Testing
 
     @Test func blursAndToneThrowNotBuilt() throws {
         let buffer = try PixelBuffer(width: 4, height: 4, fill: red)
-        #expect(throws: notBuilt) { try buffer.boxBlurred(radius: 1) }
-        #expect(throws: notBuilt) { try buffer.motionBlurred(degrees: 0, distance: 3) }
         #expect(throws: notBuilt) { try buffer.denoised(strength: 0.5, detail: 0.5) }
         #expect(throws: notBuilt) { try buffer.clarity(amount: 30, radius: 30) }
     }
