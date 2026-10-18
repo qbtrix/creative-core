@@ -105,3 +105,4 @@ utc	stage	event	ref	note
 2026-10-18T20:21Z	-	heartbeat	-	waiting
 2026-10-18T20:35Z	5	dispatch	CP-10	CP-10 feature-done fixer dispatched on d715348 (wf_7a90a943-a4e)
 2026-10-18T20:40Z	-	heartbeat	-	waiting
+2026-10-18T20:40Z	5	merged	#558	CP-10 merged a8a08d2 (feature-done); full CI 39164401954 started; Mac-Finish-Wanted CP-z posted
