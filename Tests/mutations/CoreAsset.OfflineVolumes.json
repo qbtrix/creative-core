@@ -1,0 +1,23 @@
+[
+  {
+    "note": "a preview on an unmounted volume reports online and a mounted one offline, caught by unmountedIsOffline",
+    "file": "Sources/CoreAsset/Thumbnails/OfflineVolumes.swift",
+    "anchor": "mounted.contains(volume.id) ? .online : .offline(volume)",
+    "replacement": "!mounted.contains(volume.id) ? .online : .offline(volume)",
+    "filter": "OfflineVolumeTests.unmountedIsOffline"
+  },
+  {
+    "note": "a preview with no volume reports offline, caught by noVolumeIsOnline",
+    "file": "Sources/CoreAsset/Thumbnails/OfflineVolumes.swift",
+    "anchor": "guard let volume = entry.volume else { return .online }",
+    "replacement": "guard let volume = entry.volume else { return .offline(VolumeRef(id: \"\", name: \"\")) }",
+    "filter": "OfflineVolumeTests.noVolumeIsOnline"
+  },
+  {
+    "note": "volume entries match the whole volume ref, so a renamed volume loses its previews, caught by renamedVolumeMatchesById",
+    "file": "Sources/CoreAsset/Thumbnails/OfflineVolumes.swift",
+    "anchor": "$0.volume?.id == volume.id",
+    "replacement": "$0.volume == volume",
+    "filter": "OfflineVolumeTests.renamedVolumeMatchesById"
+  }
+]

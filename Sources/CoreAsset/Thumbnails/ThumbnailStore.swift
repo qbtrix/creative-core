@@ -8,7 +8,8 @@
 // index under the folder lock (PreviewFiles.swift) and leave `usedBytes <=
 // budgetBytes`, counting payloads only; a read checks its file's header names
 // its key; reads flush the index at most every 2 s and on deinit, merged with
-// the index on disk (PreviewIndex.swift recovers a damaged one). PC-5 volumes.
+// the index on disk (PreviewIndex.swift recovers a damaged one); volume
+// entries and availability are in OfflineVolumes.swift.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -127,15 +128,9 @@ public final class ThumbnailStore: @unchecked Sendable {
         }
     }
 
-    /// Every entry whose original lives on `volume`.
-    public func entries(on volume: VolumeRef) -> [PreviewEntry] {
-        []
-    }
-
-    /// Whether `key`'s original is reachable given the volume ids `mounted`
-    /// now; nil when the store has no entry for `key`.
-    public func availability(of key: PreviewKey, mounted: Set<String>) -> Availability? {
-        nil
+    /// This store's entries now, read on the serial queue (OfflineVolumes.swift).
+    var currentEntries: [PreviewKey: PreviewEntry] {
+        queue.sync { entries }
     }
 
     /// Removes every size class of every preview of `asset`.
