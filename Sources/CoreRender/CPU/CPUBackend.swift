@@ -15,13 +15,17 @@
 // Composites onto one backdrop surface run one at a time under the store's
 // lock, and each applies in turn on the result of the one before; every other
 // call on this backend waits while a composite runs.
+// `supports` lists every family, but until its feature lands a W1 family `f`
+// in `RenderOp.notOnMetalYet` whose stub is not filled throws
+// `unsupported(f)` here too: no backend runs it, so the caller skips the op.
 import CoreColor
 import CoreRaster
 
 /// The CPU RenderBackend: CoreRaster behind the RenderBackend contract.
 public struct CPUBackend: RenderBackend {
     public let name: String
-    /// Every family: the CPU is the reference.
+    /// Every family: the CPU is the reference. A W1 family whose stub is not
+    /// filled yet still throws `unsupported` (see `RenderError.unsupported`).
     public let supports: Set<RenderOp> = Set(RenderOp.allCases)
     /// The CPU is never lost.
     public var isHealthy: Bool { true }

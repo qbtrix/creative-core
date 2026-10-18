@@ -4,5 +4,11 @@
    "replacement": "try run(.adjust, s) { try $0.adjusted($1, adjustment) }"},
   {"note": "dispatcher routes the masked composite by .composite instead of its own family", "filter": "RenderDispatcherW1Tests.maskedCompositeIsItsOwnFamily", "file": "Sources/CoreRender/RenderDispatcher.swift",
    "anchor": "try onBackdrop(.maskedComposite, s, &b) {",
-   "replacement": "try onBackdrop(.composite, s, &b) {"}
+   "replacement": "try onBackdrop(.composite, s, &b) {"},
+  {"note": "dispatcher routes flipped by .transform instead of .affine", "filter": "RenderDispatcherW1Tests.eachNewMethodReachesTheCPU", "file": "Sources/CoreRender/RenderDispatcher.swift",
+   "anchor": "try run(.affine, s) { try $0.flipped($1, axis) }",
+   "replacement": "try run(.transform, s) { try $0.flipped($1, axis) }"},
+  {"note": "dispatcher routes applying by .affine instead of .effect", "filter": "RenderDispatcherW1Tests.eachNewMethodReachesTheCPU", "file": "Sources/CoreRender/RenderDispatcher.swift",
+   "anchor": "try run(.effect, s) { try $0.applying($1, effect) }",
+   "replacement": "try run(.affine, s) { try $0.applying($1, effect) }"}
 ]
