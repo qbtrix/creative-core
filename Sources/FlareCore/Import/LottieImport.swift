@@ -33,15 +33,17 @@ extension LottieImport {
     /// Throws `tooLarge` when objects and arrays nest past `limit`, before the decoder recurses.
     static func checkNesting(_ data: Data, limit: Int) throws {
         var depth = 0, inString = false, escaped = false
-        for byte in data {
-            if inString {
-                if escaped { escaped = false } else if byte == 0x5C { escaped = true } else if byte == 0x22 { inString = false }
-                continue
+        try data.withUnsafeBytes { bytes in  // a raw buffer: iterating `Data` itself is many times slower
+            for byte in bytes {
+                if inString {
+                    if escaped { escaped = false } else if byte == 0x5C { escaped = true } else if byte == 0x22 { inString = false }
+                    continue
+                }
+                if byte == 0x22 { inString = true } else if byte == 0x7D || byte == 0x5D { depth -= 1 }
+                guard byte == 0x7B || byte == 0x5B else { continue }
+                depth += 1
+                guard depth <= limit else { throw ImportError.tooLarge("JSON nests deeper than \(limit)") }
             }
-            if byte == 0x22 { inString = true } else if byte == 0x7D || byte == 0x5D { depth -= 1 }
-            guard byte == 0x7B || byte == 0x5B else { continue }
-            depth += 1
-            guard depth <= limit else { throw ImportError.tooLarge("JSON nests deeper than \(limit)") }
         }
     }
 }
@@ -78,19 +80,50 @@ enum LottieJSON: Sendable, Equatable {
     /// does. Throws `damaged("not valid JSON")` for anything else, including invalid UTF-8, a lone
     /// surrogate escape and a number past `Double`'s range.
     static func parse(_ data: Data) throws -> LottieJSON {
-        let bad = ImportError.damaged("not valid JSON"), b = [UInt8](data)
+        var parser = Parser(b: [UInt8](data))
+        return try parser.value()
+    }
+
+    /// A container's text, hashed in one pass over its bytes rather than one byte at a time.
+    private struct Text: Hashable {
+        let bytes: ArraySlice<UInt8>
+        var count: Int { bytes.count }
+        func hash(into hasher: inout Hasher) { bytes.withUnsafeBytes { hasher.combine(bytes: $0) } }
+    }
+
+    /// `parse`'s state, with its steps as methods: the optimizer inlines these, where it kept the
+    /// closures they once were over locals as calls.
+    private struct Parser {
+        let bad = ImportError.damaged("not valid JSON"), b: [UInt8]
         var i = 0
+        let literals: [(word: [UInt8], value: LottieJSON)] = [(Array("true".utf8), .bool(true)), (Array("false".utf8), .bool(false)),
+                                                              (Array("null".utf8), .null)]
+        // Each open container: whether it is an object, where its values start on `values`, and where its
+        // text starts. Values, and an object's keys, wait on flat stacks; each container is built once, at
+        // its close, at its final size.
+        var open: [(isObject: Bool, start: Int, from: Int)] = [], values: [LottieJSON] = [], keys: [String] = []
+        // Small containers already built, by their text: the same text is the same value, so a repeat
+        // (a file's many `[0, 0]` tangents and `{"a": 0, "k": 100}` properties) shares the first's storage.
+        var built: [Text: LottieJSON] = [:]
+        let builtText = 64, builtCount = 4096
         func at(_ c: Unicode.Scalar) -> Bool { i < b.count && b[i] == UInt8(ascii: c) }
-        func space() { while i < b.count, b[i] == 0x20 || b[i] == 0x09 || b[i] == 0x0A || b[i] == 0x0D { i += 1 } }
-        func expect(_ c: Unicode.Scalar) throws { space(); guard at(c) else { throw bad }; i += 1 }
-        func hex() throws -> UInt32 {
+        mutating func space() { while i < b.count, b[i] == 0x20 || b[i] == 0x09 || b[i] == 0x0A || b[i] == 0x0D { i += 1 } }
+        mutating func expect(_ c: Unicode.Scalar) throws { space(); guard at(c) else { throw bad }; i += 1 }
+        mutating func hex() throws -> UInt32 {
             guard i + 4 <= b.count, let v = UInt32(String(decoding: b[i..<(i + 4)], as: UTF8.self), radix: 16),
                   b[i..<(i + 4)].allSatisfy({ $0 != UInt8(ascii: "+") && $0 != UInt8(ascii: "-") }) else { throw bad }
             i += 4
             return v
         }
-        func string() throws -> String {
+        mutating func string() throws -> String {
             try expect("\"")
+            // ASCII without escapes, the common case, is its own bytes.
+            var end = i
+            while end < b.count, b[end] >= 0x20, b[end] < 0x80, b[end] != 0x22, b[end] != 0x5C { end += 1 }
+            if end < b.count, b[end] == 0x22 {
+                defer { i = end + 1 }
+                return String(decoding: b[i..<end], as: UTF8.self)
+            }
             var bytes: [UInt8] = []
             while true {
                 guard i < b.count, b[i] >= 0x20 else { throw bad }
@@ -122,56 +155,71 @@ enum LottieJSON: Sendable, Equatable {
                 }
             }
         }
-        func number() throws -> Double {
+        mutating func number() throws -> Double {
             let start = i
             func digits() -> Int { let s = i; while i < b.count, (0x30...0x39).contains(b[i]) { i += 1 }; return i - s }
             if at("-") { i += 1 }
             if at("0") { i += 1 } else { guard digits() > 0 else { throw bad } }
             if at(".") { i += 1; guard digits() > 0 else { throw bad } }
             if at("e") || at("E") { i += 1; if at("+") || at("-") { i += 1 }; guard digits() > 0 else { throw bad } }
-            guard let v = Double(String(decoding: b[start..<i], as: UTF8.self)), v.isFinite else { throw bad }
+            guard let v = ImportNumber.decimal(b, start..<i) ?? Double(String(decoding: b[start..<i], as: UTF8.self)), v.isFinite else { throw bad }
             return v
         }
-        func key() throws -> String { let k = try string(); try expect(":"); return k }
-        // Each open container: an array's items, or an object's members and the key its next value goes under.
-        // Containers are filled in place, so appending never copies them.
-        var open: [(isObject: Bool, items: [LottieJSON], members: [String: LottieJSON], key: String)] = []
-        scan: while true {
-            space()
-            var value: LottieJSON
-            if at("{") {
-                i += 1; space()
-                guard at("}") else { open.append((true, [], [:], try key())); continue }
-                i += 1; value = .object([:])
-            } else if at("[") {
-                i += 1; space()
-                guard at("]") else { open.append((false, [], [:], "")); continue }
-                i += 1; value = .array([])
-            } else if at("\"") { value = .string(try string())
-            } else if let (word, v) = [("true", LottieJSON.bool(true)), ("false", .bool(false)), ("null", .null)]
-                .first(where: { b[i...].starts(with: $0.0.utf8) }) { i += word.utf8.count; value = v
-            } else { value = .number(try number()) }
-            // Hand the value to its container, closing each container it completes.
-            while let top = open.indices.last {
-                let k = open[top].key
-                if !open[top].isObject { open[top].items.append(value) } else if open[top].members[k] == nil { open[top].members[k] = value }
-                let close: Unicode.Scalar = open[top].isObject ? "}" : "]"
+        mutating func key() throws -> String { let k = try string(); try expect(":"); return k }
+        mutating func object(from start: Int) -> LottieJSON {
+            let count = values.count - start, first = keys.count - count
+            var members = [String: LottieJSON](minimumCapacity: count)
+            // Last to first, so a repeated key ends up with its first value.
+            for j in (0..<count).reversed() { members[keys[first + j]] = values[start + j] }
+            keys.removeSubrange(first...)
+            return .object(members)
+        }
+        mutating func value() throws -> LottieJSON {
+            scan: while true {
                 space()
-                if at(",") {
+                var value: LottieJSON
+                let from = i
+                if at("{") {
                     i += 1; space()
-                    // A comma before the close is taken, as Foundation's decoder takes it.
-                    if !at(close) {
-                        if open[top].isObject { open[top].key = try key() }
-                        continue scan
+                    guard at("}") else { open.append((true, values.count, from)); keys.append(try key()); continue }
+                    i += 1; value = .object([:])
+                } else if at("[") {
+                    i += 1; space()
+                    guard at("]") else { open.append((false, values.count, from)); continue }
+                    i += 1; value = .array([])
+                } else if at("\"") { value = .string(try string())
+                } else if at("-") || (i < b.count && b[i] >= 0x30 && b[i] <= 0x39) { value = .number(try number())
+                } else if let literal = literals.first(where: { b[i...].starts(with: $0.word) }) { i += literal.word.count; value = literal.value
+                } else { value = .number(try number()) }
+                // Hand the value to its container, closing each container it completes.
+                while let top = open.last {
+                    values.append(value)
+                    let close: Unicode.Scalar = top.isObject ? "}" : "]"
+                    space()
+                    if at(",") {
+                        i += 1; space()
+                        // A comma before the close is taken, as Foundation's decoder takes it.
+                        if !at(close) {
+                            if top.isObject { keys.append(try key()) }
+                            continue scan
+                        }
                     }
+                    try expect(close)
+                    open.removeLast()
+                    let text = Text(bytes: b[top.from..<i]), small = text.count <= builtText
+                    if small, let seen = built[text] {
+                        value = seen
+                        if top.isObject { keys.removeLast(values.count - top.start) }
+                    } else {
+                        value = top.isObject ? object(from: top.start) : .array(Array(values[top.start...]))
+                        if small, built.count < builtCount { built[text] = value }
+                    }
+                    values.removeSubrange(top.start...)
                 }
-                try expect(close)
-                let done = open.removeLast()
-                value = done.isObject ? .object(done.members) : .array(done.items)
+                space()
+                guard i == b.count else { throw bad }
+                return value
             }
-            space()
-            guard i == b.count else { throw bad }
-            return value
         }
     }
 
@@ -179,7 +227,12 @@ enum LottieJSON: Sendable, Equatable {
     var array: [LottieJSON]? { if case .array(let a) = self { a } else { nil } }
     var string: String? { if case .string(let s) = self { s } else { nil } }
     /// `true`, or the number 1 that some decoders hand back for it.
-    var isTrue: Bool { self == .bool(true) || self == .number(1) }
+    var isTrue: Bool {  // matched, not compared: `==` allocates its stack of pairs
+        switch self {
+        case .bool(true), .number(1): true
+        default: false
+        }
+    }
 }
 
 /// A fill and stroke that geometry is painted with.

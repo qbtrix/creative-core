@@ -47,5 +47,6 @@
     "anchor": "let centre = Point(x: coef * rx * p.y / ry, y: -coef * ry * p.x / rx)",
     "replacement": "let centre = Point(x: coef * ry * p.y / rx, y: -coef * rx * p.x / ry)",
     "filter": "SVGPathDataTests.ellipticalArcOnEllipse"
-  }
+  },
+  {"note": "import number fast path takes significands past 2^53, so it rounds twice (edgesMatchOrDecline)", "file": "Sources/FlareCore/Import/ImportNumber.swift", "anchor": "guard any, i == range.upperBound, significand <= maxSignificand, scale >= -22, scale <= 22 else { return nil }", "replacement": "guard any, i == range.upperBound, scale >= -22, scale <= 22 else { return nil }", "filter": "ImportNumberTests"}
 ]

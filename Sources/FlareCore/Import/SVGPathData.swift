@@ -90,7 +90,7 @@ private struct PathDataReader {
             }
             let before = elements.count
             try apply(letter)
-            guard elements.dropFirst(before).allSatisfy({ $0.points.allSatisfy(\.isFinite) }) else {
+            guard elements[before...].allSatisfy(isFinite) else {
                 throw damaged("coordinate out of range")
             }
             // A repeated move draws lines.
@@ -192,8 +192,8 @@ private struct PathDataReader {
             if peek == UInt8(ascii: "-") || peek == UInt8(ascii: "+") { at += 1 }
             guard digits() > 0 else { throw damaged("expected exponent digits") }
         }
-        let text = String(decoding: bytes[start..<at], as: UTF8.self)
-        guard let value = Double(text), value.isFinite else {
+        guard let value = ImportNumber.decimal(bytes, start..<at) ?? Double(String(decoding: bytes[start..<at], as: UTF8.self)),
+              value.isFinite else {
             at = start
             throw damaged("number out of range")
         }
@@ -252,6 +252,16 @@ private struct PathDataReader {
             let end = i == count - 1 ? to : toUser.apply(Point(x: cos(b), y: sin(b)))
             elements.append(.cubic(control1: toUser.apply(c1), control2: toUser.apply(c2), to: end))
         }
+    }
+}
+
+/// Every point of `element` is finite; `points` would allocate an array per element.
+private func isFinite(_ element: PathElement) -> Bool {
+    switch element {
+    case .move(let to), .line(let to): to.isFinite
+    case .quad(let control, let to): control.isFinite && to.isFinite
+    case .cubic(let control1, let control2, let to): control1.isFinite && control2.isFinite && to.isFinite
+    case .close: true
     }
 }
 
