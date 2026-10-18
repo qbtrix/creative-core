@@ -4,7 +4,9 @@
   "description": "Color3 and conversions between sRGB, linear sRGB, Display P3, XYZ D65 and OKLab through one shared transfer curve (public as TransferCurve, which CoreRaster's sRGB tone encoding uses); 8-bit display tables (DisplayTransfer: table decode and threshold encode for sRGB and Display P3); ColorError.",
   "technology": "Swift 6, Foundation",
   "paths": [
-    "Sources/CoreColor/"
+    "Sources/CoreColor/ColorError.swift",
+    "Sources/CoreColor/ColorSpace.swift",
+    "Sources/CoreColor/DisplayTransfer.swift"
   ],
   "order": 10
 }
