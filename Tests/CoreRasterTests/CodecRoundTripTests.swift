@@ -62,8 +62,8 @@ import Testing
         cases += [with(PixelLayer(name: "m", pixels: pixels, mask: PlacedMask(mask: try Mask(width: 1, height: 1)))),
                   with(PixelLayer(name: "c", pixels: pixels, clipsToBelow: true)), with(PixelLayer(name: "n\0", pixels: pixels)),
                   with(PixelLayer(name: "x", pixels: pixels, x: (1 << 30) + 1)), with(PixelLayer(name: "y", pixels: pixels, y: Int.min))]
-        var other = base; other.profile = .displayP3; cases.append(other)
-        other = base; other.bitsPerChannel = 16; cases.append(other)
+        var other = base; other.profile = .sRGB; other.profile?.toXYZD50 = [1]; cases.append(other)
+        other = base; other.bitsPerChannel = 12; cases.append(other)
         other = base; other.composite = nil; cases.append(other)
         for image in cases { #expect(throws: CodecError.self) { try OpenRaster.write(image, pixels: RawPixelCodec()) } }
     }

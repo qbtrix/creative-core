@@ -1,0 +1,5 @@
+[
+  {"note": "the ORA layer depth is passed as 8 to the PixelCodec, so a 16-bit image reopens at 8 bits, caught by ORADeepTests.sixteenBitsKept", "file": "Sources/CoreRaster/Codecs/OpenRasterWrite.swift", "anchor": "try pixels.encodePNG(buffer, bitsPerChannel: deep.bits)", "replacement": "try pixels.encodePNG(buffer, bitsPerChannel: 8)", "filter": "ORADeepTests"},
+  {"note": "the ORA profile entry is dropped from the archive, so the profile is lost, caught by ORADeepTests.profileEntry", "file": "Sources/CoreRaster/Codecs/OpenRasterWrite.swift", "anchor": "files[profilePath] = deep.icc", "replacement": "_ = deep.icc", "filter": "ORADeepTests"},
+  {"note": "the ORA profile size bound is dropped, so an oversized profile.icc is parsed, caught by ORADeepTests.damagedProfileThrows", "file": "Sources/CoreRaster/Codecs/OpenRasterDeep.swift", "anchor": "guard bytes.count <= maxProfileBytes else", "replacement": "guard bytes.count <= Int.max else", "filter": "ORADeepTests"}
+]
