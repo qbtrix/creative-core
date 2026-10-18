@@ -84,3 +84,4 @@ Next: VI-5 building, VI-7 building; Anatomy round 2 verdicts pending; Slice-Done
 - 20:21Z VI-8 #556 merged ce06d88 (round trip every export fixture, exporter writes shapes top-first, mutations 2/2). Release budgets miss on Linux: SVG 2.1 MB ~180 ms vs 150, Lottie 5.3 MB ~480 ms vs 250; launching reader perf fixer R3-3 before VI-9.
 - 20:21Z R3-3 reader perf fixer launched (Lottie 250 ms, SVG 150 ms release budgets, no loosening)
 - 20:22Z heartbeat: R3-3 reader perf fixer working; VI-9 waits on it
+- 20:45Z heartbeat: R3-3 editing Lottie/SVG readers (files touched 20:44); VI-9 waits on it
