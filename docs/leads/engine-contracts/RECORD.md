@@ -4,7 +4,7 @@ Issue: #429 · Packet: docs/blueprints/core/features/engine-contracts.md
 Run: act-1a14ddaebc8-nwqn · Session: line lead (engine-contracts, animate-properties, color-profiles) · Started: 2026-10-18T07:15Z
 Stage: 4 round 3 fixes
 Base: 9d01972365f04da4fe6074e9bdd56ceab5b616a8
-Next: Round 3 fixes r3-a (W1Values: #2 colour encoding docs, #5 HSLRange->HSLShift) and r3-b (W1Model/FlareFormat: #3 startOffset 0...1, #4 lineHeight doc, #14 boundary mutations) beside EC-9 (walk tests). Then round 4 (last allowed), then EC-10 with feature-done.
+Next: r3-a merged (#483, a5f952a), EC-9 merged (#485, ca537c1). Waiting on r3-b; then round 4 (last allowed) on the dev SHA with r3-b, then EC-10 with feature-done.
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -54,3 +54,5 @@ Next: Round 3 fixes r3-a (W1Values: #2 colour encoding docs, #5 HSLRange->HSLShi
 
 ## Open
 - none
+- EC-9 → #485 (head 460d444, merged ca537c1), slice EC-z: W1ContractWalkTests.walk and W1FileWalkTests.walk. The body was missing its Mutate line and the contract check did not flag it; the lead added 'Mutate: none (walk tests)' after merge.
+- r3-a → #483 merged a5f952a (colour-encoding docs, HSLRange renamed to HSLShift).

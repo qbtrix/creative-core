@@ -54,3 +54,4 @@ utc	stage	event	ref	note
 2026-10-18T11:22Z	4	dev-ci	39121455101	Linux green; macOS resample parity not ours (#453)
 2026-10-18T11:36Z	-	heartbeat	-	waiting
 2026-10-18T11:54Z	-	heartbeat	-	waiting
+2026-10-18T12:12Z	build-merged	pr-merged	#485	EC-9 merged ca537c1; r3-a #483 merged
