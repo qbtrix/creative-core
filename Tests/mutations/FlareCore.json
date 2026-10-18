@@ -44,8 +44,8 @@
   {
     "note": "a group whose body throws keeps the changes made before the throw",
     "file": "Sources/FlareCore/Command.swift",
-    "anchor": "document = before\n            pending = outer",
-    "replacement": "_ = before\n            pending = outer",
+    "anchor": "document = before\n            pointTotal = nil",
+    "replacement": "_ = before\n            pointTotal = nil",
     "filter": "CommandEngineTests"
   },
   {
@@ -58,7 +58,7 @@
   {
     "note": "perform commits a non-layer command without validating the result",
     "file": "Sources/FlareCore/Command.swift",
-    "anchor": "try FlareFormat.validate(doc)\n",
+    "anchor": "points = try FlareFormat.validateCountingPoints(doc)\n",
     "replacement": "_ = doc\n",
     "filter": "CommandEngineTests"
   },
@@ -184,8 +184,8 @@
   {
     "note": "the layer-scoped validate misses a layer that gained points",
     "file": "Sources/FlareCore/FlareFormat.swift",
-    "anchor": "if new.count > maxLayersPerScene || pointCount(layer) > before.map(pointCount) ?? 0 {",
-    "replacement": "if new.count > maxLayersPerScene || before == nil {",
+    "anchor": "if new.count > maxLayersPerScene || delta > 0 {",
+    "replacement": "if new.count > maxLayersPerScene {",
     "filter": "CommandEngineTests|LayerOwnerAdversarialTests|FormatLimitsTests"
   },
   {
@@ -198,8 +198,8 @@
   {
     "note": "the layer-scoped validate passes when the owner is missing instead of validating everything",
     "file": "Sources/FlareCore/FlareFormat.swift",
-    "anchor": "return try validate(document)",
-    "replacement": "return",
+    "anchor": "points = try validateCountingPoints(document)\n",
+    "replacement": "",
     "filter": "LayerOwnerAdversarialTests"
   },
   {
@@ -306,5 +306,26 @@
     "anchor": "guard !swatch.name.isEmpty else { throw FormatError.invalid(\"swatch name is empty\") }\n",
     "replacement": "",
     "filter": "SwatchCommandsTests"
+  },
+  {
+    "note": "the running point total keeps a removed layer's points",
+    "file": "Sources/FlareCore/FlareFormat.swift",
+    "anchor": "delta = -pointCount(removed)",
+    "replacement": "delta = 0",
+    "filter": "PointTotalTests"
+  },
+  {
+    "note": "the running point total ignores the changed layer's delta",
+    "file": "Sources/FlareCore/FlareFormat.swift",
+    "anchor": "var total = counted ? points.map { $0 + delta } : nil",
+    "replacement": "var total = counted ? points : nil",
+    "filter": "PointTotalTests"
+  },
+  {
+    "note": "undo keeps the running point total of the document it replaced",
+    "file": "Sources/FlareCore/Command.swift",
+    "anchor": "        pointTotal = nil\n        undoStack.removeLast()\n",
+    "replacement": "        undoStack.removeLast()\n",
+    "filter": "PointTotalTests"
   }
 ]

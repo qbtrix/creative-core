@@ -100,8 +100,12 @@ public enum FlareFormat {
     }
 
     /// Checks the invariants listed in Document.swift.
-    public static func validate(_ document: Document) throws {
-        try checkLimits(document)
+    public static func validate(_ document: Document) throws { _ = try validateCountingPoints(document) }
+
+    /// `validate(_:)`, returning the document's point total (as `checkLimits`
+    /// counts it) so CommandEngine can keep a running total.
+    static func validateCountingPoints(_ document: Document) throws -> Int {
+        let points = try checkLimits(document)
         let symbolIDs = try validateHeaders(document)
         for scene in document.scenes {
             try validate(scene.layers, owner: "scene \(scene.id)", symbols: symbolIDs)
@@ -115,21 +119,29 @@ public enum FlareFormat {
         }
         try checkSymbolCycles(document.symbols)
         try validateStateMachines(document)
+        return points
     }
 
     /// Like `validate(_:)`, after a change to layer `layerID` of `owner` only
     /// (an edit, insert, removal or move) of `previous`, which was valid.
     /// Other layers are trusted, so the cost does not grow with the scene.
+    /// `points` is `previous`'s point total, or nil when unknown; on return it
+    /// is `document`'s, or nil. A known total checks the point limit from the
+    /// changed layer's delta instead of recounting every layer.
     static func validate(_ document: Document, layer layerID: String, owner: LayerOwner,
-                         since previous: Document) throws {
+                         since previous: Document, points: inout Int?) throws {
         let symbolIDs = try validateHeaders(document)
         guard let new = document.layers(of: owner), let old = previous.layers(of: owner),
               let duration = document.scenes.first(where: { owner == .scene($0.id) })?.durationFrames
                 ?? document.symbols.first(where: { owner == .symbol($0.id) })?.durationFrames else {
-            return try validate(document)
+            points = try validateCountingPoints(document)
+            return
         }
         // Mattes name layers by id: only a removal or a change to this layer's matte can break one.
         var mattesChanged = new.count < old.count
+        // Points the change added (negative when it removed some).
+        var delta = 0
+        var counted = false
         if let i = new.firstIndex(where: { $0.id == layerID }) {
             let layer = new[i]
             try validate([layer], owner: owner.description, symbols: symbolIDs)
@@ -141,15 +153,38 @@ public enum FlareFormat {
             }
             let before = inserted ? nil
                 : old.indices.contains(i) && old[i].id == layerID ? old[i] : old.first { $0.id == layerID }
-            // The total was within the limits before, so only growth can break them.
-            if new.count > maxLayersPerScene || pointCount(layer) > before.map(pointCount) ?? 0 {
-                try checkLimits(document)
-            }
+            delta = pointCount(layer) - (before.map(pointCount) ?? 0)
+            counted = inserted ? new.count == old.count + 1 : new.count == old.count && before != nil
             mattesChanged = mattesChanged || layer.matte != before?.matte
+        } else if new.count == old.count - 1, let removed = old.first(where: { $0.id == layerID }) {
+            delta = -pointCount(removed)
+            counted = true
+        }
+        // Any other change of shape leaves the total unknown, to be recounted.
+        var total = counted ? points.map { $0 + delta } : nil
+        // The total was within the limits before, so only growth can break them,
+        // and only this owner's layer count can have grown.
+        if new.count > maxLayersPerScene || delta > 0 {
+            if let total {
+                guard new.count <= maxLayersPerScene else {
+                    throw FormatError.tooLarge("\(owner): \(new.count) layers, limit \(maxLayersPerScene)")
+                }
+                guard total <= maxTotalPoints else { throw FormatError.tooLarge("more than \(maxTotalPoints) points") }
+            } else {
+                total = try checkLimits(document)
+            }
         }
         if mattesChanged { try checkMattes(new, owner: owner.description) }
         try checkSymbolCycles(document.symbols)
         try validateStateMachines(document)
+        points = total
+    }
+
+    /// The scoped check with the point total unknown, so it recounts on growth.
+    static func validate(_ document: Document, layer layerID: String, owner: LayerOwner,
+                         since previous: Document) throws {
+        var unknown: Int?
+        try validate(document, layer: layerID, owner: owner, since: previous, points: &unknown)
     }
 
     /// Scene, symbol and swatch fields, without layers. Returns the symbol ids.
@@ -365,8 +400,9 @@ public enum FlareFormat {
 
     /// Throws `tooLarge` if a scene or symbol has too many layers or the
     /// document too many points. Points are counted across scenes and symbols,
-    /// as `pointCount(_: Layer)` counts them.
-    static func checkLimits(_ document: Document) throws {
+    /// as `pointCount(_: Layer)` counts them. Returns the document's point total.
+    @discardableResult
+    static func checkLimits(_ document: Document) throws -> Int {
         let containers = document.scenes.map { ("scene \($0.id)", $0.layers) }
             + document.symbols.map { ("symbol \($0.id)", $0.layers) }
         var points = 0
@@ -381,6 +417,7 @@ public enum FlareFormat {
                 }
             }
         }
+        return points
     }
 
     /// Points stored in `layer` for the size limit: its shapes, mask paths,
