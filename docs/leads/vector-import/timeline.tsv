@@ -21,3 +21,4 @@ utc	stage	event	ref	note
 2026-10-18T12:38:41Z	5	merge	R1-1	#488 merged 12:38Z (packet: anchor fold, fill none, ref cycles, AddScene, Lottie frame ranges; Import.swift cap docs)
 2026-10-18T12:38:41Z	4	heartbeat	-	VI-3, VI-4, VI-6 building; R1-1 merged
 2026-10-18T12:51:07Z	3	pr	VI-4	#490 opened, head d060a8a, CI PASS, mutate 5/5; round-1 arc fixes in (large-arc, F.6.6 scale-up, rotation, byte offsets)
+2026-10-18T12:55:43Z	3	pr	VI-3	#491 opened, head ddd35d9, CI PASS, mutate 3/3; EngineStressTests wall-clock budget over (7.6-11.2s vs 5s) under shared load, passed on rerun
