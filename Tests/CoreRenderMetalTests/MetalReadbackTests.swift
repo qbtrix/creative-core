@@ -18,15 +18,18 @@ import Testing
         let (device, queue) = (metal.device, metal.commandQueue)
         let scatter = try metal.pipelines.pipeline(for: ResampleShader.scatter, source: ResampleShader.source)
         let (width, height) = (400_000, 16)
-        let input = try #require(device.makeBuffer(length: width * height * 16, options: .storageModeShared))
-        let floats = input.contents().bindMemory(to: Float.self, capacity: width * height * 4)
         let fill: [Float] = [0.25, 0.5, 0.125, 0.75]
-        for index in 0..<(width * height * 4) { floats[index] = fill[index % 4] }
         let tiling = try SurfaceTiling(width: width, height: height)
         let rects = try (0..<tiling.tileCount).map { try tiling.rect($0) }
         let halves = fill.map { HalfFloat.encode($0) }
         let expected = rects.map { rect in (0..<(rect.width * rect.height)).flatMap { _ in halves } }
         for run in 0..<40 {
+            // Fresh buffers every run, as each resample allocates its own: a CPU-filled input and a GPU-filled one
+            // the size of the tiles. The stale reads only showed up with this allocation churn on the GPU.
+            let input = try #require(device.makeBuffer(length: width * height * 16, options: .storageModeShared))
+            input.contents().bindMemory(to: SIMD4<Float>.self, capacity: width * height)
+                .initialize(repeating: SIMD4(fill[0], fill[1], fill[2], fill[3]), count: width * height)
+            let churn = try #require(device.makeBuffer(length: width * height * 8, options: .storageModeShared))
             let tiles = try rects.map { rect -> any MTLTexture in
                 let descriptor = MTLTextureDescriptor.texture2DDescriptor(
                     pixelFormat: .rgba16Float, width: rect.width, height: rect.height, mipmapped: false)
@@ -35,6 +38,9 @@ import Testing
                 return try #require(device.makeTexture(descriptor: descriptor))
             }
             let commands = try #require(queue.makeCommandBuffer())
+            let blit = try #require(commands.makeBlitCommandEncoder())
+            blit.fill(buffer: churn, range: 0..<churn.length, value: 0x3C)
+            blit.endEncoding()
             let encoder = try #require(commands.makeComputeCommandEncoder())
             encoder.setComputePipelineState(scatter)
             encoder.setBuffer(input, offset: 0, index: 0)
