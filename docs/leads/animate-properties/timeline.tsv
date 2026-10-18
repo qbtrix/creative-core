@@ -23,3 +23,4 @@ utc	stage	event	ref	note
 2026-10-18T10:29Z	-	heartbeat	-	waiting
 2026-10-18T10:47Z	-	heartbeat	-	waiting
 2026-10-18T11:05Z	-	heartbeat	-	waiting
+2026-10-18T11:05Z	3	pr-merged	#477	AP-5 merged 5430f32
