@@ -12,7 +12,7 @@ Next: AP-7 (Lottie) and AP-8 (SVG) building (wf_a5b3a585-9ef). Fix batch ap-r1 f
 | AP-a | AP-1, AP-2 | engine-contracts:EC-f | merged-done | 39118832683 | |
 | AP-cmd | AP-3, AP-4 | AP-a; path-geometry:PG-edit (AP-4) | open | | |
 | AP-sample | AP-5, AP-6 | AP-a | merged (5430f32); waits a dev run with it | | |
-| AP-export | AP-7, AP-8 | AP-sample | building (wf_a5b3a585-9ef) | | |
+| AP-export | AP-7, AP-8 | AP-sample | merged (#480 b80c087, #481 0c92bfc); waits a dev run with them | | |
 | AP-z | AP-9, AP-10 | AP-cmd, AP-export | open | | |
 
 ## Tasks
