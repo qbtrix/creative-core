@@ -22,3 +22,4 @@ utc	stage	event	ref	note
 2026-10-18T23:42Z	3	pr-merged	#581	task TP-1 part B squash 803c62c; TP-1 done, TP-5/TP-6 unblocked
 2026-10-18T23:43Z	3	pr-opened	#582	task TP-4 head 2fa2a291, mutate 3/3
 2026-10-18T23:43Z	3	task-start	TP-5	builder launched
+2026-10-18T23:57:38Z	3	merged	#582	TP-4 squash 2d583a0; TP-mix all merged

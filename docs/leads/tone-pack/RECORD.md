@@ -16,7 +16,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 | TP-2 | 1 | TP-a | Reference colours, `.cube` fixtures (identity 17³, warm 33³, five damaged) generated as text in code, the cast photo | `Tests/CoreRasterTests/ToneFixtures.swift` | every fixture parses or fails as labelled (checked in TP-5) | none | #569 | merged |
 | TP-1 | 2 | TP-a | Checks first: six suites disabled by name | `Tests/CoreRasterTests/{ColorAdjust,ColorMix,ColorMap,ColorLUT,AutoTone}Tests.swift`, `Tests/CoreRenderTests/CPUColorTests.swift` | suites compile, disabled | none | #576, #581 | merged |
 | TP-3 | 3 | TP-mix | `vibrance`, `hueSaturation`, `hsl`; turns on `ColorAdjustTests` | `Sources/CoreRaster/Tone/ColorAdjust.swift`, its tests, `Tests/mutations/CoreRaster.ColorAdjust.json` | `ColorAdjustTests` | 3 (packet) | #578 | merged |
-| TP-4 | 3 | TP-mix | `blackAndWhite`, `channelMixer`, `colorBalance`; turns on `ColorMixTests` | `Sources/CoreRaster/Tone/ColorMix.swift`, its tests, `Tests/mutations/CoreRaster.ColorMix.json` | `ColorMixTests` | 3 (packet) | #582 | open |
+| TP-4 | 3 | TP-mix | `blackAndWhite`, `channelMixer`, `colorBalance`; turns on `ColorMixTests` | `Sources/CoreRaster/Tone/ColorMix.swift`, its tests, `Tests/mutations/CoreRaster.ColorMix.json` | `ColorMixTests` | 3 (packet) | #582 | merged |
 | TP-5 | 3 | TP-map | `gradientMap`, LUT apply, `CubeLUT.parse` + fuzz, `posterized`, `thresholded`, `inverted`; turns on `ColorMapTests`, `ColorLUTTests` | `Sources/CoreRaster/Tone/ColorMap.swift`, `Sources/CoreRaster/Tone/CubeLUT.swift`, both tests, `Tests/mutations/CoreRaster.ColorMap.json`, `Tests/mutations/CoreRaster.CubeLUT.json` | `ColorMapTests`, `ColorLUTTests` | 5 (packet) | | building |
 | TP-6 | 3 | TP-map | `AutoTone.suggest`; turns on `AutoToneTests` | `Sources/CoreRaster/Tone/AutoTone.swift`, its tests, `Tests/mutations/CoreRaster.AutoTone.json` | `AutoToneTests` | 2 (packet) | | planned |
 | TP-7 | 5 | TP-cpu | `CPUBackend+Color.swift` body; turns on `CPUColorTests` | `Sources/CoreRender/CPU/CPUBackend+Color.swift`, `Tests/CoreRenderTests/CPUColorTests.swift`, `Tests/mutations/CoreRenderCPUColor.json` | `CPUColorTests` | 2 (packet) | | planned |
@@ -44,8 +44,8 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
 |---|---|---|---|---|---|
-| TP-a | TP-0, TP-1, TP-2 | engine-contracts:EC-a (merged on base) | open | | |
-| TP-mix | TP-3, TP-4 | TP-a | open | | |
+| TP-a | TP-0, TP-1, TP-2 | engine-contracts:EC-a (merged on base) | merged (waits on green dev CI) | | |
+| TP-mix | TP-3, TP-4 | TP-a | merged (waits on green dev CI) | | |
 | TP-map | TP-5, TP-6 | TP-a | open | | |
 | TP-cpu | TP-7, TP-8 | TP-mix, TP-map; engine-contracts:EC-b (merged on base) | open | | |
 | TP-z | TP-9, TP-10 | TP-cpu | open | | wanted (budgets) |
