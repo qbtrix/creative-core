@@ -82,3 +82,4 @@ Next: VI-5 building, VI-7 building; Anatomy round 2 verdicts pending; Slice-Done
 - 19:44Z heartbeat: VI-8 idle since 18:38 (machine load 0), resumed with foreground-gate instruction
 - 20:01Z VI-8 builder still stalled at 20:00 (no change since 18:38); stopped and relaunched a finisher on the same worktree
 - 20:21Z VI-8 #556 merged ce06d88 (round trip every export fixture, exporter writes shapes top-first, mutations 2/2). Release budgets miss on Linux: SVG 2.1 MB ~180 ms vs 150, Lottie 5.3 MB ~480 ms vs 250; launching reader perf fixer R3-3 before VI-9.
+- 20:21Z R3-3 reader perf fixer launched (Lottie 250 ms, SVG 150 ms release budgets, no loosening)
