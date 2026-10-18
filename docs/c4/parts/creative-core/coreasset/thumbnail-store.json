@@ -1,7 +1,7 @@
 {
   "id": "thumbnail-store",
   "name": "Thumbnail Store",
-  "description": "ThumbnailStore, the disk preview store: opaque encoded preview bytes keyed by PreviewKey (asset, content token, SizeClass), PreviewEntry with its VolumeRef and relative path, and Availability (online or offline). The store writes, reads and removes previews in its folder (PreviewFiles: index.json plus digest-named p/<2 hex>/<16 hex>.bin files, each replaced by temp file and rename under an exclusive flock) and holds them to a byte budget by least-recently-used eviction. Index recovery and volume availability land in later preview-cache tasks.",
+  "description": "ThumbnailStore, the disk preview store: opaque encoded preview bytes keyed by PreviewKey (asset, content token, SizeClass), PreviewEntry with its VolumeRef and relative path, and Availability (online or offline). The store writes, reads and removes previews in its folder (PreviewFiles: index.json plus digest-named p/<2 hex>/<16 hex>.bin files, each a versioned header naming its key, volume and path ahead of the payload, replaced by temp file and rename under an exclusive flock) and holds them to a byte budget by least-recently-used eviction. Index recovery and volume availability land in later preview-cache tasks.",
   "technology": "Swift 6, Foundation",
   "paths": [
     "Sources/CoreAsset/Thumbnails/"
