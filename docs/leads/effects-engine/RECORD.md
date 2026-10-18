@@ -44,7 +44,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
 |---|---|---|---|---|---|
-| FX-a | FX-0, FX-1, FX-2 | engine-contracts:EC-a (merged on base) | open | | |
+| FX-a | FX-0, FX-1, FX-2 | engine-contracts:EC-a (merged on base) | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39174242588 | |
 | FX-blur | FX-3, FX-4 | FX-a | open | | |
 | FX-alpha | FX-5, FX-6 | FX-a | open | | |
 | FX-cpu | FX-7, FX-8 | FX-blur, FX-alpha; engine-contracts:EC-b (merged on base) | open | | |
