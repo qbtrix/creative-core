@@ -7,10 +7,16 @@
 // with a plain message; a source whose curve is not CoreColor's sRGB curve
 // decodes with its own curve; between built-ins the sRGB curve gets no
 // curve pass, so sRGB to Display P3 and back is exact to 1e-6; a target
-// whose curve is not the sRGB curve encodes with its own curve.
+// whose curve is not the sRGB curve encodes with its own curve; the input
+// is file numbers decoded with TransferCurve, not curve-free linear light.
 import CoreColor
 import CoreRaster
 import Testing
+#if canImport(Glibc)
+import Glibc
+#elseif canImport(Darwin)
+import Darwin
+#endif
 
 /// A 7 x 5 buffer of seeded random premultiplied pixels with alpha in 0.05...1.
 private func randomBuffer(seed: UInt64) throws -> PixelBuffer {
@@ -106,6 +112,24 @@ private func close(_ a: RGBA, _ b: RGBA, within eps: Float) -> Bool {
         let want: Float = 0.217_637_64  // 0.5^2.2
         #expect(abs(out.r - want) <= 1e-6 && abs(out.g - want) <= 1e-6 && abs(out.b - want) <= 1e-6)
         #expect(out.a == 1)
+    }
+
+    /// The documented input contract: pixels are file numbers decoded with TransferCurve, so a gamma-2.2
+    /// source converted to its own gamma-1 twin gives pow(encode(v), 2.2), not v (a "linear in" reading).
+    @Test func sourceCurveReplacesTransferCurveDecode() throws {
+        var linear = ColorProfile(name: "G22", isGray: false, toXYZD50: ColorProfile.displayP3.toXYZD50,
+                                  curves: Array(repeating: .gamma(2.2), count: 3))
+        let g22 = linear
+        linear.curves = Array(repeating: .gamma(1), count: 3)
+        var rng = SplitMix64(seed: 0xD0_C5_22)
+        for _ in 0..<20 {
+            let encoded = Double.random(in: 0.05...1, using: &rng)
+            let v = Float(TransferCurve.decode(encoded))
+            let buffer = try PixelBuffer(width: 1, height: 1, fill: RGBA(r: v, g: v, b: v, a: 1))
+            let out = try buffer.converted(from: g22, to: linear).pixel(x: 0, y: 0)
+            let want = Float(pow(TransferCurve.encode(Double(v)), 2.2))
+            #expect(abs(out.r - want) <= 1e-5 && abs(out.g - want) <= 1e-5 && abs(out.b - want) <= 1e-5, "\(encoded)")
+        }
     }
 
     @Test func builtInsRoundTripExactly() throws {

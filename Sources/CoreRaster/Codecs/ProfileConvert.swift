@@ -20,11 +20,26 @@ import Foundation
 import CoreColor
 
 extension PixelBuffer {
-    /// This buffer's colours, numbers in `source`'s primaries and curves,
-    /// re-expressed in `target`'s. Linear premultiplied in and out; alpha is
-    /// unchanged and out-of-gamut values stay unclamped. Throws
-    /// `RasterError.invalid` when the profiles cannot form a transform or a
-    /// converted component is not finite.
+    /// This buffer's colours, tagged with `source`, converted to `target`.
+    ///
+    /// Input contract: the pixels are premultiplied linear light as the codecs
+    /// produce them, meaning the file's numbers decoded with CoreColor's sRGB
+    /// `TransferCurve` (the way the PSD reader decodes them), whatever
+    /// profile the file carries. A side whose curves are all gamma 1, or are the
+    /// built-in sRGB curve, needs no curve pass, so between such profiles only
+    /// the matrix applies. For any other `source` the `TransferCurve` decode is
+    /// undone and `source`'s own curves decode instead, before the matrix; for
+    /// any other `target`, `target`'s curves encode and `TransferCurve` decodes
+    /// again, after it. So a truly linear buffer tagged with, say, a gamma-2.2
+    /// profile is not converted matrix-only: tag it with that profile's
+    /// gamma-1 twin instead.
+    ///
+    /// Output is premultiplied linear light in the same convention. Alpha is
+    /// unchanged, alpha 0 pixels are copied as they are, and out-of-gamut values
+    /// stay unclamped. For example
+    /// `layered.composite?.converted(from: layered.profile ?? .sRGB, to: .linearSRGB)`.
+    /// Throws `RasterError.invalid` when the profiles cannot form a transform or
+    /// a converted component is not finite.
     public func converted(from source: ColorProfile, to target: ColorProfile) throws(RasterError) -> PixelBuffer {
         let asked = (source, target)
         let transform = try Self.transform(from: source, to: target, for: asked)
