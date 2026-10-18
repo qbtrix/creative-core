@@ -44,11 +44,14 @@ Next: fix PRs for round 1 merge, then Anatomy round 2. CP-7/CP-8 wait on layered
 
 - Round 1, finding cp1-a #4 (lead decision): the built-in profiles (sRGB, Display P3, Linear sRGB) are quantised to the s15Fixed16 grid, as a real ICC file stores them, so `ColorProfile(iccData: p.iccData()) == p` holds exactly (packet CP-4) and an embedded built-in reopens equal (CP-7, CP-9). ICCShapeTests loosen to the grid: row sums within 3/65536 of D50, sRGB parameters within 1/65536 of IEC 61966-2-1. Done as fix batch cp1-d.
 
+- Round 2, finding #1 (LayeredImage.profile doc says nil means "no profile", but readers never fill it): left to CP-7/CP-8, which make the doc true. No separate doc edit, so the two batches don't race on LayeredImage.swift.
+
 ## Open
 - From engine-contracts round 2 (finding #10): ICCShapeTests never asserts the Display P3 colourants (ColorProfile.swift:58, :80). CP-5's sRGB→P3 test must cover them.
-- CP-deep (CP-7, CP-8) waits on layered-codecs:LC-write. LC-a merged as #446.
+- CP-deep: LC-write merged as #514 (168c73d); wave CP-7 + CP-8 dispatched on 168c73d.
 
 ## Anatomy
 | round | dev sha | gate | mutation | critics | confirmed | fixes |
 |---|---|---|---|---|---|---|
 | 1 | ca537c1 | CI: PASS | 12/12 (ICCRead, ICCWrite, ProfileTransform, ProfileConvert) | clarity, contract, compat, robustness, tests | 13 (4 major) | cp1-a (CP-icc docs, exact built-in round trip, gray target), cp1-b (ICC read class/version/para guards), cp1-c (convert honours tone curves, typed throws) |
+| 2 | ad85831 | CI: PASS | 25/25 (ICCRead 7, ICCWrite 4, ProfileTransform 7, ProfileConvert 7) | clarity, contract, compat, robustness, tests | 8 (2 major), 0 refuted | cp2-a (convert input contract doc, parametric table doc, CP-5 tolerance in packet), cp2-b (ICC write messages, ProfileTransform guard tests and 3 mutations, every para type round trip); #1 left to CP-7/CP-8 |
