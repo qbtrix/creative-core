@@ -4,27 +4,41 @@
     "file": "Sources/FlareCore/Sampling+TracksMorph.swift",
     "anchor": "if frame < Double(keys[mid].frame) { hi = mid } else { lo = mid + 1 }",
     "replacement": "if frame <= Double(keys[mid].frame) { hi = mid } else { lo = mid + 1 }",
-    "filter": "MorphSamplingTests"
+    "filter": "MorphSamplingTests.keyFrameIsExact"
   },
   {
     "note": "morph handles not lerped keep the left key's handles",
     "file": "Sources/FlareCore/Sampling+TracksMorph.swift",
     "anchor": "out.append(.cubic(control1: lerp(ha.0, hb.0), control2: lerp(ha.1, hb.1), to: lerp(pa, pb)))",
     "replacement": "out.append(.cubic(control1: ha.0, control2: ha.1, to: lerp(pa, pb)))",
-    "filter": "MorphSamplingTests"
+    "filter": "MorphSamplingTests.handlesLerp"
   },
   {
     "note": "morph ignores the key's easing and blends by the raw fraction",
     "file": "Sources/FlareCore/Sampling+TracksMorph.swift",
     "anchor": "let t = a.easing.value(at: (frame - Double(a.frame)) / span)",
     "replacement": "let t = (frame - Double(a.frame)) / span",
-    "filter": "MorphSamplingTests"
+    "filter": "MorphSamplingTests.easingShapesTheMorph"
   },
   {
     "note": "quad to cubic elevation puts handles one third of the way to the control",
     "file": "Sources/FlareCore/Sampling+TracksMorph.swift",
     "anchor": "Point(x: p.x + 2 * (c.x - p.x) / 3,",
     "replacement": "Point(x: p.x + (c.x - p.x) / 3,",
-    "filter": "MorphSamplingTests"
+    "filter": "MorphSamplingTests.quadElevatesToCubic"
+  },
+  {
+    "note": "morph quad against quad keeps the left key's control",
+    "file": "Sources/FlareCore/Sampling+TracksMorph.swift",
+    "anchor": "out.append(.quad(control: lerp(ca, cb), to: lerp(pa, pb)))",
+    "replacement": "out.append(.quad(control: ca, to: lerp(pa, pb)))",
+    "filter": "MorphSamplingTests.quadsLerpAsQuads"
+  },
+  {
+    "note": "unpaired path keys hold the right key instead of the left",
+    "file": "Sources/FlareCore/Sampling+TracksMorph.swift",
+    "anchor": "return Path.morph(a.path, b.path, t) ?? a.path",
+    "replacement": "return Path.morph(a.path, b.path, t) ?? b.path",
+    "filter": "MorphSamplingTests.unpairedKeysHoldTheLeftKey"
   }
 ]

@@ -11,9 +11,11 @@ import Foundation
 #endif
 
 extension Layer {
-    /// Shape `shape`'s path at `frame`, morphed anchor by anchor between its
-    /// keys with each key's easing; the end keys hold outside the track. nil
-    /// when the shape has no track or `frame` is not finite (use the static path).
+    /// The path at `frame` of the shape at index `shape` into the layer's
+    /// `shapes` (the track's `shapeIndex`, not a `Shape` value), morphed anchor
+    /// by anchor between its keys with each key's easing; the end keys hold
+    /// outside the track. nil when the shape has no track or `frame` is not
+    /// finite (use the static path).
     public func sampledPath(shape: Int, at frame: Double) -> Path? {
         guard frame.isFinite, let keys = shapeTracks.first(where: { $0.shapeIndex == shape })?.keys,
               let first = keys.first, let last = keys.last else { return nil }

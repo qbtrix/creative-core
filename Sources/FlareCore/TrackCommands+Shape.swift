@@ -18,6 +18,7 @@ public struct SetShapeKeyframe: LayerParamsCommand {
     public var label: String { "Set Shape Keyframe" }
     public var owner: LayerOwner
     public var layerID: String
+    /// Index into the layer's `shapes` (the `ShapeTrack.shapeIndex` keyed), not a `Shape` value.
     public var shape: Int
     public var frame: Int
     public var path: Path
@@ -46,6 +47,7 @@ public struct RemoveShapeKeyframe: LayerParamsCommand {
     public var label: String { "Remove Shape Keyframe" }
     public var owner: LayerOwner
     public var layerID: String
+    /// Index into the layer's `shapes` (the `ShapeTrack.shapeIndex` keyed), not a `Shape` value.
     public var shape: Int
     public var frame: Int
 

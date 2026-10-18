@@ -118,7 +118,7 @@ public struct TextOnPath: Codable, Sendable, Hashable {
 
 /// A colour value at a frame of one of a layer's `colorTracks`.
 public struct ColorKeyframe: Codable, Sendable, Hashable {
-    /// Frame in 0...the scene's duration.
+    /// Frame in 0...the owning scene's or symbol's duration.
     public var frame: Int
     /// The colour, each channel 0...1.
     public var value: Color
@@ -131,7 +131,7 @@ public struct ColorKeyframe: Codable, Sendable, Hashable {
 
 /// A shape's geometry at a frame of a `ShapeTrack`.
 public struct PathKeyframe: Codable, Sendable, Hashable {
-    /// Frame in 0...the scene's duration.
+    /// Frame in 0...the owning scene's or symbol's duration.
     public var frame: Int
     /// The shape's path at this frame.
     public var path: Path
