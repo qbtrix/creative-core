@@ -1,0 +1,16 @@
+[
+  {
+    "note": "SVG export writes the static fill colour instead of the sampled one",
+    "file": "Sources/FlareCore/Export/SVGExporter+Style.swift",
+    "anchor": "out.fill = .solid(color)",
+    "replacement": "out.fill = shape.fill",
+    "filter": "SVGStyleAtFrameTests.usesSampledColour"
+  },
+  {
+    "note": "SVG export writes the static path instead of the sampled shape track",
+    "file": "Sources/FlareCore/Export/SVGExporter+Style.swift",
+    "anchor": "if let path = layer.sampledPath(shape: index, at: frame) { out.path = path }",
+    "replacement": "if let path = layer.sampledPath(shape: index, at: frame) { out.path = path.elements.isEmpty ? path : shape.outline }",
+    "filter": "SVGStyleAtFrameTests.usesSampledPath"
+  }
+]

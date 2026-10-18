@@ -4,7 +4,8 @@
 // what the stage draws. Layers render bottom to top (the first layer is drawn
 // first). Each visible layer is a <g> carrying its sampled transform as a
 // matrix and its opacity; each shape is a <path> built from `Shape.outline`, so curves stay curves,
-// with its stroke as stroke attributes. After its shapes, each instance on a
+// with its stroke as stroke attributes, its colour, width and shape tracks sampled
+// at the frame first (SVGExporter+Style). After its shapes, each instance on a
 // layer is a nested <g> with the instance transform holding the symbol's
 // layers sampled at the symbol frame.
 // Coordinates are written as-is: scene space maps straight to SVG user space.
@@ -47,7 +48,7 @@ public enum SVGExporter {
         var gradients = 0
         let list = scene.renderList(at: frame, symbols: symbols)
         if list.isTruncated { throw SVGExportError.sceneTooLarge }
-        for node in list.nodes {
+        for node in sampled(list.nodes, layers: scene.layers, frame: frame, symbols: symbols) {
             try emit(node, inSymbol: false, into: &lines, gradients: &gradients)
         }
         lines.append("</svg>")
