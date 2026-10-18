@@ -19,15 +19,61 @@ extension Layer {
     func checkShapeIndex(_ index: Int) throws {
         guard shapes.indices.contains(index) else { throw CommandError.shapeNotFound(index) }
     }
+
+    /// The tracks that address a shape by index, saved whole so a removal's
+    /// undo puts them back exactly.
+    var indexedTracks: IndexedTracks {
+        get { IndexedTracks(colorTracks: colorTracks, shapeTracks: shapeTracks, tracks: tracks) }
+        set { (colorTracks, shapeTracks, tracks) = (newValue.colorTracks, newValue.shapeTracks, newValue.tracks) }
+    }
+
+    /// Drops shape `index`'s `fill.i`, `stroke.i` and `strokeWidth.i` tracks
+    /// and its shape track, and moves those of later shapes down one, so every
+    /// track stays on its shape once `shapes[index]` is removed.
+    mutating func removeShapeTracks(at index: Int) {
+        colorTracks = Self.removingIndex(index, prefixes: ["fill", "stroke"], from: colorTracks)
+        tracks = Self.removingIndex(index, prefixes: ["strokeWidth"], from: tracks)
+        shapeTracks = shapeTracks.compactMap { track in
+            guard track.shapeIndex != index else { return nil }
+            return track.shapeIndex > index ? ShapeTrack(shapeIndex: track.shapeIndex - 1, keys: track.keys) : track
+        }
+    }
+
+    /// `tracks` without its `<prefix>.<index>` keys, each `<prefix>.<i>` with
+    /// i > index renamed `<prefix>.<i-1>`; `i` in plain decimal, as
+    /// `FlareFormat.colorTrackTargetExists` reads it. Other keys are kept.
+    static func removingIndex<V>(_ index: Int, prefixes: Set<String>, from tracks: [String: V]) -> [String: V] {
+        var result: [String: V] = [:]
+        for (key, value) in tracks {
+            let parts = key.split(separator: ".", maxSplits: 1, omittingEmptySubsequences: false)
+            guard parts.count == 2, prefixes.contains(String(parts[0])), let i = Int(parts[1]), String(i) == parts[1] else {
+                result[key] = value
+                continue
+            }
+            if i == index { continue }
+            result[i > index ? "\(parts[0]).\(i - 1)" : key] = value
+        }
+        return result
+    }
 }
 
+/// A layer's index-addressed tracks: colour tracks, shape tracks and the
+/// Double tracks (which hold `strokeWidth.<i>`).
+struct IndexedTracks: Sendable, Hashable {
+    var colorTracks: [String: [ColorKeyframe]]
+    var shapeTracks: [ShapeTrack]
+    var tracks: [String: [Keyframe]]
+}
+
+/// Removes a shape with its fill, stroke, stroke width and path tracks; the
+/// tracks of later shapes move down one index with their shapes.
 public struct RemoveShape: LayerItemCommand {
     public static let id = "shape.remove"
     public var label: String { "Delete Shape" }
     public var owner: LayerOwner
     public var layerID: String
     public var index: Int
-    var removed: Shape?
+    var removed: (shape: Shape, tracks: IndexedTracks)?
 
     public init(owner: LayerOwner, layerID: String, index: Int) {
         self.owner = owner
@@ -39,7 +85,9 @@ public struct RemoveShape: LayerItemCommand {
         let index = index
         removed = try document.withEditableLayer(owner, layer: layerID) { layer in
             try layer.checkShapeIndex(index)
-            return layer.shapes.remove(at: index)
+            let tracks = layer.indexedTracks
+            layer.removeShapeTracks(at: index)
+            return (layer.shapes.remove(at: index), tracks)
         }
     }
 
@@ -48,7 +96,8 @@ public struct RemoveShape: LayerItemCommand {
         let index = index
         try document.withLayer(owner, layer: layerID) { layer in
             guard index >= 0, index <= layer.shapes.count else { throw CommandError.shapeNotFound(index) }
-            layer.shapes.insert(removed, at: index)
+            layer.shapes.insert(removed.shape, at: index)
+            layer.indexedTracks = removed.tracks
         }
     }
 }
