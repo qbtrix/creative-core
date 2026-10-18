@@ -64,3 +64,4 @@ utc	stage	event	ref	note
 2026-10-18T16:08Z	-	heartbeat	-	waiting
 2026-10-18T16:14Z	fix	ap2-b-dispatched	wa1pdtd8p	ap2-b dispatched on 4c9ded2 (after #524): command error docs, coalesceKey wording, TrackTarget doc, last-key-drops-track and keyframeNotFound tests+mutations.
 2026-10-18T16:26Z	-	heartbeat	-	waiting
+2026-10-18T16:28Z	fix	ap2-b	#528	ap2-b PR #528: 5/5 fixed (incl. major last-key-drops-track), head e54a585, gate PASS, FlareTrackCommands 12/12. TrackTarget doc-only (used outside batch).
