@@ -18,6 +18,7 @@
 //   scaleX/scaleY value × 100 is finite too (Lottie writes scale as a percent)
 // - text shapes have a finite font size > 0 and a finite position
 // - swatch names are non-empty and unique, and swatch color channels are finite and in 0...1
+// - masks, mattes, text styles and colour and shape tracks keep the rules in W1Model.swift
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -199,6 +200,14 @@ public struct Layer: Codable, Sendable, Hashable {
     public var instances: [Instance]
     /// Text drawn above the shapes. Missing in older v1 files means empty.
     public var texts: [TextShape]
+    /// Masks applied in order. Missing in older files means none.
+    public var masks: [LayerMask] = []
+    /// Another layer of the same list that limits where this one draws.
+    public var matte: TrackMatte?
+    /// Colour keyframes keyed "fill.<shape>", "stroke.<shape>" or "text.<index>".
+    public var colorTracks: [String: [ColorKeyframe]] = [:]
+    /// Keyframed geometry, one track per animated shape.
+    public var shapeTracks: [ShapeTrack] = []
 
     public init(
         id: String, name: String, shapes: [Shape] = [], tracks: [String: [Keyframe]] = [:],
@@ -215,7 +224,7 @@ public struct Layer: Codable, Sendable, Hashable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, name, shapes, tracks, isVisible, isLocked, instances, texts
+        case id, name, shapes, tracks, isVisible, isLocked, instances, texts, masks, matte, colorTracks, shapeTracks
     }
 
     /// Files written before the flags existed decode as visible and unlocked,
@@ -230,9 +239,13 @@ public struct Layer: Codable, Sendable, Hashable {
         isLocked = try c.decodeIfPresent(Bool.self, forKey: .isLocked) ?? false
         instances = try c.decodeIfPresent([Instance].self, forKey: .instances) ?? []
         texts = try c.decodeIfPresent([TextShape].self, forKey: .texts) ?? []
+        masks = try c.decodeIfPresent([LayerMask].self, forKey: .masks) ?? []
+        matte = try c.decodeIfPresent(TrackMatte.self, forKey: .matte)
+        colorTracks = try c.decodeIfPresent([String: [ColorKeyframe]].self, forKey: .colorTracks) ?? [:]
+        shapeTracks = try c.decodeIfPresent([ShapeTrack].self, forKey: .shapeTracks) ?? []
     }
 
-    /// Empty texts are left out, so layers without text encode as before.
+    /// Empty texts, masks and tracks and a nil matte are left out, so older layers encode as before.
     public func encode(to encoder: any Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(id, forKey: .id)
@@ -243,6 +256,10 @@ public struct Layer: Codable, Sendable, Hashable {
         try c.encode(isLocked, forKey: .isLocked)
         try c.encode(instances, forKey: .instances)
         if !texts.isEmpty { try c.encode(texts, forKey: .texts) }
+        if !masks.isEmpty { try c.encode(masks, forKey: .masks) }
+        try c.encodeIfPresent(matte, forKey: .matte)
+        if !colorTracks.isEmpty { try c.encode(colorTracks, forKey: .colorTracks) }
+        if !shapeTracks.isEmpty { try c.encode(shapeTracks, forKey: .shapeTracks) }
     }
 
     /// Inserts or replaces the keyframe at `keyframe.frame`, keeping the track
@@ -352,13 +369,16 @@ public struct Shape: Codable, Sendable, Hashable {
 }
 
 /// `string` set in `fontFamily` at `fontSize` points (finite, > 0), its baseline
-/// origin at the finite `position`, painted with `fill`.
+/// origin at the finite `position`, painted with `fill`, restyled by `runs`, `paragraph` and `onPath`.
 public struct TextShape: Codable, Sendable, Hashable {
     public var string: String
     public var fontFamily: String
     public var fontSize: Double
     public var position: Point
     public var fill: Fill
+    public var runs: [TextRun] = []
+    public var paragraph: ParagraphStyle?
+    public var onPath: TextOnPath?
 
     public init(string: String, fontFamily: String, fontSize: Double, position: Point, fill: Fill = .solid(.black)) {
         self.string = string
@@ -366,6 +386,35 @@ public struct TextShape: Codable, Sendable, Hashable {
         self.fontSize = fontSize
         self.position = position
         self.fill = fill
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case string, fontFamily, fontSize, position, fill, runs, paragraph, onPath
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        string = try c.decode(String.self, forKey: .string)
+        fontFamily = try c.decode(String.self, forKey: .fontFamily)
+        fontSize = try c.decode(Double.self, forKey: .fontSize)
+        position = try c.decode(Point.self, forKey: .position)
+        fill = try c.decode(Fill.self, forKey: .fill)
+        runs = try c.decodeIfPresent([TextRun].self, forKey: .runs) ?? []
+        paragraph = try c.decodeIfPresent(ParagraphStyle.self, forKey: .paragraph)
+        onPath = try c.decodeIfPresent(TextOnPath.self, forKey: .onPath)
+    }
+
+    /// Empty runs and nil styles are left out, so plain text encodes as before.
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(string, forKey: .string)
+        try c.encode(fontFamily, forKey: .fontFamily)
+        try c.encode(fontSize, forKey: .fontSize)
+        try c.encode(position, forKey: .position)
+        try c.encode(fill, forKey: .fill)
+        if !runs.isEmpty { try c.encode(runs, forKey: .runs) }
+        try c.encodeIfPresent(paragraph, forKey: .paragraph)
+        try c.encodeIfPresent(onPath, forKey: .onPath)
     }
 
     /// Throws `ModelError.invalidText` or `invalidFill` if an invariant above breaks.

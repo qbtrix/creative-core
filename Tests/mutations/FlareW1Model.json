@@ -1,0 +1,6 @@
+[
+  {"note": "the matte cycle check looks one step only", "file": "Sources/FlareCore/FlareFormat.swift", "anchor": "next = source[id]", "replacement": "next = nil", "filter": "W1ModelTests.refusesMatteCycleTwoDeep"},
+  {"note": "the text run overlap check uses < for <=", "file": "Sources/FlareCore/FlareFormat.swift", "anchor": "run.start > last && run.length > 0", "replacement": "run.start >= last && run.length > 0", "filter": "W1ModelTests.refusesTouchingRunsThatOverlap"},
+  {"note": "the key cap per colour or shape track is 4097, not 4096", "file": "Sources/FlareCore/FlareFormat.swift", "anchor": "public static let maxKeysPerTrack = 4_096", "replacement": "public static let maxKeysPerTrack = 4_097", "filter": "W1ModelTests.capsKeysAt4096"},
+  {"note": "removing a layer skips the matte source check", "file": "Sources/FlareCore/FlareFormat.swift", "anchor": "var mattesChanged = new.count < old.count", "replacement": "var mattesChanged = false", "filter": "W1ModelTests.removingAMatteSourceIsRefused"}
+]
