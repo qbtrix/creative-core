@@ -22,3 +22,4 @@ utc	stage	event	ref	note
 2026-10-18T23:57:38Z	3	merged	#583	AC-3 squash 6a87576
 2026-10-18T23:57:38Z	3	merged	#584	AC-4 squash 5ea5ae5; AC-geo all merged
 2026-10-18T23:57:38Z	4	slice-done	AC-a	Belt-Slice-Done on #434, run 39174242588
+2026-10-18T23:58:27Z	4	round-start	round-1	gate+mutate on 5ea5ae5 (covers merged slices)
