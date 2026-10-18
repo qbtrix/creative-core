@@ -91,7 +91,7 @@ public enum LottieExporter {
             }
             return group(layers + [try LottieItem.transform(instance.transform, opacity: 1)])
         }
-        return try instances + layer.shapes.map(LottieItem.init(shape:))
+        return try instances + layer.shapes.enumerated().map { try LottieItem(shape: $1, index: $0, of: layer, frame: frame, animate: path.isEmpty) }
     }
 
     static func group(_ items: [LottieItem]) -> LottieItem {
@@ -263,8 +263,8 @@ enum LottieProperty<Value: Encodable & Sendable>: Encodable, Sendable {
 /// A shape item. Fields not used by an item's `ty` are left out.
 struct LottieItem: Encodable, Sendable {
     var ty: String
-    var ks: LottieStatic<LottieBezier>?
-    var c: LottieStatic<[Double]>?
+    var ks: LottieProperty<LottieBezier>?
+    var c: LottieProperty<[Double]>?
     var o: LottieStatic<Double>?
     /// The fill rule on `fl` (1 is non-zero), the rotation on `tr`.
     var r: LottieR?
@@ -276,7 +276,7 @@ struct LottieItem: Encodable, Sendable {
     var e: LottieStatic<[Double]>?
     var g: LottieGradientStops?
     /// Stroke width, line cap and line join on `st`.
-    var w: LottieStatic<Double>?
+    var w: LottieScalar?
     var lc: Int?
     var lj: Int?
     /// The items of a `gr` group, the first drawn on top.
@@ -322,10 +322,10 @@ extension LottieItem {
     init(shape: Shape) throws {
         var items = try LottieExporter.beziers(shape.outline).map { bezier in
             var item = LottieItem(ty: "sh")
-            item.ks = LottieStatic(bezier)
+            item.ks = .fixed(LottieStatic(bezier))
             return item
         }
-        func channel(_ v: Double) throws -> Double { min(max(try LottieExporter.finite(v), 0), 1) }
+        func channel(_ v: Double) throws -> Double { try LottieExporter.unit(v) }
         func gradient(_ stops: [GradientStop]) throws -> LottieGradientStops {
             let alphas = try stops.map { try channel($0.color.a) }
             var flat = try stops.flatMap { stop in
@@ -346,7 +346,7 @@ extension LottieItem {
         switch shape.fill {
         case .solid(let color):
             fill = LottieItem(ty: "fl")
-            fill.c = LottieStatic([try channel(color.r), try channel(color.g), try channel(color.b), 1])
+            fill.c = .fixed(LottieStatic([try channel(color.r), try channel(color.g), try channel(color.b), 1]))
             fill.o = LottieStatic(try channel(color.a) * 100)
         case .linear(let stops, let start, let end):
             fill.t = 1
@@ -363,10 +363,10 @@ extension LottieItem {
         fill.r = .rule(1)
         if let stroke = shape.stroke {
             var item = LottieItem(ty: "st")
-            item.c = LottieStatic([try channel(stroke.color.r), try channel(stroke.color.g),
-                                   try channel(stroke.color.b), 1])
+            item.c = .fixed(LottieStatic([try channel(stroke.color.r), try channel(stroke.color.g),
+                                          try channel(stroke.color.b), 1]))
             item.o = LottieStatic(try channel(stroke.color.a) * 100)
-            item.w = LottieStatic(try LottieExporter.finite(stroke.width))
+            item.w = .fixed(LottieStatic(try LottieExporter.finite(stroke.width)))
             item.lc = [.butt: 1, .round: 2, .square: 3][stroke.cap]
             item.lj = [.miter: 1, .round: 2, .bevel: 3][stroke.join]
             items.append(item)
