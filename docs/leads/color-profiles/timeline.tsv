@@ -66,3 +66,4 @@ utc	stage	event	ref	note
 2026-10-18T15:50Z	-	heartbeat	-	waiting
 2026-10-18T15:52Z	anatomy	fix-merged	#519	cp2-a merged 3e56eee
 2026-10-18T16:06Z	build	CP-7-conflict	#523	PR #523 conflicted with dev after #518 (PSD merged image); rebase fixer dispatched, body Closes->Refs #441. CP-8 finisher dispatched (gate at low load, PR to follow).
+2026-10-18T16:08Z	-	heartbeat	-	waiting
