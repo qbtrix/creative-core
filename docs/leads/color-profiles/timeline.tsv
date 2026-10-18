@@ -92,3 +92,4 @@ utc	stage	event	ref	note
 2026-10-18T18:33Z	-	heartbeat	-	waiting
 2026-10-18T18:37Z	anatomy	heartbeat	a5fe15d	cp3-c committed a5fe15d (per-channel curve tables) on cb046a8; gating before PR
 2026-10-18T18:42Z	anatomy	round4-start	bd50d5b	cp3-c #547 merged; gap #549; #441 reopened; round 4 gate running
+2026-10-18T18:48Z	anatomy	round4-gate	bd50d5b	CI: PASS try 1; 41/41; panel running

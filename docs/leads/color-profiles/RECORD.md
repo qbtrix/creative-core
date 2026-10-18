@@ -2,7 +2,7 @@
 
 Issue: #441 · Packet: docs/blueprints/core/features/color-profiles.md
 Run: act-1a14ddaebc8-nwqn · Session: line lead (engine-contracts, animate-properties, color-profiles) · Started: 2026-10-18T07:15Z
-Stage: 4 Anatomy round 4 (the last) on bd50d5b: gate + 6 mutation plans running
+Stage: 4 Anatomy round 4 (the last) on bd50d5b: gate CI: PASS try 1 (1396 + 35), mutation 41/41; critic panel wf_345f27c8-424 running
 Base: 9d01972365f04da4fe6074e9bdd56ceab5b616a8
 Next: cp3-c merges (or a gap if the budget is out of reach); round 4 (last) gate + panel; CP-10 (feature-done, Closes #441); Mac-Finish-Wanted CP-z; contact sheet.
 
