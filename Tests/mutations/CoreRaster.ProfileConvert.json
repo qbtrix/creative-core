@@ -9,8 +9,43 @@
   {
     "note": "profile convert clamps converted colour to 0...1",
     "file": "Sources/CoreRaster/Codecs/ProfileConvert.swift",
-    "anchor": "let mapped = transform.applyLinear(straight)",
-    "replacement": "let mapped = { (m: Color3) in Color3(min(max(m.c0, 0), 1), min(max(m.c1, 0), 1), min(max(m.c2, 0), 1)) }(transform.applyLinear(straight))",
+    "anchor": "let mapped = convert(straight)",
+    "replacement": "let mapped = { (m: Color3) in Color3(min(max(m.c0, 0), 1), min(max(m.c1, 0), 1), min(max(m.c2, 0), 1)) }(convert(straight))",
     "filter": "ProfileConvertTests.keepsOutOfGamut"
+  },
+  {
+    "note": "profile convert divides alpha 0 pixels instead of copying them unchanged",
+    "file": "Sources/CoreRaster/Codecs/ProfileConvert.swift",
+    "anchor": "guard a != 0 else { continue }",
+    "replacement": "guard a != -1 else { continue }",
+    "filter": "ProfileConvertTests.transparentPixelsUnchanged"
+  },
+  {
+    "note": "profile convert stores a non-finite converted pixel instead of throwing",
+    "file": "Sources/CoreRaster/Codecs/ProfileConvert.swift",
+    "anchor": "guard rgb.0.isFinite, rgb.1.isFinite, rgb.2.isFinite else {",
+    "replacement": "guard true else {",
+    "filter": "ProfileConvertTests.nonFiniteResultThrows"
+  },
+  {
+    "note": "profile convert ignores the source tone curve and applies the matrix only",
+    "file": "Sources/CoreRaster/Codecs/ProfileConvert.swift",
+    "anchor": "let decodeIn = Self.decodesAsBuffer(source) ? nil : try Self.transform(from: source, to: Self.linear(source), for: asked)",
+    "replacement": "let decodeIn: ProfileTransform? = nil",
+    "filter": "ProfileConvertTests.decodesWithSourceCurve"
+  },
+  {
+    "note": "profile convert sends the built-in sRGB curve through a curve pass instead of the shortcut",
+    "file": "Sources/CoreRaster/Codecs/ProfileConvert.swift",
+    "anchor": "profile.curves.allSatisfy { $0 == .gamma(1) } || profile.curves == ColorProfile.sRGB.curves",
+    "replacement": "profile.curves.allSatisfy { $0 == .gamma(1) }",
+    "filter": "ProfileConvertTests.keepsOutOfGamut"
+  },
+  {
+    "note": "profile convert skips the target tone curve and leaves the target side linear",
+    "file": "Sources/CoreRaster/Codecs/ProfileConvert.swift",
+    "anchor": "let encodeOut = Self.decodesAsBuffer(target) ? nil : try Self.transform(from: Self.linear(target), to: target, for: asked)",
+    "replacement": "let encodeOut: ProfileTransform? = nil",
+    "filter": "ProfileConvertTests.encodesWithTargetCurve"
   }
 ]

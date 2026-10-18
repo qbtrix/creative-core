@@ -1,11 +1,17 @@
 // ProfileConvert.swift: converting a buffer from one colour profile to
 // another (Convert to Profile, as opposed to assigning, which keeps the
 // numbers). A PixelBuffer is linear light, premultiplied, so each pixel is
-// unpremultiplied, mapped through the transform's linear (matrix) part and
-// premultiplied again. Invariants a reader must keep: alpha never changes,
-// alpha 0 pixels are copied unchanged (they carry no recoverable colour),
-// nothing is clamped (Float32 keeps out-of-gamut values), and a non-finite
-// result or a profile CoreColor cannot invert throws RasterError.
+// unpremultiplied, converted and premultiplied again. A side whose curves
+// decode as the buffer does (every curve gamma 1, or the built-in sRGB curve,
+// which is CoreColor's TransferCurve rounded to the ICC grid) gets no curve
+// pass, so between two such profiles (the built-ins) only the transform's
+// matrix part applies. Any other side gets a curve pass: a source's numbers
+// are encoded with TransferCurve and decoded with its own curves before the
+// matrix; a target's are encoded with its own curves and decoded with
+// TransferCurve after it. Invariants a reader must keep: alpha never
+// changes, alpha 0 pixels are copied unchanged (they carry no recoverable
+// colour), nothing is clamped (Float32 keeps out-of-gamut values), and a
+// non-finite result or a profile CoreColor cannot invert throws RasterError.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -14,17 +20,28 @@ import Foundation
 import CoreColor
 
 extension PixelBuffer {
-    /// This buffer's colours, numbers in `source`'s linear primaries,
+    /// This buffer's colours, numbers in `source`'s primaries and curves,
     /// re-expressed in `target`'s. Linear premultiplied in and out; alpha is
     /// unchanged and out-of-gamut values stay unclamped. Throws
     /// `RasterError.invalid` when the profiles cannot form a transform or a
     /// converted component is not finite.
-    public func converted(from source: ColorProfile, to target: ColorProfile) throws -> PixelBuffer {
-        let transform: ProfileTransform
-        do {
-            transform = try ProfileTransform(from: source, to: target)
-        } catch {
-            throw RasterError.invalid("convert \(source.name) to \(target.name): \(error)")
+    public func converted(from source: ColorProfile, to target: ColorProfile) throws(RasterError) -> PixelBuffer {
+        let asked = (source, target)
+        let transform = try Self.transform(from: source, to: target, for: asked)
+        // Curve-only passes (same primaries, so the matrix is the identity), nil on a side that decodes as the buffer.
+        let decodeIn = Self.decodesAsBuffer(source) ? nil : try Self.transform(from: source, to: Self.linear(source), for: asked)
+        let encodeOut = Self.decodesAsBuffer(target) ? nil : try Self.transform(from: Self.linear(target), to: target, for: asked)
+        func convert(_ c: Color3) -> Color3 {
+            var v = c
+            if let decodeIn {
+                v = decodeIn.apply(Color3(TransferCurve.encode(v.c0), TransferCurve.encode(v.c1), TransferCurve.encode(v.c2)))
+            }
+            v = transform.applyLinear(v)
+            if let encodeOut {
+                v = encodeOut.apply(v)
+                v = Color3(TransferCurve.decode(v.c0), TransferCurve.decode(v.c1), TransferCurve.decode(v.c2))
+            }
+            return v
         }
         var storage = components
         for i in stride(from: 0, to: storage.count, by: Self.channels) {
@@ -32,7 +49,7 @@ extension PixelBuffer {
             guard a != 0 else { continue }
             let alpha = Double(a)
             let straight = Color3(Double(storage[i]) / alpha, Double(storage[i + 1]) / alpha, Double(storage[i + 2]) / alpha)
-            let mapped = transform.applyLinear(straight)
+            let mapped = convert(straight)
             let rgb = (Float(mapped.c0 * alpha), Float(mapped.c1 * alpha), Float(mapped.c2 * alpha))
             guard rgb.0.isFinite, rgb.1.isFinite, rgb.2.isFinite else {
                 let n = i / Self.channels
@@ -43,5 +60,33 @@ extension PixelBuffer {
             storage[i + 2] = rgb.2
         }
         return PixelBuffer(checkedWidth: width, height: height, storage: storage)
+    }
+
+    /// True when `profile`'s curves decode a value the way a PixelBuffer already
+    /// holds it, so converting needs no curve pass on that side: every curve is
+    /// gamma 1 (linear light), or the curves are the built-in sRGB curve, which
+    /// stands for CoreColor's TransferCurve rounded to the ICC grid (within 2^-16).
+    private static func decodesAsBuffer(_ profile: ColorProfile) -> Bool {
+        profile.curves.allSatisfy { $0 == .gamma(1) } || profile.curves == ColorProfile.sRGB.curves
+    }
+
+    /// `profile` with every curve gamma 1: the same primaries, read as linear light.
+    private static func linear(_ profile: ColorProfile) -> ColorProfile {
+        var twin = profile
+        twin.curves = Array(repeating: .gamma(1), count: profile.curves.count)
+        return twin
+    }
+
+    /// The CoreColor transform from `a` to `b`, its error rethrown as a plain
+    /// RasterError naming the conversion asked for.
+    private static func transform(from a: ColorProfile, to b: ColorProfile,
+                                  for asked: (ColorProfile, ColorProfile)) throws(RasterError) -> ProfileTransform {
+        do throws(ColorError) {
+            return try ProfileTransform(from: a, to: b)
+        } catch {
+            switch error {
+            case .invalid(let why): throw RasterError.invalid("convert \(asked.0.name) to \(asked.1.name): \(why)")
+            }
+        }
     }
 }
