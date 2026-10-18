@@ -28,11 +28,103 @@ import Testing
         return doc
     }
 
+    static let nanPath = Path(polyline: [Point(x: .nan, y: 0)], closed: false)
+
     static func refuses(_ edit: (inout Layer) -> Void, _ why: String = "", layers: Int = 1) {
         var doc = w1Document()
         edit(&doc.scenes[0].layers[layers])
         #expect(throws: FormatError.self, "\(why)") { try FlareFormat.validate(doc) }
     }
+
+    /// The `FormatError.invalid` message validate gives after `edit` to "ball".
+    static func message(_ edit: (inout Layer) -> Void) -> String {
+        var doc = w1Document()
+        edit(&doc.scenes[0].layers[1])
+        do { try FlareFormat.validate(doc) } catch FormatError.invalid(let message) { return message } catch {}
+        return "no invalid error"
+    }
+
+    /// A new layer "m" with `edit` applied.
+    static func layer(_ edit: (inout Layer) -> Void) -> Layer {
+        var layer = Layer(id: "m", name: "M")
+        edit(&layer)
+        return layer
+    }
+
+    /// A path of more than `maxTotalPoints` points, as cubics so it builds fast.
+    static func hugePath() -> Path {
+        let cubic = PathElement.cubic(control1: Point(x: 0, y: 0), control2: Point(x: 1, y: 1), to: Point(x: 2, y: 0))
+        return Path(elements: Array(repeating: cubic, count: FlareFormat.maxTotalPoints / 3 + 1))
+    }
+
+    /// What the encoder wrote for this text layer before the W1 fields existed.
+    static let preW1Golden = """
+    {
+      "document" : {
+        "scenes" : [
+          {
+            "background" : {
+              "a" : 1,
+              "b" : 1,
+              "g" : 1,
+              "r" : 1
+            },
+            "durationFrames" : 10,
+            "fps" : 24,
+            "guides" : [
+
+            ],
+            "height" : 400,
+            "id" : "s",
+            "labels" : {
+
+            },
+            "layers" : [
+              {
+                "id" : "l",
+                "instances" : [
+
+                ],
+                "isLocked" : false,
+                "isVisible" : true,
+                "name" : "L",
+                "shapes" : [
+
+                ],
+                "texts" : [
+                  {
+                    "fill" : {
+                      "a" : 1,
+                      "b" : 0,
+                      "g" : 0,
+                      "r" : 0
+                    },
+                    "fontFamily" : "Inter",
+                    "fontSize" : 12,
+                    "position" : {
+                      "x" : 0,
+                      "y" : 0
+                    },
+                    "string" : "Hi"
+                  }
+                ],
+                "tracks" : {
+
+                }
+              }
+            ],
+            "name" : "S",
+            "width" : 550
+          }
+        ],
+        "symbols" : [
+
+        ]
+      },
+      "format" : "flare",
+      "version" : 1
+    }
+    """
 
     @Test func v1RoundTripsByteForByte() throws {
         let v1 = #"""
@@ -45,10 +137,8 @@ import Testing
         let layer = doc.scenes[0].layers[0]
         #expect(layer.masks.isEmpty && layer.matte == nil && layer.colorTracks.isEmpty && layer.shapeTracks.isEmpty)
         #expect(layer.texts[0].runs.isEmpty && layer.texts[0].paragraph == nil && layer.texts[0].onPath == nil)
-        let bytes = try FlareFormat.encode(doc)
-        let text = String(decoding: bytes, as: UTF8.self)
-        for key in Self.newKeys { #expect(!text.contains("\"\(key)\""), "v1 file gained \(key)") }
-        #expect(try FlareFormat.encode(FlareFormat.decode(bytes)) == bytes)
+        #expect(String(decoding: try FlareFormat.encode(doc), as: UTF8.self) == Self.preW1Golden)
+        #expect(try FlareFormat.encode(FlareFormat.decode(Data(Self.preW1Golden.utf8))) == Data(Self.preW1Golden.utf8))
     }
 
     @Test func everyFieldRoundTrips() throws {
@@ -74,7 +164,73 @@ import Testing
         Self.refuses({ $0.colorTracks["fill.0"]?[1].frame = 49 }, "key past the duration")
         Self.refuses({ $0.colorTracks["fill.0"] = [] }, "empty colour track")
         Self.refuses({ $0.shapeTracks[0].shapeIndex = -1 }, "negative shape index")
-        Self.refuses({ $0.shapeTracks[0].keys[0].path = Path(polyline: [Point(x: .nan, y: 0)], closed: false) }, "NaN path")
+        Self.refuses({ $0.shapeTracks[0].keys[0].path = Self.nanPath }, "NaN path")
+        Self.refuses({ $0.shapeTracks[0].shapeIndex = $0.shapes.count }, "shape index past the shapes")
+        Self.refuses({ $0.shapeTracks.append($0.shapeTracks[0]) }, "two tracks for one shape")
+        Self.refuses({ $0.colorTracks["fill.99"] = $0.colorTracks["fill.0"] }, "colour track for a missing shape")
+        Self.refuses({ $0.colorTracks["text.1"] = $0.colorTracks["fill.0"] }, "colour track for a missing text")
+        Self.refuses({ $0.colorTracks["fill.0x"] = $0.colorTracks["fill.0"] }, "colour track key not an index")
+        Self.refuses({ $0.masks[0].path = Self.nanPath }, "NaN mask path")
+        Self.refuses({ $0.texts[0].onPath?.path = Self.nanPath }, "NaN text path")
+        Self.refuses({ $0.texts[0].runs[1].tracking = .nan }, "NaN run tracking")
+        Self.refuses({ $0.texts[0].runs[1].baselineShift = .infinity }, "infinite baseline shift")
+        Self.refuses({ $0.texts[0].runs[0].fill = .solid(Color(r: .nan, g: 0, b: 0)) }, "NaN run fill")
+        Self.refuses({ $0.texts[0].paragraph?.lineHeight = 0.4 }, "lineHeight 0.4")
+        Self.refuses({ $0.texts[0].paragraph?.boxWidth = 0 }, "boxWidth 0")
+        Self.refuses({ $0.texts[0].paragraph?.tracking = .nan }, "NaN paragraph tracking")
+        Self.refuses({ $0.texts[0].paragraph?.paragraphSpacing = .infinity }, "infinite paragraph spacing")
+        Self.refuses({ $0.colorTracks["fill.0"]?[0].value = Color(r: .nan, g: 0, b: 0, a: 1) }, "NaN colour key")
+        Self.refuses({ $0.colorTracks["fill.0"]?[0].frame = -1 }, "negative key frame")
+        Self.refuses({ l in   // with colour track fill.0, one track over the limit
+            l.shapes = Array(repeating: l.shapes[0], count: FlareFormat.maxTracksPerLayer)
+            l.shapeTracks = l.shapes.indices.map { ShapeTrack(shapeIndex: $0, keys: l.shapeTracks[0].keys) }
+        }, "too many tracks")
+    }
+
+    @Test func messagesNameTheItemAndValue() {
+        let mask = Self.message { $0.masks.append($0.masks[0]); $0.masks[1].opacity = 1.5 }
+        #expect(mask.contains("mask 1") && mask.contains("1.5"), "\(mask)")
+        let lineHeight = Self.message { $0.texts[0].paragraph?.lineHeight = 5 }
+        #expect(lineHeight.contains("0.5...4"), "\(lineHeight)")
+        let font = Self.message { $0.texts[0].runs[0].fontSize = 0 }
+        #expect(font.contains("fontSize") && font.contains("text 0 run 0"), "\(font)")
+        let key = Self.message { $0.colorTracks["fil.0"] = $0.colorTracks["fill.0"] }
+        #expect(key.contains("fil.0") && key.contains("fill.<i>") && key.contains("text.<i>"), "\(key)")
+    }
+
+    @Test func w1GeometryCountsTowardThePointLimit() {
+        let huge = Self.hugePath()
+        let layers = [Self.layer { $0.masks = [LayerMask(path: huge)] },
+                      Self.layer { $0.texts = [TextShape(string: "a", fontFamily: "Inter", fontSize: 9, position: Point(x: 0, y: 0))]
+                                   $0.texts[0].onPath = TextOnPath(path: huge) },
+                      Self.layer { $0.shapes = [Shape(points: [])]
+                                   $0.shapeTracks = [ShapeTrack(shapeIndex: 0, keys: [PathKeyframe(frame: 0, path: huge)])] }]
+        for layer in layers {
+            var doc = Self.w1Document()
+            doc.scenes[0].layers.append(layer)
+            #expect(throws: FormatError.tooLarge("more than \(FlareFormat.maxTotalPoints) points")) {
+                try FlareFormat.validate(doc)
+            }
+            var engine = CommandEngine(document: Self.w1Document())
+            #expect(throws: CommandError.self) {
+                do { try engine.perform(AddLayer(owner: .scene(Fixtures.sceneID), layer: layer)) } catch let error {
+                    #expect("\(error)".contains("tooLarge"), "\(error)")
+                    throw error
+                }
+            }
+            #expect(engine.document == Self.w1Document())
+        }
+    }
+
+    @Test func addLayerRefusesBadW1Layer() {
+        let bad = [Self.layer { $0.masks = [LayerMask(path: Self.square, feather: .nan)] },
+                   Self.layer { $0.matte = TrackMatte(sourceLayerID: "m") },
+                   Self.layer { $0.matte = TrackMatte(sourceLayerID: "nope") }]
+        for layer in bad {
+            var engine = CommandEngine(document: Self.w1Document())
+            #expect(throws: CommandError.self) { try engine.perform(AddLayer(owner: .scene(Fixtures.sceneID), layer: layer)) }
+            #expect(engine.document == Self.w1Document())
+        }
     }
 
     @Test func refusesMatteCycleTwoDeep() {
@@ -111,6 +267,15 @@ import Testing
             { l, _, n in l.texts[0].runs[0].start = n }, { l, _, n in l.texts[0].runs[1].length = n },
             { l, _, n in l.colorTracks["fill.0"]?[0].frame = n }, { l, _, n in l.shapeTracks[0].keys[0].frame = n },
             { l, _, n in l.matte = TrackMatte(sourceLayerID: n % 2 == 0 ? "ball" : "bg") },
+            { l, _, n in l.masks = Array(repeating: l.masks.first ?? LayerMask(path: Self.square), count: min(max(n, 1), 40)) },
+            { l, d, _ in l.masks = l.masks.map { LayerMask(path: Path(polyline: [Point(x: d, y: 0)], closed: true), opacity: $0.opacity) } },
+            { l, d, _ in l.texts[0].paragraph?.tracking = d }, { l, d, _ in l.texts[0].paragraph?.paragraphSpacing = d },
+            { l, d, _ in l.texts[0].paragraph?.boxWidth = d }, { l, d, _ in l.texts[0].onPath?.startOffset = d },
+            { l, d, _ in l.texts[0].onPath?.path = Path(polyline: [Point(x: 0, y: d)], closed: false) },
+            { l, d, _ in l.colorTracks["fill.0"]?[0].value = Color(r: d, g: 0, b: 0) },
+            { l, _, n in l.colorTracks["fill.\(n)"] = [ColorKeyframe(frame: 0, value: .white)] },
+            { l, _, n in l.shapeTracks[0].shapeIndex = n },
+            { l, d, _ in l.texts[0].runs[1].tracking = d }, { l, d, _ in l.texts[0].runs[1].baselineShift = d },
         ]
         for _ in 0..<200 {
             var doc = Self.w1Document()
@@ -121,6 +286,31 @@ import Testing
             do {
                 try FlareFormat.validate(doc)
                 #expect(try FlareFormat.decode(FlareFormat.encode(doc)) == doc)
+            } catch is FormatError {}
+        }
+    }
+
+    @Test func fuzzBytesNeverCrash() throws {
+        var rng = SplitMix64(seed: 62)
+        let clean = Array(try FlareFormat.encode(Self.w1Document()))
+        let text = String(decoding: clean, as: UTF8.self)
+        let starts = Self.newKeys.compactMap { text.range(of: "\"\($0)\"").map { text.utf8.distance(from: text.startIndex, to: $0.lowerBound) } }
+        let junk = Array("0-9e.[]{}\",: ntf".utf8)
+        for _ in 0..<200 {
+            var bytes = clean
+            for _ in 0..<Int.random(in: 1...4, using: &rng) {
+                let start = starts.randomElement(using: &rng) ?? 0
+                let at = min(bytes.count - 1, start + Int.random(in: 0..<300, using: &rng))
+                switch Int.random(in: 0..<3, using: &rng) {
+                case 0: bytes[at] = junk.randomElement(using: &rng) ?? 0
+                case 1: bytes.remove(at: at)
+                default: bytes.removeSubrange(at...)
+                }
+                if bytes.isEmpty { break }
+            }
+            do {
+                let doc = try FlareFormat.decode(Data(bytes))
+                try FlareFormat.validate(doc)
             } catch is FormatError {}
         }
     }

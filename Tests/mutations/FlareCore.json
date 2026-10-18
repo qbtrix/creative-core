@@ -184,7 +184,7 @@
   {
     "note": "the layer-scoped validate misses a layer that gained points",
     "file": "Sources/FlareCore/FlareFormat.swift",
-    "anchor": "if new.count > maxLayersPerScene || pointCount(layer.shapes) > pointCount(before?.shapes ?? []) {",
+    "anchor": "if new.count > maxLayersPerScene || pointCount(layer) > before.map(pointCount) ?? 0 {",
     "replacement": "if new.count > maxLayersPerScene || before == nil {",
     "filter": "CommandEngineTests|LayerOwnerAdversarialTests|FormatLimitsTests"
   },
