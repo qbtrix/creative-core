@@ -49,3 +49,5 @@ Next: VI-5 building, VI-7 building; Anatomy round 2 verdicts pending; Slice-Done
 - 2026-10-18T13:44:23Z round 2: dev 8e258c5, gate PASS (EngineStress flake rerun), mutants 37/37, lenses 5, clean=no; majors n4/12 arc NaN trap (fixer lead/vector-import-R2-1), n1 depth cap + n8 group tr tests (VI-7 follow-up lead/vector-import-R2-2), n14 #488 checks (VI-5)
 
 - 14:31Z: VI-7 #505 merged (8/8). VI-8 launches when VI-5 merges.
+
+- 14:37Z: VI R2-1 fixer opened #506 (c3c284d, 7/7, +90/-17): arc throws on non-finite centre/sweep/radii, segment count clamped via Int(exactly:), ellipse test solves F.6.5/F.6.6. Closes n4/12, n9 on merge.
