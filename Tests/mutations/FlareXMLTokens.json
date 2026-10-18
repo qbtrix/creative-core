@@ -1,0 +1,23 @@
+[
+  {
+    "note": "xml tokenizer leaves the apos entity undecoded, so &apos; reads as a question mark",
+    "file": "Sources/FlareCore/Import/XMLTokens.swift",
+    "anchor": "case \"apos\": return \"'\"",
+    "replacement": "case \"apos\": return \"?\"",
+    "filter": "XMLTokensTests.decodesEntities"
+  },
+  {
+    "note": "xml tokenizer depth cap off by one rejects a document exactly maxDepth deep",
+    "file": "Sources/FlareCore/Import/XMLTokens.swift",
+    "anchor": "if depth > maxDepth {",
+    "replacement": "if depth >= maxDepth {",
+    "filter": "XMLTokensTests.depthCapped"
+  },
+  {
+    "note": "xml tokenizer ends a comment at -> so the rest of the comment leaks out as text",
+    "file": "Sources/FlareCore/Import/XMLTokens.swift",
+    "anchor": "static let commentEnd: [UInt8] = Array(\"-->\".utf8)",
+    "replacement": "static let commentEnd: [UInt8] = Array(\"->\".utf8)",
+    "filter": "XMLTokensTests.skipsComments"
+  }
+]
