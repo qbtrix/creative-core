@@ -17,8 +17,8 @@ extension LottieImport {
         guard data.count <= maxBytes else { throw ImportError.tooLarge("file is \(data.count) bytes, limit \(maxBytes)") }
         let space: Set<UInt8> = [0x20, 0x09, 0x0A, 0x0D]
         guard data.first(where: { !space.contains($0) }) == UInt8(ascii: "{") else { throw ImportError.notThisFormat }
-        try checkNesting(data, limit: 2 * maxDepth + 12)  // 512: the decoder's cap, so this check binds first
-        guard let root = try? JSONDecoder().decode(LottieJSON.self, from: data) else { throw ImportError.damaged("not valid JSON") }
+        try checkNesting(data, limit: 2 * maxDepth + 12)  // 512, Foundation's decoder cap that the parser keeps
+        let root = try LottieJSON.parse(data)
         guard let layers = root["layers"] else { throw ImportError.notThisFormat }
         var reader = LottieReader()
         do {
@@ -46,16 +46,111 @@ extension LottieImport {
     }
 }
 
-/// Any JSON value, decoded with Foundation's JSON decoder (which caps nesting).
-enum LottieJSON: Decodable, Sendable, Hashable {
+/// Any JSON value, read by `parse` (nesting is capped by `LottieImport.checkNesting` first).
+enum LottieJSON: Sendable, Hashable {
     case null, bool(Bool), number(Double), string(String), array([LottieJSON]), object([String: LottieJSON])
 
-    init(from decoder: any Decoder) throws {
-        let c = try decoder.singleValueContainer()
-        if c.decodeNil() { self = .null } else if let v = try? c.decode(Double.self) { self = .number(v) }
-        else if let v = try? c.decode(String.self) { self = .string(v) }
-        else if let v = try? c.decode([String: LottieJSON].self) { self = .object(v) }
-        else if let v = try? c.decode([LottieJSON].self) { self = .array(v) } else { self = .bool(try c.decode(Bool.self)) }
+    /// Parses JSON (RFC 8259) with an explicit stack of open containers: Foundation's decoder
+    /// recurses per nesting level, which overflows the 512 KB stack of a secondary thread on macOS.
+    /// A repeated key keeps its first value and a trailing comma is taken, as Foundation's decoder
+    /// does. Throws `damaged("not valid JSON")` for anything else, including invalid UTF-8, a lone
+    /// surrogate escape and a number past `Double`'s range.
+    static func parse(_ data: Data) throws -> LottieJSON {
+        let bad = ImportError.damaged("not valid JSON"), b = [UInt8](data)
+        var i = 0
+        func at(_ c: Unicode.Scalar) -> Bool { i < b.count && b[i] == UInt8(ascii: c) }
+        func space() { while i < b.count, b[i] == 0x20 || b[i] == 0x09 || b[i] == 0x0A || b[i] == 0x0D { i += 1 } }
+        func expect(_ c: Unicode.Scalar) throws { space(); guard at(c) else { throw bad }; i += 1 }
+        func hex() throws -> UInt32 {
+            guard i + 4 <= b.count, let v = UInt32(String(decoding: b[i..<(i + 4)], as: UTF8.self), radix: 16),
+                  b[i..<(i + 4)].allSatisfy({ $0 != UInt8(ascii: "+") && $0 != UInt8(ascii: "-") }) else { throw bad }
+            i += 4
+            return v
+        }
+        func string() throws -> String {
+            try expect("\"")
+            var bytes: [UInt8] = []
+            while true {
+                guard i < b.count, b[i] >= 0x20 else { throw bad }
+                let c = b[i]; i += 1
+                if c == UInt8(ascii: "\"") { break }
+                guard c == UInt8(ascii: "\\") else { bytes.append(c); continue }
+                guard i < b.count else { throw bad }
+                let e = b[i]; i += 1
+                let simple: [UInt8: UInt8] = [0x22: 0x22, 0x5C: 0x5C, 0x2F: 0x2F, 0x62: 0x08, 0x66: 0x0C, 0x6E: 0x0A, 0x72: 0x0D, 0x74: 0x09]
+                if let s = simple[e] { bytes.append(s); continue }
+                guard e == UInt8(ascii: "u") else { throw bad }
+                var v = try hex()
+                if (0xD800..<0xDC00).contains(v) {
+                    guard at("\\"), i + 1 < b.count, b[i + 1] == UInt8(ascii: "u") else { throw bad }
+                    i += 2
+                    let low = try hex()
+                    guard (0xDC00..<0xE000).contains(low) else { throw bad }
+                    v = 0x10000 + (v - 0xD800) << 10 + (low - 0xDC00)
+                }
+                guard let scalar = Unicode.Scalar(v) else { throw bad }
+                bytes += Array(String(scalar).utf8)
+            }
+            var text = String.UnicodeScalarView(), it = bytes.makeIterator(), utf8 = UTF8()
+            while true {
+                switch utf8.decode(&it) {
+                case .scalarValue(let s): text.append(s)
+                case .emptyInput: return String(text)
+                case .error: throw bad
+                }
+            }
+        }
+        func number() throws -> Double {
+            let start = i
+            func digits() -> Int { let s = i; while i < b.count, (0x30...0x39).contains(b[i]) { i += 1 }; return i - s }
+            if at("-") { i += 1 }
+            if at("0") { i += 1 } else { guard digits() > 0 else { throw bad } }
+            if at(".") { i += 1; guard digits() > 0 else { throw bad } }
+            if at("e") || at("E") { i += 1; if at("+") || at("-") { i += 1 }; guard digits() > 0 else { throw bad } }
+            guard let v = Double(String(decoding: b[start..<i], as: UTF8.self)), v.isFinite else { throw bad }
+            return v
+        }
+        func key() throws -> String { let k = try string(); try expect(":"); return k }
+        // Each open container: an array's items, or an object's members and the key its next value goes under.
+        // Containers are filled in place, so appending never copies them.
+        var open: [(isObject: Bool, items: [LottieJSON], members: [String: LottieJSON], key: String)] = []
+        scan: while true {
+            space()
+            var value: LottieJSON
+            if at("{") {
+                i += 1; space()
+                guard at("}") else { open.append((true, [], [:], try key())); continue }
+                i += 1; value = .object([:])
+            } else if at("[") {
+                i += 1; space()
+                guard at("]") else { open.append((false, [], [:], "")); continue }
+                i += 1; value = .array([])
+            } else if at("\"") { value = .string(try string())
+            } else if let (word, v) = [("true", LottieJSON.bool(true)), ("false", .bool(false)), ("null", .null)]
+                .first(where: { b[i...].starts(with: $0.0.utf8) }) { i += word.utf8.count; value = v
+            } else { value = .number(try number()) }
+            // Hand the value to its container, closing each container it completes.
+            while let top = open.indices.last {
+                let k = open[top].key
+                if !open[top].isObject { open[top].items.append(value) } else if open[top].members[k] == nil { open[top].members[k] = value }
+                let close: Unicode.Scalar = open[top].isObject ? "}" : "]"
+                space()
+                if at(",") {
+                    i += 1; space()
+                    // A comma before the close is taken, as Foundation's decoder takes it.
+                    if !at(close) {
+                        if open[top].isObject { open[top].key = try key() }
+                        continue scan
+                    }
+                }
+                try expect(close)
+                let done = open.removeLast()
+                value = done.isObject ? .object(done.members) : .array(done.items)
+            }
+            space()
+            guard i == b.count else { throw bad }
+            return value
+        }
     }
 
     subscript(key: String) -> LottieJSON? { if case .object(let o) = self { o[key] } else { nil } }
@@ -154,9 +249,40 @@ struct LottieReader {
         if inPoint > range.lowerBound || outPoint < range.upperBound { skip("layer in/out") }
         return layer
     }
-    /// The shapes of one group's items, top first.
-    mutating func group(_ items: [LottieJSON], matrix outer: Matrix, opacity outerOpacity: Double,
-                        inherited outerStyles: LottieStyles, depth: Int) throws -> [LottieShape] {
+    /// The shapes of one group's items, top first. Nested groups are walked with an explicit stack:
+    /// recursing `maxDepth` deep overflows the 512 KB stack of a secondary thread on macOS.
+    mutating func group(_ items: [LottieJSON], matrix: Matrix, opacity: Double,
+                        inherited: LottieStyles, depth: Int) throws -> [LottieShape] {
+        var open = [try groupFrame(items, matrix: matrix, opacity: opacity, inherited: inherited, depth: depth)]
+        while let top = open.indices.last {
+            guard open[top].next < open[top].items.count else {
+                var done = open.removeLast()
+                if !done.placed { done.shapes.append(done.shape) }
+                guard top > 0 else { return done.shapes }
+                open[top - 1].shapes += done.shapes
+                continue
+            }
+            let item = open[top].items[open[top].next]
+            open[top].next += 1
+            switch item["ty"]?.string {
+            case "gr":
+                let f = open[top]
+                open.append(try groupFrame(item["it"]?.array ?? [], matrix: f.matrix, opacity: f.opacity, inherited: f.styles, depth: f.depth + 1))
+            case "fl", "gf", "st": if !open[top].placed { open[top].shapes.append(open[top].shape) }; open[top].placed = true
+            default: break
+            }
+        }
+        return []
+    }
+    /// One group being walked: its visible items and the next to place, what they inherit, and
+    /// its own shape, which goes in at its first fill or stroke (at the end when none).
+    struct GroupFrame {
+        var items: [LottieJSON], next = 0, matrix: Matrix, opacity: Double, styles: LottieStyles, depth: Int
+        var shape: LottieShape, placed: Bool, shapes: [LottieShape] = []
+    }
+    /// A group's frame: its transform and styles applied and its geometry built into one shape.
+    mutating func groupFrame(_ items: [LottieJSON], matrix outer: Matrix, opacity outerOpacity: Double,
+                             inherited outerStyles: LottieStyles, depth: Int) throws -> GroupFrame {
         // `depth` 0 is the layer's own shapes, so exactly `maxDepth` nested groups read.
         guard depth <= LottieImport.maxDepth else { throw ImportError.tooLarge("groups nest deeper than \(LottieImport.maxDepth)") }
         var matrix = outer, opacity = outerOpacity, inherited = outerStyles
@@ -191,17 +317,7 @@ struct LottieReader {
                                 keys: styles.keys, path: pathKeys(geometry, keyed))
         let drawn = !geometry.isEmpty && (styles.fill != nil || styles.stroke != nil)
         if !geometry.isEmpty && !drawn { skip("unstyled path") }
-        var shapes: [LottieShape] = [], placed = !drawn
-        for item in visible {
-            switch item["ty"]?.string {
-            case "gr":
-                shapes += try group(item["it"]?.array ?? [], matrix: matrix, opacity: opacity, inherited: styles, depth: depth + 1)
-            case "fl", "gf", "st": if !placed { shapes.append(shape) }; placed = true
-            default: break
-            }
-        }
-        if !placed { shapes.append(shape) }
-        return shapes
+        return GroupFrame(items: visible, matrix: matrix, opacity: opacity, styles: styles, depth: depth, shape: shape, placed: !drawn)
     }
     /// An `rc` or `el` item's box: `s` wide and tall around `p`.
     mutating func box(_ item: LottieJSON) throws -> Rect {
