@@ -60,3 +60,4 @@ utc	stage	event	ref	note
 2026-10-18T15:04Z	status	dev-ci	39137820117	Dev CI on c294adb: Linux green, macOS SIGBUS again in Metal ParityTests.resample (not ours; #507 did not fix it). Noted on #453.
 2026-10-18T15:10Z	fix-r1	merged	#515 ad85831	cp1-e merged (carries cp1-c + sRGB-curve shortcut): Mutate 7/7 CoreRaster.ProfileConvert, 3 files +143/-16. Round 1 fixes all merged. Round 2 gate+mutation queued on ad85831 after AP r2.
 2026-10-18T15:13Z	-	heartbeat	-	waiting
+2026-10-18T15:20Z	anatomy-r2	gate-mutation	ad85831	Round 2 on ad85831: gate PASS try 1; mutation 25/25 (ICCRead 7/7, ICCWrite 4/4, ProfileTransform 7/7, ProfileConvert 7/7). Critic panel next.
