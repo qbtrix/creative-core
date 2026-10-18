@@ -83,3 +83,4 @@ utc	stage	event	ref	note
 2026-10-18T17:34Z	build	cp9-merged	4ece840	#536 merged; convert24MP 6410 ms vs 150 ms -> cp3-c
 2026-10-18T17:38Z	-	heartbeat	-	waiting
 2026-10-18T17:45Z	fix	cp3-a-merged	e39537c	#537 merged
+2026-10-18T17:46Z	fix	cp3-b-opened	12164b8	#538 open, mergeable, waiting on lane

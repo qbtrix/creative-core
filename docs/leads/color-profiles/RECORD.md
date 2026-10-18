@@ -56,4 +56,5 @@ Next: round 3 critic panel on c3e0225; CP-deep Slice-Done once a dev Linux job i
 - Round 2 fixes merged: cp2-a #519 (3e56eee), cp2-b #532 (c3e0225).
 - CP-9 merged #536 (4ece840): walk passes; deepOpen holds (16-bit 2329 ms vs 8-bit 1996 ms, budget 2595 ms, Linux release); convert24MP misses (median 6410 ms vs 150 ms, Linux release). Treated as a round 3 finding: fix batch cp3-c makes converted table-driven; if it cannot reach the budget, a gap issue is filed.
 - Round 3 fix cp3-a merged #537 (e39537c): para types 2/4 below-knee tests, ICC table range cases, 2 mutations.
+- Round 3 fix cp3-b opened #538 (head 12164b8): bitsPerChannel and PixelCodec docs; a refused embedded profile opens as nil in PSD and ORA; CodecError.profileData unwraps ColorError; gray profile writes a grayscale PSD (non-neutral pixel throws). PSDDeep 4/4, ORADeep 4/4.
 - CP-7 #523 and CP-8 #529 merged (40249d5); lead check on 40249d5: CodecWalk, ORADeep, PSDDeep, CodecRoundTrip, OpenRaster, PSD 41 tests pass.
