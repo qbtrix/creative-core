@@ -31,3 +31,4 @@ utc	stage	event	ref	note
 2026-10-18T09:28Z	3	pr-merged	#459	stress fix merged b5b782b (EC-f perf); dev-red #453 should clear on next CI
 2026-10-18T09:29Z	3	stage-start	EC-4	EC-4 unheld: rebasing on b5b782b, gate, PR
 2026-10-18T09:31Z	3	pr-opened	#460	EC-4 PR 90a94c3, Mutate 2/2 CoreRenderDispatcherW1; gets Metal (macOS) check? no (CoreRender only)
+2026-10-18T09:32Z	3	pr-merged	#460	EC-4 merged 8839b71; EC-b tasks all merged; wave 3 done
