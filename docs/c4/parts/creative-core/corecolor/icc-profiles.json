@@ -1,7 +1,7 @@
 {
   "id": "icc-profiles",
   "name": "ICC Profiles",
-  "description": "ColorProfile (an ICC matrix-and-curve profile: RGB or gray, colourants in XYZ D50 after Bradford adaptation, gamma, table and parametric curves) with the built-in sRGB, Display P3 and linear sRGB profiles, the bounds-checked ICC reader (v2 and v4 matrix-and-curve profiles; LUT-based, CMYK and Lab profiles and damaged bytes throw ColorError), and ProfileTransform between two profiles through the D50 PCS (source curves, colourants, Bradford adaptation between differing whites, inverse target colourants and curves; singular colourants throw ColorError). Writing ICC bytes is a stub that throws ColorError.invalid(\"not built: <task>\") until it lands.",
+  "description": "ColorProfile (an ICC matrix-and-curve profile: RGB or gray, colourants in XYZ D50 after Bradford adaptation, gamma, table and parametric curves) with the built-in sRGB, Display P3 and linear sRGB profiles, the bounds-checked ICC reader (v2 and v4 matrix-and-curve profiles; LUT-based, CMYK and Lab profiles and damaged bytes throw ColorError), and ProfileTransform between two profiles through the D50 PCS (source curves, colourants, Bradford adaptation between differing whites, inverse target colourants and curves; singular colourants throw ColorError). The ICC writer emits v4 bytes (header, tag table, 4-byte-aligned tags, mluc description, chad for RGB) that the reader reads back equal; a value that does not fit its field throws ColorError.",
   "technology": "Swift 6, Foundation",
   "paths": [
     "Sources/CoreColor/ICC/"
