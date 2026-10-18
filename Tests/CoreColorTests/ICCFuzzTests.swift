@@ -13,6 +13,17 @@ struct ICCFuzzTests {
         #expect(throws: ColorError.self) { try ColorProfile(iccData: ICCFixture.damaged.data) }
     }
 
+    /// A `para` function type above 4 throws instead of indexing past the parameter counts: type 5 and
+    /// 200 seeded types up to 65535.
+    @Test func paraTypeFiveThrows() {
+        var rng = ICC.SplitMix64(state: 0x9A7A_0005)
+        let types: [UInt16] = [5, 6, UInt16.max] + (0..<200).map { _ in UInt16(5 + rng.next() % 65531) }
+        for function in types {
+            let bytes = ICC.profile(ICC.Header(), ICCFixture.rgbTags(ICCFixture.primariesA, three(ICC.para(function, [2.2]))))
+            #expect(throws: ColorError.self, "type \(function)") { try ColorProfile(iccData: Data(bytes)) }
+        }
+    }
+
     @Test func everyTruncationThrows() {
         let bytes = ICCFixture.v4Parametric.bytes
         for n in 0..<bytes.count {

@@ -61,4 +61,20 @@ struct ICCReadTests {
             + ICCFixture.rgbTags(ICCFixture.primariesA, three(ICC.curv(gamma: 2.2))))
         #expect(readThrowsNaming("Lab", Data(labPCS)))
     }
+
+    @Test func unsupportedClassThrows() {
+        for cls in ["nmcl", "prtr", "spac", "abst", "link"] {
+            let bytes = ICC.profile(ICC.Header(deviceClass: cls), ICCFixture.rgbTags(ICCFixture.primariesA, three(ICC.curv(gamma: 2.2))))
+            #expect(readThrowsNaming("class", Data(bytes)), "\(cls)")
+        }
+        let input = ICC.profile(ICC.Header(deviceClass: "scnr"), ICCFixture.rgbTags(ICCFixture.primariesA, three(ICC.curv(gamma: 2.2))))
+        #expect((try? ColorProfile(iccData: Data(input))) != nil)
+    }
+
+    @Test func otherVersionsThrow() {
+        for version: UInt32 in [0x0000_0000, 0x0100_0000, 0x0300_0000, 0x0500_0000, 0xFF00_0000] {
+            let bytes = ICC.profile(ICC.Header(version: version), ICCFixture.rgbTags(ICCFixture.primariesB, three(ICC.para(3, ICCFixture.sRGBParams))))
+            #expect(readThrowsNaming("version", Data(bytes)), "\(String(version, radix: 16))")
+        }
+    }
 }

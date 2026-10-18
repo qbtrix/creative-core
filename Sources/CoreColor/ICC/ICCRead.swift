@@ -2,7 +2,7 @@
 // Layouts come only from the public ICC.1:2010 specification (section numbers below) and ICC.1:2001-04
 // for the v2 `desc` type. The bytes are untrusted: every offset, size and count is checked against the
 // bytes with no Int overflow, so damaged input throws `ColorError.invalid` and never traps. LUT-based,
-// CMYK and Lab profiles throw naming what they are. Colourants are read as stored: ICC.1 already
+// CMYK and Lab profiles, and classes other than display (`mntr`) and input (`scnr`), throw naming what they are. Colourants are read as stored: ICC.1 already
 // adapts them to the D50 PCS (the `chad` step), so the reader applies no adaptation of its own.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
@@ -103,6 +103,9 @@ enum ICCRead {
         guard pcs == "XYZ " else {
             throw ICCSpan.fail(pcs == "Lab " ? "a Lab PCS is not supported" : "PCS '\(pcs)' is not supported")
         }
+        // Device class (7.2.5): only input and display profiles carry the matrix-and-curve model read here.
+        let cls = try table.header.signature(12)
+        guard cls == "mntr" || cls == "scnr" else { throw ICCSpan.fail("profile class '\(cls)' is not supported") }
         let major = try table.header.span(8, 1, "the version").bytes.first ?? 0
         guard major == 2 || major == 4 else { throw ICCSpan.fail("version \(major) is not 2 or 4") }
         let needed = isGray ? ["wtpt", "kTRC"] : ["rXYZ", "gXYZ", "bXYZ", "rTRC", "gTRC", "bTRC"]
