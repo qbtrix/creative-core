@@ -2,7 +2,7 @@
 
 Issue: #441 · Packet: docs/blueprints/core/features/color-profiles.md
 Run: act-1a14ddaebc8-nwqn · Session: line lead (engine-contracts, animate-properties, color-profiles) · Started: 2026-10-18T07:15Z
-Stage: 3 CP-a, CP-icc, CP-convert merged; CP-deep waits
+Stage: 4 Anatomy round 1 running (dev ca537c1; gate CI: PASS; mutation all caught)
 Base: 9d01972365f04da4fe6074e9bdd56ceab5b616a8
 Next: Anatomy round 1 on the CP-icc/CP-convert surface. CP-7/CP-8 wait on layered-codecs LC-write.
 
