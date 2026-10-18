@@ -144,7 +144,7 @@ extension MetalBackend {
 
     /// `pixels` (one tile) as a new tile texture, a CPU upload with no GPU wait; safe under the lock. Throws
     /// `deviceLost` on an allocation failure without failing the backend: the caller does that with the lock free.
-    private static func makeTile(_ pixels: PixelBuffer, on device: any MTLDevice) throws -> any MTLTexture {
+    static func makeTile(_ pixels: PixelBuffer, on device: any MTLDevice) throws -> any MTLTexture {
         guard let tile = try MetalSurface(device: device, buffer: pixels, clock: 0).tiles.first ?? nil else {
             throw RenderError.raster("composite: empty staged tile")
         }
