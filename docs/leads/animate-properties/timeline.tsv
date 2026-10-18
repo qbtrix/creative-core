@@ -59,3 +59,4 @@ utc	stage	event	ref	note
 2026-10-18T15:13Z	-	heartbeat	-	waiting
 2026-10-18T15:20Z	anatomy-r2	gate-mutation	c294adb	Round 2 on c294adb: gate PASS try 1; mutation 32/32 (ColorSampling 3/3, MorphSampling 6/6, TrackCommands 9/9, LottieTrackExport 4/4, SVGStyleAtFrame 4/4, RemoveShapeTracks 6/6). Critic panel next.
 2026-10-18T15:26Z	anatomy	round2-fixes	wf_4954bc74-1d9	round 2: 8 confirmed; ap2-a dispatched, ap2-b after ec4-a
+2026-10-18T15:32Z	-	heartbeat	-	waiting
