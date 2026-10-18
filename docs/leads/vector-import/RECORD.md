@@ -51,3 +51,4 @@ Next: VI-5 building, VI-7 building; Anatomy round 2 verdicts pending; Slice-Done
 - 14:31Z: VI-7 #505 merged (8/8). VI-8 launches when VI-5 merges.
 
 - 14:37Z: VI R2-1 fixer opened #506 (c3c284d, 7/7, +90/-17): arc throws on non-finite centre/sweep/radii, segment count clamped via Int(exactly:), ellipse test solves F.6.5/F.6.6. Closes n4/12, n9 on merge.
+- 2026-10-18T14:54:08Z VI R2-1 #506 merged (14:37Z, c3c284d, 7/7): round-2 n4/12 and n9 closed.
