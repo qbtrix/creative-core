@@ -60,6 +60,11 @@ struct SVGStyle: Sendable, Hashable {
 
     /// `value` without leading and trailing spaces, tabs, line breaks and `extra` characters.
     static func trim<S: StringProtocol>(_ value: S, extra: String = "") -> String {
+        // Every character dropped is one ASCII byte, so ends that are not such a byte drop nothing.
+        func dropped(_ b: UInt8) -> Bool { b == 0x20 || b == 0x09 || b == 0x0A || b == 0x0D || extra.utf8.contains(b) }
+        let text = String(value)
+        if extra.utf8.allSatisfy({ $0 < 0x80 }), let first = text.utf8.first, let last = text.utf8.last,
+           !dropped(first), !dropped(last) { return text }
         let drop = Set(" \t\n\r" + extra)
         return String(value.drop { drop.contains($0) }.reversed().drop { drop.contains($0) }.reversed())
     }

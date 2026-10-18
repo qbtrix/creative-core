@@ -43,6 +43,19 @@ struct LottieJSONTests {
         }
     }
 
+    /// Containers whose text repeats, or nearly repeats, each read as their own text says.
+    @Test func repeatedContainersReadAsWritten() throws {
+        let json = #"[[0,0],[0,1],[0,0],{"a":[0,0]},{"a":[0,1]},{"a":[0,0]},{"a":1,"a":2},{"a":1,"a":2},[ 0,0],[-0,0]]"#
+        let zero = LottieJSON.array([.number(0), .number(0)]), one = LottieJSON.array([.number(0), .number(1)])
+        let expected = LottieJSON.array([zero, one, zero, .object(["a": zero]), .object(["a": one]), .object(["a": zero]),
+                                         .object(["a": .number(1)]), .object(["a": .number(1)]), zero, zero])
+        let value = try LottieJSON.parse(Data(json.utf8))
+        #expect(value == expected)
+        #expect(same(Array(json.utf8)))
+        guard case .number(let negative)? = value.array?.last?.array?.first else { Issue.record("no -0"); return }
+        #expect(negative.sign == .minus)
+    }
+
     /// `==` compares every item and member: a shorter array, a renamed key or a changed leaf differs.
     @Test func equalityComparesEveryLevel() {
         let value = LottieJSON.object(["a": .array([.number(1), .string("x")]), "b": .object(["c": .null])])
