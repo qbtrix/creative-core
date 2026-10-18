@@ -51,3 +51,4 @@ utc	stage	event	ref	note
 2026-10-18T14:01Z	-	heartbeat	-	waiting
 2026-10-18T14:19Z	4	fix-gate-wait	cp1-c 1831265	cp1-c waits for a quiet gate
 2026-10-18T14:19Z	-	heartbeat	-	waiting
+2026-10-18T14:28Z	4	fix-merged	#503 #504; cp1-d started	cp1-a and cp1-b merged; s15Fixed16 decision as cp1-d
