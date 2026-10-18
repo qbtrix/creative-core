@@ -1,0 +1,16 @@
+[
+  {
+    "note": "resolved runs skip the gap filler at the end, so plain text after the last run is lost",
+    "file": "Sources/FlareCore/TextLayout.swift",
+    "anchor": "        if cursor < count { out.append(plain(cursor, count)) }",
+    "replacement": "        if cursor > count { out.append(plain(cursor, count)) }",
+    "filter": "TextShapeTests.runsTileTheString"
+  },
+  {
+    "note": "resolved runs count utf16 units instead of graphemes",
+    "file": "Sources/FlareCore/TextLayout.swift",
+    "anchor": "        let count = string.count",
+    "replacement": "        let count = string.utf16.count",
+    "filter": "TextShapeTests.emojiIsOneGrapheme"
+  }
+]
