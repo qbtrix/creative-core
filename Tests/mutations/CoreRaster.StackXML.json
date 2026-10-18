@@ -1,0 +1,11 @@
+[
+  {"note": "a layer's x is read from its y attribute", "file": "Sources/CoreRaster/Codecs/StackXML.swift", "anchor": "x: try integer(attributes, \"x\")", "replacement": "x: try integer(attributes, \"y\")", "filter": "ORAReadTests.offsetsKept"},
+  {"note": "a layer without visibility defaults to hidden", "file": "Sources/CoreRaster/Codecs/StackXML.swift", "anchor": "isHidden: attributes[\"visibility\"] == \"hidden\"", "replacement": "isHidden: attributes[\"visibility\"] != \"visible\"", "filter": "ORAReadTests.visibleByDefault"},
+  {"note": "the opacity attribute is ignored", "file": "Sources/CoreRaster/Codecs/StackXML.swift", "anchor": "opacity = min(max(value, 0), 1)", "replacement": "opacity = 1", "filter": "ORAReadTests.offsetsKept|ORAReadTests.attributesBounded"},
+  {"note": "the nesting depth cap is removed", "file": "Sources/CoreRaster/Codecs/StackXML.swift", "anchor": "guard open.count <= OpenRaster.maxDepth else {", "replacement": "guard open.count <= Int.max else {", "filter": "ORAReadTests.namesDecodeEntitiesAndDepthIsCapped"},
+  {"note": "stack order stays top first instead of bottom to top", "file": "Sources/CoreRaster/Codecs/OpenRaster.swift", "anchor": "try list.reversed().map { node in", "replacement": "try list.map { node in", "filter": "ORAReadTests.offsetsKept"},
+  {"note": "the PNG header size check before decoding is skipped", "file": "Sources/CoreRaster/Codecs/OpenRaster.swift", "anchor": "try checkSize(side(16), side(20), path)", "replacement": "_ = (side(16), side(20))", "filter": "ORAReadTests.refusesHuge"},
+  {"note": "a repeated layer source is accepted", "file": "Sources/CoreRaster/Codecs/OpenRaster.swift", "anchor": "guard used.insert(src).inserted else", "replacement": "guard used.insert(src).inserted || true else", "filter": "ORAReadTests.repeatedSourceThrows"},
+  {"note": "zip entry sizes may total more than the archive", "file": "Sources/CoreRaster/Codecs/ZipStore.swift", "anchor": "guard total <= bytes.count else", "replacement": "guard total <= Int.max else", "filter": "ORAReadTests.overlappingEntriesThrow"},
+  {"note": "a merged image of another size is kept", "file": "Sources/CoreRaster/Codecs/OpenRaster.swift", "anchor": "$0.width == stack.width && $0.height == stack.height", "replacement": "$0.width > 0", "filter": "ORAReadTests.compositeMatchesTheCanvas"}
+]

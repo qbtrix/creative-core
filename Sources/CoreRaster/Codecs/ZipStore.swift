@@ -8,7 +8,9 @@
 //   extra fields, no comment. The same files always give the same bytes.
 // - Reading never trusts a length: every field read is bounds checked against
 //   the bytes, a method other than 0 throws `compressedEntry` naming the
-//   entry, and a CRC that does not match throws `damaged`.
+//   entry, and a CRC that does not match throws `damaged`. The entry sizes'
+//   running total may not pass the archive's byte count, so entries that all
+//   point at one body throw before they are copied.
 // - CRC-32 is the IEEE one (reflected polynomial 0xEDB88320), slicing-by-8.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
@@ -104,7 +106,7 @@ public enum ZipStore {
             throw CodecError.damaged("central directory outside the archive")
         }
         var result: [String: Data] = [:]
-        var cursor = centralStart
+        var cursor = centralStart, total = 0
         for _ in 0..<count {
             guard try readLE32(bytes, cursor) == centralSignature else {
                 throw CodecError.damaged("central directory entry at \(cursor)")
@@ -122,6 +124,8 @@ public enum ZipStore {
             guard method == 0 else { throw CodecError.compressedEntry(name) }
             guard flags & 1 == 0 else { throw CodecError.unsupported("encrypted entry \(name)") }
             guard size == storedSize else { throw CodecError.damaged("sizes differ for \(name)") }
+            total += size
+            guard total <= bytes.count else { throw CodecError.damaged("entries overlap at \(name)") }
             guard try readLE32(bytes, localStart) == localSignature else {
                 throw CodecError.damaged("local header of \(name)")
             }

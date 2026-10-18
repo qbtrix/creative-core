@@ -1,7 +1,7 @@
 {
   "id": "codecs",
   "name": "Layered Codecs",
-  "description": "The neutral LayeredImage (pixel layers with offset, opacity, blend mode, visibility, clipping and a placed mask, nested groups, the merged composite) and CodecError; the PixelCodec protocol apps plug their PNG codec into, with RawPixelCodec as the lossless test stand-in; the PSD and OpenRaster entry points and limits, stubs that throw unsupported until the readers and writers land.",
+  "description": "The neutral LayeredImage (pixel layers with offset, opacity, blend mode, visibility, clipping and a placed mask, nested groups, the merged composite) and CodecError; the PixelCodec protocol apps plug their PNG codec into, with RawPixelCodec as the lossless test stand-in; ZipStore, the stored-only zip container; the OpenRaster reader (StackXML, a small bounded stack.xml parser, with layer PNGs through the PixelCodec); the PSD and OpenRaster entry points and limits, stubs that throw unsupported until the remaining readers and writers land.",
   "technology": "Swift 6, Foundation",
   "paths": [
     "Sources/CoreRaster/Codecs/"
