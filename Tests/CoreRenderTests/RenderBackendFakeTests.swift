@@ -1,7 +1,9 @@
 // RenderBackendFakeTests.swift: render-backend slice RB-a's acceptance. FakeBackend's
 // call log, its gating by op family, its SurfaceStore (round trip, released, foreign and
 // wrong-size surfaces), copies sharing the log, concurrent recording, and the two shared
-// mappings.
+// mappings. engine-contracts EC-3: the five W1 calls recorded with their arguments (the
+// mask offset included), and each W1 family, `.color` tone cases among them, gated by
+// `supports`.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -149,5 +151,70 @@ private func seededBuffer(width: Int, height: Int, seed: UInt64) throws -> Pixel
         }
         #expect(fake.calls.count == tasks * perTask * 2)
         #expect(fake.calls.filter { if case .surface = $0 { true } else { false } }.count == tasks * perTask)
+    }
+
+    @Test func w1RecordsArguments() throws {
+        let fake = FakeBackend(supports: Set(RenderOp.allCases))
+        let buffer = try seededBuffer(width: 4, height: 3, seed: 11)
+        let s = try fake.surface(buffer)
+        let backdropBuffer = try seededBuffer(width: 4, height: 3, seed: 12)
+        var b = try fake.surface(backdropBuffer)
+        let backdropID = b.id
+        let mask = try Mask(width: 2, height: 3)
+        let m = AffineMatrix(a: 0, b: 1, c: -1, d: 0, tx: 3, ty: 0)
+        let effect = LayerEffect.motionBlur(degrees: 30, distance: 4)
+        try fake.composite(s, onto: &b, x: 1, y: -2, mode: .multiply, opacity: 0.75, mask: mask, maskX: 3, maskY: -4)
+        let moved = try fake.transformed(s, m, width: 3, height: 5, filter: .lanczos3)
+        let mirrored = try fake.flipped(s, .vertical)
+        try fake.composite(s, onto: &b, through: m, mode: .screen, opacity: 0.25, filter: .bilinear)
+        let lit = try fake.applying(s, effect)
+        let vivid = try fake.adjusted(s, .vibrance(20))
+        #expect(Array(fake.calls.dropFirst(2)) == [
+            .maskedComposite(x: 1, y: -2, mode: .multiply, opacity: 0.75, mask: mask, maskX: 3, maskY: -4),
+            .transformed(m, width: 3, height: 5, filter: .lanczos3),
+            .flipped(.vertical),
+            .compositeThrough(m, mode: .screen, opacity: 0.25, filter: .bilinear),
+            .applying(effect),
+            .op(.color),
+        ])
+        #expect(b.id == backdropID)
+        #expect(try fake.read(b) == backdropBuffer, "the fake leaves a backdrop alone")
+        #expect(moved.width == 3 && moved.height == 5, "transformed has the asked size")
+        for out in [mirrored, lit, vivid] {
+            #expect(out.id != s.id)
+            #expect(try fake.read(out) == buffer, "a new surface with the pixels unchanged")
+        }
+    }
+
+    @Test func w1HonoursSupports() throws {
+        for family in [RenderOp.maskedComposite, .affine, .effect, .color] {
+            let fake = FakeBackend(supports: Set(RenderOp.allCases).subtracting([family]))
+            let s = try fake.surface(try PixelBuffer(width: 2, height: 2))
+            let backdrop = try fake.surface(try PixelBuffer(width: 2, height: 2))
+            var b = backdrop
+            let mask = try Mask(width: 1, height: 1)
+            let calls: [(family: RenderOp, call: () throws -> Void)] = [
+                (.maskedComposite, { try fake.composite(s, onto: &b, x: 0, y: 0, mode: .normal, opacity: 1, mask: mask, maskX: 0, maskY: 0) }),
+                (.affine, { _ = try fake.transformed(s, .identity, width: 2, height: 2, filter: .bilinear) }),
+                (.affine, { _ = try fake.flipped(s, .horizontal) }),
+                (.affine, { try fake.composite(s, onto: &b, through: .identity, mode: .normal, opacity: 1, filter: .bilinear) }),
+                (.effect, { _ = try fake.applying(s, .boxBlur(radius: 1)) }),
+                (.color, { _ = try fake.adjusted(s, .invert) }),
+                (.adjust, { _ = try fake.adjusted(s, .contrast(10)) }),
+            ]
+            for (op, call) in calls {
+                if op == family {
+                    #expect(throws: RenderError.unsupported(family)) { try call() }
+                } else {
+                    #expect(throws: Never.self, "\(op) with \(family) unlisted") { try call() }
+                }
+            }
+            #expect(fake.calls.count == 2 + calls.count, "a refused call is still recorded")
+            #expect(b == backdrop)
+        }
+        let none = FakeBackend(supports: [])
+        let s = try none.surface(try PixelBuffer(width: 1, height: 1))
+        #expect(throws: RenderError.unsupported(.affine)) { try none.flipped(s, .vertical) }
+        #expect(none.calls.last == .flipped(.vertical), "recorded before it is refused")
     }
 }

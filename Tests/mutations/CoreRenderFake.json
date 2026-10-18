@@ -24,6 +24,18 @@
    "anchor": "catch let error as RasterError { throw RenderError(error) }",
    "replacement": "catch is RasterError { throw RenderError.raster(\"\") }"},
   {"note": "fake backend checks supports before recording, so an unsupported op leaves no call in the log", "filter": "RenderBackendFakeTests", "file": "Sources/CoreRender/FakeBackend.swift",
-   "anchor": "record(.op(op))\n        guard supports.contains(op) else { throw RenderError.unsupported(op) }",
-   "replacement": "guard supports.contains(op) else { throw RenderError.unsupported(op) }\n        record(.op(op))"}
+   "anchor": "record(call ?? .op(op))\n        guard supports.contains(op) else { throw RenderError.unsupported(op) }",
+   "replacement": "guard supports.contains(op) else { throw RenderError.unsupported(op) }\n        record(call ?? .op(op))"},
+  {"note": "the new W1 calls ignore supports, so the fake runs a W1 family it does not list", "filter": "RenderBackendFakeTests.w1HonoursSupports", "file": "Sources/CoreRender/FakeBackend.swift",
+   "anchor": "guard supports.contains(op) else { throw RenderError.unsupported(op) }",
+   "replacement": "guard supports.contains(op) || call != nil else { throw RenderError.unsupported(op) }"},
+  {"note": "the recorded masked composite loses the mask offset", "filter": "RenderBackendFakeTests.w1RecordsArguments", "file": "Sources/CoreRender/FakeBackend.swift",
+   "anchor": "mask: mask, maskX: maskX, maskY: maskY)",
+   "replacement": "mask: mask, maskX: 0, maskY: 0)"},
+  {"note": "the fake gates every tone adjustment by adjust, so a colour case runs without color listed", "filter": "RenderBackendFakeTests.w1HonoursSupports", "file": "Sources/CoreRender/FakeBackend.swift",
+   "anchor": "store.insert(try input(s, adjustment.family))",
+   "replacement": "store.insert(try input(s, .adjust))"},
+  {"note": "metal capabilities enable a family that is not on metal yet", "filter": "MetalHoldoutTests", "file": "Sources/CoreRender/Metal/MetalCapabilities.swift",
+   "anchor": "guard !RenderOp.notOnMetalYet.contains(op) else { return }",
+   "replacement": ""}
 ]
