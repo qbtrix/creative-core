@@ -45,3 +45,5 @@ Next: VI-5 building, VI-7 building; Anatomy round 2 verdicts pending; Slice-Done
 
 ## Open
 - none
+
+- 2026-10-18T13:44:23Z round 2: dev 8e258c5, gate PASS (EngineStress flake rerun), mutants 37/37, lenses 5, clean=no; majors n4/12 arc NaN trap (fixer lead/vector-import-R2-1), n1 depth cap + n8 group tr tests (VI-7 follow-up lead/vector-import-R2-2), n14 #488 checks (VI-5)
