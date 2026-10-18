@@ -75,3 +75,4 @@ Next: VI-5 building, VI-7 building; Anatomy round 2 verdicts pending; Slice-Done
 - 18:06Z VI R3-1 #542 merged 18:05 (142d65d): Lottie nesting cap at the top level, group-walk mutations, own shape placed once, iterative LottieJSON ==. Mutate 27/27 FlareLottieImport. Two leftovers in the squash commit, which can't be rewritten on dev: a bare '---' last line, and the commit text names the edge case as \uD800 when the test uses \uD800\uE000.
 - 18:13Z #544 merged 18:11 (aa0092c): VI-5 done, VI-svg PRs all merged; awaiting dev run with Linux green
 - 18:13Z VI-8 builder launched on lead/vector-import-VI-8 (round-trip + budget suites, shape-order check)
+- 18:21Z heartbeat: 18G free; dev CI 373 (66bd163) green but predates #542-#544; no open lead PRs; LC R3-1 and PC R3-2 queued on gate, VI-8 building
