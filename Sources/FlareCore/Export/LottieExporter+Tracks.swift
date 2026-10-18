@@ -1,10 +1,11 @@
 // LottieExporter+Tracks.swift: animated Lottie properties and keyframes written from layer tracks.
 //
 // A shape's keyed fill colour (`fl.c`), stroke colour (`st.c`), stroke width
-// (`st.w`, the "strokeWidth.<i>" track) and path (`sh.ks`) animate when the
+// (`st.w`, the `Layer.trackKey(strokeWidthOf:)` track) and path (`sh.ks`) animate when the
 // track has two keys or more: one keyframe per key, `o`/`i` from its easing
 // (hold: `h: 1`) as for position. A colour is `[r, g, b, a]` clamped to 0...1,
-// and `o` is its alpha at frame 0 (alpha keys do not animate `o`). A path key
+// and `o` is its alpha times 100: animated from the same keys when their
+// alphas differ (players fade from `o`, not `c`'s 4th value). A path key
 // is one bezier per subpath, tangents relative to their vertex; two path keys
 // whose anchors do not pair up hold the left one, as the sampler does, and
 // keys with different subpath counts throw `unsupported("shape track")`. A
@@ -166,7 +167,7 @@ extension LottieItem {
     /// `animate` (a scene layer), else their values at `frame` (a symbol's layer).
     init(shape: Shape, index: Int, of layer: Layer, frame: Double, animate: Bool) throws {
         try self.init(shape: shape)
-        let widthKey = "strokeWidth.\(index)"
+        let widthKey = Layer.trackKey(strokeWidthOf: index)
         let fills = layer.colorTracks[Layer.colorTrackKey(fillOf: index)] ?? []
         let strokes = layer.colorTracks[Layer.colorTrackKey(strokeOf: index)] ?? []
         let widths = layer.tracks[widthKey] ?? []
@@ -198,10 +199,14 @@ extension LottieItem {
     func coloured(_ keys: [ColorKeyframe], _ target: TrackTarget, of layer: Layer, frame: Double, animate: Bool) throws -> LottieItem {
         guard let now = layer.sampledColor(target, at: frame) else { return self }
         var out = self
-        out.o = LottieStatic(try LottieExporter.unit(now.a) * 100)
+        out.o = .fixed(LottieStatic(try LottieExporter.unit(now.a) * 100))
         if animate, keys.count > 1 {
             out.c = .animated(try LottieKeyframe.list(keys, frame: \.frame, value: { .numbers(try LottieExporter.rgba($0.value)) },
                                                        easing: { key, _ in key.easing }))
+            if keys.contains(where: { $0.value.a != keys.first?.value.a }) {
+                out.o = .animated(try LottieKeyframe.list(keys, frame: \.frame, value: { .numbers([try LottieExporter.unit($0.value.a) * 100]) },
+                                                           easing: { key, _ in key.easing }))
+            }
         } else {
             out.c = .fixed(LottieStatic(Array(try LottieExporter.rgba(now).prefix(3)) + [1]))
         }

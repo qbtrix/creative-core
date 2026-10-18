@@ -265,7 +265,8 @@ struct LottieItem: Encodable, Sendable {
     var ty: String
     var ks: LottieProperty<LottieBezier>?
     var c: LottieProperty<[Double]>?
-    var o: LottieStatic<Double>?
+    /// Opacity, times 100: static, or animated by a colour track's alpha keys.
+    var o: LottieScalar?
     /// The fill rule on `fl` (1 is non-zero), the rotation on `tr`.
     var r: LottieR?
     var p: LottieStatic<[Double]>?
@@ -292,7 +293,7 @@ struct LottieItem: Encodable, Sendable {
         item.a = LottieStatic([0, 0])
         item.s = LottieStatic([try f(t.scaleX * 100), try f(t.scaleY * 100)])
         item.r = .rotation(LottieStatic(try f(t.rotation)))
-        item.o = LottieStatic(min(max(try f(opacity), 0), 1) * 100)
+        item.o = .fixed(LottieStatic(min(max(try f(opacity), 0), 1) * 100))
         return item
     }
 }
@@ -347,7 +348,7 @@ extension LottieItem {
         case .solid(let color):
             fill = LottieItem(ty: "fl")
             fill.c = .fixed(LottieStatic([try channel(color.r), try channel(color.g), try channel(color.b), 1]))
-            fill.o = LottieStatic(try channel(color.a) * 100)
+            fill.o = .fixed(LottieStatic(try channel(color.a) * 100))
         case .linear(let stops, let start, let end):
             fill.t = 1
             fill.s = try point(start)
@@ -359,13 +360,13 @@ extension LottieItem {
             fill.e = try point(Point(x: center.x + radius, y: center.y))
             fill.g = try gradient(stops)
         }
-        if fill.ty == "gf" { fill.o = LottieStatic(100) }
+        if fill.ty == "gf" { fill.o = .fixed(LottieStatic(100)) }
         fill.r = .rule(1)
         if let stroke = shape.stroke {
             var item = LottieItem(ty: "st")
             item.c = .fixed(LottieStatic([try channel(stroke.color.r), try channel(stroke.color.g),
                                           try channel(stroke.color.b), 1]))
-            item.o = LottieStatic(try channel(stroke.color.a) * 100)
+            item.o = .fixed(LottieStatic(try channel(stroke.color.a) * 100))
             item.w = .fixed(LottieStatic(try LottieExporter.finite(stroke.width)))
             item.lc = [.butt: 1, .round: 2, .square: 3][stroke.cap]
             item.lj = [.miter: 1, .round: 2, .bevel: 3][stroke.join]

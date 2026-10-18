@@ -1,6 +1,6 @@
 // SVGExporter+Style.swift: the fill, stroke and gradient attributes SVGExporter writes on a path,
 // and each shape as it draws at the exported frame: its layer's fill and stroke colour tracks,
-// "strokeWidth.<i>" track and shape track sampled there (an instance's symbol layers at the
+// `Layer.trackKey(strokeWidthOf:)` track and shape track sampled there (an instance's symbol layers at the
 // symbol frame). A value with no track stays static, so an unkeyed scene exports as before.
 // A fill track colours a solid fill only (a gradient keeps its stops); stroke tracks colour
 // and widen an existing stroke only.
@@ -41,7 +41,7 @@ extension SVGExporter {
         }
         if var stroke = shape.stroke {
             if let color = layer.sampledColor(.stroke(shape: index), at: frame) { stroke.color = color }
-            if let keys = layer.tracks["strokeWidth.\(index)"], let width = Timeline.value(of: keys, at: frame) {
+            if let keys = layer.tracks[Layer.trackKey(strokeWidthOf: index)], let width = Timeline.value(of: keys, at: frame) {
                 stroke.width = max(width, 0)
             }
             out.stroke = stroke

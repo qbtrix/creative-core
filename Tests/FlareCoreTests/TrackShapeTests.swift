@@ -37,6 +37,10 @@ import Testing
         #expect(TrackTarget.fill(shape: 1) != .stroke(shape: 1))
     }
 
+    @Test func strokeWidthKey() {
+        #expect(Layer.trackKey(strokeWidthOf: 2) == "strokeWidth.2")
+    }
+
     @Test func commandsRoundTripThroughTheRegistry() throws {
         for command in Self.commands() {
             let data = try CommandRegistry.builtIn.encode(command)

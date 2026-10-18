@@ -1,6 +1,6 @@
 // Document.swift: the Flare document model. A Document holds Scenes; a Scene
 // holds Layers; a Layer holds vector Shapes and keyframe tracks keyed by
-// property name ("x", "opacity", ...).
+// property name ("x", "opacity", ..., "strokeWidth.<i>"; see `Layer.tracks`).
 //
 // Invariants (checked by the format layer on load, kept by commands):
 // - every type here is a Codable, Sendable value type; no classes, no shared state
@@ -191,6 +191,10 @@ public struct Layer: Codable, Sendable, Hashable {
     public var id: String
     public var name: String
     public var shapes: [Shape]
+    /// Number keyframes keyed by property: "x", "y", "scaleX", "scaleY",
+    /// "rotation" and "opacity" for the layer, and "strokeWidth.<i>" for the
+    /// stroke width of `shapes[i]` (build it with `trackKey(strokeWidthOf:)`).
+    /// Any other key is stored, but no drawing or export reads it.
     public var tracks: [String: [Keyframe]]
     /// Hidden layers are skipped when rendering; they stay editable.
     public var isVisible: Bool
@@ -258,6 +262,8 @@ public struct Layer: Codable, Sendable, Hashable {
         self.shapeTracks = shapeTracks
     }
 
+    /// The `tracks` key for the stroke width of `shapes[index]`.
+    public static func trackKey(strokeWidthOf index: Int) -> String { "strokeWidth.\(index)" }
     /// The `colorTracks` key for the fill of `shapes[index]`.
     public static func colorTrackKey(fillOf index: Int) -> String { "fill.\(index)" }
     /// The `colorTracks` key for the stroke of `shapes[index]`.

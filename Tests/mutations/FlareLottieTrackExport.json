@@ -12,5 +12,19 @@
     "anchor": "[try unit(color.r), try unit(color.g), try unit(color.b), try unit(color.a)]",
     "replacement": "[try unit(color.r), try unit(color.g), try unit(color.b), try unit(color.a)].map { $0 * 255 }",
     "filter": "LottieTrackExportTests.colourUnitRange"
+  },
+  {
+    "note": "lottie unmatched path keys tween instead of holding",
+    "file": "Sources/FlareCore/Export/LottieExporter+Tracks.swift",
+    "anchor": "easing: { tweens($0, $1) ? $0.0.easing : .hold }",
+    "replacement": "easing: { key, _ in key.0.easing }",
+    "filter": "LottieTrackExportTests.unmatchedPathKeysHold"
+  },
+  {
+    "note": "lottie colour alpha keys leave opacity static",
+    "file": "Sources/FlareCore/Export/LottieExporter+Tracks.swift",
+    "anchor": "if keys.contains(where: { $0.value.a != keys.first?.value.a }) {",
+    "replacement": "if keys.isEmpty {",
+    "filter": "LottieTrackExportTests.alphaKeysAnimateOpacity"
   }
 ]
