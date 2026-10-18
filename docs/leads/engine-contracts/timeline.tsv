@@ -43,3 +43,4 @@ utc	stage	event	ref	note
 2026-10-18T10:24Z	4	pr-merged	#465	r2-a merged cdad305
 2026-10-18T10:25Z	3	ci-run	39118832683	Linux green, macOS red (ICCBytes.swift:59 type-check); Belt-Slice-Done posted
 2026-10-18T10:29Z	-	heartbeat	-	waiting
+2026-10-18T10:34Z	4	pr-merged	#467	r2-c merged 2e76b26
