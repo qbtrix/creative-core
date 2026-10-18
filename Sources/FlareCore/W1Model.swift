@@ -144,3 +144,17 @@ public struct ShapeTrack: Codable, Sendable, Hashable {
     public var keys: [PathKeyframe]
     public init(shapeIndex: Int, keys: [PathKeyframe]) { (self.shapeIndex, self.keys) = (shapeIndex, keys) }
 }
+
+/// The W1 fields of a `Layer`, stored together so the layer holds them behind one box.
+struct W1Fields: Sendable, Hashable {
+    var masks: [LayerMask] = []
+    var matte: TrackMatte?
+    var colorTracks: [String: [ColorKeyframe]] = [:]
+    var shapeTracks: [ShapeTrack] = []
+    var isEmpty: Bool { masks.isEmpty && matte == nil && colorTracks.isEmpty && shapeTracks.isEmpty }
+}
+
+/// A heap box for `W1Fields`: one pointer in `Layer`, so a layer without them copies as before.
+indirect enum W1Box: Sendable, Hashable {
+    case fields(W1Fields)
+}

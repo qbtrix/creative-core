@@ -201,15 +201,42 @@ public struct Layer: Codable, Sendable, Hashable {
     /// Text drawn above the shapes. Missing in older v1 files means empty.
     public var texts: [TextShape]
     /// Masks applied in order. Missing in older files means none.
-    public var masks: [LayerMask] = []
+    public var masks: [LayerMask] {
+        get { w1Fields.masks }
+        set { w1Fields.masks = newValue }
+    }
     /// Another layer of the same list that limits where this one draws.
-    public var matte: TrackMatte?
+    public var matte: TrackMatte? {
+        get { w1Fields.matte }
+        set { w1Fields.matte = newValue }
+    }
     /// Colour keyframes keyed "fill.<i>" or "stroke.<i>", `i` an index into
     /// `shapes`, or "text.<i>", `i` an index into `texts`; build keys with
     /// `colorTrackKey(fillOf:)`, `colorTrackKey(strokeOf:)` and `colorTrackKey(text:)`.
-    public var colorTracks: [String: [ColorKeyframe]] = [:]
+    public var colorTracks: [String: [ColorKeyframe]] {
+        get { w1Fields.colorTracks }
+        set { w1Fields.colorTracks = newValue }
+    }
     /// Keyframed geometry, one track per animated shape.
-    public var shapeTracks: [ShapeTrack] = []
+    public var shapeTracks: [ShapeTrack] {
+        get { w1Fields.shapeTracks }
+        set { w1Fields.shapeTracks = newValue }
+    }
+
+    /// The W1 fields behind one box, nil while all are empty, so copying a
+    /// layer (and so a big scene's layer array) costs what it did before them.
+    private var w1: W1Box?
+    /// False when masks, matte, colorTracks and shapeTracks are all empty: validation skips them.
+    var hasW1Fields: Bool { w1 != nil }
+    private var w1Fields: W1Fields {
+        get {
+            switch w1 {
+            case .fields(let fields)?: fields
+            case nil: W1Fields()
+            }
+        }
+        set { w1 = newValue.isEmpty ? nil : .fields(newValue) }
+    }
 
     public init(
         id: String, name: String, shapes: [Shape] = [], tracks: [String: [Keyframe]] = [:],
