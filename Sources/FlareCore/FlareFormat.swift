@@ -46,6 +46,9 @@ public enum FlareFormat {
     /// Most points allowed in the whole document, counting `Shape.points` and
     /// the points of every path element.
     public static let maxTotalPoints = 1_000_000
+    /// Most masks on one layer, and most keys in one colour or shape track.
+    public static let maxMasksPerLayer = 32
+    public static let maxKeysPerTrack = 4_096
 
     struct Header: Decodable {
         var format: String?
@@ -99,9 +102,13 @@ public enum FlareFormat {
         let symbolIDs = try validateHeaders(document)
         for scene in document.scenes {
             try validate(scene.layers, owner: "scene \(scene.id)", symbols: symbolIDs)
+            for layer in scene.layers { try validateW1(layer, duration: scene.durationFrames) }
+            try checkMattes(scene.layers, owner: "scene \(scene.id)")
         }
         for symbol in document.symbols {
             try validate(symbol.layers, owner: "symbol \(symbol.id)", symbols: symbolIDs)
+            for layer in symbol.layers { try validateW1(layer, duration: symbol.durationFrames) }
+            try checkMattes(symbol.layers, owner: "symbol \(symbol.id)")
         }
         try checkSymbolCycles(document.symbols)
         try validateStateMachines(document)
@@ -113,12 +120,17 @@ public enum FlareFormat {
     static func validate(_ document: Document, layer layerID: String, owner: LayerOwner,
                          since previous: Document) throws {
         let symbolIDs = try validateHeaders(document)
-        guard let new = document.layers(of: owner), let old = previous.layers(of: owner) else {
+        guard let new = document.layers(of: owner), let old = previous.layers(of: owner),
+              let duration = document.scenes.first(where: { owner == .scene($0.id) })?.durationFrames
+                ?? document.symbols.first(where: { owner == .symbol($0.id) })?.durationFrames else {
             return try validate(document)
         }
+        // Mattes name layers by id: only a removal or a change to this layer's matte can break one.
+        var mattesChanged = new.count < old.count
         if let i = new.firstIndex(where: { $0.id == layerID }) {
             let layer = new[i]
             try validate([layer], owner: owner.description, symbols: symbolIDs)
+            try validateW1(layer, duration: duration)
             let inserted = new.count > old.count
             // The other ids were unique before, so only a later copy of this one can clash.
             if inserted, new[(i + 1)...].contains(where: { $0.id == layerID }) {
@@ -130,7 +142,9 @@ public enum FlareFormat {
             if new.count > maxLayersPerScene || pointCount(layer.shapes) > pointCount(before?.shapes ?? []) {
                 try checkLimits(document)
             }
+            mattesChanged = mattesChanged || layer.matte != before?.matte
         }
+        if mattesChanged { try checkMattes(new, owner: owner.description) }
         try checkSymbolCycles(document.symbols)
         try validateStateMachines(document)
     }
@@ -220,6 +234,71 @@ public enum FlareFormat {
                     throw FormatError.invalid("layer \(layer.id): instance transform must be finite")
                 }
             }
+        }
+    }
+
+    /// The W1Model.swift invariants of one layer that do not look at other layers.
+    static func validateW1(_ layer: Layer, duration: Int) throws {
+        func check(_ ok: Bool, _ what: @autoclosure () -> String) throws {
+            guard ok else { throw FormatError.invalid("layer \(layer.id): \(what())") }
+        }
+        func finite(_ path: Path) -> Bool { path.elements.allSatisfy { $0.points.allSatisfy(\.isFinite) } }
+        func checkKeys(_ frames: [Int], _ track: String) throws {
+            try check(!frames.isEmpty && frames.count <= maxKeysPerTrack, "track \(track) needs 1...\(maxKeysPerTrack) keys")
+            let sorted = zip(frames, frames.dropFirst()).allSatisfy { $0 < $1 }
+            try check(sorted && frames.allSatisfy { $0 >= 0 && $0 <= duration }, "track \(track) unsorted or off the timeline")
+        }
+        try check(layer.masks.count <= maxMasksPerLayer, "more than \(maxMasksPerLayer) masks")
+        for mask in layer.masks {
+            try check(finite(mask.path) && mask.feather.isFinite && mask.feather >= 0 && (0...1).contains(mask.opacity),
+                      "mask needs finite points, feather >= 0 and opacity in 0...1")
+        }
+        for text in layer.texts {
+            let count = text.string.count
+            var last = -1
+            for run in text.runs {
+                try check(run.start > last && run.length > 0 && run.start <= count - run.length, // last >= -1
+                          "text runs must lie in the string, sorted and not overlapping")
+                last = run.start + run.length - 1
+                try check([run.tracking, run.baselineShift].allSatisfy { $0?.isFinite ?? true }
+                          && run.fontSize.map { $0.isFinite && $0 > 0 } ?? true, "text run values must be finite")
+                do { try run.fill?.validate() } catch let error as ModelError { throw FormatError(error) }
+            }
+            if let p = text.paragraph {
+                try check((0.5...4).contains(p.lineHeight) && p.tracking.isFinite && p.paragraphSpacing.isFinite
+                          && p.boxWidth.map { $0.isFinite && $0 > 0 } ?? true, "paragraph lineHeight or sizes out of range")
+            }
+            if let on = text.onPath { try check(finite(on.path) && on.startOffset.isFinite, "text path must be finite") }
+        }
+        for (key, track) in layer.colorTracks {
+            try checkKeys(track.map(\.frame), key)
+            try check(track.allSatisfy { $0.value.isFinite }, "track \(key) has a non-finite color")
+        }
+        for track in layer.shapeTracks {
+            try check(track.shapeIndex >= 0 && track.keys.allSatisfy { finite($0.path) }, "shape track index < 0 or non-finite")
+            try checkKeys(track.keys.map(\.frame), "shape \(track.shapeIndex)")
+        }
+    }
+
+    /// Each matte names another layer of `layers`, and no chain of mattes
+    /// returns to a layer it passed. Linear: a layer proven acyclic is not walked again.
+    static func checkMattes(_ layers: [Layer], owner: String) throws {
+        var source: [String: String] = [:]
+        for layer in layers { if let matte = layer.matte { source[layer.id] = matte.sourceLayerID } }
+        guard !source.isEmpty else { return }
+        let ids = Set(layers.map(\.id))
+        var acyclic = Set<String>()
+        for (start, first) in source {
+            guard first != start, ids.contains(first) else {
+                throw FormatError.invalid("\(owner): layer \(start) matte source \(first) is not another layer here")
+            }
+            var seen: Set<String> = [start]
+            var next: String? = first
+            while let id = next, !acyclic.contains(id) {
+                guard seen.insert(id).inserted else { throw FormatError.invalid("\(owner): layer \(start) matte cycle") }
+                next = source[id]
+            }
+            acyclic.formUnion(seen)
         }
     }
 
