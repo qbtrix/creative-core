@@ -86,7 +86,8 @@ struct LottieExporterTests {
         ])])
         let json = try object(LottieExporter.export(scene: scene))
         let groups = try #require((json["layers"] as? [[String: Any]])?.first?["shapes"] as? [[String: Any]])
-        let fills = try groups.map { try #require(($0["it"] as? [[String: Any]])?[1]) }
+        // Lottie lists items top first, so the groups run last shape first.
+        let fills = try groups.reversed().map { try #require(($0["it"] as? [[String: Any]])?[1]) }
         #expect(fills.map { $0["ty"] as? String } == ["gf", "gf"])
         #expect(fills.map { $0["t"] as? Int } == [1, 2])
         #expect((fills[1]["e"] as? [String: Any])?["k"] as? [Double] == [7, 3])

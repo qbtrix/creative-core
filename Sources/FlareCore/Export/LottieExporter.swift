@@ -76,8 +76,10 @@ public enum LottieExporter {
     }
 
     /// A layer's shape items at `frame`: one group per instance, holding the
-    /// symbol's visible layers, on top of one group per shape. `path` is the
-    /// ids of the symbols being drawn around the layer.
+    /// symbol's visible layers, on top of one group per shape. Items run top
+    /// first, so instances and shapes are both reversed (Flare draws its first
+    /// shape first); each shape keeps its own index for its tracks. `path` is
+    /// the ids of the symbols being drawn around the layer.
     static func content(of layer: Layer, frame: Double, symbols: [Symbol], path: [String]) throws -> [LottieItem] {
         guard layer.texts.isEmpty else { throw LottieExportError.unsupported("text") }
         let instances = try layer.instances.reversed().map { instance in
@@ -91,7 +93,7 @@ public enum LottieExporter {
             }
             return group(layers + [try LottieItem.transform(instance.transform, opacity: 1)])
         }
-        return try instances + layer.shapes.enumerated().map { try LottieItem(shape: $1, index: $0, of: layer, frame: frame, animate: path.isEmpty) }
+        return try instances + layer.shapes.enumerated().reversed().map { try LottieItem(shape: $1, index: $0, of: layer, frame: frame, animate: path.isEmpty) }
     }
 
     static func group(_ items: [LottieItem]) -> LottieItem {

@@ -40,5 +40,12 @@
     "anchor": "guard shapes.allSatisfy({ $0.1.count == parts }) else { throw LottieExportError.unsupported(\"shape track\") }",
     "replacement": "_ = parts",
     "filter": "LottieTrackExportTests.pathKeysWithDifferentPartCountsThrow"
+  },
+  {
+    "note": "lottie shapes written bottom first, so the round trip reverses their order",
+    "file": "Sources/FlareCore/Export/LottieExporter.swift",
+    "anchor": "layer.shapes.enumerated().reversed().map { try LottieItem",
+    "replacement": "layer.shapes.enumerated().map { try LottieItem",
+    "filter": "ImportRoundTripTests|LottieExporterTests"
   }
 ]
