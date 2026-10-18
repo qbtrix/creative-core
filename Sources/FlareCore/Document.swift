@@ -3,7 +3,9 @@
 // property name ("x", "opacity", ..., "strokeWidth.<i>"; see `Layer.tracks`).
 //
 // Invariants (checked by the format layer on load, kept by commands):
-// - every type here is a Codable, Sendable value type; no classes, no shared state
+// - every public type here is a Codable, Sendable value type with no shared mutable
+//   state; Layer keeps its fields behind a private copy-on-write box (LayerStorage),
+//   so copying a big scene's layer array costs an id and a pointer per layer
 // - Scene.fps > 0, Scene.durationFrames >= 0
 // - Scene.width and Scene.height are finite and > 0
 // - Scene label frames are in 0...durationFrames
@@ -187,23 +189,65 @@ public struct Guide: Codable, Sendable, Hashable {
     }
 }
 
+/// The fields of a `Layer` other than its id; see `Layer` for each one.
+struct LayerFields: Sendable, Hashable {
+    var name: String
+    var shapes: [Shape]
+    var tracks: [String: [Keyframe]]
+    var isVisible: Bool
+    var isLocked: Bool
+    var instances: [Instance]
+    var texts: [TextShape]
+    var w1: W1Box?
+}
+
+/// The copy-on-write box behind a `Layer`. Sendable because no box is written
+/// while shared: `Layer` writes only through its `fields`, which first copies
+/// a box it does not own alone, the way Array's own storage works.
+final class LayerStorage: @unchecked Sendable {
+    var fields: LayerFields
+    init(_ fields: LayerFields) { self.fields = fields }
+}
+
 public struct Layer: Codable, Sendable, Hashable {
+    /// Stored inline, so a scan for a layer by id reads the array, not each box.
     public var id: String
-    public var name: String
-    public var shapes: [Shape]
+    public var name: String {
+        get { storage.fields.name }
+        _modify { yield &fields.name }
+    }
+    public var shapes: [Shape] {
+        get { storage.fields.shapes }
+        _modify { yield &fields.shapes }
+    }
     /// Number keyframes keyed by property: "x", "y", "scaleX", "scaleY",
     /// "rotation" and "opacity" for the layer, and "strokeWidth.<i>" for the
     /// stroke width of `shapes[i]` (build it with `trackKey(strokeWidthOf:)`).
     /// Any other key is stored, but no drawing or export reads it.
-    public var tracks: [String: [Keyframe]]
+    public var tracks: [String: [Keyframe]] {
+        get { storage.fields.tracks }
+        _modify { yield &fields.tracks }
+    }
     /// Hidden layers are skipped when rendering; they stay editable.
-    public var isVisible: Bool
+    public var isVisible: Bool {
+        get { storage.fields.isVisible }
+        _modify { yield &fields.isVisible }
+    }
     /// Locked layers reject commands that edit their shapes or keyframes.
-    public var isLocked: Bool
+    public var isLocked: Bool {
+        get { storage.fields.isLocked }
+        _modify { yield &fields.isLocked }
+    }
     /// Symbol placements on this layer. Missing in older v1 files means empty.
-    public var instances: [Instance]
+    public var instances: [Instance] {
+        get { storage.fields.instances }
+        _modify { yield &fields.instances }
+    }
     /// Text drawn above the shapes. Missing in older v1 files means empty.
-    public var texts: [TextShape]
+    public var texts: [TextShape] {
+        get { storage.fields.texts }
+        _modify { yield &fields.texts }
+    }
     /// Masks applied in order. Missing in older files means none.
     public var masks: [LayerMask] {
         get { w1Fields.masks }
@@ -227,19 +271,28 @@ public struct Layer: Codable, Sendable, Hashable {
         set { w1Fields.shapeTracks = newValue }
     }
 
-    /// The W1 fields behind one box, nil while all are empty, so copying a
-    /// layer (and so a big scene's layer array) costs what it did before them.
-    private var w1: W1Box?
+    /// Every field but `id`, behind one copy-on-write reference, so copying a
+    /// layer (and so a big scene's layer array, which every command and undo
+    /// does) is two retains, not one per field.
+    private var storage: LayerStorage
+    /// `storage`'s fields for writing: the box is copied first unless this layer is its only owner.
+    private var fields: LayerFields {
+        get { storage.fields }
+        _modify {
+            if !isKnownUniquelyReferenced(&storage) { storage = LayerStorage(storage.fields) }
+            yield &storage.fields
+        }
+    }
     /// False when masks, matte, colorTracks and shapeTracks are all empty: validation skips them.
-    var hasW1Fields: Bool { w1 != nil }
+    var hasW1Fields: Bool { storage.fields.w1 != nil }
     private var w1Fields: W1Fields {
         get {
-            switch w1 {
+            switch storage.fields.w1 {
             case .fields(let fields)?: fields
             case nil: W1Fields()
             }
         }
-        set { w1 = newValue.isEmpty ? nil : .fields(newValue) }
+        set { fields.w1 = newValue.isEmpty ? nil : .fields(newValue) }
     }
 
     public init(
@@ -249,17 +302,21 @@ public struct Layer: Codable, Sendable, Hashable {
         shapeTracks: [ShapeTrack] = []
     ) {
         self.id = id
-        self.name = name
-        self.shapes = shapes
-        self.tracks = tracks
-        self.isVisible = isVisible
-        self.isLocked = isLocked
-        self.instances = instances
-        self.texts = texts
+        storage = LayerStorage(LayerFields(name: name, shapes: shapes, tracks: tracks, isVisible: isVisible,
+                                           isLocked: isLocked, instances: instances, texts: texts))
         self.masks = masks
         self.matte = matte
         self.colorTracks = colorTracks
         self.shapeTracks = shapeTracks
+    }
+
+    public static func == (a: Layer, b: Layer) -> Bool {
+        a.id == b.id && (a.storage === b.storage || a.storage.fields == b.storage.fields)
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+        hasher.combine(storage.fields)
     }
 
     /// The `tracks` key for the stroke width of `shapes[index]`.
@@ -279,18 +336,20 @@ public struct Layer: Codable, Sendable, Hashable {
     /// and files without instances or texts decode with none.
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        id = try c.decode(String.self, forKey: .id)
-        name = try c.decode(String.self, forKey: .name)
-        shapes = try c.decode([Shape].self, forKey: .shapes)
-        tracks = try c.decode([String: [Keyframe]].self, forKey: .tracks)
-        isVisible = try c.decodeIfPresent(Bool.self, forKey: .isVisible) ?? true
-        isLocked = try c.decodeIfPresent(Bool.self, forKey: .isLocked) ?? false
-        instances = try c.decodeIfPresent([Instance].self, forKey: .instances) ?? []
-        texts = try c.decodeIfPresent([TextShape].self, forKey: .texts) ?? []
-        masks = try c.decodeIfPresent([LayerMask].self, forKey: .masks) ?? []
-        matte = try c.decodeIfPresent(TrackMatte.self, forKey: .matte)
-        colorTracks = try c.decodeIfPresent([String: [ColorKeyframe]].self, forKey: .colorTracks) ?? [:]
-        shapeTracks = try c.decodeIfPresent([ShapeTrack].self, forKey: .shapeTracks) ?? []
+        try self.init(
+            id: c.decode(String.self, forKey: .id),
+            name: c.decode(String.self, forKey: .name),
+            shapes: c.decode([Shape].self, forKey: .shapes),
+            tracks: c.decode([String: [Keyframe]].self, forKey: .tracks),
+            isVisible: c.decodeIfPresent(Bool.self, forKey: .isVisible) ?? true,
+            isLocked: c.decodeIfPresent(Bool.self, forKey: .isLocked) ?? false,
+            instances: c.decodeIfPresent([Instance].self, forKey: .instances) ?? [],
+            texts: c.decodeIfPresent([TextShape].self, forKey: .texts) ?? [],
+            masks: c.decodeIfPresent([LayerMask].self, forKey: .masks) ?? [],
+            matte: c.decodeIfPresent(TrackMatte.self, forKey: .matte),
+            colorTracks: c.decodeIfPresent([String: [ColorKeyframe]].self, forKey: .colorTracks) ?? [:],
+            shapeTracks: c.decodeIfPresent([ShapeTrack].self, forKey: .shapeTracks) ?? []
+        )
     }
 
     /// Empty texts, masks and tracks and a nil matte are left out, so older layers encode as before.

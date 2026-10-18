@@ -163,7 +163,8 @@ struct W1Fields: Sendable, Hashable {
     var isEmpty: Bool { masks.isEmpty && matte == nil && colorTracks.isEmpty && shapeTracks.isEmpty }
 }
 
-/// A heap box for `W1Fields`: one pointer in `Layer`, so a layer without them copies as before.
+/// A heap box for `W1Fields`, nil in `LayerFields` while they are empty, so a
+/// plain layer skips the W1 checks and copies no W1 arrays.
 indirect enum W1Box: Sendable, Hashable {
     case fields(W1Fields)
 }
