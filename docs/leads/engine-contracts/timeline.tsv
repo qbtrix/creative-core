@@ -82,3 +82,4 @@ utc	stage	event	ref	note
 2026-10-18T16:36Z	ship	wait	39145044059	feature-done CI run on 7fcd04d still queued; contact sheet waits on it
 2026-10-18T16:44Z	-	heartbeat	-	waiting
 2026-10-18T17:02Z	-	heartbeat	-	waiting
+2026-10-18T17:06Z	ship	contact-sheet	39145044059	EC-z Slice-Done and Belt-Contact-Sheet posted on #429; macOS EngineStress miss filed as gap #533
