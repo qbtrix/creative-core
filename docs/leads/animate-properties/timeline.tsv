@@ -53,3 +53,4 @@ utc	stage	event	ref	note
 2026-10-18T14:49Z	anatomy	fast-check	#496,#500	ap1-a cf0d19c and ap1-b bab6ca6 gate PASS; Fast-Check added, waiting on the lane
 2026-10-18T14:50Z	anatomy	merged	#496,#500	ap1-a f2ad1a5, ap1-b b2f87b9 merged: all round 1 batches in
 2026-10-18T14:52Z	anatomy	round-start	c294adb	round 2: gate + 6 mutation plans on dev c294adb queued behind EC round 4 mutation
+2026-10-18T14:55Z	-	heartbeat	-	waiting
