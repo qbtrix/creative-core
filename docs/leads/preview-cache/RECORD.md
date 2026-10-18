@@ -77,3 +77,4 @@ Next: PC-4, PC-5 building (PC-3 #498 merged with round-2 recovery header); PC-ha
 - 16:54Z Belt-Slice-Done posted for PC-a and PC-store on run 39143654502 (Linux green). Stripped the attribution footers from the earlier lead comments.
 - 17:16Z Heartbeat: run 370 (7fcd04d) has Linux green. macOS is red only on EngineStressTests (7.0 s vs 5 s), which is outside this lead; groupManyBudget passed. All round-3 agents are gating, queued on the CI lock. No new lead PRs since #525 and #526. PC-z waits on PC-9 (feature-done).
 - 17:38Z Heartbeat: all five round-3 agents are gating, serialized on the CI lock. No lead PR is open. Dev run 373 (66bd163, #535 engine-stress perf) is queued. Disk: 17 GB free.
+- 18:00Z Heartbeat: five agents, one CI-lock waiter each and no duplicates; LC R3-1 was resumed after stopping early. No lead PR is open. Dev run 373 is still queued. Disk: 17 GB free.
