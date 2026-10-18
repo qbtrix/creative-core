@@ -1,0 +1,40 @@
+# color-profiles lead record
+
+Issue: #441 · Packet: docs/blueprints/core/features/color-profiles.md
+Run: act-1a14ddaebc8-nwqn · Session: line lead (engine-contracts, animate-properties, color-profiles) · Started: 2026-10-18T07:15Z
+Stage: 0 setup (blocked)
+Base: 9d01972365f04da4fe6074e9bdd56ceab5b616a8
+Next: check whether layered-codecs:LC-a has merged on dev (Sources/CoreRaster/Codecs/LayeredImage.swift exists); if so start CP-1
+
+## Slices
+| slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
+|---|---|---|---|---|---|
+| CP-a | CP-1, CP-2 | layered-codecs:LC-a | blocked | | |
+| CP-icc | CP-3, CP-4 | CP-a | open | | |
+| CP-convert | CP-5, CP-6 | CP-icc | open | | |
+| CP-deep | CP-7, CP-8 | CP-icc; layered-codecs:LC-write | blocked | | |
+| CP-z | CP-9, CP-10 | CP-convert, CP-deep | open | | wanted (budgets) |
+
+## Tasks
+| id | wave | behavior | files | test | mutation | PR | state |
+|---|---|---|---|---|---|---|---|
+| CP-1 | – | values, stubs, LayeredImage.profile, icc-profiles part | ICC/ColorProfile, ICC/ProfileTransform, Codecs/LayeredImage | ICCShapeTests | none | | blocked: LC-a |
+| CP-2 | – | ICC byte builder, fixtures, suites disabled | Tests/CoreColorTests/ICC* | compile | – | | waits CP-1 |
+| CP-3 | – | ICC read | ICC/ICCRead.swift | ICCReadTests, ICCFuzzTests | CoreColor.ICCRead (3) | | waits CP-2 |
+| CP-4 | – | ICC write | ICC/ICCWrite.swift | ICCWriteTests | CoreColor.ICCWrite (2) | | waits CP-3 |
+| CP-5 | – | ProfileTransform | ICC/ProfileTransform.swift | ProfileTransformTests | CoreColor.ProfileTransform (2) | | waits CP-3 |
+| CP-6 | – | PixelBuffer.converted | Codecs/ProfileConvert.swift | ProfileConvertTests | CoreRaster.ProfileConvert (2) | | waits CP-5 |
+| CP-7 | – | PSD 16-bit + ICC resource | Codecs/PSDDeep.swift | PSDDeepTests | CoreRaster.PSDDeep (2) | | waits CP-4, LC-write |
+| CP-8 | – | ORA 16-bit + profile entry | Codecs/OpenRasterDeep.swift | ORADeepTests | CoreRaster.ORADeep (2) | | waits CP-4, LC-write |
+| CP-9 | – | KJ-CP walk, budgets | ProfileWalkTests, ProfileBudgetTests | walk | none | | waits CP-6,7,8 |
+| CP-10 | – | parts' words, status, feature-done | parts, packet | – | – | | waits CP-9, layered-codecs |
+
+## Rounds
+| round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
+|---|---|---|---|---|---|---|---|---|
+
+## Decisions
+- CP-1 edits LayeredImage.swift, which layered-codecs' LC-a creates; nothing in this packet can start before it (the packet's CP-a waits on it).
+
+## Open
+- Blocked on layered-codecs (#438): no Sources/CoreRaster/Codecs/ on dev 9d01972 and no open PR. Re-checked at every wave boundary.
