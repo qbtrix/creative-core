@@ -24,7 +24,8 @@ those rows run in one wave.
 **Depends on:** nothing open. Base: `origin/dev` 4f91e04 (2026-10-18).
 **Unblocks:** wave 6 (`masks-mattes`, `tone-pack`, `effects-engine`,
 `affine-composite`, `fill-tools`, `retouch-heal`, `text-engine`,
-`animate-properties`, `color-profiles`) and the slices of wave-5 features
+`animate-properties`; wave 6's `color-profiles` waits on `layered-codecs`
+instead) and the slices of wave-5 features
 that name `engine-contracts:<slice>`.
 
 **C4:** no new component. Edits the parts `corerender/contract`,
