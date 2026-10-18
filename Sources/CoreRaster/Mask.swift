@@ -39,6 +39,15 @@ public struct Mask: Equatable, Sendable {
         storage = [Float](repeating: fill, count: pixels)
     }
 
+    /// Wraps coverage the caller has already sized and checked: `width x height`
+    /// passed `PixelBuffer.validatedSize`, `storage.count == width * height`,
+    /// and every value is in 0...1. For this module's codecs only.
+    init(checkedWidth width: Int, height: Int, storage: [Float]) {
+        self.width = width
+        self.height = height
+        self.storage = storage
+    }
+
     /// The coverage of pixel (x, y). Throws when it is outside the mask.
     public func coverage(x: Int, y: Int) throws -> Float {
         guard (0..<width).contains(x), (0..<height).contains(y) else {
