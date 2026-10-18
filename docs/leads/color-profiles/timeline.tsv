@@ -68,3 +68,4 @@ utc	stage	event	ref	note
 2026-10-18T16:06Z	build	CP-7-conflict	#523	PR #523 conflicted with dev after #518 (PSD merged image); rebase fixer dispatched, body Closes->Refs #441. CP-8 finisher dispatched (gate at low load, PR to follow).
 2026-10-18T16:08Z	-	heartbeat	-	waiting
 2026-10-18T16:26Z	-	heartbeat	-	waiting
+2026-10-18T16:29Z	build	CP-8	#529	CP-8 PR #529 open: head 4e5f426, gate PASS (cp8-ci-c3.log), ORADeep 3/3, 6 files +156/-17, Refs #441. Lead verifying CodecWalkTests (#526) on the merge with dev.
