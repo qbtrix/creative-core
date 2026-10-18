@@ -2,7 +2,7 @@
 
 Issue: #442 · Packet: docs/blueprints/core/features/animate-properties.md
 Run: act-1a14ddaebc8-nwqn · Session: line lead (engine-contracts, animate-properties, color-profiles) · Started: 2026-10-18T07:15Z
-Stage: 3 line wave 4 (AP-7, AP-8 building) + fixes from engine-contracts round 3
+Stage: 4 Anatomy round 1 running (dev ca537c1; gate CI: PASS; mutation all caught)
 Base: 9d01972365f04da4fe6074e9bdd56ceab5b616a8
 Next: Anatomy round 1 on the AP-sample/AP-export surface (includes the AP-7/AP-8 base-exporter edits). AP-4 waits on path-geometry PG-edit (#430); AP-9, AP-10 after.
 

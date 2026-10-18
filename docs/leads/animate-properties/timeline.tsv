@@ -37,3 +37,4 @@ utc	stage	event	ref	note
 2026-10-18T12:10Z	fix-merged	pr-merged	#484	ap-r1 merged d51ef90
 2026-10-18T12:12Z	-	heartbeat	-	waiting
 2026-10-18T12:13Z	slice-done	belt-slice-done	#442	AP-sample, AP-export done, run 39126063033
+2026-10-18T12:19Z	anatomy	round-start	r1	critic panel wf_121c877a-e58 on ca537c1, mutate 16/16
