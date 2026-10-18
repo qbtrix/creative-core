@@ -82,3 +82,4 @@ Next: PC-4, PC-5 building (PC-3 #498 merged with round-2 recovery header); PC-ha
 - 18:21Z heartbeat: 18G free; dev CI 373 (66bd163) green but predates #542-#544; no open lead PRs; LC R3-1 and PC R3-2 queued on gate, VI-8 building
 - 18:29Z #546 merged; PC-9 (feature-done) launched. Minor: DuplicateGroups mutation 1 caught only by a 903 s hang
 - 18:41Z #548 (PC-9, feature-done) merged; awaiting dev CI with Linux green for PC-z
+- 18:43Z heartbeat: 18G free; dev CI 374 (bd50d5b, has #544 #545 #546 #548) Linux running; no open lead PRs; VI-8 and LC R3-2 working
