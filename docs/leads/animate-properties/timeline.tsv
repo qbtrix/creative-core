@@ -8,3 +8,4 @@ utc	stage	event	ref	note
 2026-10-18T08:29Z	-	heartbeat	-	waiting
 2026-10-18T08:47Z	-	heartbeat	-	waiting
 2026-10-18T09:05Z	-	heartbeat	-	waiting
+2026-10-18T09:19Z	3	pr-merged	#457	AP-1 merged 60b515d; AP-2 starts once dev-red #453 clears (gate fails on dev)
