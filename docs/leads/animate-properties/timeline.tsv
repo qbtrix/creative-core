@@ -73,3 +73,4 @@ utc	stage	event	ref	note
 2026-10-18T16:50Z	anatomy	r3-fix	whxe84gci	round 3 panel: 7 confirmed, 0 refuted. Fix batches ap3-a (AP-cmd: colour .text target throws shapeNotFound like text cmds; merge redo test + mutation) and ap3-b (AP-export: pinned Lottie golden, alpha sampling test + mutation, SVG stroke colour mutation) dispatched. Deferred: AP-4 shape-key compat (blocked on path-geometry PG-edit), AP-9/AP-10 walk+budgets (AP-z, after AP-4).
 2026-10-18T17:02Z	-	heartbeat	-	waiting
 2026-10-18T17:08Z	fix	ap3-a-merged	ee1bd83	ap3-a merged as #534 (one missing-text error, redo-checked colour key drag); ap3-b still running
+2026-10-18T17:20Z	-	heartbeat	-	waiting
