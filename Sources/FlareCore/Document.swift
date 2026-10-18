@@ -204,14 +204,18 @@ public struct Layer: Codable, Sendable, Hashable {
     public var masks: [LayerMask] = []
     /// Another layer of the same list that limits where this one draws.
     public var matte: TrackMatte?
-    /// Colour keyframes keyed "fill.<shape>", "stroke.<shape>" or "text.<index>".
+    /// Colour keyframes keyed "fill.<i>" or "stroke.<i>", `i` an index into
+    /// `shapes`, or "text.<i>", `i` an index into `texts`; build keys with
+    /// `colorTrackKey(fillOf:)`, `colorTrackKey(strokeOf:)` and `colorTrackKey(text:)`.
     public var colorTracks: [String: [ColorKeyframe]] = [:]
     /// Keyframed geometry, one track per animated shape.
     public var shapeTracks: [ShapeTrack] = []
 
     public init(
         id: String, name: String, shapes: [Shape] = [], tracks: [String: [Keyframe]] = [:],
-        isVisible: Bool = true, isLocked: Bool = false, instances: [Instance] = [], texts: [TextShape] = []
+        isVisible: Bool = true, isLocked: Bool = false, instances: [Instance] = [], texts: [TextShape] = [],
+        masks: [LayerMask] = [], matte: TrackMatte? = nil, colorTracks: [String: [ColorKeyframe]] = [:],
+        shapeTracks: [ShapeTrack] = []
     ) {
         self.id = id
         self.name = name
@@ -221,7 +225,18 @@ public struct Layer: Codable, Sendable, Hashable {
         self.isLocked = isLocked
         self.instances = instances
         self.texts = texts
+        self.masks = masks
+        self.matte = matte
+        self.colorTracks = colorTracks
+        self.shapeTracks = shapeTracks
     }
+
+    /// The `colorTracks` key for the fill of `shapes[index]`.
+    public static func colorTrackKey(fillOf index: Int) -> String { "fill.\(index)" }
+    /// The `colorTracks` key for the stroke of `shapes[index]`.
+    public static func colorTrackKey(strokeOf index: Int) -> String { "stroke.\(index)" }
+    /// The `colorTracks` key for the fill of `texts[index]`.
+    public static func colorTrackKey(text index: Int) -> String { "text.\(index)" }
 
     private enum CodingKeys: String, CodingKey {
         case id, name, shapes, tracks, isVisible, isLocked, instances, texts, masks, matte, colorTracks, shapeTracks
@@ -376,16 +391,25 @@ public struct TextShape: Codable, Sendable, Hashable {
     public var fontSize: Double
     public var position: Point
     public var fill: Fill
+    /// Styles over grapheme ranges, sorted and not overlapping; graphemes outside every run keep the shape's style.
     public var runs: [TextRun] = []
+    /// Line layout; nil means one unwrapped, leading-aligned line per paragraph.
     public var paragraph: ParagraphStyle?
+    /// A path the text follows instead of a straight baseline at `position`; nil means none.
     public var onPath: TextOnPath?
 
-    public init(string: String, fontFamily: String, fontSize: Double, position: Point, fill: Fill = .solid(.black)) {
+    public init(
+        string: String, fontFamily: String, fontSize: Double, position: Point, fill: Fill = .solid(.black),
+        runs: [TextRun] = [], paragraph: ParagraphStyle? = nil, onPath: TextOnPath? = nil
+    ) {
         self.string = string
         self.fontFamily = fontFamily
         self.fontSize = fontSize
         self.position = position
         self.fill = fill
+        self.runs = runs
+        self.paragraph = paragraph
+        self.onPath = onPath
     }
 
     private enum CodingKeys: String, CodingKey {

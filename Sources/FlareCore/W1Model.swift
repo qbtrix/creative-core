@@ -20,7 +20,9 @@ public struct LayerMask: Codable, Sendable, Hashable {
     public var mode: MaskMode
     /// Edge softness in points.
     public var feather: Double
+    /// Mask strength, 0...1: 1 limits fully, 0 leaves the layer unmasked.
     public var opacity: Double
+    /// When true the mask keeps what lies outside `path` instead of inside it.
     public var inverted: Bool
     public init(path: Path, mode: MaskMode = .add, feather: Double = 0, opacity: Double = 1, inverted: Bool = false) {
         (self.path, self.mode, self.feather, self.opacity, self.inverted) = (path, mode, feather, opacity, inverted)
@@ -33,23 +35,35 @@ public enum MaskMode: String, Codable, Sendable, Hashable { case add, subtract, 
 /// The layer draws only where `sourceLayerID`, in the same layer list, covers it.
 public struct TrackMatte: Codable, Sendable, Hashable {
     public var sourceLayerID: String
+    /// Which of the source's values limits this layer.
     public var kind: MatteKind
     public init(sourceLayerID: String, kind: MatteKind = .alpha) { (self.sourceLayerID, self.kind) = (sourceLayerID, kind) }
 }
 
+/// What a track matte reads from its source layer: its alpha or its luminance
+/// (each 0...1), or one minus that value for the inverted kinds.
 public enum MatteKind: String, Codable, Sendable, Hashable { case alpha, alphaInverted, luma, lumaInverted }
 
 /// A style over graphemes `start ..< start + length` of a text shape's string.
 /// Nil fields inherit the text shape's own style.
 public struct TextRun: Codable, Sendable, Hashable {
+    /// First grapheme of the run, an offset into the string's graphemes.
     public var start: Int
+    /// Number of graphemes the run covers, > 0.
     public var length: Int
+    /// Font family name.
     public var fontFamily: String?
+    /// Font size in points, > 0.
     public var fontSize: Double?
+    /// CSS-style font weight, 100...900: 400 is regular, 700 bold.
     public var weight: Int?
+    /// True sets the run in the family's italic face.
     public var italic: Bool?
+    /// Paint for the run's glyphs.
     public var fill: Fill?
+    /// Extra space after each grapheme, in points; added to the paragraph's.
     public var tracking: Double?
+    /// Points the run's baseline is raised; negative lowers it.
     public var baselineShift: Double?
     public init(start: Int, length: Int, fontFamily: String? = nil, fontSize: Double? = nil, weight: Int? = nil,
                 italic: Bool? = nil, fill: Fill? = nil, tracking: Double? = nil, baselineShift: Double? = nil) {
@@ -61,10 +75,15 @@ public struct TextRun: Codable, Sendable, Hashable {
 /// Line layout of a text shape. `lineHeight` is a multiple of the font size;
 /// a nil `boxWidth` means one line per paragraph, with no wrapping.
 public struct ParagraphStyle: Codable, Sendable, Hashable {
+    /// How each line sits in the box.
     public var alignment: TextAlignment
+    /// Line gap as a multiple of the font size, 0.5...4.
     public var lineHeight: Double
+    /// Extra space after each grapheme, in points, for the whole shape.
     public var tracking: Double
+    /// Extra space in points added after each paragraph (at each newline).
     public var paragraphSpacing: Double
+    /// Wrap width in points, > 0; nil means no wrapping.
     public var boxWidth: Double?
     public init(alignment: TextAlignment = .leading, lineHeight: Double = 1.2, tracking: Double = 0,
                 paragraphSpacing: Double = 0, boxWidth: Double? = nil) {
@@ -73,20 +92,28 @@ public struct ParagraphStyle: Codable, Sendable, Hashable {
     }
 }
 
+/// Where a line sits in the box: against its start, centred, against its
+/// end, or justified (spaces stretched to fill every line but a paragraph's last).
 public enum TextAlignment: String, Codable, Sendable, Hashable { case leading, center, trailing, justified }
 
-/// Text set along `path`, starting `startOffset` points from its start.
+/// Text set along `path`, starting `startOffset` along it.
 public struct TextOnPath: Codable, Sendable, Hashable {
+    /// The path the baseline follows.
     public var path: Path
+    /// Where the text starts, as a fraction of the path's length: 0 is its start, 0.5 its middle.
     public var startOffset: Double
+    /// Reverses the path, so the text reads the other way and sits on its other side.
     public var flipped: Bool
     public init(path: Path, startOffset: Double = 0, flipped: Bool = false) {
         (self.path, self.startOffset, self.flipped) = (path, startOffset, flipped)
     }
 }
 
+/// A colour value at a frame of one of a layer's `colorTracks`.
 public struct ColorKeyframe: Codable, Sendable, Hashable {
+    /// Frame in 0...the scene's duration.
     public var frame: Int
+    /// The colour, each channel 0...1.
     public var value: Color
     /// Easing applied from this keyframe to the next one.
     public var easing: Easing
@@ -95,8 +122,11 @@ public struct ColorKeyframe: Codable, Sendable, Hashable {
     }
 }
 
+/// A shape's geometry at a frame of a `ShapeTrack`.
 public struct PathKeyframe: Codable, Sendable, Hashable {
+    /// Frame in 0...the scene's duration.
     public var frame: Int
+    /// The shape's path at this frame.
     public var path: Path
     /// Easing applied from this keyframe to the next one.
     public var easing: Easing

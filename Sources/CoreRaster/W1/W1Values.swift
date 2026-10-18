@@ -80,7 +80,9 @@ public struct HSLAdjustment: Hashable, Sendable {
 }
 
 /// The black-and-white mix: how much each hue band contributes to the gray,
-/// in percent, and an optional tint laid over the result.
+/// each in percent, -200...300, and an optional tint laid over the result.
+/// The default mix is 40, 60, 40, 60, 20, 80 with no tint. The tone ops clamp
+/// a value outside that range.
 public struct GrayMix: Hashable, Sendable {
     public var reds, yellows, greens, cyans, blues, magentas: Float
     public var tint: RGBA?
@@ -98,8 +100,10 @@ public struct GrayMix: Hashable, Sendable {
 }
 
 /// The channel mixer. Each output channel is a vector (r, g, b, constant):
-/// out = r·R + g·G + b·B + constant. When `monochrome` is set, `red` alone
-/// makes a gray written to all three channels.
+/// out = r·R + g·G + b·B + constant, on linear values in 0...1. The weights are
+/// fractions (1 is 100%, each -2...2) and the constant is added in -1...1, so
+/// (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0) changes nothing. When `monochrome`
+/// is set, `red` alone makes a gray written to all three channels.
 public struct ChannelMatrix: Hashable, Sendable {
     public var red, green, blue: SIMD4<Float>
     public var monochrome: Bool
@@ -112,8 +116,10 @@ public struct ChannelMatrix: Hashable, Sendable {
     }
 }
 
-/// The color balance: an (r, g, b) shift for each tone range, and whether
-/// the result keeps each pixel's luminosity.
+/// The color balance: an (r, g, b) shift for each tone range, each component
+/// in -100...100 (positive moves toward that channel, 0 changes nothing), and
+/// whether the result keeps each pixel's luminosity. The tone ops clamp a value
+/// outside that range.
 public struct ToneBalance: Hashable, Sendable {
     public var shadows, midtones, highlights: SIMD3<Float>
     public var preserveLuminosity: Bool
@@ -165,8 +171,11 @@ public struct ColorLUT: Hashable, Sendable {
     }
 }
 
-/// A non-destructive effect on a layer's pixels. Distances and radii are in
-/// pixels, angles in degrees, amounts and intensities as each op documents.
+/// A non-destructive effect on a layer's pixels. Distances, radii, offsets and
+/// widths are in pixels, 0...1,000; angles in degrees. Denoise `strength` and
+/// `detail` are 0...1 (strength 0 changes nothing), clarity `amount` is
+/// -100...100 (0 changes nothing, negative softens), glow `intensity` is 0...1
+/// (0 changes nothing). The effect ops throw on a value outside its range.
 public enum LayerEffect: Hashable, Sendable {
     case boxBlur(radius: Double), motionBlur(degrees: Double, distance: Double), denoise(strength: Double, detail: Double)
     case clarity(amount: Double, radius: Double), glow(color: RGBA, radius: Double, intensity: Double, inner: Bool)
