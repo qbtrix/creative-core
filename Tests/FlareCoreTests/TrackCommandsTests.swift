@@ -148,10 +148,15 @@ import Testing
         #expect(merged == [true, false, false])
         // A drag over two frames under one coalesce key keeps both keys and undoes in one step.
         var engine = CommandEngine(document: Fixtures.document())
-        for (frame, value) in [(10, Self.red), (10, Self.blue), (20, Self.red)] { try engine.perform(key(frame, value), coalesceKey: "drag") }
-        #expect(fills(engine) == [ColorKeyframe(frame: 10, value: Self.blue), ColorKeyframe(frame: 20, value: Self.red)])
+        let steps: [(Int, Color, Easing)] = [(10, Self.red, .linear), (10, Self.blue, .hold), (20, Self.red, .linear)]
+        for (frame, value, easing) in steps { try engine.perform(key(frame, value, easing), coalesceKey: "drag") }
+        let dragged = [ColorKeyframe(frame: 10, value: Self.blue, easing: .hold), ColorKeyframe(frame: 20, value: Self.red)]
+        #expect(fills(engine) == dragged)
         try engine.undo()
         #expect(engine.document == Fixtures.document() && !engine.canUndo)
+        // Redo re-executes the merged command, so it must carry the last step's value and easing.
+        try engine.redo()
+        #expect(fills(engine) == dragged)
     }
 
     @Test
@@ -212,18 +217,27 @@ import Testing
         #expect(engine.document == Fixtures.document())
     }
 
-    /// A text target past the layer's texts is a bad index, not a missing shape.
+    /// A text target past the layer's texts throws shapeNotFound, as the text
+    /// commands do; a text target counts the layer's texts, not its shapes.
     @Test
-    func missingTextIsInvalidIndex() throws {
+    func missingTextIsShapeNotFound() throws {
         var start = Fixtures.document()
         let ball = try #require(start.scenes[0].layers.firstIndex { $0.id == "ball" })
-        start.scenes[0].layers[ball].texts = [TextShape(string: "Hi", fontFamily: "Sans", fontSize: 12, position: Point(x: 1, y: 2))]
+        let hi = TextShape(string: "Hi", fontFamily: "Sans", fontSize: 12, position: Point(x: 1, y: 2))
+        start.scenes[0].layers[ball].texts = [hi, hi]
         var engine = CommandEngine(document: start)
-        #expect(throws: CommandError.invalidIndex(3)) { try engine.perform(key(0, Self.red, .linear, .text(index: 3))) }
-        #expect(throws: CommandError.invalidIndex(3)) {
+        #expect(throws: CommandError.shapeNotFound(3)) { try engine.perform(RemoveTextShape(owner: Self.owner, layerID: "ball", index: 3)) }
+        #expect(throws: CommandError.shapeNotFound(3)) { try engine.perform(key(0, Self.red, .linear, .text(index: 3))) }
+        #expect(throws: CommandError.shapeNotFound(3)) {
             try engine.perform(RemoveColorKeyframe(owner: Self.owner, layerID: "ball", target: .text(index: 3), frame: 0))
         }
+        #expect(throws: CommandError.shapeNotFound(3)) {
+            try engine.perform(MoveColorKeyframes(owner: Self.owner, layerID: "ball", target: .text(index: 3), frames: [], by: 1))
+        }
         #expect(engine.document == start)
+        // Text 1 exists although "ball" has one shape.
+        try engine.perform(key(0, Self.red, .linear, .text(index: 1)))
+        #expect(engine.document.scenes[0].layers[ball].colorTracks["text.1"] == [ColorKeyframe(frame: 0, value: Self.red)])
     }
 
     /// Removing a track's last key removes the track (nil, never []), and undo restores it.

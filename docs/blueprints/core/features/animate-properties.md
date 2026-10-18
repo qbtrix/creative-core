@@ -65,7 +65,7 @@ The model types are `engine-contracts`'. This feature adds:
 // Sources/FlareCore/TrackCommands.swift (AP-1 stubs, AP-3 bodies)
 public enum TrackTarget: Hashable, Codable, Sendable { case fill(shape: Int), stroke(shape: Int), text(index: Int)  // colour tracks only
     public var key: String { get } }                                         // "fill.<i>", "stroke.<i>", "text.<i>" in Layer.colorTracks
-// colour commands: a missing fill/stroke shape throws shapeNotFound(i), a missing text invalidIndex(i)
+// colour commands: a missing fill/stroke shape or text throws shapeNotFound(i), as the text commands do
 public struct SetColorKeyframe: LayerCommand { owner, layerID, target: TrackTarget, frame: Int, value: Color, easing: Easing }   // steps on one key merge under one coalesceKey
 public struct RemoveColorKeyframe: LayerCommand { owner, layerID, target: TrackTarget, frame: Int }
 public struct MoveColorKeyframes: LayerCommand { owner, layerID, target: TrackTarget, frames: [Int], by: Int }                 // all or nothing

@@ -27,7 +27,7 @@ public enum TrackCommands {
     /// Replaces `target`'s colour track on the editable layer with what `edit`
     /// makes of it (given the track, empty if none, and the owner's duration);
     /// an empty result removes the track. Returns the track it replaced.
-    /// A missing shape throws shapeNotFound, a missing text invalidIndex.
+    /// A missing shape or text throws shapeNotFound, as the text commands do.
     static func editColorTrack(
         _ document: inout Document, _ owner: LayerOwner, _ layerID: String, _ target: TrackTarget,
         _ edit: ([ColorKeyframe], Int) throws -> [ColorKeyframe]
@@ -37,10 +37,7 @@ public enum TrackCommands {
         case .symbol(let id): try document.symbols[document.symbolIndex(id)].durationFrames
         }
         return try document.withEditableLayer(owner, layer: layerID) { layer in
-            guard target.exists(in: layer) else {
-                if case .text(let index) = target { throw CommandError.invalidIndex(index) }
-                throw CommandError.shapeNotFound(target.index)
-            }
+            guard target.exists(in: layer) else { throw CommandError.shapeNotFound(target.index) }
             let old = layer.colorTracks[target.key]
             let new = try edit(old ?? [], duration)
             layer.colorTracks[target.key] = new.isEmpty ? nil : new
@@ -94,8 +91,8 @@ public enum TrackTarget: Hashable, Codable, Sendable {
 /// Sets the colour key at `frame` on `target`'s track of `owner`'s layer,
 /// adding it or replacing the key there. Throws invalidColor unless every
 /// channel is in 0...1, invalidFrame outside 0...the owner's duration,
-/// shapeNotFound(i) for a missing fill or stroke shape and invalidIndex(i) for
-/// a missing text. Performed repeatedly with the same `coalesceKey`, steps on
+/// shapeNotFound(i) for a missing fill or stroke shape or a missing text.
+/// Performed repeatedly with the same `coalesceKey`, steps on
 /// one key (same owner, layer, target and frame) merge into one undo step.
 public struct SetColorKeyframe: LayerParamsCommand {
     public static let id = "colorKey.set"
@@ -158,8 +155,8 @@ public struct SetColorKeyframe: LayerParamsCommand {
 
 /// Removes the colour key at `frame` from `target`'s track of `owner`'s
 /// layer, and the track with its last key; throws keyframeNotFound if there
-/// is no key there, shapeNotFound(i) for a missing fill or stroke shape and
-/// invalidIndex(i) for a missing text.
+/// is no key there, shapeNotFound(i) for a missing fill or stroke shape or a
+/// missing text.
 public struct RemoveColorKeyframe: LayerParamsCommand {
     public static let id = "colorKey.remove"
     public var label: String { "Remove Color Keyframe" }
@@ -203,8 +200,7 @@ public struct RemoveColorKeyframe: LayerParamsCommand {
 /// key, invalidFrame(the key's frame) if a key would leave 0...the owner's
 /// duration (the number names the key that could not move, not where it
 /// would land), frameOccupied if one would land on a key that is not moving,
-/// shapeNotFound(i) for a missing fill or stroke shape and invalidIndex(i) for
-/// a missing text.
+/// shapeNotFound(i) for a missing fill or stroke shape or a missing text.
 public struct MoveColorKeyframes: LayerParamsCommand {
     public static let id = "colorKey.move"
     public var label: String { "Move Color Keyframes" }
