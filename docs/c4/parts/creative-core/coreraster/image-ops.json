@@ -1,7 +1,7 @@
 {
   "id": "image-ops",
   "name": "Image Operations",
-  "description": "Masks, resampling, crop, quarter turns and rotation by any angle with the straighten crop, blur, tone adjustments and histograms (levels, curves and histograms on linear or sRGB-encoded values) and cloning from an offset through a mask over PixelBuffer.",
+  "description": "Masks, resampling, crop, quarter turns and rotation by any angle with the straighten crop, blur, tone adjustments and histograms (levels, curves and histograms on linear or sRGB-encoded values) and cloning from an offset through a mask over PixelBuffer. W1/ declares the values the W1 engines share (AffineMatrix, ColorLUT, LayerEffect and the tone, matte, fill and gradient values), with no operations. Masks/ holds mask feathering, contours and mattes read from a buffer. Tone/ holds the color-family tone ops and the auto-tone suggestion. Effects/ holds the layer effects a PixelBuffer applies. Affine/ holds transforms through an AffineMatrix, flips and canvas padding. Fill/ holds flood fill by tolerance and raster gradient fills. Heal/ holds healing from sampled source pixels. Hash/ holds image hashes for comparing buffers.",
   "technology": "Swift 6, Foundation",
   "paths": [
     "Sources/CoreRaster/Mask.swift",
@@ -11,7 +11,15 @@
     "Sources/CoreRaster/Adjustments.swift",
     "Sources/CoreRaster/Blur.swift",
     "Sources/CoreRaster/Histogram.swift",
-    "Sources/CoreRaster/Retouch.swift"
+    "Sources/CoreRaster/Retouch.swift",
+    "Sources/CoreRaster/W1/",
+    "Sources/CoreRaster/Masks/",
+    "Sources/CoreRaster/Tone/",
+    "Sources/CoreRaster/Effects/",
+    "Sources/CoreRaster/Affine/",
+    "Sources/CoreRaster/Fill/",
+    "Sources/CoreRaster/Heal/",
+    "Sources/CoreRaster/Hash/"
   ],
   "order": 30
 }

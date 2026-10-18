@@ -1,0 +1,23 @@
+[
+  {
+    "note": "the affine inverse treats a negative determinant as singular",
+    "file": "Sources/CoreRaster/W1/W1Values.swift",
+    "anchor": "if det == 0 || !det.isFinite { return nil }",
+    "replacement": "if det < 1e-300 || !det.isFinite { return nil }",
+    "filter": "W1ValuesTests.singularHasNoInverse"
+  },
+  {
+    "note": "the color LUT accepts a table longer than size cubed",
+    "file": "Sources/CoreRaster/W1/W1Values.swift",
+    "anchor": "if table.count != count {",
+    "replacement": "if table.count < count {",
+    "filter": "W1ValuesTests.refusesShortTable"
+  },
+  {
+    "note": "the color LUT accepts a non-finite green entry",
+    "file": "Sources/CoreRaster/W1/W1Values.swift",
+    "anchor": "guard table.allSatisfy({ $0.x.isFinite && $0.y.isFinite && $0.z.isFinite }) else {",
+    "replacement": "guard table.allSatisfy({ $0.x.isFinite && $0.z.isFinite }) else {",
+    "filter": "W1ValuesTests.refusesNonFiniteEntry"
+  }
+]
