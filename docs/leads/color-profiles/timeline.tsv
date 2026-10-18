@@ -27,3 +27,4 @@ utc	stage	event	ref	note
 2026-10-18T10:39Z	3	pr-merged	#468	CP-3 merged 9021b2e, CoreColor.ICCRead 3/3
 2026-10-18T10:40Z	3	stage-start	wave-4	CP-4, CP-5 launched (wf_92d29b5f-79b) on 9021b2e
 2026-10-18T10:47Z	-	heartbeat	-	waiting
+2026-10-18T10:50Z	4	pr-merged	#469	CP-5 merged aac58b4
