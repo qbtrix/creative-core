@@ -11,3 +11,6 @@ utc	stage	event	ref	note
 2026-10-18T22:03Z	3	wave-start	W2	FX-1 on dev 15e96dd4
 2026-10-18T22:25Z	3	heartbeat	W2	FX-1 builder running, no PR yet
 2026-10-18T22:45Z	3	pr-opened	#577	task FX-1 head b438a62d
+2026-10-18T22:47Z	3	pr-merged	#577	task FX-1
+2026-10-18T22:47Z	3	wave-end	W2	wave 2 merged
+2026-10-18T22:47Z	3	wave-start	W3	FX-3 on dev 4feaaf9f

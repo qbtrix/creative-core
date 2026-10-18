@@ -2,9 +2,9 @@
 
 Issue: #433 · Packet: docs/blueprints/core/features/effects-engine.md
 Run: act-1a150bfbcf7-sfwy · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
-Stage: 3 wave 2
-Base: 15e96dd47c720025f5ae49b3649608deb65ab216
-Next: wave 2 builder running (FX-1 checks-first suites); then wave 3 once it merges
+Stage: 3 wave 3
+Base: 4feaaf9fac3cc050901f8b459a0908515a927f54
+Next: FX-3 building; FX-4 and FX-5 after it (3 builders max across the line); then W4 FX-6
 
 Line lead for #434, #433 and #432 (rule 19); one wave plan across the three
 features, bookkeeping per feature. Packet v3 (has a Slices table).
@@ -14,8 +14,8 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 |---|---|---|---|---|---|---|---|---|
 | FX-0 | 1 | FX-a | Stubs for the contract slice's signatures (rule 18): `applying(_: LayerEffect)`, `boxBlurred`, `motionBlurred`, `denoised`, `clarity`, `DistanceField`, `stroked`, `glowing`, `shadowed`; each throws `RasterError.invalid("not built")` | `Sources/CoreRaster/Effects/{Effects,BlurFamily,DenoiseClarity,DistanceField,AlphaEffects,AlphaEffects+Light}.swift`, `Tests/CoreRasterTests/EffectStubTests.swift` | `EffectStubTests` | none (no invariant) | #565 | merged |
 | FX-2 | 1 | FX-a | Reference images (disc, 1 px line, noisy flat patch with an edge, glyph mask) and analytic expectations | `Tests/CoreRasterTests/EffectFixtures.swift` | fixtures build | none | #570 | merged |
-| FX-1 | 2 | FX-a | Checks first: five suites disabled by name | `Tests/CoreRasterTests/{BlurFamily,DenoiseClarity,AlphaEffect,DistanceField}Tests.swift`, `Tests/CoreRenderTests/CPUEffectTests.swift` | suites compile, disabled | none | #577 | open |
-| FX-3 | 3 | FX-blur | `boxBlurred`, `motionBlurred`; turns on `BlurFamilyTests` | `Sources/CoreRaster/Effects/BlurFamily.swift`, its tests, `Tests/mutations/CoreRaster.BlurFamily.json` | `BlurFamilyTests` | 3 (packet) | | planned |
+| FX-1 | 2 | FX-a | Checks first: five suites disabled by name | `Tests/CoreRasterTests/{BlurFamily,DenoiseClarity,AlphaEffect,DistanceField}Tests.swift`, `Tests/CoreRenderTests/CPUEffectTests.swift` | suites compile, disabled | none | #577 | merged |
+| FX-3 | 3 | FX-blur | `boxBlurred`, `motionBlurred`; turns on `BlurFamilyTests` | `Sources/CoreRaster/Effects/BlurFamily.swift`, its tests, `Tests/mutations/CoreRaster.BlurFamily.json` | `BlurFamilyTests` | 3 (packet) | | building |
 | FX-4 | 3 | FX-blur | `denoised`, `clarity`; turns on `DenoiseClarityTests` | `Sources/CoreRaster/Effects/DenoiseClarity.swift`, its tests, `Tests/mutations/CoreRaster.DenoiseClarity.json` | `DenoiseClarityTests` | 2 (packet) | | planned |
 | FX-5 | 3 | FX-alpha | `DistanceField`, `stroked`; turns on `DistanceFieldTests` and stroke cases | `Sources/CoreRaster/Effects/DistanceField.swift`, `Sources/CoreRaster/Effects/AlphaEffects.swift`, both tests, `Tests/mutations/CoreRaster.DistanceField.json` | `DistanceFieldTests`, `AlphaEffectTests` | 3 (packet) | | planned |
 | FX-6 | 4 | FX-alpha | `glowing`, `shadowed`; their cases | `Sources/CoreRaster/Effects/AlphaEffects+Light.swift`, `Tests/CoreRasterTests/AlphaEffectLightTests.swift`, `Tests/mutations/CoreRaster.AlphaEffects.json` | `AlphaEffectLightTests` | 2 (packet) | | planned |
