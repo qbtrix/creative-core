@@ -1,0 +1,8 @@
+[
+  {"note": "dispatcher routes adjusted by .adjust always, so a colour case goes to a backend that lists only .adjust", "filter": "RenderDispatcherW1Tests.colorCasesFallBack", "file": "Sources/CoreRender/RenderDispatcher.swift",
+   "anchor": "try run(adjustment.family, s) { try $0.adjusted($1, adjustment) }",
+   "replacement": "try run(.adjust, s) { try $0.adjusted($1, adjustment) }"},
+  {"note": "dispatcher routes the masked composite by .composite instead of its own family", "filter": "RenderDispatcherW1Tests.maskedCompositeIsItsOwnFamily", "file": "Sources/CoreRender/RenderDispatcher.swift",
+   "anchor": "try onBackdrop(.maskedComposite, s, &b) {",
+   "replacement": "try onBackdrop(.composite, s, &b) {"}
+]
