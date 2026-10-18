@@ -3,8 +3,7 @@
 // and rebuilt from the preview files, skipping files whose header is damaged;
 // files gone from disk and orphan temp files are cleared at open; reads flush
 // the index at most every 2 s and on close, merged with the index on disk; and
-// a seeded fuzz of hostile indexes. The checks that read volumes through
-// `entries(on:)` and `availability` wait on PC-5.
+// a seeded fuzz of hostile indexes; rebuilt entries keep their volume and path.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -51,7 +50,7 @@ private func stamp(_ url: URL) throws -> String {
         #expect(store.usedBytes == 200)
     }
 
-    @Test(.disabled("waits on PC-5")) func rebuiltEntriesKeepTheirVolume() throws {
+    @Test func rebuiltEntriesKeepTheirVolume() throws {
         let scratch = try PreviewScratch()
         try fill(scratch.folder)
         try Data("{".utf8).write(to: scratch.index)

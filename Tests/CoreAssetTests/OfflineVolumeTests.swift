@@ -1,8 +1,8 @@
 // OfflineVolumeTests.swift: previews of originals on removable volumes (PC-5).
 // An entry whose volume isn't mounted still reads its bytes and reports
 // `.offline(volume)`; `entries(on:)` lists one volume's entries; an entry with
-// no volume is always online. Written first from the packet and disabled until
-// PC-5 builds volume entries and `availability`.
+// no volume is always online; volumes match by id, so a renamed one still
+// lists its entries.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -15,7 +15,7 @@ private let cardA = VolumeRef(id: "vol-a", name: "Card A")
 private let cardB = VolumeRef(id: "vol-b", name: "Card B")
 
 @Suite struct OfflineVolumeTests {
-    @Test(.disabled("waits on PC-5")) func unmountedIsOffline() throws {
+    @Test func unmountedIsOffline() throws {
         let scratch = try PreviewScratch()
         let store = try ThumbnailStore(folder: scratch.folder, budgetBytes: 1 << 20)
         let key = previewKey("IMG_0001")
@@ -27,7 +27,7 @@ private let cardB = VolumeRef(id: "vol-b", name: "Card B")
         #expect(store.availability(of: previewKey("absent"), mounted: []) == nil)
     }
 
-    @Test(.disabled("waits on PC-5")) func noVolumeIsOnline() throws {
+    @Test func noVolumeIsOnline() throws {
         let scratch = try PreviewScratch()
         let store = try ThumbnailStore(folder: scratch.folder, budgetBytes: 1 << 20)
         let key = previewKey("loose")
@@ -36,7 +36,7 @@ private let cardB = VolumeRef(id: "vol-b", name: "Card B")
         #expect(store.availability(of: key, mounted: ["vol-a"]) == .online)
     }
 
-    @Test(.disabled("waits on PC-5")) func entriesListOnlyThatVolume() throws {
+    @Test func entriesListOnlyThatVolume() throws {
         let scratch = try PreviewScratch()
         let store = try ThumbnailStore(folder: scratch.folder, budgetBytes: 1 << 20)
         try store.write(previewBytes(1), for: previewKey("a1"), volume: cardA, relativePath: "DCIM/a1.jpg")
@@ -53,7 +53,18 @@ private let cardB = VolumeRef(id: "vol-b", name: "Card B")
         #expect(store.entries(on: VolumeRef(id: "vol-c", name: "Card C")).isEmpty)
     }
 
-    @Test(.disabled("waits on PC-5")) func offlineEntriesSurviveRelaunch() throws {
+    @Test func renamedVolumeMatchesById() throws {
+        let scratch = try PreviewScratch()
+        let store = try ThumbnailStore(folder: scratch.folder, budgetBytes: 1 << 20)
+        try store.write(previewBytes(1), for: previewKey("a1"), volume: cardA, relativePath: "DCIM/a1.jpg")
+        try store.write(previewBytes(2), for: previewKey("b1"), volume: VolumeRef(id: "vol-b", name: "Card A"), relativePath: "b1.jpg")
+        let renamed = VolumeRef(id: "vol-a", name: "Holiday Card")
+        #expect(store.entries(on: renamed).map(\.key) == [previewKey("a1")])
+        #expect(store.entries(on: renamed).map(\.volume) == [cardA])
+        #expect(store.availability(of: previewKey("a1"), mounted: [renamed.id]) == .online)
+    }
+
+    @Test func offlineEntriesSurviveRelaunch() throws {
         let scratch = try PreviewScratch()
         let key = previewKey("IMG_0001")
         do {
