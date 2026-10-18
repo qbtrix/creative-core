@@ -71,3 +71,4 @@ utc	stage	event	ref	note
 2026-10-18T16:29Z	build	CP-8	#529	CP-8 PR #529 open: head 4e5f426, gate PASS (cp8-ci-c3.log), ORADeep 3/3, 6 files +156/-17, Refs #441. Lead verifying CodecWalkTests (#526) on the merge with dev.
 2026-10-18T16:31Z	fix	CP-7-rebased	#523	#523 rebased over #518 (PSDRead conflict: kept #518 merged-image rule, CP-7 passes depth-scaled plane width), head 48d3c51, gate PASS try 2, PSDDeep 2/2, 393 lines; body Refs #441.
 2026-10-18T16:32Z	verify	CP-deep	40249d5	CP-7 #523 and CP-8 #529 merged. Lead check on dev 40249d5: CodecWalk/ORADeep/PSDDeep/CodecRoundTrip/OpenRaster/PSD 41 tests pass. Slice-Done waits on a dev Linux run including 40249d5.
+2026-10-18T16:37Z	anatomy	wait	cp2-b	CP-7/CP-8 on dev 40249d5 (41 tests pass); CP-deep Slice-Done waits on a green dev Linux job; cp2-b running
