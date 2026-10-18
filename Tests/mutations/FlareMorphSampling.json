@@ -12,5 +12,19 @@
     "anchor": "out.append(.cubic(control1: lerp(ha.0, hb.0), control2: lerp(ha.1, hb.1), to: lerp(pa, pb)))",
     "replacement": "out.append(.cubic(control1: ha.0, control2: ha.1, to: lerp(pa, pb)))",
     "filter": "MorphSamplingTests"
+  },
+  {
+    "note": "morph ignores the key's easing and blends by the raw fraction",
+    "file": "Sources/FlareCore/Sampling+TracksMorph.swift",
+    "anchor": "let t = a.easing.value(at: (frame - Double(a.frame)) / span)",
+    "replacement": "let t = (frame - Double(a.frame)) / span",
+    "filter": "MorphSamplingTests"
+  },
+  {
+    "note": "quad to cubic elevation puts handles one third of the way to the control",
+    "file": "Sources/FlareCore/Sampling+TracksMorph.swift",
+    "anchor": "Point(x: p.x + 2 * (c.x - p.x) / 3,",
+    "replacement": "Point(x: p.x + (c.x - p.x) / 3,",
+    "filter": "MorphSamplingTests"
   }
 ]

@@ -19,8 +19,9 @@ public enum TrackCommands {
         SetShapeKeyframe.self, RemoveShapeKeyframe.self,
     ]
 
-    /// What a stub command throws until the task that builds it merges.
-    static func notBuilt(_ task: String) -> CommandError { .invalidDocument("not built: \(task)") }
+    /// What a stub command with id `id` throws until its feature builds it,
+    /// e.g. "shapeKey.set is not built yet (animate-properties)".
+    static func notBuilt(_ id: String) -> CommandError { .notBuilt("\(id) is not built yet (animate-properties)") }
 
     /// Replaces `target`'s colour track on the editable layer with what `edit`
     /// makes of it (given the track, empty if none, and the owner's duration);

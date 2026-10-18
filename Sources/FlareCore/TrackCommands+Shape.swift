@@ -1,7 +1,7 @@
 // TrackCommands+Shape.swift: the shape key commands, which key a shape's
 // path for morphing. Stubs today (animate-properties AP-1): they decode,
 // encode and register in `TrackCommands.all`, but execute and undo throw
-// `CommandError.invalidDocument("not built: AP-4")` until AP-4 gives them
+// `CommandError.notBuilt("<id> is not built yet (animate-properties)")` until AP-4 gives them
 // bodies, including the rule that makes a new key compatible with the track.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
@@ -12,7 +12,7 @@ import Foundation
 /// Sets the path key at `frame` on the shape track of `owner`'s layer's shape
 /// `shape`, adding it or replacing the key there. The key is made compatible
 /// with the track's other keys (same contours and anchor counts) without
-/// changing how it draws. Stub: execute and undo throw "not built: AP-4".
+/// changing how it draws. Stub: execute and undo throw `CommandError.notBuilt`.
 public struct SetShapeKeyframe: LayerParamsCommand {
     public static let id = "shapeKey.set"
     public var label: String { "Set Shape Keyframe" }
@@ -35,12 +35,12 @@ public struct SetShapeKeyframe: LayerParamsCommand {
                   path: params.path, easing: params.easing)
     }
 
-    public mutating func execute(_ document: inout Document) throws { throw TrackCommands.notBuilt("AP-4") }
-    public func undo(_ document: inout Document) throws { throw TrackCommands.notBuilt("AP-4") }
+    public mutating func execute(_ document: inout Document) throws { throw TrackCommands.notBuilt(Self.id) }
+    public func undo(_ document: inout Document) throws { throw TrackCommands.notBuilt(Self.id) }
 }
 
 /// Removes the path key at `frame` from the shape track of `owner`'s layer's
-/// shape `shape`. Stub: execute and undo throw "not built: AP-4".
+/// shape `shape`. Stub: execute and undo throw `CommandError.notBuilt`.
 public struct RemoveShapeKeyframe: LayerParamsCommand {
     public static let id = "shapeKey.remove"
     public var label: String { "Remove Shape Keyframe" }
@@ -59,6 +59,6 @@ public struct RemoveShapeKeyframe: LayerParamsCommand {
         self.init(owner: owner, layerID: layerID, shape: params.shape, frame: params.frame)
     }
 
-    public mutating func execute(_ document: inout Document) throws { throw TrackCommands.notBuilt("AP-4") }
-    public func undo(_ document: inout Document) throws { throw TrackCommands.notBuilt("AP-4") }
+    public mutating func execute(_ document: inout Document) throws { throw TrackCommands.notBuilt(Self.id) }
+    public func undo(_ document: inout Document) throws { throw TrackCommands.notBuilt(Self.id) }
 }
