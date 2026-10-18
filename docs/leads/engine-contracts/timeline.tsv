@@ -74,3 +74,4 @@ utc	stage	event	ref	note
 2026-10-18T15:32Z	-	heartbeat	-	waiting
 2026-10-18T15:50Z	-	heartbeat	-	waiting
 2026-10-18T16:08Z	-	heartbeat	-	waiting
+2026-10-18T16:12Z	fix	ec4-a	#524	R4 fixes: 5/5 minor fixed, head 9c53f62, gate PASS, mutation FlareTrackCommands 10/10 FlareW1Model 27/27 CoreRenderFake 14/14 CoreRenderDispatcherW1 5/5. Follow-up: TextCommands missing text still shapeNotFound.
