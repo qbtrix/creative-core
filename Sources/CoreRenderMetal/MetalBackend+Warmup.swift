@@ -33,7 +33,7 @@ extension MetalBackend {
     /// kernel, and each composite family has one kernel per blend mode in it (`compositeKernel(for:)`).
     static func builtInPipelines(for op: RenderOp) -> [(key: PipelineKey, source: String)] {
         switch op {
-        case .display: return [(DisplayShader.key, DisplayShader.source)]
+        case .display: return [(DisplayShader.key, DisplayShader.source), (DisplayShader.targetKey, DisplayShader.source)]
         case .transform: return [(TransformShader.key, TransformShader.source)]
         case .resample: return [(ResampleShader.pass, ResampleShader.source), (ResampleShader.scatter, ResampleShader.source)]
         case .blur:

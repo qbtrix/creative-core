@@ -88,7 +88,7 @@ extension MetalBackend {
     }
 
     /// Binds `values` as a small constant buffer (under 4 KB) at `index`.
-    private static func setConstants<T>(_ values: [T], on encoder: any MTLComputeCommandEncoder, index: Int) {
+    static func setConstants<T>(_ values: [T], on encoder: any MTLComputeCommandEncoder, index: Int) {
         values.withUnsafeBytes { raw in
             if let base = raw.baseAddress { encoder.setBytes(base, length: raw.count, index: index) }
         }
