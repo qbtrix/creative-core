@@ -1,9 +1,9 @@
 // ColorProfile.swift: an ICC matrix-and-curve colour profile as a plain value
 // (RGB or gray, from the ICC.1 specification), and the three built-in
 // profiles. Colourants are in the PCS, XYZ relative to D50, already adapted
-// (the `chad` step) so a transform needs no second adaptation. Reading lands
-// in ICCRead.swift (CP-3) and writing in ICCWrite.swift (CP-4); until then
-// both throw `ColorError.invalid("not built: <task>")`.
+// (the `chad` step) so a transform needs no second adaptation. Reading is in
+// ICCRead.swift; writing lands in ICCWrite.swift (CP-4) and until then throws
+// `ColorError.invalid("not built: CP-4")`.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -41,7 +41,7 @@ public struct ColorProfile: Hashable, Sendable {
     /// Reads ICC bytes. Matrix and curve only; LUT-based, CMYK and Lab
     /// profiles throw `.invalid` naming what they are.
     public init(iccData: Data) throws(ColorError) {
-        throw ColorError.invalid("not built: CP-3")
+        self = try ICCRead.profile(iccData)
     }
 
     /// Writes a v4 profile: `mluc` description, D50 `wtpt`, `chad`, colourants and curves.

@@ -1,6 +1,6 @@
 // ICCShapeTests.swift: the ICC contract exists with its exact signatures, the
-// unbuilt entry points throw `ColorError.invalid("not built: <task>")` instead
-// of trapping, and the three built-in profiles hold the values ICC.1 needs.
+// unbuilt entry points throw `ColorError.invalid("not built: <task>")` and a
+// bare header throws instead of trapping, and the three built-in profiles hold the values ICC.1 needs.
 import CoreColor
 import Testing
 #if canImport(FoundationEssentials)
@@ -9,10 +9,10 @@ import FoundationEssentials
 import Foundation
 #endif
 
-@Test func readStubThrowsNotBuilt() {
+@Test func readThrowsOnAHeaderAlone() {
     let header = Data([0, 0, 0, 128] + [UInt8](repeating: 0, count: 124))
-    #expect(throws: ColorError.invalid("not built: CP-3")) { try ColorProfile(iccData: header) }
-    #expect(throws: ColorError.invalid("not built: CP-3")) { try ColorProfile(iccData: Data()) }
+    #expect(throws: ColorError.self) { try ColorProfile(iccData: header) }
+    #expect(throws: ColorError.self) { try ColorProfile(iccData: Data()) }
 }
 
 @Test func writeStubThrowsNotBuilt() {

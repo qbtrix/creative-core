@@ -1,0 +1,23 @@
+[
+  {
+    "note": "icc read s15Fixed16 divided by 65535",
+    "file": "Sources/CoreColor/ICC/ICCRead.swift",
+    "anchor": "Double(Int32(bitPattern: try u32(at))) / 65536",
+    "replacement": "Double(Int32(bitPattern: try u32(at))) / 65535",
+    "filter": "ICCReadTests/colourantsExact"
+  },
+  {
+    "note": "icc read curv count 1 read as a table",
+    "file": "Sources/CoreColor/ICC/ICCRead.swift",
+    "anchor": "case 1: return .gamma(Double(try tag.u16(12)) / 256)",
+    "replacement": "case -1: return .gamma(Double(try tag.u16(12)) / 256)",
+    "filter": "ICCReadTests/gammaCurve"
+  },
+  {
+    "note": "icc read tag bounds <= for <, so a tag one byte past the end reads",
+    "file": "Sources/CoreColor/ICC/ICCRead.swift",
+    "anchor": "guard !overflow, length >= 8, end - 1 < size else",
+    "replacement": "guard !overflow, length >= 8, end - 1 <= size else",
+    "filter": "ICCFuzzTests/tagPastEndThrows"
+  }
+]

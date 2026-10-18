@@ -1,7 +1,7 @@
 {
   "id": "icc-profiles",
   "name": "ICC Profiles",
-  "description": "ColorProfile (an ICC matrix-and-curve profile: RGB or gray, colourants in XYZ D50 after Bradford adaptation, gamma, table and parametric curves) with the built-in sRGB, Display P3 and linear sRGB profiles, and ProfileTransform between two profiles through the D50 PCS. Reading ICC bytes, writing them and the transform's body are stubs that throw ColorError.invalid(\"not built: <task>\") until they land.",
+  "description": "ColorProfile (an ICC matrix-and-curve profile: RGB or gray, colourants in XYZ D50 after Bradford adaptation, gamma, table and parametric curves) with the built-in sRGB, Display P3 and linear sRGB profiles, the bounds-checked ICC reader (v2 and v4 matrix-and-curve profiles; LUT-based, CMYK and Lab profiles and damaged bytes throw ColorError), and ProfileTransform between two profiles through the D50 PCS. Writing ICC bytes and the transform's body are stubs that throw ColorError.invalid(\"not built: <task>\") until they land.",
   "technology": "Swift 6, Foundation",
   "paths": [
     "Sources/CoreColor/ICC/"

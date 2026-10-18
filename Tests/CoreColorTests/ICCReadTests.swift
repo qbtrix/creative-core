@@ -1,5 +1,5 @@
 // ICCReadTests.swift: CP-3's acceptance checks. Matrix-and-curve fixtures read colourants within 1e-6 and
-// their curves; gray reads one curve; LUT, CMYK and Lab profiles throw naming themselves. Disabled until CP-3.
+// their curves; gray reads one curve; LUT, CMYK and Lab profiles throw naming themselves.
 import CoreColor
 import Testing
 #if canImport(FoundationEssentials)
@@ -14,7 +14,6 @@ func readThrowsNaming(_ word: String, _ data: Data) -> Bool {
     return false
 }
 
-@Suite(.disabled("waits on CP-3"))
 struct ICCReadTests {
     @Test func colourantsExact() throws {
         for fixture in [ICCFixture.v2Gamma, .v4Parametric, .table] {
