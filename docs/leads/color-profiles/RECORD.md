@@ -29,12 +29,6 @@ Next: round 3 critic panel on c3e0225; CP-deep Slice-Done once a dev Linux job i
 | CP-9 | – | KJ-CP walk, budgets | ProfileWalkTests, ProfileBudgetTests | walk | none | | waits CP-6,7,8 |
 | CP-10 | – | parts' words, status, feature-done | parts, packet | – | – | | waits CP-9, layered-codecs |
 
-## Rounds
-| round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
-|---|---|---|---|---|---|---|---|---|
-| 1 | ca537c1 | CI: PASS | 12/12 | - | clarity, contract, compat, robustness, tests | 13 | cp1-a #504, cp1-b #503, cp1-d #509, cp1-e #515 (carries cp1-c) | no |
-| 2 | ad85831 | CI: PASS try 1 | 25/25 (ICCRead 7/7, ICCWrite 4/4, ProfileTransform 7/7, ProfileConvert 7/7) | - | clarity, contract, compat, robustness, tests | 8 | cp2-a #519 (3e56eee), cp2-b #532 (c3e0225) | no |
-
 ## Decisions
 - Merged: CP-1 #458, CP-2 #462 + #466, CP-3 #468, CP-5 #469, CP-4 #470, CP-6 #476 (73a3ac9).
 - engine-contracts round 3 (f7413a6) routed 3 findings here: #9 (major) no test that different whites adapt; #12 (minor) inversion guard half-covered; #13 (minor) equal-tag sharing unasserted. Fixer cp-r1 takes them.
@@ -58,4 +52,5 @@ Next: round 3 critic panel on c3e0225; CP-deep Slice-Done once a dev Linux job i
 |---|---|---|---|---|---|---|
 | 1 | ca537c1 | CI: PASS | 12/12 (ICCRead, ICCWrite, ProfileTransform, ProfileConvert) | clarity, contract, compat, robustness, tests | 13 (4 major) | cp1-a (CP-icc docs, exact built-in round trip, gray target), cp1-b (ICC read class/version/para guards), cp1-c (convert honours tone curves, typed throws) |
 | 2 | ad85831 | CI: PASS | 25/25 (ICCRead 7, ICCWrite 4, ProfileTransform 7, ProfileConvert 7) | clarity, contract, compat, robustness, tests | 8 (2 major), 0 refuted | cp2-a (convert input contract doc, parametric table doc, CP-5 tolerance in packet), cp2-b (ICC write messages, ProfileTransform guard tests and 3 mutations, every para type round trip); #1 left to CP-7/CP-8 |
+- Round 2 fixes merged: cp2-a #519 (3e56eee), cp2-b #532 (c3e0225).
 - CP-7 #523 and CP-8 #529 merged (40249d5); lead check on 40249d5: CodecWalk, ORADeep, PSDDeep, CodecRoundTrip, OpenRaster, PSD 41 tests pass.
