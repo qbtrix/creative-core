@@ -10,5 +10,6 @@ import Foundation
 
 /// The text run and style commands, registered in `CommandRegistry.builtIn`.
 public enum TextStyleCommands {
+    /// Every text-style command type, in registration order; empty until the first lands.
     public static let all: [any Command.Type] = []
 }

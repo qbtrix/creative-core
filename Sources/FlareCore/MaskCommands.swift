@@ -9,5 +9,6 @@ import Foundation
 
 /// The mask and track-matte commands, registered in `CommandRegistry.builtIn`.
 public enum MaskCommands {
+    /// Every mask and track-matte command type, in registration order; empty until the first lands.
     public static let all: [any Command.Type] = []
 }
