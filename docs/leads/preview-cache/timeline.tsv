@@ -43,3 +43,4 @@ utc	stage	event	ref	note
 2026-10-18T16:05Z	heartbeat	checking merges, dev CI, agents
 2026-10-18T16:22Z	pr	#525 PC-8 walk+budgets open, head e6b2056, CI PASS 1386; release relaunch 37.3/40ms, read 0.018/0.3ms, hash 1.21/1.5s, group 1.09/2s
 2026-10-18T16:22Z	finding	ThumbnailStore rewrites whole index per write: quadratic fill (debug 2000 fill 284 s); relaunch margin 7%; round 3 PC-a
+2026-10-18T16:28Z	merge	PC-8 #525 merged 16:21Z. Round 3: fixer lead/preview-cache-R3-1 launched for the ThumbnailStore quadratic index rewrite (PC-a). PC-9 feature-done waits on it. Dev CI run 370 (7fcd04d) queued.

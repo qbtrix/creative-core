@@ -72,3 +72,4 @@ Next: PC-4, PC-5 building (PC-3 #498 merged with round-2 recovery header); PC-ha
   The debug walk uses 200 previews.
 
   Round-3 finding for PC-a: ThumbnailStore rewrites its whole index on every write, so filling it is quadratic. A debug fill of 2,000 took 284 s. Relaunch has only 7% to spare, so the Mac budgets need checking at PC-z.
+- 2026-10-18T16:28Z PC-8 #525 merged 16:21Z. Round 3: fixer lead/preview-cache-R3-1 launched for the ThumbnailStore quadratic index rewrite (PC-a). PC-9 feature-done waits on it. Dev CI run 370 (7fcd04d) queued.
