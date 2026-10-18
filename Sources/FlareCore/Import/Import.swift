@@ -71,8 +71,10 @@ public enum LottieImport {
     /// array counts, skipped kinds (precomps, images, text) included. The
     /// 5,000th layer is read; the 5,001st throws `ImportError.tooLarge`.
     public static let maxLayers = 5_000
-    /// The deepest `gr` nesting read: 256 groups read, the 257th throws `tooLarge`.
-    public static let maxDepth = 256
+    /// The deepest `gr` nesting read: 250 nested groups read, the 251st throws
+    /// `ImportError.tooLarge`. Any JSON nesting past `2 * maxDepth + 12` (512,
+    /// the decoder's own cap) also throws `tooLarge`, before the JSON is decoded.
+    public static let maxDepth = 250
 
     /// The document in the Lottie JSON `data`, with what was skipped.
     public static func document(from data: Data) throws -> (Document, ImportReport) {
