@@ -21,15 +21,6 @@ import Foundation
     }
 }
 
-@Test func transformStubThrowsNotBuilt() {
-    #expect(throws: ColorError.invalid("not built: CP-5")) {
-        try ProfileTransform(from: .sRGB, to: .displayP3)
-    }
-    #expect(throws: ColorError.invalid("not built: CP-5")) {
-        try ProfileTransform(from: .sRGB, to: .sRGB)
-    }
-}
-
 @Test func builtInsMapWhiteToTheD50PCS() {
     // ICC.1 7.2.16: the PCS illuminant is D50 (0.9642, 1.0, 0.8249).
     for profile in [ColorProfile.sRGB, .displayP3, .linearSRGB] {
