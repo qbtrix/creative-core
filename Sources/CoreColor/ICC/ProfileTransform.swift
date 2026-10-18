@@ -107,7 +107,11 @@ public struct ProfileTransform: Sendable {
             throw ColorError.invalid("profile \(profile.name) needs \(want) curves, has \(profile.curves.count)")
         }
         var tones: [Tone] = []
-        for curve in profile.curves { tones.append(try Tone(curve)) }
+        for (channel, curve) in profile.curves.enumerated() {
+            do { tones.append(try Tone(curve)) } catch {
+                switch error { case .invalid(let why): throw ColorError.invalid("profile \(profile.name) curve \(channel): \(why)") }
+            }
+        }
         return profile.isGray ? [tones[0], tones[0], tones[0]] : tones
     }
 }

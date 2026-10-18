@@ -1,8 +1,18 @@
 // ProfileTransformTests.swift: CP-5's acceptance checks. sRGB to itself is identity within 1e-9, to P3 matches
 // CoreColor within `grid` (the built-ins sit on the ICC s15Fixed16 grid, CoreColor does not); a table inverts within 1e-5, outside 0...1 too; gray gives r == g == b; singular
-// colourants and a falling table throw; the built-in P3 colourants are CoreColor's P3 primaries adapted to D50.
+// colourants, a falling or dipping table and malformed curves throw; every para type round trips; the built-in P3 colourants are CoreColor's P3 primaries adapted to D50.
 import CoreColor
 import Testing
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import Foundation
+#endif
+#if canImport(Glibc)
+import Glibc
+#elseif canImport(Musl)
+import Musl
+#endif
 
 @Suite
 struct ProfileTransformTests {
@@ -72,6 +82,55 @@ struct ProfileTransformTests {
             let target = ColorProfile(name: "\(curve)", isGray: false, toXYZD50: ColorProfile.sRGB.toXYZD50,
                                       curves: [curve, curve, curve])
             #expect(throws: ColorError.self, "\(curve)") { try ProfileTransform(from: .sRGB, to: target) }
+        }
+        // A table that dips in the middle, and one that never rises, cannot be inverted by binary search.
+        for curve in [ProfileCurve.table([0, 0.8, 0.4, 1]), .table([0.5, 0.5])] {
+            let target = ColorProfile(name: "\(curve)", isGray: false, toXYZD50: ColorProfile.sRGB.toXYZD50,
+                                      curves: [curve, curve, curve])
+            #expect(throws: ColorError.self, "\(curve)") { try ProfileTransform(from: .sRGB, to: target) }
+        }
+    }
+
+    @Test func malformedCurvesThrow() {
+        // A para type out of range, a para type with too few parameters, and an RGB profile with 2 curves: each
+        // throws, where indexing the parameter counts, the parameters or the third curve would trap.
+        let g = ProfileCurve.gamma(2.2), m = ColorProfile.sRGB.toXYZD50
+        let targets = [
+            ColorProfile(name: "para type 5", isGray: false, toXYZD50: m, curves: [g, .parametric(type: 5, params: [1]), g]),
+            ColorProfile(name: "para short", isGray: false, toXYZD50: m, curves: [g, .parametric(type: 3, params: [2.4]), g]),
+            ColorProfile(name: "two curves", isGray: false, toXYZD50: m, curves: [g, g]),
+        ]
+        for target in targets {
+            #expect(throws: ColorError.self, "\(target.name)") { try ProfileTransform(from: .sRGB, to: target) }
+        }
+        // A curve's error names the profile and the channel that failed.
+        #expect { try ProfileTransform(from: .sRGB, to: targets[0]) } throws: { error in
+            guard case ColorError.invalid(let why) = error else { return false }
+            return why.contains("para type 5") && why.contains("curve 1")
+        }
+    }
+
+    @Test func everyParametricTypeRoundTrips() throws {
+        // ICC.1 10.18's five function types, each with the linear value it gives encoded 0.5. sRGB's colourants
+        // make the matrix part identity, and 0.1 and up is past every knee, where each curve is invertible.
+        let cases: [(Int, [Double], Double)] = [
+            (0, [2.2], pow(0.5, 2.2)),
+            (1, [2.2, 1.1, -0.1], pow(1.1 * 0.5 - 0.1, 2.2)),
+            (2, [2.2, 1.1, -0.1, 0.05], pow(1.1 * 0.5 - 0.1, 2.2) + 0.05),
+            (3, [2.4, 1 / 1.055, 0.055 / 1.055, 1 / 12.92, 0.04045], pow((0.5 + 0.055) / 1.055, 2.4)),
+            (4, [2.4, 0.947, 0.052, 0.077, 0.04, 0.01, 0.02], pow(0.947 * 0.5 + 0.052, 2.4) + 0.01),
+        ]
+        for (type, params, half) in cases {
+            let curve = ProfileCurve.parametric(type: type, params: params)
+            let profile = ColorProfile(name: "Type \(type)", isGray: false, toXYZD50: ColorProfile.sRGB.toXYZD50,
+                                       curves: [curve, curve, curve])
+            let decode = try ProfileTransform(from: profile, to: .linearSRGB)
+            let encode = try ProfileTransform(from: .linearSRGB, to: profile)
+            let linear = decode.apply(Color3(0.5, 0.5, 0.5))
+            #expect(Self.near(linear, Color3(half, half, half), 1e-9), "type \(type): \(linear) vs \(half)")
+            for c in Self.colours(6, 0.1, 1.25) {
+                #expect(Self.near(encode.apply(decode.apply(c)), c, 1e-6), "type \(type): \(c)")
+            }
         }
     }
 

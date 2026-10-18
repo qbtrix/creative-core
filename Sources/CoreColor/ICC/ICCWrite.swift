@@ -19,7 +19,8 @@ enum ICCWrite {
     static func profile(_ p: ColorProfile) throws(ColorError) -> Data {
         let m = p.toXYZD50
         guard m.count == (p.isGray ? 3 : 9), p.curves.count == (p.isGray ? 1 : 3) else {
-            throw fail("a \(p.isGray ? "gray" : "RGB") profile with \(m.count) matrix values and \(p.curves.count) curves")
+            let want = p.isGray ? "3 matrix values and 1 curve" : "9 matrix values and 3 curves"
+            throw fail("a \(p.isGray ? "gray" : "RGB") profile needs \(want), has \(m.count) and \(p.curves.count)")
         }
         var tags: [(String, [UInt8])] = [("desc", try mluc(p.name))]
         if p.isGray {
@@ -104,7 +105,7 @@ enum ICCWrite {
             return type("curv") + (try u32(1)) + u16(v)
         case .table(let entries):
             // A count of 0 or 1 means identity or gamma (10.6), so a table needs two entries.
-            guard entries.count >= 2 else { throw fail("a curve table of \(entries.count) entries") }
+            guard entries.count >= 2 else { throw fail("a curve table needs 2 or more entries, has \(entries.count)") }
             var out = type("curv") + (try u32(entries.count))
             for e in entries {
                 guard e >= 0, e <= 1, let v = UInt16(exactly: (e * 65535).rounded()) else {
@@ -117,7 +118,7 @@ enum ICCWrite {
             let counts = [1, 3, 4, 5, 7]
             guard counts.indices.contains(function), params.count == counts[function],
                   let kind = UInt16(exactly: function) else {
-                throw fail("parametric function type \(function) with \(params.count) parameters")
+                throw fail("parametric type must be 0 to 4 with 1/3/4/5/7 params, has type \(function) with \(params.count)")
             }
             var out = type("para") + u16(kind) + [0, 0]
             for v in params { out += try s15(v) }

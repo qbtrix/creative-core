@@ -47,5 +47,33 @@
     "anchor": "guard a > 0 else",
     "replacement": "guard a > -1 else",
     "filter": "ProfileTransformTests/uninvertibleTargetsThrow"
+  },
+  {
+    "note": "profile transform parametric type and parameter count unchecked",
+    "file": "Sources/CoreColor/ICC/ProfileTransform.swift",
+    "anchor": "guard (0..<counts.count).contains(type), p.count == counts[type], p.allSatisfy(\\.isFinite) else {",
+    "replacement": "guard p.allSatisfy(\\.isFinite) else {",
+    "filter": "ProfileTransformTests/malformedCurvesThrow"
+  },
+  {
+    "note": "profile transform curve count unchecked",
+    "file": "Sources/CoreColor/ICC/ProfileTransform.swift",
+    "anchor": "guard profile.curves.count == want else {",
+    "replacement": "guard true else {",
+    "filter": "ProfileTransformTests/malformedCurvesThrow"
+  },
+  {
+    "note": "profile transform accepts a table that dips between entries",
+    "file": "Sources/CoreColor/ICC/ProfileTransform.swift",
+    "anchor": "zip(t, t.dropFirst()).allSatisfy({ $0 <= $1 }),",
+    "replacement": "true,",
+    "filter": "ProfileTransformTests/uninvertibleTargetsThrow"
+  },
+  {
+    "note": "profile transform para type 2 drops its offset",
+    "file": "Sources/CoreColor/ICC/ProfileTransform.swift",
+    "anchor": "case 2: self = .segments(g: g, a: a, b: b, c: 0, d: -b / a, e: p[3], f: p[3])",
+    "replacement": "case 2: self = .segments(g: g, a: a, b: b, c: 0, d: -b / a, e: 0, f: 0)",
+    "filter": "ProfileTransformTests/everyParametricTypeRoundTrips"
   }
 ]
