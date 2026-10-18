@@ -14,7 +14,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 |---|---|---|---|---|---|---|---|---|
 | FX-0 | 1 | FX-a | Stubs for the contract slice's signatures (rule 18): `applying(_: LayerEffect)`, `boxBlurred`, `motionBlurred`, `denoised`, `clarity`, `DistanceField`, `stroked`, `glowing`, `shadowed`; each throws `RasterError.invalid("not built")` | `Sources/CoreRaster/Effects/{Effects,BlurFamily,DenoiseClarity,DistanceField,AlphaEffects,AlphaEffects+Light}.swift`, `Tests/CoreRasterTests/EffectStubTests.swift` | `EffectStubTests` | none (no invariant) | #565 | merged |
 | FX-2 | 1 | FX-a | Reference images (disc, 1 px line, noisy flat patch with an edge, glyph mask) and analytic expectations | `Tests/CoreRasterTests/EffectFixtures.swift` | fixtures build | none | #570 | merged |
-| FX-1 | 2 | FX-a | Checks first: five suites disabled by name | `Tests/CoreRasterTests/{BlurFamily,DenoiseClarity,AlphaEffect,DistanceField}Tests.swift`, `Tests/CoreRenderTests/CPUEffectTests.swift` | suites compile, disabled | none | | building |
+| FX-1 | 2 | FX-a | Checks first: five suites disabled by name | `Tests/CoreRasterTests/{BlurFamily,DenoiseClarity,AlphaEffect,DistanceField}Tests.swift`, `Tests/CoreRenderTests/CPUEffectTests.swift` | suites compile, disabled | none | #577 | open |
 | FX-3 | 3 | FX-blur | `boxBlurred`, `motionBlurred`; turns on `BlurFamilyTests` | `Sources/CoreRaster/Effects/BlurFamily.swift`, its tests, `Tests/mutations/CoreRaster.BlurFamily.json` | `BlurFamilyTests` | 3 (packet) | | planned |
 | FX-4 | 3 | FX-blur | `denoised`, `clarity`; turns on `DenoiseClarityTests` | `Sources/CoreRaster/Effects/DenoiseClarity.swift`, its tests, `Tests/mutations/CoreRaster.DenoiseClarity.json` | `DenoiseClarityTests` | 2 (packet) | | planned |
 | FX-5 | 3 | FX-alpha | `DistanceField`, `stroked`; turns on `DistanceFieldTests` and stroke cases | `Sources/CoreRaster/Effects/DistanceField.swift`, `Sources/CoreRaster/Effects/AlphaEffects.swift`, both tests, `Tests/mutations/CoreRaster.DistanceField.json` | `DistanceFieldTests`, `AlphaEffectTests` | 3 (packet) | | planned |
@@ -62,4 +62,6 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 - Combined wave plan: see affine-composite's RECORD (W1 FX-0, FX-2 · W2 FX-1 · W3 FX-3, FX-4, FX-5 · W4 FX-6 · W5 FX-7 · W6 FX-8 · W7 FX-9 · W8 FX-10).
 
 ## Open
+- FX-3 must sample motion/directional blur at whole-pixel steps: FX-1 tests expect exactly 10 occupied columns for distance 9.
+- FX-5 stroke coverage must hit the ring area within 1%: shift the distance field 0.5 px or measure to the edge (pixel-centre smoothstep comes out ~13% short).
 - none
