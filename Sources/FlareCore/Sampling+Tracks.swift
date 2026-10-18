@@ -16,11 +16,4 @@ extension Layer {
     public func sampledColor(_ target: TrackTarget, at frame: Double) -> Color? {
         nil
     }
-
-    /// Shape `shape`'s path at `frame`, morphed anchor by anchor between its
-    /// keys, or nil when the shape has no track (use the static path). Stub:
-    /// always nil until AP-6.
-    public func sampledPath(shape: Int, at frame: Double) -> Path? {
-        nil
-    }
 }

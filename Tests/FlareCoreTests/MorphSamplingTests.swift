@@ -3,7 +3,6 @@
 import FlareCore
 import Testing
 
-@Suite(.disabled("AP-6 turns this on"))
 struct MorphSamplingTests {
     static func p(_ x: Double, _ y: Double) -> Point { Point(x: x, y: y) }
     static func near(_ a: Point, _ b: Point) -> Bool { abs(a.x - b.x) <= 1e-12 && abs(a.y - b.y) <= 1e-12 }
