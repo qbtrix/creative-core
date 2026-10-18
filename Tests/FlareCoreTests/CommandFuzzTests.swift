@@ -190,7 +190,7 @@ import Testing
     @Test func structuredFuzzNeverCrashesAndThrowsCleanly() throws {
         let templates = try Self.templates()
         // Stubs have no registry sample until built; TrackShapeTests fuzzes their decoders.
-        #expect(Set(templates.map(\.id)) == CommandRegistryTests.expectedIDs.subtracting(TrackCommandsTests.notBuiltIDs))
+        #expect(Set(templates.map(\.id)) == CommandRegistryTests.expectedIDs.subtracting(CommandRegistryTests.notBuiltIDs))
         var rng = SplitMix64(seed: 43)
         var decoded = 0, performed = 0
         var performedByID: [String: Int] = [:]

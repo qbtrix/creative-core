@@ -8,9 +8,15 @@ import Testing
 
 @Suite struct TextStyleCommandsTests {
     /// Every id in `TextStyleCommands.all`, in order, written out by hand.
-    static let expectedIDs: [String] = []
+    static let expectedIDs: [String] = [
+        "text.applyStyle", "text.clearStyle", "text.editString", "text.setParagraph", "text.setOnPath",
+    ]
 
-    /// One sample of every text style command, each valid on
+    /// The ids whose commands are still stubs that throw "not built"; each
+    /// leaves this set when its task builds it and adds a registry sample.
+    static let notBuiltIDs: Set<String> = Set(expectedIDs)
+
+    /// One sample of every built text style command (not in `notBuiltIDs`), each valid on
     /// `CommandRegistryTests.sampleDocument()`, in `expectedIDs` order.
     static func registrySamples() -> [any Command] { [] }
 
@@ -22,6 +28,6 @@ import Testing
     }
 
     @Test func samplesListExactlyItsIDs() {
-        #expect(Self.registrySamples().map { type(of: $0).id } == Self.expectedIDs)
+        #expect(Self.registrySamples().map { type(of: $0).id } == Self.expectedIDs.filter { !Self.notBuiltIDs.contains($0) })
     }
 }

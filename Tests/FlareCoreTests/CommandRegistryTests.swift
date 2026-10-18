@@ -1,6 +1,6 @@
 // CommandRegistryTests.swift: every built-in command round-trips through the
 // {"id", "params"} envelope and behaves the same after decoding (the ids are
-// checked family by family against hand-written lists, 63 in all), and encode
+// checked family by family against hand-written lists, 68 in all), and encode
 // only their params, so a command decoded after execute is fresh; unknown ids
 // and malformed envelopes throw a CommandError, never crash (seeded fuzz).
 @testable import FlareCore
@@ -42,6 +42,9 @@ import Testing
 
     /// Every built-in command id: the union of the family lists.
     static let expectedIDs = Set(familyIDs.joined())
+
+    /// The ids still stubs that throw "not built", so they have no sample yet.
+    static let notBuiltIDs = TrackCommandsTests.notBuiltIDs.union(TextStyleCommandsTests.notBuiltIDs)
 
     /// One sample of every built-in command, each valid on the fixture document.
     /// A new family adds one line here; a new command goes in its family's samples.
@@ -128,7 +131,7 @@ import Testing
     }
 
     @Test func everyBuiltInCommandIsRegistered() {
-        #expect(Self.expectedIDs.count == 63)
+        #expect(Self.expectedIDs.count == 68)
         #expect(Set(Self.registry.ids) == Self.expectedIDs)
     }
 
@@ -145,16 +148,16 @@ import Testing
     }
 
     /// The W1 seams: mask, text style and track families are registered, last
-    /// and in that order; mask and text style hold no command yet.
+    /// and in that order; mask holds no command yet.
     @Test func w1FamiliesAreRegisteredAndEmpty() {
         let ids = CommandRegistry.builtInFamilies.suffix(3).map { $0.map { $0.id } }
         #expect(ids == [MaskCommands.all, TextStyleCommands.all, TrackCommands.all].map { $0.map { $0.id } })
-        #expect(ids == [[], [], TrackCommandsTests.expectedIDs])
+        #expect(ids == [[], TextStyleCommandsTests.expectedIDs, TrackCommandsTests.expectedIDs])
     }
 
     @Test func samplesCoverEveryBuiltIn() {
         // Stubs throw "not built" until their task lands, so they have no sample yet.
-        let built = Self.expectedIDs.subtracting(TrackCommandsTests.notBuiltIDs)
+        let built = Self.expectedIDs.subtracting(Self.notBuiltIDs)
         let sampled = Set(Self.samples().map { type(of: $0).id })
         #expect(sampled == built)
         #expect(Self.samples().count == built.count)
