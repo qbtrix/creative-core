@@ -44,8 +44,10 @@ import Testing
     }
 
     @Test func packsCoverEveryFamilyOnce() {
-        #expect(ParityPack.all.flatMap(\.ops).sorted { $0.rawValue < $1.rawValue }
-            == RenderOp.allCases.sorted { $0.rawValue < $1.rawValue })
+        // The CPU-first W1 families get packs when their features add samples.
+        let ported = { (op: RenderOp) in !RenderOp.notOnMetalYet.contains(op) }
+        #expect(ParityPack.all.flatMap(\.ops).filter(ported).sorted { $0.rawValue < $1.rawValue }
+            == RenderOp.allCases.filter(ported).sorted { $0.rawValue < $1.rawValue })
     }
 
     @Test(arguments: ParityPack.all.indices)

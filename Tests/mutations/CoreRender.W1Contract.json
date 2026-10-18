@@ -1,0 +1,16 @@
+[
+  {
+    "note": "the invert tone case is gated by the adjust family instead of color",
+    "file": "Sources/CoreRender/ToneAdjustment.swift",
+    "anchor": "case .gradientMap, .lut, .posterize, .threshold, .invert: return .color",
+    "replacement": "case .gradientMap, .lut, .posterize, .threshold: return .color\n        case .invert: return .adjust",
+    "filter": "W1ContractTests.colorCasesAreColor"
+  },
+  {
+    "note": "the flipped default names the transform family instead of affine",
+    "file": "Sources/CoreRender/RenderBackend+NotOnThisBackend.swift",
+    "anchor": "public func flipped(_ s: RenderSurface, _ axis: FlipAxis) throws -> RenderSurface { throw RenderError.unsupported(.affine) }",
+    "replacement": "public func flipped(_ s: RenderSurface, _ axis: FlipAxis) throws -> RenderSurface { throw RenderError.unsupported(.transform) }",
+    "filter": "W1ContractTests.defaultsNameTheirFamily"
+  }
+]

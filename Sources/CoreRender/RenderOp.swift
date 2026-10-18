@@ -30,10 +30,30 @@ public enum RenderOp: String, CaseIterable, Codable, Sendable {
     case resample
     /// `gaussianBlur` and `unsharpMask`: convolution.
     case blur
-    /// `adjusted`: every `ToneAdjustment`.
+    /// `adjusted` with a tone adjustment whose `family` is `.adjust`: the
+    /// six from before W1 (exposure, levels, curves, white balance, contrast,
+    /// highlights and shadows).
     case adjust
     /// `cloned`: a masked copy offset within the surface.
     case retouch
+    /// `composite(_:onto:x:y:mode:opacity:mask:maskX:maskY:)`: a composite
+    /// whose coverage is scaled by a mask. CPU first (`notOnMetalYet`).
+    case maskedComposite
+    /// `transformed`, `flipped` and `composite(_:onto:through:mode:opacity:filter:)`:
+    /// an affine matrix or a mirror, filtered. CPU first (`notOnMetalYet`).
+    case affine
+    /// `applying(_:)`: every `LayerEffect`. CPU first (`notOnMetalYet`).
+    case effect
+    /// `adjusted` with a tone adjustment whose `family` is `.color`: the W1
+    /// colour adjustments (vibrance to invert). CPU first (`notOnMetalYet`).
+    case color
+}
+
+extension RenderOp {
+    /// The CPU-first families no Metal kernel implements yet. The Metal
+    /// backend enables none of them, so RenderDispatcher sends each to the
+    /// CPU; a family leaves this set when its kernel and parity test land.
+    public static let notOnMetalYet: Set<RenderOp> = [.maskedComposite, .affine, .effect, .color]
 }
 
 extension RenderOp {

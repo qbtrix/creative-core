@@ -3,6 +3,8 @@
 // types and defaults of that method, so `CPUBackend` maps
 // each case to its call with no conversion and the Metal backend has the same
 // parameters to match. Units are CoreRaster's; parameter checks stay in CoreRaster.
+// Each case belongs to one family (`family`), which gates it: the six cases
+// from before W1 are `.adjust`, the W1 colour cases are `.color` (CPU first).
 import CoreRaster
 
 /// One tone adjustment, as CoreRaster's `Adjustments.swift` defines it.
@@ -33,4 +35,45 @@ public enum ToneAdjustment: Equatable, Sendable {
     /// exposure at 100, weighted by luminance above mid grey (`highlights`) or
     /// below 0.5 (`shadows`). Both -100...100.
     case highlightsShadows(highlights: Float, shadows: Float)
+
+    // The W1 colour family (`.color`), one case per CoreRaster op the
+    // `tone-pack` feature adds; ranges are that op's, checked there.
+    /// `PixelBuffer.vibrance(_:)`: a saturation boost that moves muted colours
+    /// most; negative desaturates. -100...100.
+    case vibrance(Float)
+    /// `PixelBuffer.hueSaturation(hue:saturation:lightness:)`: `hue` in
+    /// degrees, `saturation` and `lightness` -100...100.
+    case hueSaturation(hue: Float, saturation: Float, lightness: Float)
+    /// `PixelBuffer.hsl(_:)`: per-hue-band hue, saturation and lightness shifts.
+    case hsl(HSLAdjustment)
+    /// `PixelBuffer.blackAndWhite(_:)`: a gray mixed from the hue bands, tinted.
+    case blackAndWhite(GrayMix)
+    /// `PixelBuffer.channelMixer(_:)`: each channel a weighted sum plus a constant.
+    case channelMixer(ChannelMatrix)
+    /// `PixelBuffer.colorBalance(_:)`: shadow, midtone and highlight shifts.
+    case colorBalance(ToneBalance)
+    /// `PixelBuffer.gradientMap(_:)`: luminance through 2...64 stops, sorted by offset.
+    case gradientMap([GradientMapStop])
+    /// `PixelBuffer.applying(_:)` of a `ColorLUT`: a trilinear 3D lookup.
+    case lut(ColorLUT)
+    /// `PixelBuffer.posterized(levels:)`: each channel in `levels` steps, 2...255.
+    case posterize(levels: Int)
+    /// `PixelBuffer.thresholded(_:)`: white at or above the luma level
+    /// (0...1), black below.
+    case threshold(Float)
+    /// `PixelBuffer.inverted()`: each colour channel becomes 1 minus itself.
+    case invert
+}
+
+extension ToneAdjustment {
+    /// The family that gates this adjustment: `.adjust` for the six cases
+    /// from before W1, `.color` for the W1 colour cases. A backend runs a
+    /// case only when it lists the case's family in `supports`.
+    public var family: RenderOp {
+        switch self {
+        case .exposure, .levels, .curves, .whiteBalance, .contrast, .highlightsShadows: return .adjust
+        case .vibrance, .hueSaturation, .hsl, .blackAndWhite, .channelMixer, .colorBalance: return .color
+        case .gradientMap, .lut, .posterize, .threshold, .invert: return .color
+        }
+    }
 }

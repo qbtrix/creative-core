@@ -248,7 +248,7 @@ import Testing
         #expect(backend.compiledOnMainThread == false, "the compile ran off the main thread, on the given queue")
         #expect(backend.isHealthy && backend.capabilities.compiling.isEmpty)
         #expect(backend.supports == cold.supported && backend.pipelineCompileCount > 0)
-        if device.readWriteTextureSupport == .tier2 { #expect(backend.supports == Set(RenderOp.allCases)) }
+        if device.readWriteTextureSupport == .tier2 { #expect(backend.supports == Set(RenderOp.allCases).subtracting(RenderOp.notOnMetalYet)) }
         let compiled = backend.pipelineCompileCount
         _ = try backend.display(image, colorSpace: .sRGB)
         #expect(backend.pipelineCompileCount == compiled, "the first display reuses the warmed pipeline")
