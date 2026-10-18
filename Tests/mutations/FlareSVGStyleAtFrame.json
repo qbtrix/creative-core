@@ -18,7 +18,7 @@
     "file": "Sources/FlareCore/Export/SVGExporter+Style.swift",
     "anchor": "stroke.width = max(width, 0)",
     "replacement": "stroke.width = width",
-    "filter": "SVGStyleAtFrameTests.tracksOnlyRestyleThePaintTheShapeHas"
+    "filter": "SVGStyleAtFrameTests.keyedFillReplacesAGradientAndStrokeTracksNeedAStroke"
   },
   {
     "note": "SVG export writes the static stroke width instead of the sampled one",
@@ -26,5 +26,12 @@
     "anchor": "stroke.width = max(width, 0)",
     "replacement": "stroke.width = max(shape.stroke?.width ?? width, 0)",
     "filter": "SVGStyleAtFrameTests.usesSampledWidth"
+  },
+  {
+    "note": "SVG export keeps a gradient under a keyed fill track",
+    "file": "Sources/FlareCore/Export/SVGExporter+Style.swift",
+    "anchor": "if let color = layer.sampledColor(.fill(shape: index), at: frame) { out.fill = .solid(color) }",
+    "replacement": "if case .solid = shape.fill, let color = layer.sampledColor(.fill(shape: index), at: frame) { out.fill = .solid(color) }",
+    "filter": "SVGStyleAtFrameTests.keyedFillReplacesAGradientAndStrokeTracksNeedAStroke"
   }
 ]

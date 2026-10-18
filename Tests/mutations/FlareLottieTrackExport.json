@@ -26,5 +26,19 @@
     "anchor": "if keys.contains(where: { $0.value.a != keys.first?.value.a }) {",
     "replacement": "if keys.isEmpty {",
     "filter": "LottieTrackExportTests.alphaKeysAnimateOpacity"
+  },
+  {
+    "note": "lottie path keys lose their easing",
+    "file": "Sources/FlareCore/Export/LottieExporter+Tracks.swift",
+    "anchor": "easing: { tweens($0, $1) ? $0.0.easing : .hold }",
+    "replacement": "easing: { tweens($0, $1) ? .linear : .hold }",
+    "filter": "LottieTrackExportTests.pathAndWidthKeysCarryEasing"
+  },
+  {
+    "note": "lottie path keys with different part counts export",
+    "file": "Sources/FlareCore/Export/LottieExporter+Tracks.swift",
+    "anchor": "guard shapes.allSatisfy({ $0.1.count == parts }) else { throw LottieExportError.unsupported(\"shape track\") }",
+    "replacement": "_ = parts",
+    "filter": "LottieTrackExportTests.pathKeysWithDifferentPartCountsThrow"
   }
 ]

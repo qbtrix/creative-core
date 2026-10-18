@@ -2,8 +2,8 @@
 // and each shape as it draws at the exported frame: its layer's fill and stroke colour tracks,
 // `Layer.trackKey(strokeWidthOf:)` track and shape track sampled there (an instance's symbol layers at the
 // symbol frame). A value with no track stays static, so an unkeyed scene exports as before.
-// A fill track colours a solid fill only (a gradient keeps its stops); stroke tracks colour
-// and widen an existing stroke only.
+// A keyed fill track paints the shape a solid of its sampled colour, replacing a gradient as the
+// Lottie export does; stroke tracks colour and widen an existing stroke only.
 
 extension SVGExporter {
     /// `nodes` with each shape replaced by `styled(_:index:of:at:)`: shapes of
@@ -33,12 +33,11 @@ extension SVGExporter {
 
     /// `shape`, which is `layer.shapes[index]`, with its fill colour, stroke
     /// colour, stroke width and path sampled from `layer`'s tracks at `frame`.
+    /// A keyed fill colour replaces any fill, gradients included, with that solid.
     /// A sampled width below 0 draws as 0, the least a stroke may have.
     static func styled(_ shape: Shape, index: Int, of layer: Layer, at frame: Double) -> Shape {
         var out = shape
-        if case .solid = shape.fill, let color = layer.sampledColor(.fill(shape: index), at: frame) {
-            out.fill = .solid(color)
-        }
+        if let color = layer.sampledColor(.fill(shape: index), at: frame) { out.fill = .solid(color) }
         if var stroke = shape.stroke {
             if let color = layer.sampledColor(.stroke(shape: index), at: frame) { stroke.color = color }
             if let keys = layer.tracks[Layer.trackKey(strokeWidthOf: index)], let width = Timeline.value(of: keys, at: frame) {
