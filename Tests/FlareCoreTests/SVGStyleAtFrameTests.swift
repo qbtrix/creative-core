@@ -46,13 +46,14 @@ struct SVGStyleAtFrameTests {
         #expect(line == twelve && line != zero)
     }
 
-    @Test func tracksOnlyRestyleThePaintTheShapeHas() throws {
+    @Test func keyedFillReplacesAGradientAndStrokeTracksNeedAStroke() throws {
         var scene = try TrackCommandsTests.fixtureScene()
         let stops = [GradientStop(offset: 0, color: .black), GradientStop(offset: 1, color: .white)]
         scene.layers[0].shapes[0].fill = .linear(stops: stops, start: Point(x: 0, y: 0), end: Point(x: 40, y: 0))
         scene.layers[0].tracks["strokeWidth.0"] = [Keyframe(frame: 0, value: -3)]
         let gradient = try Self.pathLine(in: SVGExporter.export(scene: scene, frame: 24))
-        #expect(gradient.contains("fill=\"url(#g0)\"") && gradient.contains("stroke-width=\"0\""))
+        // The keyed fill replaces the gradient with its sampled solid, as the Lottie export paints it.
+        #expect(gradient.contains("fill=\"#0000ff\"") && !gradient.contains("url(#g0)") && gradient.contains("stroke-width=\"0\""))
         scene.layers[0].shapes[0].stroke = nil
         #expect(!(try Self.pathLine(in: SVGExporter.export(scene: scene, frame: 24))).contains("stroke"))
     }

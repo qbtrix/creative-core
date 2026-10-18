@@ -68,6 +68,17 @@ import Testing
         #expect(bezier["o"] as? [[Double]] == [[4, 0], [0, 0]] && bezier["i"] as? [[Double]] == [[0, 0], [0, -4]])
     }
 
+    @Test func pathAndWidthKeysCarryEasing() throws {
+        var scene = try TrackCommandsTests.fixtureScene()
+        scene.layers[0].shapeTracks[0].keys[0].easing = .easeInOut
+        scene.layers[0].tracks["strokeWidth.0"]?[0].easing = .easeInOut
+        for (type, property) in [("sh", "ks"), ("st", "w")] {
+            let first = try #require(try Self.keys(type, property, scene: scene).first)
+            let o = try #require(first["o"] as? [String: Any]), i = try #require(first["i"] as? [String: Any])
+            #expect(o["x"] as? [Double] == [0.42] && o["y"] as? [Double] == [0] && i["x"] as? [Double] == [0.58] && i["y"] as? [Double] == [1])
+        }
+    }
+
     @Test func byteStable() throws {
         let scene = try TrackCommandsTests.fixtureScene()
         #expect(try LottieExporter.export(scene: scene) == LottieExporter.export(scene: scene))
