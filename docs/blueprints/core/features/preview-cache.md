@@ -91,7 +91,11 @@ public enum DuplicateGroups { public static func group(_ hashes: [(id: String, h
 - **Layout on disk.** `folder/index.json` (entries, a version, the budget)
   and `folder/p/<2 hex>/<key digest>.bin`, the digest a stable 64-bit
   FNV-1a of the key's fields (written here, Foundation only), so names
-  never carry user text. Writes go to a temp file then an atomic rename,
+  never carry user text. Each `.bin` is a header (`FLPV`, a version byte,
+  a 4-byte big-endian length, then that many bytes of JSON naming the
+  `PreviewKey`, `VolumeRef?` and `relativePath?`) and then the payload;
+  `byteCount`, `usedBytes` and `read` see the payload only. Writes go to a
+  temp file then an atomic rename,
   under an exclusive lock file (the suite's `FileStore` rule), and the
   index is rewritten after the file.
 - **Budget.** After a write, while `usedBytes > budgetBytes`, remove the
@@ -99,7 +103,9 @@ public enum DuplicateGroups { public static func group(_ hashes: [(id: String, h
   `lastRead` updates on read in memory and is flushed at most every 2 s and
   on deinit, so a scroll doesn't rewrite the index per thumbnail.
 - **Recovery.** An index that fails to decode or names a newer version is
-  set aside (`index.damaged.json`) and rebuilt from the files present,
+  set aside (`index.damaged.json`) and rebuilt from the files present
+  (key, volume and path from each file's header, `byteCount` from its
+  payload; a file whose header doesn't decode is skipped),
   with `lastRead` from their modification dates; files the index names but
   that are missing are dropped.
 - **Offline.** The caller passes the volumes mounted now; an entry whose

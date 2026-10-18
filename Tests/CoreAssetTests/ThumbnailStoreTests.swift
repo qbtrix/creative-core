@@ -1,7 +1,7 @@
 // ThumbnailStoreTests.swift: the preview store's write, read, relaunch, budget,
-// remove, atomic replace and lock (PC-3). Written first from the packet's
-// acceptance tests and disabled until PC-3 builds the store. Also holds the
-// scratch-folder helpers the recovery and offline suites share.
+// remove, atomic replace, lock and file header (PC-3), plus a seeded fuzz of
+// the index and headers. Also holds the scratch-folder helpers the recovery
+// and offline suites share.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -46,7 +46,7 @@ func previewKey(_ asset: String, _ size: SizeClass = .medium) -> PreviewKey {
 }
 
 @Suite struct ThumbnailStoreTests {
-    @Test(.disabled("waits on PC-3")) func writeThenReadIsEqual() throws {
+    @Test func writeThenReadIsEqual() throws {
         let scratch = try PreviewScratch()
         let store = try ThumbnailStore(folder: scratch.folder, budgetBytes: 1 << 20)
         let key = previewKey("IMG_0001")
@@ -57,7 +57,7 @@ func previewKey(_ asset: String, _ size: SizeClass = .medium) -> PreviewKey {
         #expect(try store.read(PreviewKey(asset: "IMG_0001", content: "sha-other", size: .medium)) == nil)
     }
 
-    @Test(.disabled("waits on PC-3")) func writeReplacesEarlierPreview() throws {
+    @Test func writeReplacesEarlierPreview() throws {
         let scratch = try PreviewScratch()
         let store = try ThumbnailStore(folder: scratch.folder, budgetBytes: 1 << 20)
         let key = previewKey("IMG_0001")
@@ -67,7 +67,7 @@ func previewKey(_ asset: String, _ size: SizeClass = .medium) -> PreviewKey {
         #expect(store.usedBytes == 40)
     }
 
-    @Test(.disabled("waits on PC-3")) func secondStoreReadsAfterRelaunch() throws {
+    @Test func secondStoreReadsAfterRelaunch() throws {
         let scratch = try PreviewScratch()
         let keys = SizeClass.allCases.map { previewKey("IMG_0001", $0) } + [previewKey("IMG_0002")]
         do {
@@ -83,7 +83,7 @@ func previewKey(_ asset: String, _ size: SizeClass = .medium) -> PreviewKey {
         #expect(second.usedBytes == 400)
     }
 
-    @Test(.disabled("waits on PC-3")) func evictsLeastRecentlyRead() throws {
+    @Test func evictsLeastRecentlyRead() throws {
         let scratch = try PreviewScratch()
         let store = try ThumbnailStore(folder: scratch.folder, budgetBytes: 300)
         let keys = ["a", "b", "c", "d"].map { previewKey($0) }
@@ -97,7 +97,7 @@ func previewKey(_ asset: String, _ size: SizeClass = .medium) -> PreviewKey {
         }
     }
 
-    @Test(.disabled("waits on PC-3")) func readBumpsRecency() throws {
+    @Test func readBumpsRecency() throws {
         let scratch = try PreviewScratch()
         let store = try ThumbnailStore(folder: scratch.folder, budgetBytes: 300)
         let keys = ["a", "b", "c", "d"].map { previewKey($0) }
@@ -113,7 +113,7 @@ func previewKey(_ asset: String, _ size: SizeClass = .medium) -> PreviewKey {
         #expect(try store.read(keys[3]) == previewBytes(3))
     }
 
-    @Test(.disabled("waits on PC-3")) func removeDropsEverySizeClass() throws {
+    @Test func removeDropsEverySizeClass() throws {
         let scratch = try PreviewScratch()
         let store = try ThumbnailStore(folder: scratch.folder, budgetBytes: 1 << 20)
         for size in SizeClass.allCases {
@@ -129,7 +129,7 @@ func previewKey(_ asset: String, _ size: SizeClass = .medium) -> PreviewKey {
         #expect(try scratch.previewFiles().count == 1)
     }
 
-    @Test(.disabled("waits on PC-3")) func interruptedWriteKeepsOld() async throws {
+    @Test func interruptedWriteKeepsOld() async throws {
         let scratch = try PreviewScratch()
         let key = previewKey("IMG_0001")
         let old = Data(repeating: 0x11, count: 1 << 16)
@@ -168,7 +168,7 @@ func previewKey(_ asset: String, _ size: SizeClass = .medium) -> PreviewKey {
         #expect(torn == 0)
     }
 
-    @Test(.disabled("waits on PC-3")) func twoStoresUnderTheLockLoseNothing() async throws {
+    @Test func twoStoresUnderTheLockLoseNothing() async throws {
         let scratch = try PreviewScratch()
         let left = try ThumbnailStore(folder: scratch.folder, budgetBytes: 1 << 24)
         let right = try ThumbnailStore(folder: scratch.folder, budgetBytes: 1 << 24)
@@ -190,5 +190,72 @@ func previewKey(_ asset: String, _ size: SizeClass = .medium) -> PreviewKey {
         }
         #expect(reopened.usedBytes == 100 * 100)
         #expect(try scratch.previewFiles().count == 100)
+    }
+
+    @Test func impossibleSizesInTheIndexThrow() throws {
+        let scratch = try PreviewScratch()
+        let entry = "{\"key\":{\"asset\":\"a\",\"content\":\"c\",\"size\":1024},\"lastRead\":0,\"byteCount\":"
+        for size in ["-1", "\(Int.max)},\(entry)\(Int.max)"] {
+            try Data("{\"version\":1,\"budgetBytes\":0,\"entries\":[\(entry)\(size)}]}".utf8).write(to: scratch.index)
+            #expect(throws: AssetError.self) { try ThumbnailStore(folder: scratch.folder, budgetBytes: 1 << 20) }
+        }
+    }
+
+    @Test func filesCarryTheirKeyAheadOfThePayload() throws {
+        let scratch = try PreviewScratch()
+        let store = try ThumbnailStore(folder: scratch.folder, budgetBytes: 1 << 20)
+        try store.write(previewBytes(1), for: previewKey("a"), volume: nil, relativePath: nil)
+        let fileA = try #require(try scratch.previewFiles().first)
+        let bytes = try Data(contentsOf: URL(fileURLWithPath: fileA))
+        #expect(bytes.prefix(4) == Data("FLPV".utf8) && bytes.suffix(100) == previewBytes(1))
+        try store.write(previewBytes(2), for: previewKey("b"), volume: nil, relativePath: nil)
+        let fileB = try #require(try scratch.previewFiles().first { $0 != fileA })
+        try bytes.write(to: URL(fileURLWithPath: fileB))  // a's file under b's name
+        #expect(throws: AssetError.self) { try store.read(previewKey("b")) }
+    }
+
+    @Test func fuzzedIndexAndHeadersThrowOrRead() throws {
+        let scratch = try PreviewScratch()
+        let keys = SizeClass.allCases.map { previewKey("IMG_0001", $0) }
+        let writer = try ThumbnailStore(folder: scratch.folder, budgetBytes: 1 << 20)
+        for (seed, key) in keys.enumerated() {
+            try writer.write(previewBytes(UInt8(seed)), for: key, volume: VolumeRef(id: "v", name: "V"), relativePath: "a/b")
+        }
+        // The index, whole, and each preview file's header (all but its 100-byte payload).
+        let targets = try [(scratch.index, 0)] + scratch.previewFiles().map { (URL(fileURLWithPath: $0), 100) }
+        let valid = try targets.map { [UInt8](try Data(contentsOf: $0.0)) }
+        var rng = SplitMix64(state: 487)
+        for _ in 0..<300 {
+            for (target, bytes) in zip(targets, valid) { try Data(bytes).write(to: target.0) }
+            let pick = Int.random(in: 0..<targets.count, using: &rng)
+            var bytes = valid[pick]
+            let span = bytes.count - targets[pick].1
+            if Bool.random(using: &rng) { bytes = Array(bytes.prefix(Int.random(in: 0..<span, using: &rng))) } else {
+                for _ in 0..<Int.random(in: 1...4, using: &rng) { bytes[Int.random(in: 0..<span, using: &rng)] = .random(in: 0...255, using: &rng) }
+            }
+            try Data(bytes).write(to: targets[pick].0)
+            do throws(AssetError) {
+                let store = try ThumbnailStore(folder: scratch.folder, budgetBytes: 1 << 20)
+                for (seed, key) in keys.enumerated() {
+                    let data = try store.read(key)
+                    #expect(data == nil || data == previewBytes(UInt8(seed)))
+                }
+            } catch {
+                #expect(error != .invalid(""))  // a typed error that names its cause
+            }
+        }
+    }
+}
+
+/// Seeded generator; the same algorithm as FlareCoreTests' `SplitMix64`, which
+/// this test target cannot import.
+private struct SplitMix64: RandomNumberGenerator {
+    var state: UInt64
+
+    mutating func next() -> UInt64 {
+        state &+= 0x9E37_79B9_7F4A_7C15
+        var z = (state ^ (state >> 30)) &* 0xBF58_476D_1CE4_E5B9
+        z = (z ^ (z >> 27)) &* 0x94D0_49BB_1331_11EB
+        return z ^ (z >> 31)
     }
 }

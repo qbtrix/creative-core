@@ -4,15 +4,16 @@
 // names its volume and relative path so a preview of a file on an unplugged
 // drive still reads and reports offline. CoreAsset stays dependency-free: the
 // store keeps opaque `Data` and never decodes images.
-// Status: contract and stubs only (PC-1). The throwing members throw
-// `AssetError.invalid("not built")` and the others answer empty until PC-3
-// (write, read, remove, budget), PC-4 (index and recovery) and PC-5 (volumes)
-// build them. Invariant to keep: every failure is an `AssetError`.
+// Invariants: every failure is an `AssetError`; writes and removes reload the
+// index under the folder lock (PreviewFiles.swift) and leave `usedBytes <=
+// budgetBytes`, counting payloads only; a read checks its file's header names
+// its key. PC-4 adds recovery and the read flush, PC-5 volumes.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
 import Foundation
 #endif
+import Dispatch
 
 /// The caller's identity for a storage volume: a stable id and a display name.
 public struct VolumeRef: Hashable, Codable, Sendable {
@@ -76,20 +77,48 @@ public final class ThumbnailStore: @unchecked Sendable {
     /// The most bytes of preview files the store keeps before it evicts.
     public let budgetBytes: Int
 
+    private let files: PreviewFiles
+    private let queue = DispatchQueue(label: "CoreAsset.ThumbnailStore")
+    private var entries: [PreviewKey: PreviewEntry]
+    private var clock = Date.distantPast
+
     /// Opens (or, from PC-3, creates) the store in `folder`.
     public init(folder: URL, budgetBytes: Int) throws(AssetError) {
+        guard budgetBytes >= 0 else { throw .invalid("a preview budget cannot be negative") }
+        let files = PreviewFiles(folder: folder)
+        try files.createFolders()
+        entries = try files.withLock { () throws(AssetError) in try files.loadIndex() }
         self.folder = folder
         self.budgetBytes = budgetBytes
+        self.files = files
     }
 
     /// Stores `data` as the preview for `key`, replacing any earlier one.
     public func write(_ data: Data, for key: PreviewKey, volume: VolumeRef?, relativePath: String?) throws(AssetError) {
-        throw AssetError.invalid("not built")
+        try changeFolder { (current: inout [PreviewKey: PreviewEntry]) throws(AssetError) in
+            let header = PreviewFileHeader(key: key, volume: volume, relativePath: relativePath)
+            try files.replace(files.file(for: key), with: PreviewFiles.encode(header, payload: data))
+            current[key] = PreviewEntry(key: key, byteCount: data.count, volume: volume,
+                                        relativePath: relativePath, lastRead: tick())
+            evict(&current)
+        }
     }
 
     /// The preview bytes for `key`, or nil when absent; a read bumps `lastRead`.
     public func read(_ key: PreviewKey) throws(AssetError) -> Data? {
-        throw AssetError.invalid("not built")
+        try locked { () throws(AssetError) -> Data? in
+            guard entries[key] != nil else { return nil }
+            let file = files.file(for: key)
+            let data: Data
+            do { data = try Data(contentsOf: file) } catch {
+                guard FileManager.default.fileExists(atPath: file.path) else { entries[key] = nil; return nil }
+                throw .invalid("cannot read preview file \(file.lastPathComponent)")
+            }
+            let (header, payload) = try PreviewFiles.decode(data)
+            guard header.key == key else { throw .invalid("preview file \(file.lastPathComponent) is another key's") }
+            entries[key]?.lastRead = tick()
+            return payload
+        }
     }
 
     /// Every entry whose original lives on `volume`.
@@ -105,9 +134,60 @@ public final class ThumbnailStore: @unchecked Sendable {
 
     /// Removes every size class of every preview of `asset`.
     public func remove(asset: String) throws(AssetError) {
-        throw AssetError.invalid("not built")
+        try changeFolder { (current: inout [PreviewKey: PreviewEntry]) throws(AssetError) in
+            for key in current.keys.filter({ $0.asset == asset }) {
+                current[key] = nil
+                files.removeFile(for: key)
+            }
+        }
     }
 
     /// The bytes of preview files the store holds now.
-    public var usedBytes: Int { 0 }
+    public var usedBytes: Int {
+        queue.sync { entries.values.reduce(0) { $0 + $1.byteCount } }
+    }
+
+    /// Runs `body` on the serial queue.
+    private func locked<T>(_ body: () throws(AssetError) -> T) throws(AssetError) -> T {
+        let result: Result<T, AssetError> = queue.sync { Result { () throws(AssetError) -> T in try body() } }
+        return try result.get()
+    }
+
+    /// Under the queue and the folder lock: reloads the index (keeping this
+    /// store's newer reads), lets `body` change it and its files, then writes it.
+    private func changeFolder(_ body: (inout [PreviewKey: PreviewEntry]) throws(AssetError) -> Void) throws(AssetError) {
+        try locked { () throws(AssetError) in
+            try files.withLock { () throws(AssetError) in
+                var current = try files.loadIndex()
+                for (key, mine) in entries where current[key].map({ $0.lastRead < mine.lastRead }) == true {
+                    current[key]?.lastRead = mine.lastRead
+                }
+                try body(&current)
+                try files.saveIndex(current, budgetBytes: budgetBytes)
+                entries = current
+            }
+        }
+    }
+
+    /// While over budget, drops the entry read longest ago and its file.
+    private func evict(_ current: inout [PreviewKey: PreviewEntry]) {
+        var used = current.values.reduce(0) { $0 + $1.byteCount }
+        for victim in current.values.sorted(by: Self.evictsBefore) where used > budgetBytes {
+            current[victim.key] = nil
+            used -= victim.byteCount
+            files.removeFile(for: victim.key)
+        }
+    }
+
+    /// Eviction order: older `lastRead` first, then the larger size class.
+    private static func evictsBefore(_ a: PreviewEntry, _ b: PreviewEntry) -> Bool {
+        a.lastRead != b.lastRead ? a.lastRead < b.lastRead : a.key.size.rawValue > b.key.size.rawValue
+    }
+
+    /// Now, nudged past the last stamp this store gave so stamps never tie.
+    private func tick() -> Date {
+        let now = Date()
+        clock = now > clock ? now : clock.addingTimeInterval(0.000_001)
+        return clock
+    }
 }

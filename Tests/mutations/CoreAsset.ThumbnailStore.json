@@ -1,0 +1,23 @@
+[
+  {
+    "note": "the preview store evicts the newest read first instead of the least recently read, caught by evictsLeastRecentlyRead",
+    "file": "Sources/CoreAsset/Thumbnails/ThumbnailStore.swift",
+    "anchor": "a.lastRead != b.lastRead ? a.lastRead < b.lastRead",
+    "replacement": "a.lastRead != b.lastRead ? a.lastRead > b.lastRead",
+    "filter": "ThumbnailStoreTests"
+  },
+  {
+    "note": "a preview read doesn't bump its recency, caught by readBumpsRecency",
+    "file": "Sources/CoreAsset/Thumbnails/ThumbnailStore.swift",
+    "anchor": "entries[key]?.lastRead = tick()",
+    "replacement": "_ = tick()",
+    "filter": "ThumbnailStoreTests"
+  },
+  {
+    "note": "a preview read returns another key's file without checking its header, caught by filesCarryTheirKeyAheadOfThePayload",
+    "file": "Sources/CoreAsset/Thumbnails/ThumbnailStore.swift",
+    "anchor": "guard header.key == key else",
+    "replacement": "guard true else",
+    "filter": "ThumbnailStoreTests"
+  }
+]
