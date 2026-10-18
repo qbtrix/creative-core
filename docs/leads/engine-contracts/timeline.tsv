@@ -14,3 +14,4 @@ utc	stage	event	ref	note
 2026-10-18T08:01Z	4	round-findings	round-1	15 confirmed (3 major); fix batches r1-a, r1-b, r1-c
 2026-10-18T08:11Z	-	heartbeat	-	waiting
 2026-10-18T08:24Z	4	pr-merged	#451	r1-b merged a7ba215
+2026-10-18T08:29Z	-	heartbeat	-	waiting
