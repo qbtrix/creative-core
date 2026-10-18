@@ -59,3 +59,4 @@ Next: PC-4, PC-5 building (PC-3 #498 merged with round-2 recovery header); PC-ha
 - 2026-10-18T15:24:19Z PC-5 #516 merged (f7e5f0d). PC-8 builder launched (walk and budgets; relaunch 40 ms to be measured).
 - 2026-10-18T15:40Z heartbeat: checking merges, dev CI and agents.
 - 2026-10-18T15:43Z incident: the disk filled up at about 15:39Z. I deleted the .build caches of finished worktrees and told the running agents to rerun any gate that failed. No dev CI run newer than 364 yet. #518 (LC R2-2) needs a rebase onto 168c73d.
+- 2026-10-18T16:05Z heartbeat.
