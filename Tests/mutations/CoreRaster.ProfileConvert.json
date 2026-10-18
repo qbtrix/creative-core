@@ -1,0 +1,16 @@
+[
+  {
+    "note": "profile convert maps premultiplied values instead of unpremultiplying first",
+    "file": "Sources/CoreRaster/Codecs/ProfileConvert.swift",
+    "anchor": "let straight = Color3(Double(storage[i]) / alpha, Double(storage[i + 1]) / alpha, Double(storage[i + 2]) / alpha)",
+    "replacement": "let straight = Color3(Double(storage[i]), Double(storage[i + 1]), Double(storage[i + 2]))",
+    "filter": "ProfileConvertTests.unpremultipliesFirst"
+  },
+  {
+    "note": "profile convert clamps converted colour to 0...1",
+    "file": "Sources/CoreRaster/Codecs/ProfileConvert.swift",
+    "anchor": "let mapped = transform.applyLinear(straight)",
+    "replacement": "let mapped = { (m: Color3) in Color3(min(max(m.c0, 0), 1), min(max(m.c1, 0), 1), min(max(m.c2, 0), 1)) }(transform.applyLinear(straight))",
+    "filter": "ProfileConvertTests.keepsOutOfGamut"
+  }
+]
