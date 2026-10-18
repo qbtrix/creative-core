@@ -2,29 +2,29 @@
   {
     "note": "profile convert maps premultiplied values instead of unpremultiplying first",
     "file": "Sources/CoreRaster/Codecs/ProfileConvert.swift",
-    "anchor": "let straight = Color3(Double(storage[i]) / alpha, Double(storage[i + 1]) / alpha, Double(storage[i + 2]) / alpha)",
-    "replacement": "let straight = Color3(Double(storage[i]), Double(storage[i + 1]), Double(storage[i + 2]))",
+    "anchor": "let straight = (Double(s[i]) * inverse, Double(s[i + 1]) * inverse, Double(s[i + 2]) * inverse)",
+    "replacement": "let straight = (Double(s[i]), Double(s[i + 1]), Double(s[i + 2]))",
     "filter": "ProfileConvertTests.unpremultipliesFirst"
   },
   {
     "note": "profile convert clamps converted colour to 0...1",
     "file": "Sources/CoreRaster/Codecs/ProfileConvert.swift",
-    "anchor": "let mapped = convert(straight)",
-    "replacement": "let mapped = { (m: Color3) in Color3(min(max(m.c0, 0), 1), min(max(m.c1, 0), 1), min(max(m.c2, 0), 1)) }(convert(straight))",
+    "anchor": "let rgb = (Float(mapped.0 * alpha), Float(mapped.1 * alpha), Float(mapped.2 * alpha))",
+    "replacement": "let rgb = (Float(min(max(mapped.0, 0), 1) * alpha), Float(min(max(mapped.1, 0), 1) * alpha), Float(min(max(mapped.2, 0), 1) * alpha))",
     "filter": "ProfileConvertTests.keepsOutOfGamut"
   },
   {
     "note": "profile convert divides alpha 0 pixels instead of copying them unchanged",
     "file": "Sources/CoreRaster/Codecs/ProfileConvert.swift",
-    "anchor": "guard a != 0 else { continue }",
-    "replacement": "guard a != -1 else { continue }",
+    "anchor": "guard a != 0 else {",
+    "replacement": "guard a != -1 else {",
     "filter": "ProfileConvertTests.transparentPixelsUnchanged"
   },
   {
     "note": "profile convert stores a non-finite converted pixel instead of throwing",
     "file": "Sources/CoreRaster/Codecs/ProfileConvert.swift",
-    "anchor": "guard rgb.0.isFinite, rgb.1.isFinite, rgb.2.isFinite else {",
-    "replacement": "guard true else {",
+    "anchor": "if !(rgb.0.isFinite && rgb.1.isFinite && rgb.2.isFinite), notFinite == nil {",
+    "replacement": "if false, notFinite == nil {",
     "filter": "ProfileConvertTests.nonFiniteResultThrows"
   },
   {
@@ -47,5 +47,12 @@
     "anchor": "let encodeOut = Self.decodesAsBuffer(target) ? nil : try Self.transform(from: Self.linear(target), to: target, for: asked)",
     "replacement": "let encodeOut: ProfileTransform? = nil",
     "filter": "ProfileConvertTests.encodesWithTargetCurve"
+  },
+  {
+    "note": "profile convert curve table drops the fractional term and returns the left node",
+    "file": "Sources/CoreRaster/Codecs/ProfileConvertCurves.swift",
+    "anchor": "return left + (right - left) * fraction",
+    "replacement": "return left",
+    "filter": "ProfileConvertTests.curveTablesMatchExactPath"
   }
 ]
