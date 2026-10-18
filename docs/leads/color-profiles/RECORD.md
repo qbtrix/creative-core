@@ -2,7 +2,7 @@
 
 Issue: #441 · Packet: docs/blueprints/core/features/color-profiles.md
 Run: act-1a14ddaebc8-nwqn · Session: line lead (engine-contracts, animate-properties, color-profiles) · Started: 2026-10-18T07:15Z
-Stage: 4 Anatomy round 1 done, not clean (13 confirmed, 1 refuted); fix batches cp1-a, cp1-b, cp1-c running (base ca537c1)
+Stage: 4 Anatomy round 1 fixes: cp1-a and cp1-b running; cp1-c committed (1831265, no PR yet) and waits on the gate: scripts/ci fails only on wall-clock budget tests (EngineStressTests, StageBudgetTests) under load 10 to 26 on the shared machine; the lead reruns it serially at load < 5 and opens the PR only on CI: PASS.
 Base: 9d01972365f04da4fe6074e9bdd56ceab5b616a8
 Next: fix PRs for round 1 merge, then Anatomy round 2. CP-7/CP-8 wait on layered-codecs LC-write.
 
