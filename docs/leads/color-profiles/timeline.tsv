@@ -16,3 +16,4 @@ utc	stage	event	ref	note
 2026-10-18T09:49Z	3	pr-opened	#462	CP-2 PR ed17631 (checks first, contract check ok)
 2026-10-18T09:49Z	3	pr-merged	#462	CP-2 merged 33d2376; CP-a tasks all merged; Belt-Slice-Done after Linux green
 2026-10-18T09:50Z	3	stage-start	CP-3	wave 3 CP-3 ICC read building on 33d2376
+2026-10-18T09:53Z	-	heartbeat	-	waiting
