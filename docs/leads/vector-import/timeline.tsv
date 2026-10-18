@@ -16,3 +16,4 @@ utc	stage	event	ref	note
 2026-10-18T11:59:58Z	4	gate	VI-a	round 1 on b80c087: CI PASS
 2026-10-18T11:59:58Z	4	critics-start	VI-a	round 1 lenses clarity,contract,undo,robustness,tests
 2026-10-18T12:09:47Z	4	verify	VI-a	round 1: 13 verifiers; not clean, confirmed majors routed
+2026-10-18T12:10:38Z	4	fix-start	R1-1	docs batch: anchor, fill none, cycles, AddScene id, frame ranges, cap docs
