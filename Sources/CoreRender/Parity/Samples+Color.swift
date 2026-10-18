@@ -1,5 +1,5 @@
 // Samples+Color.swift: the parity samples and golden packs of `RenderOp.color`, empty until
-// the colour-adjustments feature adds samples and checks in their CPU goldens.
+// the `tone-pack` feature adds samples and checks in their CPU goldens.
 
 /// The parity inputs of `RenderOp.color`, read by `ParityHarness.sampleSet(for:)` and `ParityPack.all`.
 enum ColorSamples {

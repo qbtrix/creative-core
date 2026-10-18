@@ -71,14 +71,18 @@ public protocol RenderBackend: Sendable {
                    mask: Mask, maskX: Int, maskY: Int) throws
     /// `s` mapped through `m` (source to output pixels) into a new
     /// `width` x `height` surface, sampled with `filter`; output pixels with
-    /// no source are clear. Gated by `.affine`.
+    /// no source are clear. Coordinates are continuous pixel units with
+    /// (0, 0) at the top-left corner of the top-left pixel; pixel (x, y) is
+    /// sampled at its centre (x + 0.5, y + 0.5). Gated by `.affine`.
     func transformed(_ s: RenderSurface, _ m: AffineMatrix, width: Int, height: Int, filter: ResampleFilter) throws
         -> RenderSurface
     /// `s` mirrored across `axis`, as a new surface. Gated by `.affine`.
     func flipped(_ s: RenderSurface, _ axis: FlipAxis) throws -> RenderSurface
     /// Blends `s` onto `b` in place through `m` (`s`'s pixels to `b`'s),
     /// sampled with `filter`, with `mode` at `opacity`; `b` keeps its id and
-    /// size. Gated by `.affine`.
+    /// size. Coordinates are continuous pixel units with (0, 0) at the
+    /// top-left corner of the top-left pixel; pixel (x, y) is sampled at its
+    /// centre (x + 0.5, y + 0.5). Gated by `.affine`.
     func composite(_ s: RenderSurface, onto b: inout RenderSurface, through m: AffineMatrix, mode: BlendMode,
                    opacity: Float, filter: ResampleFilter) throws
     /// `s` with `effect` applied, as a new surface of the same size. Gated

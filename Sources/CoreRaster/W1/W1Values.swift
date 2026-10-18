@@ -9,6 +9,10 @@
 /// A 2D affine transform. A point (x, y) maps to
 /// (a·x + c·y + tx, b·x + d·y + ty): `a`, `b` are the first column,
 /// `c`, `d` the second, `tx`, `ty` the translation.
+/// Coordinates are continuous pixel units with (0, 0) at the top-left corner
+/// of the top-left pixel; pixel (x, y) is sampled at its centre
+/// (x + 0.5, y + 0.5), as `rotated(degrees:filter:)` and
+/// `resized(width:height:filter:)` already do.
 public struct AffineMatrix: Hashable, Sendable {
     public var a, b, c, d, tx, ty: Double
 

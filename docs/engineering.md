@@ -105,6 +105,53 @@ FlareCore has four layers. Each depends only on the ones above it. CoreColor, Co
   silence. Hit testing and bounds follow the same rule. Review-only; Q4 (#100)
   tracks stroke and instances.
 
+## W1 seams
+
+`engine-contracts` (`docs/blueprints/core/features/engine-contracts.md`)
+split the shared files so the wave-6 features never edit the same file. Each
+seam file below is owned by the feature its name says; fill your own file and
+leave the rest alone. Test: `W1ContractWalkTests.walk` (every new backend
+method once) and `W1FileWalkTests.walk` (a file with and without the W1
+fields).
+
+- **Values and model.** `Sources/CoreRaster/W1/W1Values.swift` (the shared
+  value types, values only) and `Sources/FlareCore/W1Model.swift` (masks,
+  mattes, text runs, colour and shape tracks; every field optional or
+  defaulted, decoded with `decodeIfPresent`).
+- **Contract.** `Sources/CoreRender/RenderBackend+NotOnThisBackend.swift`
+  gives each new `RenderBackend` method a default that throws
+  `RenderError.unsupported(<its family>)`; `Sources/CoreRender/RenderDispatcher.swift`
+  routes each new method by its family and each `ToneAdjustment` by `family`.
+- **CPU-first families.** `maskedComposite`, `affine`, `effect` and `color`
+  are in `RenderOp.notOnMetalYet`: Metal claims none of them, so the
+  dispatcher always sends them to the CPU. Their CPU stubs are one file per
+  family: `Sources/CoreRender/CPU/CPUBackend+MaskedComposite.swift`,
+  `CPUBackend+Affine.swift`, `CPUBackend+Effect.swift` and
+  `CPUBackend+Color.swift` (`CPUBackend+Ops.swift` calls `+Color` for a
+  `.color` case). R2 removes a family from `notOnMetalYet` only when its
+  Metal kernel and parity test land. Test: `W1ContractTests`,
+  `RenderDispatcherW1Tests`.
+- **Parity.** `ParitySamples.swift` and `ParityPack.swift` read one file per
+  family: `Sources/CoreRender/Parity/Samples+MaskedComposite.swift`,
+  `Samples+Affine.swift`, `Samples+Effect.swift` and `Samples+Color.swift`,
+  empty until the family's feature adds samples and their CPU goldens.
+- **Commands.** `MaskCommands.swift`, `TextStyleCommands.swift`,
+  `TrackCommands.swift` and `TrackCommands+Shape.swift` in
+  `Sources/FlareCore/`, each with its own `all`, `undoSteps` and
+  `expectedIDs` in its test file, so a new command touches only its family's
+  two files.
+- **Export.** Mask, text, style and track writing lives in
+  `Sources/FlareCore/Export/SVGExporter+Masks.swift`, `SVGExporter+Text.swift`,
+  `SVGExporter+Style.swift`, `LottieExporter+Masks.swift` and
+  `LottieExporter+Tracks.swift`.
+- **Path ops** (`docs/blueprints/core/features/path-geometry.md`). Path editing, measuring, trim, dash, outline and booleans
+  belong to `path-geometry` in `Sources/FlareCore/PathOps/`, as extensions on
+  FlareCore's `Path`: no second path type and no new module. They are
+  Linux-safe value code at the model layer, so they throw `GeometryError`
+  (never trap), take an explicit flattening `tolerance`, and refuse a boolean
+  over `Path.maxBooleanVertices` flattened vertices with `tooComplex`. No W1
+  seam file holds path math; a W1 feature that needs it calls `PathOps/`.
+
 ## Tests
 
 - **Test behavior, not wiring.** Call the public API with one concrete input
