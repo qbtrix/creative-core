@@ -56,22 +56,28 @@ public struct ColorProfile: Hashable, Sendable {
         try ICCWrite.profile(self)
     }
 
-    /// IEC 61966-2-1 sRGB as ICC `para` function type 3.
-    static let sRGBCurve = ProfileCurve.parametric(
-        type: 3, params: [2.4, 1 / 1.055, 0.055 / 1.055, 1 / 12.92, 0.04045])
+    // The built-ins: values are on the ICC s15Fixed16 grid, so a written profile reads back ==; each is
+    // within 2^-16 of IEC 61966-2-1 / the P3 primaries.
 
-    /// IEC 61966-2-1 sRGB: its primaries and curve, D65 adapted to D50.
+    /// IEC 61966-2-1 sRGB as ICC `para` function type 3, its parameters on the s15Fixed16 grid.
+    static let sRGBCurve = ProfileCurve.parametric(
+        type: 3, params: [2.4, 1 / 1.055, 0.055 / 1.055, 1 / 12.92, 0.04045].map(s15))
+
+    /// IEC 61966-2-1 sRGB: its primaries and curve, D65 adapted to D50, on the s15Fixed16 grid.
     public static let sRGB = rgb("sRGB", Matrix3.xyzFromLinearSRGB, sRGBCurve)
-    /// P3 primaries, D65 white, the sRGB curve.
+    /// P3 primaries, D65 white, the sRGB curve, on the s15Fixed16 grid.
     public static let displayP3 = rgb("Display P3", Matrix3.xyzFromLinearSRGB * Matrix3.linearSRGBFromP3, sRGBCurve)
-    /// sRGB primaries, linear light: the working space.
+    /// sRGB primaries, linear light: the working space, on the s15Fixed16 grid.
     public static let linearSRGB = rgb("Linear sRGB", Matrix3.xyzFromLinearSRGB, .gamma(1))
 
     private static func rgb(_ name: String, _ xyzD65: Matrix3, _ curve: ProfileCurve) -> ColorProfile {
         let m = (Matrix3.bradfordD65ToD50 * xyzD65).m
-        return ColorProfile(name: name, isGray: false, toXYZD50: [m.0, m.1, m.2, m.3, m.4, m.5, m.6, m.7, m.8],
+        return ColorProfile(name: name, isGray: false, toXYZD50: [m.0, m.1, m.2, m.3, m.4, m.5, m.6, m.7, m.8].map(s15),
                             curves: [curve, curve, curve])
     }
+
+    /// Rounds to the nearest ICC s15Fixed16 value (1/65536 steps), as a written profile stores it.
+    private static func s15(_ v: Double) -> Double { (v * 65536).rounded() / 65536 }
 }
 
 extension Matrix3 {

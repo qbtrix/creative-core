@@ -1,11 +1,15 @@
 // ProfileTransformTests.swift: CP-5's acceptance checks. sRGB to itself is identity within 1e-9, to P3 matches
-// CoreColor within 1e-6; a table inverts within 1e-5, outside 0...1 too; gray gives r == g == b; singular
+// CoreColor within `grid` (the built-ins sit on the ICC s15Fixed16 grid, CoreColor does not); a table inverts within 1e-5, outside 0...1 too; gray gives r == g == b; singular
 // colourants and a falling table throw; the built-in P3 colourants are CoreColor's P3 primaries adapted to D50.
 import CoreColor
 import Testing
 
 @Suite
 struct ProfileTransformTests {
+    /// Comparing a built-in against CoreColor's unrounded matrices and curve: the built-ins' entries are each
+    /// within 2^-17 of those values, and three s15Fixed16 steps bound what that moves a channel or cone response.
+    static let grid = 3.0 / 65536
+
     static func colours(_ seed: UInt64, _ low: Double, _ high: Double) -> [Color3] {
         var rng = ICC.SplitMix64(state: seed)
         return (0..<200).map { _ in
@@ -26,10 +30,11 @@ struct ProfileTransformTests {
         let transform = try ProfileTransform(from: .sRGB, to: .displayP3)
         for c in Self.colours(2, 0, 1) {
             let want = try c.converted(from: .sRGB, to: .displayP3)
-            #expect(Self.near(transform.apply(c), want, 1e-6), "\(c)")
+            // Encoded, a linear difference grows by up to the sRGB curve's steepest slope, 12.92.
+            #expect(Self.near(transform.apply(c), want, 13 * Self.grid), "\(c)")
             // The matrix part alone: linear sRGB in, linear P3 out.
             let linearP3 = Color3(TransferCurve.decode(want.c0), TransferCurve.decode(want.c1), TransferCurve.decode(want.c2))
-            #expect(Self.near(transform.applyLinear(try c.converted(from: .sRGB, to: .linearSRGB)), linearP3, 1e-9), "\(c)")
+            #expect(Self.near(transform.applyLinear(try c.converted(from: .sRGB, to: .linearSRGB)), linearP3, Self.grid), "\(c)")
         }
     }
 
@@ -46,7 +51,7 @@ struct ProfileTransformTests {
             let p = try rgb.converted(from: .displayP3, to: .xyzD65)
             let want = zip(cones(p.c0, p.c1, p.c2), zip(d50, white)).map { $0 * $1.0 / $1.1 }
             let got = cones(m[column], m[3 + column], m[6 + column])
-            #expect(zip(got, want).allSatisfy { abs($0 - $1) < 1e-9 }, "column \(column): \(got) vs \(want)")
+            #expect(zip(got, want).allSatisfy { abs($0 - $1) < Self.grid }, "column \(column): \(got) vs \(want)")
         }
     }
 
@@ -101,7 +106,7 @@ struct ProfileTransformTests {
             let linear = toLinear.apply(c), y = row[3] * linear.c0 + row[4] * linear.c1 + row[5] * linear.c2
             let out = transform.apply(c)
             #expect(out.c0 == out.c1 && out.c1 == out.c2, "\(c): \(out)")
-            #expect(abs(out.c1 - y.squareRoot()) < 1e-6, "\(c): \(out) vs \(y)")
+            #expect(abs(out.c1 - y.squareRoot()) < Self.grid, "\(c): \(out) vs \(y)")
         }
         // A gray white with Y <= 0 throws; a negative Y would otherwise build a finite, inverted transform.
         for y in [0.0, -1] {
@@ -116,7 +121,7 @@ struct ProfileTransformTests {
         for v in stride(from: 0.0, through: 1.0, by: 0.125) {
             let out = transform.apply(Color3(v, v, v))
             #expect(abs(out.c0 - out.c1) < 1e-9 && abs(out.c1 - out.c2) < 1e-9, "\(v): \(out)")
-            #expect(abs(out.c1 - TransferCurve.encode(v * v)) < 1e-6, "\(v): \(out)")
+            #expect(abs(out.c1 - TransferCurve.encode(v * v)) < Self.grid, "\(v): \(out)")
         }
     }
 }

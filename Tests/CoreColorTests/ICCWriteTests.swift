@@ -1,5 +1,5 @@
-// ICCWriteTests.swift: CP-4's acceptance checks. A written profile reads back: exactly for 50 seeded ones on
-// the fields' grids, within their rounding for the built-ins. Sizes are multiples of 4 matching the header,
+// ICCWriteTests.swift: CP-4's acceptance checks. A written profile reads back exactly: 50 seeded ones on
+// the fields' grids and the built-ins, which are on the s15Fixed16 grid too. Sizes are multiples of 4 matching the header,
 // and `chad` adapts D65 to the D50 PCS. Gray, table and parametric curves read back too, and a value that does
 // not fit its field throws instead of writing bytes that read back different.
 import CoreColor
@@ -27,7 +27,7 @@ struct ICCWriteTests {
     @Test func roundTripsBuiltIns() throws {
         for profile in Self.builtIns {
             let read = try ColorProfile(iccData: profile.iccData())
-            #expect(nearlyEqual(read, profile, 1e-5), "\(profile.name): \(read)")
+            #expect(read == profile, "\(profile.name): \(read)")
         }
     }
 
@@ -49,7 +49,7 @@ struct ICCWriteTests {
         let d65 = try Color3(1, 1, 1).converted(from: .linearSRGB, to: .xyzD65)
         let mapped = [0, 3, 6].map { m[$0] * d65.c0 + m[$0 + 1] * d65.c1 + m[$0 + 2] * d65.c2 }
         #expect(zip(mapped, ICCFixture.d50).allSatisfy { abs($0 - $1) < 1e-4 }, "\(mapped)")
-        #expect(nearlyEqual(try ColorProfile(iccData: Data(bytes)), .sRGB, 1e-5))
+        #expect(try ColorProfile(iccData: Data(bytes)) == .sRGB)
     }
 
     @Test func equalTagsShareOneCopy() throws {
