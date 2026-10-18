@@ -10,3 +10,4 @@ utc	stage	event	ref	note
 2026-10-18T09:05Z	-	heartbeat	-	waiting
 2026-10-18T09:19Z	3	pr-merged	#457	AP-1 merged 60b515d; AP-2 starts once dev-red #453 clears (gate fails on dev)
 2026-10-18T09:20Z	3	stage-end	AP-1	AP-1 #457 merged; check flags accepted (see Decisions)
+2026-10-18T09:29Z	3	stage-start	AP-2	wave 2 AP-2 (checks first) building on b5b782b
