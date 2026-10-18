@@ -4,3 +4,4 @@ utc	stage	event	ref	note
 2026-10-18T07:35Z	-	heartbeat	-	waiting
 2026-10-18T07:36Z	3	pr-merged	#443	wave 1
 2026-10-18T07:36Z	3	pr-merged	#444	wave 1
+2026-10-18T07:36Z	3	stage-start	wave-2	EC-2, EC-7, EC-8 on e1d381f
