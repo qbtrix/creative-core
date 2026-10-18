@@ -18,6 +18,11 @@
 // Composites onto one CPU surface run one at a time under the CPU store's
 // lock, and each applies in turn. A backdrop uploaded first becomes a new
 // surface on each call, so composites racing onto it do not combine.
+// Every W1 method routes by its own family, never an old one: the masked
+// composite by `.maskedComposite` (not by its blend mode), `transformed`,
+// `flipped` and the composite through a matrix by `.affine`, `applying` by
+// `.effect`, and `adjusted` by `adjustment.family` (`.adjust` or `.color`).
+// The two W1 composites share `composite`'s backdrop path.
 import CoreColor
 import CoreRaster
 
@@ -98,18 +103,28 @@ public struct RenderDispatcher: Sendable {
     /// unless it is also `s`, which the caller still holds.
     public func composite(_ s: RenderSurface, onto b: inout RenderSurface, x: Int, y: Int,
                           mode: BlendMode, opacity: Float) throws {
-        let original = b
-        let target = backend(for: RenderOp(compositing: mode))
-        let (backdrop, moved) = try local(b, on: target)
-        var result = backdrop
-        do {
-            try run(target, s) { try $0.composite($1, onto: &result, x: x, y: y, mode: mode, opacity: opacity) }
-        } catch {
-            if moved { target.release(backdrop) }
-            throw error
+        try onBackdrop(RenderOp(compositing: mode), s, &b) {
+            try $0.composite($1, onto: &$2, x: x, y: y, mode: mode, opacity: opacity)
         }
-        b = result
-        if moved, original != s { release(original) }
+    }
+
+    /// A masked composite on the backend routed for `.maskedComposite`, its
+    /// own family whatever `mode` is, with `b` moved as `composite` moves it.
+    public func composite(_ s: RenderSurface, onto b: inout RenderSurface, x: Int, y: Int, mode: BlendMode,
+                          opacity: Float, mask: Mask, maskX: Int, maskY: Int) throws {
+        try onBackdrop(.maskedComposite, s, &b) {
+            try $0.composite($1, onto: &$2, x: x, y: y, mode: mode, opacity: opacity,
+                             mask: mask, maskX: maskX, maskY: maskY)
+        }
+    }
+
+    /// A composite through `m` on the backend routed for `.affine`, with `b`
+    /// moved as `composite` moves it.
+    public func composite(_ s: RenderSurface, onto b: inout RenderSurface, through m: AffineMatrix, mode: BlendMode,
+                          opacity: Float, filter: ResampleFilter) throws {
+        try onBackdrop(.affine, s, &b) {
+            try $0.composite($1, onto: &$2, through: m, mode: mode, opacity: opacity, filter: filter)
+        }
     }
 
     /// A crop on the backend routed for `.transform`.
@@ -132,13 +147,48 @@ public struct RenderDispatcher: Sendable {
     public func unsharpMask(_ s: RenderSurface, amount: Double, sigma: Double, threshold: Double) throws -> RenderSurface {
         try run(.blur, s) { try $0.unsharpMask($1, amount: amount, sigma: sigma, threshold: threshold) }
     }
-    /// A tone adjustment on the backend routed for `.adjust`.
+    /// A tone adjustment on the backend routed for its family: `.adjust` for
+    /// the six old cases, `.color` for the W1 colour cases.
     public func adjusted(_ s: RenderSurface, _ adjustment: ToneAdjustment) throws -> RenderSurface {
-        try run(.adjust, s) { try $0.adjusted($1, adjustment) }
+        try run(adjustment.family, s) { try $0.adjusted($1, adjustment) }
     }
     /// A clone through `mask` on the backend routed for `.retouch`.
     public func cloned(_ s: RenderSurface, offset: (dx: Int, dy: Int), through mask: Mask) throws -> RenderSurface {
         try run(.retouch, s) { try $0.cloned($1, offset: offset, through: mask) }
+    }
+
+    /// An affine resample on the backend routed for `.affine`.
+    public func transformed(_ s: RenderSurface, _ m: AffineMatrix, width: Int, height: Int,
+                            filter: ResampleFilter) throws -> RenderSurface {
+        try run(.affine, s) { try $0.transformed($1, m, width: width, height: height, filter: filter) }
+    }
+    /// A mirror on the backend routed for `.affine`.
+    public func flipped(_ s: RenderSurface, _ axis: FlipAxis) throws -> RenderSurface {
+        try run(.affine, s) { try $0.flipped($1, axis) }
+    }
+    /// A layer effect on the backend routed for `.effect`.
+    public func applying(_ s: RenderSurface, _ effect: LayerEffect) throws -> RenderSurface {
+        try run(.effect, s) { try $0.applying($1, effect) }
+    }
+
+    /// Routes `op`, then runs `body` on `s` and `b` there, each uploaded if
+    /// needed. A moved `b` becomes the routed backend's copy and the owner's
+    /// is released, unless it is also `s`; if `body` throws, the copy is
+    /// released and `b` is left as it was.
+    private func onBackdrop(_ op: RenderOp, _ s: RenderSurface, _ b: inout RenderSurface,
+                            _ body: (any RenderBackend, RenderSurface, inout RenderSurface) throws -> Void) throws {
+        let original = b
+        let target = backend(for: op)
+        let (backdrop, moved) = try local(b, on: target)
+        var result = backdrop
+        do {
+            try run(target, s) { try body($0, $1, &result) }
+        } catch {
+            if moved { target.release(backdrop) }
+            throw error
+        }
+        b = result
+        if moved, original != s { release(original) }
     }
 
     /// Routes `op`, then runs `body` there with `s` uploaded to it if needed.

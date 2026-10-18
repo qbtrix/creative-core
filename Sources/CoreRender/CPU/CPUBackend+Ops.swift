@@ -1,11 +1,14 @@
 // CPUBackend+Ops.swift: the CPU backend's transform, resample, blur, adjust and
 // retouch families (render-backend RB-4). Each op is exactly the CoreRaster
 // `PixelBuffer` method it names, with its arguments passed through in order, so
-// its pixels equal the direct call with `==`.
-// Invariants: each op reads `s` gated by its family and returns a new surface,
-// leaving `s` unchanged (`derived`); every CoreRaster error comes back as
-// `RenderError.raster` with the same message; each `ToneAdjustment` case maps to
-// the method of the same name with every parameter, encoding included.
+// its pixels equal the direct call with `==`. A `.color` tone adjustment goes
+// to `colorAdjusted` (CPUBackend+Color.swift), and `notBuilt` is the answer
+// of each W1 family's stub file until its feature fills it.
+// Invariants: each op reads `s` gated by its family (a tone adjustment by
+// `adjustment.family`) and returns a new surface, leaving `s` unchanged
+// (`derived`); every CoreRaster error comes back as `RenderError.raster` with
+// the same message; each `.adjust` case maps to the method of the same name
+// with every parameter, encoding included.
 import CoreRaster
 
 extension CPUBackend {
@@ -30,7 +33,7 @@ extension CPUBackend {
     }
 
     public func adjusted(_ s: RenderSurface, _ adjustment: ToneAdjustment) throws -> RenderSurface {
-        try derived(s, .adjust) { buffer in
+        try derived(s, adjustment.family) { buffer in
             switch adjustment {
             case .exposure(let stops):
                 try buffer.exposure(stops: stops)
@@ -47,12 +50,19 @@ extension CPUBackend {
                 try buffer.highlightsShadows(highlights: highlights, shadows: shadows)
             case .vibrance, .hueSaturation, .hsl, .blackAndWhite, .channelMixer, .colorBalance,
                  .gradientMap, .lut, .posterize, .threshold, .invert:
-                throw RenderError.unsupported(.color)  // the `.color` family has no CPU op yet
+                try colorAdjusted(buffer, adjustment)  // CPUBackend+Color.swift
             }
         }
     }
 
     public func cloned(_ s: RenderSurface, offset: (dx: Int, dy: Int), through mask: Mask) throws -> RenderSurface {
         try derived(s, .retouch) { try $0.cloned(offset: offset, through: mask) }
+    }
+
+    /// The answer of a W1 op its feature has not filled yet: `s` checked as
+    /// `derived` checks it (`op`'s gate, then the surface), then
+    /// `unsupported(op)`. Each `CPUBackend+<Family>.swift` stub calls it.
+    func notBuilt(_ s: RenderSurface, _ op: RenderOp) throws -> RenderSurface {
+        try derived(s, op) { _ in throw RenderError.unsupported(op) }
     }
 }
