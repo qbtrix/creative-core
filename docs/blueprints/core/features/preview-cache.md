@@ -83,7 +83,7 @@ public final class ThumbnailStore: @unchecked Sendable {   // a store, not a mod
 public struct PerceptualHash: Hashable, Codable, Sendable { public let bits: UInt64
     public init(of buffer: PixelBuffer) throws; public func distance(to other: PerceptualHash) -> Int }
 // Sources/CoreRaster/Hash/DuplicateGroups.swift (PC-7)
-public enum DuplicateGroups { public static func group(_ hashes: [(id: String, hash: PerceptualHash)], within distance: Int) -> [[String]] }  // 0...16
+public enum DuplicateGroups { public static func group(_ hashes: [(id: String, hash: PerceptualHash)], within distance: Int) -> [[String]] }  // 0...10: past it random hashes chain
 ```
 
 ## Pseudocode
@@ -114,9 +114,12 @@ public enum DuplicateGroups { public static func group(_ hashes: [(id: String, h
 - **PerceptualHash.** Luma, area-resampled to 32 × 32, a 2D DCT-II, the
   8 × 8 lowest frequencies without the DC term, each bit = coefficient >
   their median. `distance` is the popcount of the XOR.
-- **DuplicateGroups.** A BK-tree over the hashes; union-find over pairs
-  within `distance`; groups of 2 or more, each sorted by id, the list
-  sorted by its first id.
+- **DuplicateGroups.** The distance is clamped to 0...10: of 100,000 random
+  hashes 0.1% group at 10, 2% at 12 and 98% chain at 16. A multi-index
+  table over four 16-bit blocks (r = 4q + a: some block in 0...a is within
+  q, or one of the rest within q - 1), each block's hashes sorted by key so
+  a probe reads one run; union-find over pairs within `distance`; groups of
+  2 or more, each sorted by id, the list sorted by its first id.
 
 ## Tasks
 
@@ -160,7 +163,7 @@ walk relaunches through recovery, PC-9 is the prose task.
 | PC-4 | `ThumbnailStoreRecoveryTests`: a truncated index is set aside and rebuilt with every file; a newer version is set aside, not read; files missing from disk drop out; flush at most every 2 s (a 1,000-read scroll writes the index ≤ 2 times) | a damaged index loses previews or the index churns | `CoreAsset.PreviewIndex`: newer version accepted → `ThumbnailStoreRecoveryTests.newerSetAside`; flush on every read → `.scrollFlushesRarely` |
 | PC-5 | `OfflineVolumeTests`: an entry on an unmounted volume reads its bytes and reports `.offline`; `entries(on:)` lists only that volume; no volume means always online | offline previews disappear | `CoreAsset.OfflineVolumes`: mounted check inverted → `OfflineVolumeTests.unmountedIsOffline`; nil volume reported offline → `.noVolumeIsOnline` |
 | PC-6 | `PerceptualHashTests`: a picture and its 0.5× resize, its 8-bit round trip and a +0.1-stop exposure are within distance 6; 100 seeded different pictures are pairwise ≥ 20; the hash is deterministic | near copies drift apart or different pictures collide | `CoreRaster.PerceptualHash`: DC term kept → `PerceptualHashTests.exposureIsNear`; mean for median → `.differentPicturesFar`; DCT over 16 × 16 → `.resizeIsNear` |
-| PC-7 | `DuplicateGroupsTests`: three near copies of one picture form one group; a chain a~b~c groups all three; singletons are left out; each id is in at most one group; output order is stable | a picture lands in two groups | `CoreRaster.DuplicateGroups`: union by pair only (no transitivity) → `DuplicateGroupsTests.chainsGroup`; singletons kept → `.singletonsDropped` |
+| PC-7 | `DuplicateGroupsTests`: three near copies of one picture form one group; a chain a~b~c groups all three; singletons are left out; each id is in at most one group; output order is stable; the distance is clamped to 0...10; every split of the differing bits over the blocks is found; ≤ 1% of 100,000 random ids group; 100,000 hashes with 30% near copies group ≤ 2 s (`groupManyBudget`, 10,000 in debug) | a picture lands in two groups, random hashes chain, or grouping goes quadratic | `CoreRaster.DuplicateGroups`: union by pair only (no transitivity) → `DuplicateGroupsTests.chainsGroup`; singletons kept → `.singletonsDropped`; cap not applied → `.distanceIsClamped`; block probes one bit short or a block skipped → `.everyBlockSplitIsFound` |
 | PC-8 | `PreviewWalkTests.walk` and `DuplicateWalkTests.walk` (KJ-PC); their budget cases: a relaunch reading 2,000 entries' index ≤ 40 ms; a read ≤ 0.3 ms; hashing 1,000 previews ≤ 1.5 s; grouping 100,000 hashes ≤ 2 s (release, reported) | the walk's checks fail | none |
 | PC-9 | the part's words; status line says built | – | – |
 
@@ -170,7 +173,7 @@ walk relaunches through recovery, PC-9 is the prose task.
 |---|---|---|
 | Fast relaunch | index of 2,000 entries opens ≤ 40 ms | `PreviewWalkTests.relaunchBudget` (release, reported) |
 | Scroll | a cached read ≤ 0.3 ms; the index flushes ≤ once per 2 s | `PreviewWalkTests.readBudget`, `ThumbnailStoreRecoveryTests.scrollFlushesRarely` |
-| Duplicates at catalogue size | 100,000 hashes grouped ≤ 2 s | `DuplicateWalkTests.groupManyBudget` |
+| Duplicates at catalogue size | 100,000 hashes grouped ≤ 2 s | `DuplicateGroupsTests.groupManyBudget` |
 | Never loses a preview | atomic writes, recovery rebuilds from files | `ThumbnailStoreTests`, `ThumbnailStoreRecoveryTests` |
 | No new dependency | CoreAsset imports only Foundation | `scripts/ci` |
 

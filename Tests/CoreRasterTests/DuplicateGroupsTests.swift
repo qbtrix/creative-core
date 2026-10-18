@@ -1,10 +1,19 @@
 // DuplicateGroupsTests.swift: DuplicateGroups puts near copies of a picture in
 // one group, chains a~b~c into one group in any input order, leaves
 // singletons out, counts a hash exactly `distance` away as near, clamps the
-// distance to 0...16, and on seeded clusters matches a brute-force grouping
-// over every pair, with each id in at most one group and a stable order.
+// distance to 0...10, finds a pair however its differing bits fall across
+// the four 16-bit blocks, on seeded clusters matches a brute-force grouping
+// over every pair, with each id in at most one group and a stable order,
+// leaves all but about 1% of 100,000 random hashes ungrouped, and groups
+// 100,000 hashes with 30% near copies within the 2 s budget.
 import CoreRaster
 import Testing
+
+#if DEBUG
+private let optimized = false
+#else
+private let optimized = true
+#endif
 
 private func hash(_ bits: UInt64) -> PerceptualHash { PerceptualHash(bits: bits) }
 
@@ -54,7 +63,9 @@ private func photo(seed: UInt64) throws -> PixelBuffer {
 }
 
 @Test func distanceIsClamped() {
-    let input = [(id: "p", hash: hash(0)), (id: "q", hash: hash(0x1_FFFF))]  // 17 apart
+    #expect(DuplicateGroups.maxDistance == 10)
+    let input = [(id: "p", hash: hash(0)), (id: "q", hash: hash(0x7FF))]  // 11 apart
+    #expect(DuplicateGroups.group(input, within: 11) == [])
     #expect(DuplicateGroups.group(input, within: 16) == [])
     #expect(DuplicateGroups.group(input, within: Int.max) == [])
     #expect(DuplicateGroups.group(input, within: -1) == [])
@@ -109,4 +120,77 @@ private func reference(_ input: [(id: String, hash: PerceptualHash)], within rad
         #expect(Set(groups.map(Set.init)) == reference(input, within: radius))
         #expect(DuplicateGroups.group(input.reversed(), within: radius) == groups)
     }
+}
+
+// Every way to spread r differing bits over the four 16-bit blocks, each pair
+// on its own seeded base: within r each pair is one group, within r - 1 none.
+@Test func everyBlockSplitIsFound() {
+    var rng = SplitMix64(seed: 704)
+    for r in 0...DuplicateGroups.maxDistance {
+        var input: [(id: String, hash: PerceptualHash)] = []
+        var pairs: [[String]] = []
+        for d0 in 0...r {
+            for d1 in 0...(r - d0) {
+                for d2 in 0...(r - d0 - d1) {
+                    let spread = [d0, d1, d2, r - d0 - d1 - d2]
+                    var pattern: UInt64 = 0
+                    for (b, d) in spread.enumerated() where d > 0 { pattern |= ((1 << UInt64(d)) - 1) << UInt64(16 * b) }
+                    let base = rng.next(), name = spread.map(String.init).joined(separator: ".")
+                    input.append((id: "\(name)a", hash: hash(base)))
+                    input.append((id: "\(name)b", hash: hash(base ^ pattern)))
+                    pairs.append(["\(name)a", "\(name)b"])
+                }
+            }
+        }
+        #expect(DuplicateGroups.group(input, within: r) == pairs.sorted { $0[0] < $1[0] }, "r = \(r)")
+        if r > 0 { #expect(DuplicateGroups.group(input, within: r - 1) == [], "r = \(r)") }
+    }
+}
+
+/// `count` seeded hashes: 30% of the ids in clusters of 2...6 copies of one
+/// base, each copy 1...4 bits off it (so within 8 of each other), the rest
+/// random. Returns the hashes and the number of clustered ids.
+private func clustered(_ count: Int, seed: UInt64) -> (hashes: [(id: String, hash: PerceptualHash)], clustered: Int) {
+    var rng = SplitMix64(seed: seed)
+    var hashes: [(id: String, hash: PerceptualHash)] = []
+    var inClusters = 0
+    while hashes.count < count {
+        if Int.random(in: 0..<10, using: &rng) < 3 {
+            let base = rng.next(), size = min(Int.random(in: 2...6, using: &rng), count - hashes.count)
+            for _ in 0..<size {
+                var bits = base
+                for _ in 0..<Int.random(in: 1...4, using: &rng) { bits ^= 1 << UInt64.random(in: 0..<64, using: &rng) }
+                hashes.append((id: "p\(hashes.count)", hash: hash(bits)))
+            }
+            if size >= 2 { inClusters += size }
+        } else {
+            hashes.append((id: "p\(hashes.count)", hash: hash(rng.next())))
+        }
+    }
+    return (hashes, inClusters)
+}
+
+// At the largest distance, unrelated hashes stay apart: of 100,000 seeded
+// random ids at most 1% land in groups (about 0.1% do).
+@Test func randomIdsRarelyGroup() {
+    var rng = SplitMix64(seed: 705)
+    let input = (0..<100_000).map { (id: "r\($0)", hash: hash(rng.next())) }
+    let grouped = DuplicateGroups.group(input, within: DuplicateGroups.maxDistance).reduce(0) { $0 + $1.count }
+    #expect(grouped <= input.count / 100, "\(grouped) of \(input.count) random ids grouped")
+}
+
+// The budget: 100,000 hashes, 30% near copies, grouped at the largest
+// distance in 2 s or less. Debug builds, about 5 times slower per hash,
+// time 10,000 against the same budget: the quadratic tree this replaced took
+// 0.9 s on 10,000 even in an optimized build. At least as many ids group as
+// the clusters hold, and at most 1% more.
+@Test func groupManyBudget() {
+    let count = optimized ? 100_000 : 10_000
+    let (input, inClusters) = clustered(count, seed: 706)
+    var groups: [[String]] = []
+    let elapsed = ContinuousClock().measure { groups = DuplicateGroups.group(input, within: DuplicateGroups.maxDistance) }
+    print("budget groupMany \(count): \(elapsed) (budget 2 s)")
+    #expect(elapsed <= .seconds(2), "grouping \(count) hashes took \(elapsed)")
+    let grouped = groups.reduce(0) { $0 + $1.count }
+    #expect(grouped >= inClusters && grouped <= inClusters + count / 100)
 }
