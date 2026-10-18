@@ -2,8 +2,8 @@
   {
     "note": "a preview index with a newer version is accepted instead of set aside, caught by newerSetAside",
     "file": "Sources/CoreAsset/Thumbnails/PreviewIndex.swift",
-    "anchor": "guard decoded.version == PreviewIndexFile.currentVersion else",
-    "replacement": "guard decoded.version >= PreviewIndexFile.currentVersion else",
+    "anchor": "guard (1...PreviewIndexFile.currentVersion).contains(decoded.version) else",
+    "replacement": "guard decoded.version >= 1 else",
     "filter": "ThumbnailStoreRecoveryTests"
   },
   {
@@ -37,8 +37,8 @@
   {
     "note": "opening the preview store keeps index entries whose file is gone, caught by missingFilesDropOut",
     "file": "Sources/CoreAsset/Thumbnails/PreviewIndex.swift",
-    "anchor": "let entries = loaded.filter { present.contains(Self.name(for: $0.key)) }",
-    "replacement": "let entries = loaded",
+    "anchor": "let entries = ledger.entries.filter { present.contains(Self.name(for: $0.key)) }",
+    "replacement": "let entries = ledger.entries",
     "filter": "ThumbnailStoreRecoveryTests"
   }
 ]

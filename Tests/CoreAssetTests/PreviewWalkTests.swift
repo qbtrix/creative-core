@@ -3,9 +3,9 @@
 // classes, 600 of them on volume "Card A"; a relaunched store reads every one
 // back equal; with Card A unplugged its 600 entries still read and report
 // offline; reopened at half the budget, the next write evicts the least
-// recently read half and the rest still read. Every write rewrites the whole
-// index, so filling is quadratic: debug builds walk 200 previews (60 on Card
-// A), as DuplicateGroupsTests' budget walks 10,000 there. The budget cases
+// recently read half and the rest still read. Debug builds walk 200 previews
+// (60 on Card A) to keep the debug gate short, as DuplicateGroupsTests' budget
+// walks 10,000 there. The budget cases
 // fill 2,000 and time a relaunch that reads their index (40 ms) and a cached
 // read (0.3 ms) as medians, printed as `budget <row>: <ms> ms (budget <ms>
 // ms)`; like the other budget suites they run only in optimized builds, since

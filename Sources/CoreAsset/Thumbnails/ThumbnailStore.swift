@@ -5,7 +5,7 @@
 // drive still reads and reports offline. CoreAsset stays dependency-free: the
 // store keeps opaque `Data` and never decodes images.
 // Invariants: every failure is an `AssetError`; writes and removes reload the
-// index under the folder lock (PreviewFiles.swift) and leave `usedBytes <=
+// index under the folder lock (PreviewFiles.swift, PreviewJournal.swift) and leave `usedBytes <=
 // budgetBytes`, counting payloads only; a read checks its file's header names
 // its key; reads flush the index at most every 2 s and on deinit, merged with
 // the index on disk (PreviewIndex.swift recovers a damaged one); volume
@@ -81,10 +81,12 @@ public final class ThumbnailStore: @unchecked Sendable {
 
     private let files: PreviewFiles
     private let queue = DispatchQueue(label: "CoreAsset.ThumbnailStore")
-    private var entries: [PreviewKey: PreviewEntry]
+    private var ledger: PreviewLedger
+    /// Keys whose `lastRead` a read bumped since the last flush.
+    private var dirty: Set<PreviewKey> = []
+    private var unflushed: Bool { !dirty.isEmpty }
     private var clock = Date.distantPast
     private var lastFlush = Date()
-    private var unflushed = false
     private static let flushInterval: TimeInterval = 2
 
     /// Opens (or, from PC-3, creates) the store in `folder`.
@@ -92,7 +94,7 @@ public final class ThumbnailStore: @unchecked Sendable {
         guard budgetBytes >= 0 else { throw .invalid("a preview budget cannot be negative") }
         let files = PreviewFiles(folder: folder)
         try files.createFolders()
-        entries = try files.withLock { () throws(AssetError) in try files.openIndex(budgetBytes: budgetBytes) }
+        ledger = try files.withLock { () throws(AssetError) in try files.openIndex(budgetBytes: budgetBytes) }
         self.folder = folder
         self.budgetBytes = budgetBytes
         self.files = files
@@ -112,17 +114,17 @@ public final class ThumbnailStore: @unchecked Sendable {
     /// The preview bytes for `key`, or nil when absent; a read bumps `lastRead`.
     public func read(_ key: PreviewKey) throws(AssetError) -> Data? {
         try locked { () throws(AssetError) -> Data? in
-            guard entries[key] != nil else { return nil }
+            guard ledger.entries[key] != nil else { return nil }
             let file = files.file(for: key)
             let data: Data
             do { data = try Data(contentsOf: file) } catch {
-                guard FileManager.default.fileExists(atPath: file.path) else { entries[key] = nil; return nil }
+                guard FileManager.default.fileExists(atPath: file.path) else { ledger.entries[key] = nil; return nil }
                 throw .invalid("cannot read preview file \(file.lastPathComponent)")
             }
             let (header, payload) = try PreviewFiles.decode(data)
             guard header.key == key else { throw .invalid("preview file \(file.lastPathComponent) is another key's") }
-            entries[key]?.lastRead = tick()
-            unflushed = true
+            ledger.entries[key]?.lastRead = tick()
+            dirty.insert(key)
             if Date().timeIntervalSince(lastFlush) >= Self.flushInterval { try? syncFolder { _ in } }
             return payload
         }
@@ -130,7 +132,12 @@ public final class ThumbnailStore: @unchecked Sendable {
 
     /// This store's entries now, read on the serial queue (OfflineVolumes.swift).
     var currentEntries: [PreviewKey: PreviewEntry] {
-        queue.sync { entries }
+        queue.sync { ledger.entries }
+    }
+
+    /// This store's view of its index now, with its index I/O counts (tests).
+    var currentLedger: PreviewLedger {
+        queue.sync { ledger }
     }
 
     /// Removes every size class of every preview of `asset`.
@@ -145,7 +152,7 @@ public final class ThumbnailStore: @unchecked Sendable {
 
     /// The bytes of preview files the store holds now.
     public var usedBytes: Int {
-        queue.sync { entries.values.reduce(0) { $0 + $1.byteCount } }
+        queue.sync { ledger.entries.values.reduce(0) { $0 + $1.byteCount } }
     }
 
     /// Runs `body` on the serial queue.
@@ -154,25 +161,33 @@ public final class ThumbnailStore: @unchecked Sendable {
         return try result.get()
     }
 
-    /// Under the queue and the folder lock: reloads the index (keeping this
-    /// store's newer reads), lets `body` change it and its files, then writes it.
+    /// Under the queue and the folder lock: catches up on the index (keeping
+    /// this store's newer reads), lets `body` change it and its files, then journals what changed.
     private func changeFolder(_ body: (inout [PreviewKey: PreviewEntry]) throws(AssetError) -> Void) throws(AssetError) {
         try locked { () throws(AssetError) in try syncFolder(body) }
     }
 
     /// `changeFolder`'s work, for a caller already on the queue; it also
     /// flushes this store's reads.
+    /// A failure leaves the ledger stale, so the next change compacts.
     private func syncFolder(_ body: (inout [PreviewKey: PreviewEntry]) throws(AssetError) -> Void) throws(AssetError) {
         try files.withLock { () throws(AssetError) in
-            var current = try files.loadIndex().entries
-            for (key, mine) in entries where current[key].map({ $0.lastRead < mine.lastRead }) == true {
-                current[key]?.lastRead = mine.lastRead
+            do throws(AssetError) {
+                try files.catchUp(&ledger)
+                let before = ledger.entries
+                try body(&ledger.entries)
+                let changed = dirty.union(Set(before.keys).union(ledger.entries.keys).filter { before[$0] != ledger.entries[$0] })
+                if ledger.needsCompaction {
+                    try files.compact(&ledger, budgetBytes: budgetBytes)
+                } else if !changed.isEmpty {
+                    try files.append(changed.map { PreviewJournalRecord(put: ledger.entries[$0], drop: ledger.entries[$0] == nil ? $0 : nil) }, to: &ledger)
+                }
+            } catch {
+                ledger.stale = true
+                throw error
             }
-            try body(&current)
-            try files.saveIndex(current, budgetBytes: budgetBytes)
-            entries = current
             lastFlush = Date()
-            unflushed = false
+            dirty = []
         }
     }
 
@@ -184,6 +199,7 @@ public final class ThumbnailStore: @unchecked Sendable {
     /// While over budget, drops the entry read longest ago and its file.
     private func evict(_ current: inout [PreviewKey: PreviewEntry]) {
         var used = current.values.reduce(0) { $0 + $1.byteCount }
+        guard used > budgetBytes else { return }
         for victim in current.values.sorted(by: Self.evictsBefore) where used > budgetBytes {
             current[victim.key] = nil
             used -= victim.byteCount

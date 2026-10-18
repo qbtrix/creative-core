@@ -202,11 +202,11 @@ private func stamp(_ url: URL) throws -> String {
         let scratch = try PreviewScratch()
         try fill(scratch.folder)
         let store = try ThumbnailStore(folder: scratch.folder, budgetBytes: 1 << 20)
-        var last = try stamp(scratch.index)
+        var last = try stamp(scratch.folder.appendingPathComponent("index.journal"))
         var flushes = 0
         for n in 0..<1000 {
             _ = try store.read(keys[n % keys.count])
-            let now = try stamp(scratch.index)
+            let now = try stamp(scratch.folder.appendingPathComponent("index.journal"))
             if now != last { flushes += 1 }
             last = now
         }
