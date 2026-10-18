@@ -80,3 +80,4 @@ Next: PC-4, PC-5 building (PC-3 #498 merged with round-2 recovery header); PC-ha
 - 18:00Z Heartbeat: five agents, one CI-lock waiter each and no duplicates; LC R3-1 was resumed after stopping early. No lead PR is open. Dev run 373 is still queued. Disk: 17 GB free.
 - 18:08Z PC R3-1 #543 merged: the thumbnail index is now an append-only index.journal with periodic compaction, so index I/O per write is constant on average; v1 indexes upgrade on open. Relaunch with 2,000 entries: 32 ms against a 40 ms budget. One read: 0.019 ms against 0.3 ms. Mutate 1/1. PC-9 waits on R3-2.
 - 18:21Z heartbeat: 18G free; dev CI 373 (66bd163) green but predates #542-#544; no open lead PRs; LC R3-1 and PC R3-2 queued on gate, VI-8 building
+- 18:29Z #546 merged; PC-9 (feature-done) launched. Minor: DuplicateGroups mutation 1 caught only by a 903 s hang
