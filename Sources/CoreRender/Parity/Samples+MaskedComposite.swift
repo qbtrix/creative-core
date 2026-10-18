@@ -1,5 +1,5 @@
 // Samples+MaskedComposite.swift: the parity samples and golden packs of `RenderOp.maskedComposite`,
-// empty until the masked-composite feature adds samples and checks in their CPU goldens.
+// empty until the `masks-mattes` feature adds samples and checks in their CPU goldens.
 
 /// The parity inputs of `RenderOp.maskedComposite`, read by `ParityHarness.sampleSet(for:)` and `ParityPack.all`.
 enum MaskedCompositeSamples {

@@ -1,5 +1,5 @@
 // Samples+Effect.swift: the parity samples and golden packs of `RenderOp.effect`, empty until
-// the layer-effects feature adds samples and checks in their CPU goldens.
+// the `effects-engine` feature adds samples and checks in their CPU goldens.
 
 /// The parity inputs of `RenderOp.effect`, read by `ParityHarness.sampleSet(for:)` and `ParityPack.all`.
 enum EffectSamples {
