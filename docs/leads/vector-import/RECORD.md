@@ -80,3 +80,4 @@ Next: VI-5 building, VI-7 building; Anatomy round 2 verdicts pending; Slice-Done
 - 19:00Z run 374 Linux green: Belt-Slice-Done VI-svg posted on #439 (footer stripped); VI-8 building
 - 19:22Z heartbeat: VI-8 has round-trip + budget suites drafted and a LottieExporter shape-order change in progress; no PR yet
 - 19:44Z heartbeat: VI-8 idle since 18:38 (machine load 0), resumed with foreground-gate instruction
+- 20:01Z VI-8 builder still stalled at 20:00 (no change since 18:38); stopped and relaunched a finisher on the same worktree
