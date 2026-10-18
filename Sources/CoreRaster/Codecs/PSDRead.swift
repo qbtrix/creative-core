@@ -163,12 +163,33 @@ extension PSD {
         guard !color.isEmpty, color.allSatisfy({ $0.count == size }), (alpha?.count ?? size) == size else {
             throw CodecError.damaged("planes do not fill \(width)x\(height)")
         }
-        let planes = color.count == 1 ? [color[0], color[0], color[0]] : color
+        let (r, g, b) = color.count == 1 ? (color[0], color[0], color[0]) : (color[0], color[1], color[2])
+        let wide = depth == .sixteen, top = Float(depth.maxSample)
         var storage = [Float](repeating: 0, count: count * 4)
-        for i in 0..<count {
-            let a = alpha.map { depth.fraction($0, i) } ?? 1
-            for c in 0..<3 { storage[i * 4 + c] = table[depth.sample(planes[c], i)] * a }
-            storage[i * 4 + 3] = a
+        // The 12 MP open's hot loop: planes read through unsafe pointers, sample
+        // for sample the arithmetic of `PSDDepth.sample` and `fraction`.
+        table.withUnsafeBufferPointer { table in
+            r.withUnsafeBufferPointer { r in
+                g.withUnsafeBufferPointer { g in
+                    b.withUnsafeBufferPointer { b in
+                        storage.withUnsafeMutableBufferPointer { out in
+                            func sample(_ plane: UnsafeBufferPointer<UInt8>, _ i: Int) -> Int {
+                                wide ? Int(plane[i * 2]) << 8 | Int(plane[i * 2 + 1]) : Int(plane[i])
+                            }
+                            func fill(_ alpha: UnsafeBufferPointer<UInt8>?) {
+                                for i in 0..<count {
+                                    let a = alpha.map { Float(sample($0, i)) / top } ?? 1
+                                    out[i * 4] = table[sample(r, i)] * a
+                                    out[i * 4 + 1] = table[sample(g, i)] * a
+                                    out[i * 4 + 2] = table[sample(b, i)] * a
+                                    out[i * 4 + 3] = a
+                                }
+                            }
+                            if let alpha { alpha.withUnsafeBufferPointer { fill($0) } } else { fill(nil) }
+                        }
+                    }
+                }
+            }
         }
         return PixelBuffer(checkedWidth: width, height: height, storage: storage)
     }
