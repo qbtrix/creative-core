@@ -22,10 +22,10 @@ extension MetalSurface {
     /// Moves tile `index` to a new tile-sized `PixelBuffer` shadow, drops its texture and takes its
     /// bytes off `residentBytes`; a tile already evicted is a no-op. Throws `RenderError.raster` for
     /// an index outside `0..<tiling.tileCount` or a download with a non-finite component (see `read`).
-    func evict(tile index: Int) throws {
+    func evict(tile index: Int, queue: any MTLCommandQueue) throws {
         let rect = try tiling.rect(index)  // throws outside the tiling, so the subscripts are in range
         guard let texture = tiles[index] else { return }
-        shadows[index] = try Self.download(texture, rect: rect, index: index)
+        shadows[index] = try Self.download(texture, rect: rect, index: index, queue: queue)
         tiles[index] = nil
         residentBytes -= Self.bytes(of: rect)
     }

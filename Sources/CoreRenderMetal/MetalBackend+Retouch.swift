@@ -20,7 +20,7 @@ extension MetalBackend {
             let stored = try lookup(s)
             let clock = tick()
             stored.touch(clock)
-            return (try stored.read(), clock, commandQueue)
+            return (try stored.read(queue: commandQueue), clock, commandQueue)
         }
         let (w, h, dx, dy) = (image.width, image.height, offset.dx, offset.dy)
         // CoreRaster's own size check and message: with dx == width every source is off the image, so `cloned`

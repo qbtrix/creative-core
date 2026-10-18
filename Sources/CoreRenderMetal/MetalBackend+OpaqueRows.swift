@@ -20,11 +20,13 @@ extension MetalBackend {
                         opacity: Float) throws -> (kernel: [TilePiece], blits: [TilePiece]) {
         guard OpaqueRows.applies(mode: mode, opacity: opacity) else { return (pieces, []) }
         var stored: [Int: PixelBuffer] = [:]
+        let queue = withLock { commandQueue }
         var (kernel, blits): ([TilePiece], [TilePiece]) = ([], [])
         for piece in pieces {
             guard let texture = textures[piece.sourceTile] else { kernel.append(piece); continue }
             let tile = try stored[piece.sourceTile] ?? MetalSurface.download(
-                texture, rect: TileRect(x: 0, y: 0, width: texture.width, height: texture.height), index: piece.sourceTile)
+                texture, rect: TileRect(x: 0, y: 0, width: texture.width, height: texture.height), index: piece.sourceTile,
+                queue: queue)
             stored[piece.sourceTile] = tile
             for run in try OpaqueRows.runs(of: piece, opaque: OpaqueRows.flags(of: piece, in: tile)) {
                 if run.opaque { blits.append(run.piece) } else { kernel.append(run.piece) }
