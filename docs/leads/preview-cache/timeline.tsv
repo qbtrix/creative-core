@@ -1,0 +1,4 @@
+utc	stage	event	ref	note
+2026-10-18T07:20Z	0	start	9d01972	lead run act-1a14de006be-1kmq on dev
+2026-10-18T07:22Z	2	plan	-	line wave plan across preview-cache, vector-import, layered-codecs
+2026-10-18T07:22Z	3	wave1-start	-	builders launched
