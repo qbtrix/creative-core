@@ -45,3 +45,5 @@ Next: PC-3 building (PC-2 merged); PC-a slice-done waits on a green dev Linux ru
 
 ## Open
 - PC-6 `differentPicturesFar` seed 624 has zero margin (closest pair = 20) and `hashIsDeterministic` pins 0xFF0CB51C37665241; both rest on identical floating point on macOS. PC-hash Anatomy reviews this.
+
+- 2026-10-18T13:44:23Z round 2: dev 8e258c5, gate PASS (EngineStress flake rerun), mutants 37/37, lenses 5, clean=no; majors n2/11/16 recovery header (PC-3 builder), n7 DuplicateGroups quadratic (fixer lead/preview-cache-R2-1)

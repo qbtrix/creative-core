@@ -24,3 +24,4 @@ utc	stage	event	ref	note
 2026-10-18T13:09:50Z	-	anatomy	round-2	dev 8e258c5: gate+mutate running; critic panel launched (clarity, contract, undo, robustness, tests) on PC-a,PC-hash (r1), VI-a (r2), LC-a (r2), LC-psd, LC-ora (r1)
 2026-10-18T13:18:42Z	anatomy-r2	critics in (5 lenses, 17 majors incl. dups); verifiers running; gate 8e258c5 FAIL only EngineStressTests budget flake
 2026-10-18T13:25:39Z	heartbeat	dev CI run 360 (72fbef6) Linux success, macOS failure; holds all merged slices
+2026-10-18T13:44:23Z	anatomy-r2-routed	round 2: dev 8e258c5, gate PASS (EngineStress flake rerun), mutants 37/37, lenses 5, clean=no; majors n2/11/16 recovery header (PC-3 builder), n7 DuplicateGroups quadratic (fixer lead/preview-cache-R2-1)
