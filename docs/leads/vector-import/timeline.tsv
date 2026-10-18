@@ -13,3 +13,5 @@ utc	stage	event	ref	note
 2026-10-18T11:56:24Z	3	builder-start	VI-4	under flock gate
 2026-10-18T11:56:24Z	3	builder-start	VI-6	under flock gate
 2026-10-18T11:56:59Z	3	heartbeat	-	wave 3 building; round-1 mutations running
+2026-10-18T11:59:58Z	4	gate	VI-a	round 1 on b80c087: CI PASS
+2026-10-18T11:59:58Z	4	critics-start	VI-a	round 1 lenses clarity,contract,undo,robustness,tests
