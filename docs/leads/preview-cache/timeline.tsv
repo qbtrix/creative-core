@@ -23,3 +23,4 @@ utc	stage	event	ref	note
 2026-10-18T13:03:03Z	-	heartbeat	-	PC-3 building; dev CI #359 (d51ef90) Linux green but lacks #487, PC-a waits for newer run
 2026-10-18T13:09:50Z	-	anatomy	round-2	dev 8e258c5: gate+mutate running; critic panel launched (clarity, contract, undo, robustness, tests) on PC-a,PC-hash (r1), VI-a (r2), LC-a (r2), LC-psd, LC-ora (r1)
 2026-10-18T13:18:42Z	anatomy-r2	critics in (5 lenses, 17 majors incl. dups); verifiers running; gate 8e258c5 FAIL only EngineStressTests budget flake
+2026-10-18T13:25:39Z	heartbeat	dev CI run 360 (72fbef6) Linux success, macOS failure; holds all merged slices
