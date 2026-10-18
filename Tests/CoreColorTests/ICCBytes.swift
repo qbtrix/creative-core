@@ -24,7 +24,13 @@ enum ICC {
     /// A tag type's signature and the four reserved bytes every tag type starts with (10.1).
     static func type(_ s: String) -> [UInt8] { sig(s) + zeros(4) }
 
-    static func xyz(_ x: Double, _ y: Double, _ z: Double) -> [UInt8] { type("XYZ ") + s15(x) + s15(y) + s15(z) }
+    // Byte builders append one or two pieces per statement: older Swift compilers (Xcode's 6.1)
+    // cannot type-check a long `+` chain of [UInt8] values in reasonable time.
+    static func xyz(_ x: Double, _ y: Double, _ z: Double) -> [UInt8] {
+        var out: [UInt8] = type("XYZ ") + s15(x)
+        out += s15(y) + s15(z)
+        return out
+    }
     /// curveType (10.6): count 0 is identity, 1 a u8Fixed8 gamma, n a table of uInt16 over 65535.
     static func curv(gamma: Double) -> [UInt8] { type("curv") + u32(1) + u16(UInt16((gamma * 256).rounded())) }
     static func curv(table: [Double]) -> [UInt8] {
@@ -32,32 +38,48 @@ enum ICC {
     }
     /// parametricCurveType (10.18): function type 0 to 4 and its 1, 3, 4, 5 or 7 parameters.
     static func para(_ function: UInt16, _ params: [Double]) -> [UInt8] {
-        type("para") + u16(function) + zeros(2) + params.flatMap(s15)
+        var out: [UInt8] = type("para") + u16(function)
+        out += zeros(2) + params.flatMap(s15)
+        return out
     }
     /// s15Fixed16ArrayType (10.22), as the `chad` tag uses it.
     static func sf32(_ values: [Double]) -> [UInt8] { type("sf32") + values.flatMap(s15) }
     /// textDescriptionType (v2, 6.5.17): ASCII with its NUL, empty Unicode and ScriptCode parts.
     static func desc(_ text: String) -> [UInt8] {
         let ascii: [UInt8] = Array(text.utf8) + [0]
-        return type("desc") + u32(UInt32(ascii.count)) + ascii + zeros(8) + zeros(2 + 1 + 67)
+        var out: [UInt8] = type("desc") + u32(UInt32(ascii.count))
+        out += ascii
+        out += zeros(8) + zeros(2 + 1 + 67)
+        return out
     }
     /// multiLocalizedUnicodeType (10.15): one en-US record, UTF-16BE, right after the record.
     static func mluc(_ text: String) -> [UInt8] {
-        let utf16 = text.utf16.flatMap { u16($0) }
-        return type("mluc") + u32(1) + u32(12) + sig("enUS") + u32(UInt32(utf16.count)) + u32(28) + utf16
+        let utf16: [UInt8] = text.utf16.flatMap { u16($0) }
+        var out: [UInt8] = type("mluc") + u32(1)
+        out += u32(12) + sig("enUS")
+        out += u32(UInt32(utf16.count)) + u32(28)
+        out += utf16
+        return out
     }
     /// lut16Type (10.11): identity matrix, 2-entry input and output ramps, a grid-2 CLUT.
     static func mft2(inputs: Int, outputs: Int) -> [UInt8] {
-        let ramp = u16(0) + u16(0xFFFF), cells = (0..<inputs).reduce(1) { n, _ in n * 2 }
-        var out = type("mft2") + [UInt8(inputs), UInt8(outputs), 2, 0]
-        out += [1.0, 0, 0, 0, 1, 0, 0, 0, 1].flatMap(s15) + u16(2) + u16(2) + (0..<inputs).flatMap { _ in ramp }
+        let ramp: [UInt8] = u16(0) + u16(0xFFFF), cells = (0..<inputs).reduce(1) { n, _ in n * 2 }
+        var out: [UInt8] = type("mft2") + [UInt8(inputs), UInt8(outputs), 2, 0]
+        let identity: [Double] = [1.0, 0, 0, 0, 1, 0, 0, 0, 1]
+        out += identity.flatMap(s15)
+        out += u16(2) + u16(2)
+        out += (0..<inputs).flatMap { _ in ramp }
         out += (0..<cells * outputs).flatMap { u16(UInt16(truncatingIfNeeded: $0 &* 4099)) }
-        return out + (0..<outputs).flatMap { _ in ramp }
+        out += (0..<outputs).flatMap { _ in ramp }
+        return out
     }
     /// lutAToBType (10.12) with only its B curves (identity `curv`s): enough when inputs equal outputs.
     static func mAB(channels: Int) -> [UInt8] {
-        type("mAB ") + [UInt8(channels), UInt8(channels), 0, 0] + u32(32) + zeros(16)
-            + (0..<channels).flatMap { _ in type("curv") + u32(0) }
+        let curve: [UInt8] = type("curv") + u32(0)
+        var out: [UInt8] = type("mAB ") + [UInt8(channels), UInt8(channels), 0, 0]
+        out += u32(32) + zeros(16)
+        out += (0..<channels).flatMap { _ in curve }
+        return out
     }
 
     struct Header {
@@ -69,20 +91,28 @@ enum ICC {
     /// data at a 4-byte boundary. `share` points tags with equal bytes at one copy (7.3.1).
     static func profile(_ h: Header, _ tags: [(String, [UInt8])], share: Bool = false) -> [UInt8] {
         let start = 132 + 12 * tags.count
-        var table = u32(UInt32(tags.count)), body: [UInt8] = [], placed: [[UInt8]: Int] = [:]
+        var table: [UInt8] = u32(UInt32(tags.count)), body: [UInt8] = [], placed: [[UInt8]: Int] = [:]
         for (signature, bytes) in tags {
             let offset = share ? placed[bytes] ?? start + body.count : start + body.count
             if offset == start + body.count {
                 placed[bytes] = offset
                 body += bytes + zeros((4 - bytes.count % 4) % 4)
             }
-            table += sig(signature) + u32(UInt32(offset)) + u32(UInt32(bytes.count))
+            table += sig(signature) + u32(UInt32(offset))
+            table += u32(UInt32(bytes.count))
         }
         // Size, CMM, version, class, colour space, PCS, date, 'acsp', platform to intent, illuminant, creator to reserved.
-        var header = u32(UInt32(start + body.count)) + u32(0) + u32(h.version) + sig(h.deviceClass)
-        header += sig(h.colorSpace) + sig(h.pcs) + [2026, 10, 18, 12, 0, 0].flatMap { u16(UInt16($0)) }
-        header += sig("acsp") + zeros(28) + s15(0.9642) + s15(1) + s15(0.8249) + zeros(48)
-        return header + table + body
+        var header: [UInt8] = u32(UInt32(start + body.count)) + u32(0)
+        header += u32(h.version) + sig(h.deviceClass)
+        header += sig(h.colorSpace) + sig(h.pcs)
+        let date: [UInt16] = [2026, 10, 18, 12, 0, 0]
+        header += date.flatMap { u16($0) }
+        header += sig("acsp") + zeros(28)
+        header += s15(0.9642) + s15(1)
+        header += s15(0.8249) + zeros(48)
+        var out: [UInt8] = header + table
+        out += body
+        return out
     }
 
     static func read32(_ b: [UInt8], _ at: Int) -> Int { (0..<4).reduce(0) { $0 << 8 | Int(b[at + $1]) } }
