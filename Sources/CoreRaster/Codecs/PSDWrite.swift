@@ -127,18 +127,26 @@ extension PSD {
     }
 
     /// `planes` (each `width` wide) behind one RLE compression value: every row's byte count, then the rows.
+    /// The counts are patched into their slots as each row is appended, so nothing is copied twice.
     static func rle(_ planes: [[UInt8]], width: Int) throws -> [UInt8] {
-        var counts = PSDByteWriter(), rows: [UInt8] = []
-        counts.u16(1)
+        let step = max(width, 1)
+        let rowCount = planes.reduce(0) { $0 + ($1.count + step - 1) / step }
+        let total = planes.reduce(0) { $0 + $1.count }
+        var out = [UInt8](repeating: 0, count: 2 + rowCount * 2)
+        out.reserveCapacity(out.count + total + total / 128 + rowCount)
+        out[1] = 1
+        var slot = 2
         for plane in planes {
-            for start in stride(from: 0, to: plane.count, by: max(width, 1)) {
+            for start in stride(from: 0, to: plane.count, by: step) {
                 let row = PackBits.encode(Array(plane[start..<min(start + width, plane.count)]))
                 guard let count = UInt16(exactly: row.count) else { throw CodecError.tooLarge("an RLE row of \(row.count) bytes") }
-                counts.u16(count)
-                rows += row
+                out[slot] = UInt8(truncatingIfNeeded: count >> 8)
+                out[slot + 1] = UInt8(truncatingIfNeeded: count)
+                slot += 2
+                out += row
             }
         }
-        return counts.bytes + rows
+        return out
     }
 
     /// A 0...1 value as a byte of 255ths, rounded to nearest; NaN and below 0 are 0.

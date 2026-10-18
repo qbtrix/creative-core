@@ -8,6 +8,9 @@
 // a gray profile writes a grayscale file, and a pixel whose stored red, green
 // and blue differ then throws `unsupported`; 8-bit output is byte-for-byte the
 // old one; 16-bit output reopens == (nearest sample after unpremultiplying).
+// `nearest` with spans searches only a 0..<1 value's bucket of the table and
+// must return what the whole-table search returns, so the fast save writes
+// the same bytes.
 import CoreColor
 #if canImport(FoundationEssentials)
 import FoundationEssentials
@@ -30,6 +33,8 @@ enum PSDDepth: Int, Sendable {
     var maxSample: Int { self == .eight ? 255 : 65_535 }
     /// Each encoded sRGB sample's linear light.
     var linear: [Float] { self == .eight ? PSD.linear : PSD.linear16 }
+    /// `linear`'s bucket spans for `PSD.nearest(_:in:spans:)`.
+    var spans: [Int] { self == .eight ? PSD.spans8 : PSD.spans16 }
     /// Sample `i` of a plane holding at least `(i + 1) * bytes` bytes.
     func sample(_ plane: [UInt8], _ i: Int) -> Int {
         guard self == .sixteen else { return Int(plane[i]) }
@@ -50,18 +55,32 @@ enum PSDDepth: Int, Sendable {
         return scaled > 0 ? Int(min(scaled, 65_535)) : 0
     }
 
-    /// Red, green, blue and alpha planes of premultiplied linear pixels, `bytes` per sample.
+    /// Red, green, blue and alpha planes of premultiplied linear pixels, `bytes` per sample,
+    /// written planar into one buffer through unsafe pointers (the 12 MP save's hot loop).
     func colorPlanes(_ buffer: PixelBuffer) -> [[UInt8]] {
-        let components = buffer.components, count = components.count / 4, table = linear
-        var planes = [[UInt8]](repeating: [UInt8](repeating: 0, count: count * bytes), count: 4)
-        for i in 0..<count {
-            let alpha = quantized(components[i * 4 + 3])
-            put(alpha, into: &planes[3], at: i)
-            guard alpha > 0 else { continue }
-            let a = Float(alpha) / Float(maxSample)
-            for c in 0..<3 { put(PSD.nearest(components[i * 4 + c] / a, in: table), into: &planes[c], at: i) }
+        let components = buffer.components, count = components.count / 4, table = linear, spans = self.spans
+        let size = count * bytes, wide = self == .sixteen, top = Float(maxSample)
+        var out = [UInt8](repeating: 0, count: size * 4)
+        components.withUnsafeBufferPointer { src in
+            out.withUnsafeMutableBufferPointer { dst in
+                func store(_ value: Int, _ plane: Int, _ i: Int) {
+                    if wide {
+                        dst[plane * size + i * 2] = UInt8(truncatingIfNeeded: value >> 8)
+                        dst[plane * size + i * 2 + 1] = UInt8(truncatingIfNeeded: value)
+                    } else {
+                        dst[plane * size + i] = UInt8(truncatingIfNeeded: value)
+                    }
+                }
+                for i in 0..<count {
+                    let alpha = quantized(src[i * 4 + 3])
+                    store(alpha, 3, i)
+                    guard alpha > 0 else { continue }
+                    let a = Float(alpha) / top
+                    for c in 0..<3 { store(PSD.nearest(src[i * 4 + c] / a, in: table, spans: spans), c, i) }
+                }
+            }
         }
-        return planes
+        return (0..<4).map { Array(out[$0 * size..<($0 + 1) * size]) }
     }
     /// `colorPlanes`, folded to grey and alpha when `gray`. A pixel whose stored
     /// red, green and blue samples differ cannot be grey, so it throws `unsupported`.
@@ -87,12 +106,36 @@ extension PSD {
     /// Encoded 16-bit sRGB to linear light.
     static let linear16: [Float] = (0..<65_536).map { Float(TransferCurve.decode(Double($0) / 65_535)) }
 
-    /// The index whose entry in the ascending `table` is nearest `value`, by binary search.
-    static func nearest(_ value: Float, in table: [Float]) -> Int {
-        var low = 0, high = table.count - 1
+    /// Buckets per unit in the spans tables; a power of two, so `value * spanCount` is exact.
+    static let spanCount = 65_536
+    /// For each bucket edge b / `spanCount` (b in 0...spanCount), `firstAtLeast` of it in the table.
+    /// A value in bucket b has its `firstAtLeast` in `spans[b]...spans[b + 1]`, since that index
+    /// never decreases as the value grows.
+    static func spans(_ table: [Float]) -> [Int] {
+        (0...spanCount).map { firstAtLeast(Float($0) / Float(spanCount), in: table, 0, table.count - 1) }
+    }
+    static let spans8 = spans(linear), spans16 = spans(linear16)
+
+    /// The first index in `low...high` of the ascending `table` whose entry is at least `value`, else `high`.
+    static func firstAtLeast(_ value: Float, in table: [Float], _ low: Int, _ high: Int) -> Int {
+        var low = low, high = high
         while low < high {
             let mid = (low + high) / 2
             if table[mid] < value { low = mid + 1 } else { high = mid }
+        }
+        return low
+    }
+
+    /// The index whose entry in the ascending `table` is nearest `value`, ties to the lower index.
+    /// `spans` is `spans(table)`: a 0..<1 value searches only its bucket, anything else
+    /// (1 and over, negative, NaN) the whole table.
+    static func nearest(_ value: Float, in table: [Float], spans: [Int]) -> Int {
+        var low: Int
+        if value >= 0, value < 1 {
+            let bucket = Int(value * Float(spanCount))
+            low = firstAtLeast(value, in: table, spans[bucket], spans[bucket + 1])
+        } else {
+            low = firstAtLeast(value, in: table, 0, table.count - 1)
         }
         if low > 0, value - table[low - 1] <= table[low] - value { low -= 1 }
         return low
