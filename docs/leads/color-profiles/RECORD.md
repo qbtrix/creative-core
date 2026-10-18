@@ -2,9 +2,9 @@
 
 Issue: #441 · Packet: docs/blueprints/core/features/color-profiles.md
 Run: act-1a14ddaebc8-nwqn · Session: line lead (engine-contracts, animate-properties, color-profiles) · Started: 2026-10-18T07:15Z
-Stage: 5 Anatomy budget spent (4 rounds). cp4-a merged #552 (1e38f30); gaps #549, #550, #551 open. CP-10 waits on layered-codecs' LC-10.
+Stage: 6 Done. CP-10 merged #558 (a8a08d2, feature-done, closed #441); CI 39167458602 Linux green; Belt-Slice-Done CP-z and Belt-Contact-Sheet posted. Gaps #549, #550, #551 open; Mac-Finish-Wanted CP-z.
 Base: 9d01972365f04da4fe6074e9bdd56ceab5b616a8
-Next: CP-10 (feature-done, Closes #441) once LC-10 has merged; Mac-Finish-Wanted CP-z; contact sheet.
+Next: none for this run (Mac finishing of CP-z budgets is the Mac crew's).
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -13,7 +13,7 @@ Next: CP-10 (feature-done, Closes #441) once LC-10 has merged; Mac-Finish-Wanted
 | CP-icc | CP-3, CP-4 | CP-a | merged-done | 39121455101 | |
 | CP-convert | CP-5, CP-6 | CP-icc | merged-done (run 39126063033, Linux green on d51ef90) | | |
 | CP-deep | CP-7, CP-8 | CP-icc; layered-codecs:LC-write | merged-done | 39150176925 (CI on 66bd163, Linux green) | |
-| CP-z | CP-9, CP-10 | CP-convert, CP-deep | open | | wanted (budgets) |
+| CP-z | CP-9, CP-10 | CP-convert, CP-deep | merged-done (CI 39167458602) | | wanted (budgets) |
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
