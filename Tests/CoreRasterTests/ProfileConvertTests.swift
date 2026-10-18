@@ -3,7 +3,9 @@
 // another's. sRGB to Display P3 and back is the identity within 1e-5; alpha
 // never moves; alpha 0 pixels come back untouched; a colour is converted
 // straight (unpremultiplied), not premultiplied; out-of-gamut values are
-// kept, not clamped; a non-finite result or a bad profile throws RasterError.
+// kept, not clamped; a non-finite result or a bad profile throws RasterError
+// with a plain message; a source whose curve is not CoreColor's sRGB curve
+// decodes with its own curve.
 import CoreColor
 import CoreRaster
 import Testing
@@ -80,5 +82,27 @@ private func close(_ a: RGBA, _ b: RGBA, within eps: Float) -> Bool {
         singular.toXYZD50 = [1, 1, 1, 1, 1, 1, 1, 1, 1]
         let buffer = try PixelBuffer(width: 1, height: 1, fill: RGBA(r: 0.1, g: 0.2, b: 0.3, a: 1))
         #expect(throws: RasterError.self) { try buffer.converted(from: .sRGB, to: singular) }
+    }
+
+    @Test func singularTargetMessage() throws {
+        let zero = ColorProfile(name: "Zero", isGray: false, toXYZD50: Array(repeating: 0, count: 9),
+                                curves: ColorProfile.sRGB.curves)
+        let buffer = try PixelBuffer(width: 1, height: 1, fill: RGBA(r: 0.1, g: 0.2, b: 0.3, a: 1))
+        let error = #expect(throws: RasterError.self) { try buffer.converted(from: .sRGB, to: zero) }
+        guard case .invalid(let why) = error else { return }
+        #expect(why.contains("singular colourants"))
+        #expect(!why.contains("invalid("))
+        #expect(why.hasPrefix("convert sRGB to Zero: profile Zero"))
+    }
+
+    @Test func decodesWithSourceCurve() throws {
+        let g22 = ColorProfile(name: "G22", isGray: false, toXYZD50: ColorProfile.sRGB.toXYZD50,
+                               curves: Array(repeating: .gamma(2.2), count: 3))
+        let grey = Float(TransferCurve.decode(0.5))
+        let buffer = try PixelBuffer(width: 1, height: 1, fill: RGBA(r: grey, g: grey, b: grey, a: 1))
+        let out = try buffer.converted(from: g22, to: .linearSRGB).pixel(x: 0, y: 0)
+        let want: Float = 0.217_637_64  // 0.5^2.2
+        #expect(abs(out.r - want) <= 1e-6 && abs(out.g - want) <= 1e-6 && abs(out.b - want) <= 1e-6)
+        #expect(out.a == 1)
     }
 }
