@@ -33,3 +33,4 @@ utc	stage	event	ref	note
 2026-10-18T11:36Z	-	heartbeat	-	waiting
 2026-10-18T11:54Z	-	heartbeat	-	waiting
 2026-10-18T12:02Z	3	merged	#481	AP-8 SVG style at frame (0c92bfc); AP-export merged
+2026-10-18T12:02Z	3	contract-check	#480 #481	base exporter seams accepted

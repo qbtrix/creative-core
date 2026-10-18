@@ -34,6 +34,7 @@ Next: AP-7 (Lottie) and AP-8 (SVG) building (wf_a5b3a585-9ef). Fix batch ap-r1 f
 |---|---|---|---|---|---|---|---|---|
 
 ## Decisions
+- Wave 4 contract checks (wf_a5b3a585-9ef), after the lane merged both: AP-7 #480 also edited LottieExporter.swift (10+/10-: LottieItem ks/c/w widened to LottieProperty so keyed values fit, clamp through the shared unit); AP-8 #481 edited SVGExporter.swift (+3/-2, the seam so +Style sees layer tracks). The prompt allowed a hook in each base exporter; AP-7 went past one line but stayed on the seam the packet's Contract needs. Accepted; round 1 critics on AP-export will review both base-file edits. Everything else in both checks passed (232 lines/4 files and 102 lines/4 files, trailers, mutations 2/2 each).
 - Merged: AP-1 #457, AP-2 #463, AP-6 #464, AP-5 #477, AP-3 #479 (d7ad60b).
 - engine-contracts round 3 (f7413a6) routed 3 findings here: #1 (major) TrackCommands.notBuilt throws invalidDocument with an internal task id; #8 (major) no test that easing shapes the morph; #11 (minor) quad-to-cubic elevation untested. Fixer ap-r1 takes them; files kept disjoint from AP-7/AP-8.
 - dev CI 39118832683 on 0660756: Linux green. AP-a merged-done.
