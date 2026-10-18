@@ -19,7 +19,7 @@ Next: finish PC-2 (gate serialized), build PC-7; Anatomy on PC-a once PC-2 merge
 | id | wave | behavior | files | test | mutation | PR | state |
 |---|---|---|---|---|---|---|---|
 | PC-1 | 1 | store types and stubs, `thumbnail-store` part | Sources/CoreAsset/Thumbnails/ThumbnailStore.swift, Tests/CoreAssetTests/ThumbnailStoreShapeTests.swift, docs/c4/parts/creative-core/coreasset/thumbnail-store.json | ThumbnailStoreShapeTests | none | #445 (e53d151) | merged |
-| PC-2 | 2 | store, recovery, offline suites written and disabled | Tests/CoreAssetTests/{ThumbnailStoreTests,ThumbnailStoreRecoveryTests,OfflineVolumeTests}.swift | suites compile | – | branch 7fddaf7, no PR | re-gating |
+| PC-2 | 2 | store, recovery, offline suites written and disabled | Tests/CoreAssetTests/{ThumbnailStoreTests,ThumbnailStoreRecoveryTests,OfflineVolumeTests}.swift | suites compile | – | #487 | PR open (41434d1) |
 | PC-3 | 3 | write/read/remove, budget LRU, lock, atomic replace | ThumbnailStore.swift, PreviewFiles.swift, ThumbnailStoreTests | ThumbnailStoreTests | CoreAsset.ThumbnailStore (3) | | open |
 | PC-4 | 4 | index codec and recovery | PreviewIndex.swift, ThumbnailStoreRecoveryTests | ThumbnailStoreRecoveryTests | CoreAsset.PreviewIndex (2) | | open |
 | PC-5 | 4 | volumes and availability | OfflineVolumes.swift, OfflineVolumeTests | OfflineVolumeTests | CoreAsset.OfflineVolumes (2) | | open |
