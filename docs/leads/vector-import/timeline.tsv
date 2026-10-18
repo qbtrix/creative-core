@@ -49,3 +49,4 @@ utc	stage	event	ref	note
 2026-10-18T16:05Z	heartbeat	checking merges, dev CI, agents
 2026-10-18T16:05Z	note	stack-depth SIGBUS fixed by Mac-side PRs #520 #521 #522 (not this lead); own fixer R2-3 stood down to avoid duplicates
 2026-10-18T16:08Z	followup	after #521 merges: pin checkNesting (deep non-group arrays -> tooLarge), ownShapeAtFirstPaint test, mutation entries for group-walk merge/placed/depth; unpushed work on lead/vector-import-R2-3 ($S/vi)
+2026-10-18T16:28Z	launch	#520-522 merged 16:08Z. Round 3: fixer lead/vector-import-R3-1 launched for the #521 gaps (checkNesting pin, group-walk mutations, own-shape test, iterative JSON ==/hash). VI-5 builder resumed to open its second PR. Dev CI run 370 queued.

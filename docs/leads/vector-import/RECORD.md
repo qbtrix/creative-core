@@ -66,3 +66,4 @@ Next: VI-5 building, VI-7 building; Anatomy round 2 verdicts pending; Slice-Done
   - The JSON value's `==` and `hash` still recurse; that only matters to tests.
 
   Plan: after #521 merges, run a follow-up fixer PR in round 3 that reuses the unpushed lead/vector-import-R2-3 work in /tmp/claude-0/-home-user-creative-core/ddd489f2-63fc-556a-b5ff-d210f2448d09/scratchpad/vi (13 mutation entries, 25/25 caught, not gated yet).
+- 2026-10-18T16:28Z #520-522 merged 16:08Z. Round 3: fixer lead/vector-import-R3-1 launched for the #521 gaps (checkNesting pin, group-walk mutations, own-shape test, iterative JSON ==/hash). VI-5 builder resumed to open its second PR. Dev CI run 370 queued.
