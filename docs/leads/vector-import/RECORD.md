@@ -54,3 +54,4 @@ Next: VI-5 building, VI-7 building; Anatomy round 2 verdicts pending; Slice-Done
 - 2026-10-18T14:54:08Z VI R2-1 #506 merged (14:37Z, c3c284d, 7/7): round-2 n4/12 and n9 closed.
 - 2026-10-18T14:59:41Z VI R2-2 #512 opened (f5a3348, 12/12 FlareLottieImport): depth cap 250 with tooLarge, group tr tests, opacity clamp. Closes n1, n8/15 once merged. VI-8 notes: exporter shape order not reversed (LottieExporter.swift ~94), colour track index follows; masks/mattes exporter stubs.
 - 2026-10-18T15:17:10Z VI R2-2 #512 merged 14:59Z (n1, n8/15 closed). macOS SIGBUS on deep recursion (Lottie maxDepth 250 on 512 KB thread stacks, #453): fixer R2-3 launched.
+- 2026-10-18T15:24:19Z VI-5 #517 (read SVG documents) merged 5dfa965; VI-5 second PR in progress.
