@@ -6,3 +6,6 @@ utc	stage	event	ref	note
 2026-10-18T10:01Z	3	pr-merged	#445	PC-1 e53d151
 2026-10-18T10:01Z	3	dep-met	EC-a	#443 #450 #456
 2026-10-18T10:01Z	3	stage-start	wave2	PC-2 PC-6 at 9e826ac
+2026-10-18T11:52Z	3	pr-merged	#473	PC-6 cd93e06
+2026-10-18T11:52Z	3	gate-fail	PC-2	budget tests under load; re-gate serialized
+2026-10-18T11:52Z	3	stage-start	wave3	PC-2 PC-7 at b80c087
