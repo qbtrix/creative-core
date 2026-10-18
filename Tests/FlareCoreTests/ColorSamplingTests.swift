@@ -3,7 +3,7 @@
 import FlareCore
 import Testing
 
-@Suite(.disabled("AP-5 turns this on"))
+@Suite
 struct ColorSamplingTests {
     static let (red, blue) = (Color(r: 1, g: 0, b: 0), Color(r: 0, g: 0, b: 1))
 

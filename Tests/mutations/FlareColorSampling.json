@@ -1,0 +1,23 @@
+[
+  {
+    "note": "colour sampling interpolates in linear light instead of encoded sRGB",
+    "file": "Sources/FlareCore/Sampling+Tracks.swift",
+    "anchor": "Timeline.value(of: keys.map { Keyframe(frame: $0.frame, value: $0.value[keyPath: c], easing: $0.easing) }, at: frame)",
+    "replacement": "Timeline.value(of: keys.map { Keyframe(frame: $0.frame, value: $0.value[keyPath: c] * $0.value[keyPath: c], easing: $0.easing) }, at: frame)?.squareRoot()",
+    "filter": "ColorSamplingTests.encodedComponents"
+  },
+  {
+    "note": "colour sampling ignores the key's easing",
+    "file": "Sources/FlareCore/Sampling+Tracks.swift",
+    "anchor": "easing: $0.easing) }, at: frame)",
+    "replacement": "easing: .linear) }, at: frame)",
+    "filter": "ColorSamplingTests.easingApplies"
+  },
+  {
+    "note": "colour sampling does not honour a hold key",
+    "file": "Sources/FlareCore/Sampling+Tracks.swift",
+    "anchor": "easing: $0.easing) }, at: frame)",
+    "replacement": "easing: $0.easing == .hold ? .linear : $0.easing) }, at: frame)",
+    "filter": "ColorSamplingTests.holdKeepsLeft"
+  }
+]
