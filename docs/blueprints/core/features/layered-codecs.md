@@ -85,10 +85,12 @@ public protocol PixelCodec: Sendable {                                          
 public struct RawPixelCodec: PixelCodec { }                                      // a tiny header + bytes, for tests only
 // Sources/CoreRaster/Codecs/PSD.swift (LC-1 stubs, LC-4 read, LC-7 write)
 public enum PSD { public static let maxSide = 30_000; public static let maxLayers = 8_000
+    public static let maxTotalPixels = PixelBuffer.maxPixels                     // summed area of every layer, mask and composite
     public static func read(_ data: Data) throws -> LayeredImage
     public static func write(_ image: LayeredImage) throws -> Data }
 // Sources/CoreRaster/Codecs/OpenRaster.swift (LC-1 stubs, LC-6 read, LC-8 write)
-public enum OpenRaster {
+public enum OpenRaster { public static let maxSide = PSD.maxSide; public static let maxLayers = PSD.maxLayers
+    public static let maxDepth = 256                                             // nested <stack> levels
     public static func read(_ data: Data, pixels: any PixelCodec) throws -> LayeredImage
     public static func write(_ image: LayeredImage, pixels: any PixelCodec, extra: [String: Data] = [:]) throws -> Data }  // extra: app entries, e.g. photo/document.json
 // Sources/CoreRaster/Codecs/ZipStore.swift (LC-5, moved from PhotoZip)
@@ -108,30 +110,65 @@ public enum ZipStore { public static func archive(_ files: [String: Data], first
   colour mode RGB or Grayscale (others → `unsupported`). Colour-mode data
   and image resources are skipped by length (the ICC resource is read in
   `color-profiles`). Layer and mask section: layer count (negative means the
-  first alpha channel is the merged transparency), each record's bounds,
+  first alpha channel is the merged transparency; more than `maxLayers` →
+  `tooLarge`), each record's bounds,
   channel ids and lengths, blend key (`norm`, `mul `, `scrn`, `over`,
   `dark`, `lite`, `diff`, `hue `, `sat `, `colr`, `lum `, … mapped to
-  `BlendMode`; an unknown key → `.normal` and a warning in
-  `LayeredImage`'s read notes), opacity, clipping, flags (hidden bit), mask
-  record (bounds, default colour, disabled flag), Pascal name, then tagged
+  `BlendMode`; an unknown key reads as `.normal`, which `PSD.read`'s doc
+  comment says, and `PSDReadTests` has a case for it), opacity, clipping,
+  flags (hidden bit), mask
+  record (bounds, default colour 0 or 255 → `defaultCoverage` 0 or 1,
+  disabled flag → `isDisabled`), Pascal name, then tagged
   blocks: `luni` (Unicode name), `lsct` (section divider: open folder,
   closed folder, bounding divider) for groups. Channel data per channel:
   compression 0 raw, 1 RLE (PackBits rows with per-row byte counts),
   2 and 3 (zip) → `unsupported("zip-compressed channel")` (no inflate in
-  the module; see Not in this packet). Pixels become premultiplied linear
+  the module; see Not in this packet).
+- **PSD limits.** Every record's bounds (layer and mask) are four Int32
+  values; width and height are computed in Int (`right − left`,
+  `bottom − top`, so no Int32 overflow), a negative one → `damaged`, one
+  over `maxSide` → `tooLarge`. A canvas within `maxSide` whose
+  width × height is over `PixelBuffer.maxPixels` → `CodecError.tooLarge`.
+  The summed area of every layer, every mask and the composite is checked
+  against `maxTotalPixels` from the record bounds, before any channel is
+  decoded (→ `tooLarge`). Every channel length is checked against the bytes
+  left before it is read.
+- **PSD pixels.** Pixels become premultiplied linear
   Float32 through CoreColor's sRGB tables. The merged image section fills
   `composite`.
 - **Groups.** Records are bottom to top; a bounding divider opens a group
   and the matching folder record closes it, carrying its name, opacity,
   blend (`pass` → nil) and hidden flag. Unbalanced dividers → `damaged`.
-- **ORA read.** `ZipStore.entries`; `mimetype` must be
-  `image/openraster`; `stack.xml` read by a small attribute scanner for
-  `<stack>` and `<layer>` (src, x, y, opacity, visibility, name,
-  composite-op `svg:*` mapped to `BlendMode`), nested stacks as groups; each
-  `src` PNG through `pixels.decodePNG`. Unknown elements are skipped.
+- **ORA read.** `ZipStore.entries`, which keeps a running total of entry
+  sizes and throws `damaged` once it passes the archive's byte count
+  (entries that overlap cannot multiply the bytes); `mimetype` must be
+  exactly `image/openraster`, and a missing or different one throws
+  `notThisFormat`; `stack.xml` read by a small attribute scanner for
+  `<image>` (`w`, `h`: the canvas, 1...`maxSide` and at most
+  `PixelBuffer.maxPixels` in area, else `tooLarge`), `<stack>` and
+  `<layer>` (src, x, y, opacity, visibility, name, composite-op `svg:*`
+  mapped to `BlendMode`), nested stacks as groups. More than `maxLayers`
+  `<layer>` elements, or stacks nested deeper than `maxDepth`, →
+  `tooLarge`; a `src` that two layers name → `damaged`, so one entry is
+  never decoded twice. Before each `src` goes through `pixels.decodePNG`,
+  a PNG's IHDR width and height (bytes 16 to 23, after the signature) are
+  checked against `maxSide` and `PixelBuffer.maxPixels` (→ `tooLarge`);
+  bytes without the PNG signature (the raw test fake) go to the codec as
+  they are, and the `PixelBuffer` it returns is already bounded. Unknown
+  elements are skipped. `mergedimage.png`, when present, fills `composite`
+  through `pixels.decodePNG` (same IHDR check; a size other than the
+  canvas → `damaged`); a file without it reads `composite` nil. So an ORA
+  this codec wrote reopens with the composite it saved, which LC-9's walk
+  needs for "attributes equal". `Thumbnails/` is not read.
 - **Write.** PSD: RGB 8-bit, RLE every channel, one record per pixel layer
   plus the two divider records per group, `luni` names, the merged image
-  from `composite` (or the flattened stack via `composite` today). ORA:
+  from `composite` (or the flattened stack via `composite` today). Before
+  any byte is written, `PSD.write` validates the image and throws a
+  `CodecError` instead of trapping: every layer and group opacity finite
+  and in 0...1, and `bitsPerChannel` 8 or 16 (16 throws `unsupported`
+  until `color-profiles`), else `unsupported` naming the value; every layer
+  and mask's bounds (`x`, `y`, `x + width`, `y + height`) fit Int32, and
+  the canvas within `maxSide`, else `tooLarge`. ORA:
   Photo's container rules (stored entries, `mimetype` first at offset 30,
   the other paths sorted, the fixed DOS date), `stack.xml`, one PNG per
   layer, `mergedimage.png`, `Thumbnails/thumbnail.png` (longest side 256).
@@ -145,7 +182,7 @@ public enum ZipStore { public static func archive(_ files: [String: Data], first
 | LC-3 | – | The bounds-checked big-endian reader and PackBits decode and encode | `Sources/CoreRaster/Codecs/ByteReader.swift`, `Sources/CoreRaster/Codecs/PackBits.swift`, `Tests/CoreRasterTests/PackBitsTests.swift`, `Tests/mutations/CoreRaster.PackBits.json` | LC-1 | ~220, 4 |
 | LC-4 | – | PSD read: header, layer records, masks, tagged blocks, groups, channels, merged image; turns on `PSDReadTests`, `PSDFuzzTests` | `Sources/CoreRaster/Codecs/PSD.swift`, `Sources/CoreRaster/Codecs/PSDRead.swift`, `Tests/CoreRasterTests/PSDReadTests.swift`, `Tests/CoreRasterTests/PSDFuzzTests.swift`, `Tests/mutations/CoreRaster.PSDRead.json` | LC-2, LC-3 | ~390, 5 |
 | LC-5 | – | `ZipStore` moved from Photo's `PhotoZip` (same bytes; CRC-32 slicing-by-8); `ORAContainerTests` from Photo's container tests | `Sources/CoreRaster/Codecs/ZipStore.swift`, `Tests/CoreRasterTests/ORAContainerTests.swift`, `Tests/mutations/CoreRaster.ZipStore.json` | LC-1 | ~300, 3 |
-| LC-6 | – | ORA read (`stack.xml` scanner, nested stacks, composite ops); turns on `ORAReadTests`, `ORAFuzzTests` | `Sources/CoreRaster/Codecs/OpenRaster.swift`, `Sources/CoreRaster/Codecs/StackXML.swift`, `Tests/CoreRasterTests/ORAReadTests.swift`, `Tests/CoreRasterTests/ORAFuzzTests.swift`, `Tests/mutations/CoreRaster.StackXML.json` | LC-2, LC-5 | ~340, 5 |
+| LC-6 | – | ORA read (`stack.xml` scanner, nested stacks, composite ops, `mergedimage.png`, the limits); `ZipStore.entries`' running size total; turns on `ORAReadTests`, `ORAFuzzTests` | `Sources/CoreRaster/Codecs/OpenRaster.swift`, `Sources/CoreRaster/Codecs/StackXML.swift`, `Sources/CoreRaster/Codecs/ZipStore.swift`, `Tests/CoreRasterTests/ORAReadTests.swift`, `Tests/CoreRasterTests/ORAFuzzTests.swift`, `Tests/mutations/CoreRaster.StackXML.json` | LC-2, LC-5 | ~370, 6 |
 | LC-7 | – | PSD write; turns on `PSDWriteTests` | `Sources/CoreRaster/Codecs/PSDWrite.swift`, `Tests/CoreRasterTests/PSDWriteTests.swift`, `Tests/mutations/CoreRaster.PSDWrite.json` | LC-4 | ~340, 3 |
 | LC-8 | – | ORA write (moved `stack.xml` writer, thumbnail, merged image); turns on `CodecRoundTripTests` | `Sources/CoreRaster/Codecs/OpenRasterWrite.swift`, `Tests/CoreRasterTests/CodecRoundTripTests.swift`, `Tests/mutations/CoreRaster.ORAWrite.json` | LC-6, LC-7 | ~280, 3 |
 | LC-9 | – | KJ-LC walk; `CodecBudgetTests` (release, `.serialized`) | `Tests/CoreRasterTests/CodecWalkTests.swift`, `Tests/CoreRasterTests/CodecBudgetTests.swift` | LC-8 | ~180, 2 |
@@ -177,10 +214,10 @@ is the prose task.
 | LC-1 | `CodecShapeTests`: every entry point exists, stubs throw `unsupported("not built")`; `RawPixelCodec` round-trips | a signature is missing | none: declarations |
 | LC-2 | the byte builder's fixture opens nowhere yet (suites disabled) | – | – |
 | LC-3 | `PackBitsTests`: the published example row decodes exactly; encode then decode is identity for 1,000 seeded rows; a run past the row's end throws; the reader throws at every truncation point of a 64-byte sample | a run overflows the row | `CoreRaster.PackBits`: run length `n` for `1 − n` → `PackBitsTests.publishedExample`; row bound `<=` for `<` → `.runPastEndThrows` |
-| LC-4 | `PSDReadTests`: `layers.psd` gives 5 nodes with exact bounds, opacity 0.6 Multiply, hidden, clipped, the mask at its offset with default 0, the group's two children, the Unicode name; grayscale opens as grey RGB; the merged image matches; version 2, CMYK, 16-bit, zip channels each throw their named error; `PSDFuzzTests`: 1,000 seeded mutations of three fixtures throw or open, never crash, each under 1 s | a layer is misplaced or a damaged file crashes | `CoreRaster.PSDRead`: negative layer count not treated as "merged alpha" → `PSDReadTests.negativeCountHasAlpha`; group closes at the bounding divider (order inverted) → `.groupsNest`; mask offset ignored → `.maskAtOffset`; hidden bit 1 for bit 2 → `.hiddenFlag` |
+| LC-4 | `PSDReadTests`: `layers.psd` gives 5 nodes with exact bounds, opacity 0.6 Multiply, hidden, clipped, the mask at its offset with default 0, the group's two children, the Unicode name; grayscale opens as grey RGB; the merged image matches; version 2, CMYK, 16-bit, zip channels each throw their named error; an unknown blend key reads as `.normal` (`.unknownBlendKeyIsNormal`); unbalanced dividers throw `damaged` (`.unbalancedDividersThrow`); a mask with default colour 255 and the disabled flag reads `defaultCoverage` 1 and `isDisabled` (`.maskDefaultAndDisabled`); `.refusesHuge`: record bounds over `maxSide`, a canvas within `maxSide` but over `PixelBuffer.maxPixels`, summed areas over `maxTotalPixels` and more than `maxLayers` records each throw `tooLarge` before any channel is decoded; `PSDFuzzTests`: 1,000 seeded mutations of three fixtures throw or open, never crash, each under 1 s | a layer is misplaced or a damaged file crashes | `CoreRaster.PSDRead`: negative layer count not treated as "merged alpha" → `PSDReadTests.negativeCountHasAlpha`; group closes at the bounding divider (order inverted) → `.groupsNest`; mask offset ignored → `.maskAtOffset`; hidden bit 1 for bit 2 → `.hiddenFlag` |
 | LC-5 | `ORAContainerTests`: Photo's expected bytes (copied from its container tests, our code) are equal; `mimetype` at offset 30; a compressed entry throws `compressedEntry` naming it; truncated archives throw | a byte moves from Photo's output | `CoreRaster.ZipStore`: CRC table reflected wrong → `ORAContainerTests.crcMatches`; paths not sorted → `.sameBytesAsPhoto` |
-| LC-6 | `ORAReadTests`: both third-party files open with offsets, opacity, hidden layers and `svg:multiply` as `.multiply`; a nested stack is a group; a missing `src` throws `damaged` naming it; `ORAFuzzTests`: 500 seeded mutations of `stack.xml` throw or open | an offset or op is lost | `CoreRaster.StackXML`: `x` read as `y` → `ORAReadTests.offsetsKept`; visibility default hidden → `.visibleByDefault` |
-| LC-7 | `PSDWriteTests`: `PSD.read(PSD.write(img)) == img` for the fixture and 50 seeded stacks; every channel RLE; the file opens through LC-2's byte reader expectations | a written attribute reads back different | `CoreRaster.PSDWrite`: divider records swapped → `PSDWriteTests.groupsRoundTrip`; opacity rounded down → `.opacityRoundTrips` |
+| LC-6 | `ORAReadTests`: both third-party files open with offsets, opacity, hidden layers and `svg:multiply` as `.multiply`; a nested stack is a group; a missing `src` throws `damaged` naming it; a wrong or missing `mimetype` throws `notThisFormat`; `mergedimage.png` fills `composite`, and a file without it reads nil; `.refusesHuge`: a canvas or PNG IHDR over `maxSide` or `PixelBuffer.maxPixels`, more than `maxLayers` layers and stacks deeper than `maxDepth` each throw `tooLarge` before any decode; `.repeatedSourceThrows`: two layers naming one `src` throw `damaged`; `.overlappingEntriesThrow`: a zip whose entry sizes sum past its byte count throws `damaged`; `ORAFuzzTests`: 500 seeded mutations of `stack.xml` throw or open | an offset or op is lost | `CoreRaster.StackXML`: `x` read as `y` → `ORAReadTests.offsetsKept`; visibility default hidden → `.visibleByDefault` |
+| LC-7 | `PSDWriteTests`: `PSD.read(PSD.write(img)) == img` for the fixture and 50 seeded stacks; every channel RLE; the file opens through LC-2's byte reader expectations; `.invalidValuesThrow`: NaN, −0.1 and 1.5 opacity, an offset past Int32 and `bitsPerChannel` 12 each throw a `CodecError`, never trap | a written attribute reads back different | `CoreRaster.PSDWrite`: divider records swapped → `PSDWriteTests.groupsRoundTrip`; opacity rounded down → `.opacityRoundTrips` |
 | LC-8 | `CodecRoundTripTests`: ORA write then read equals within 1/255 with the fake codec; `extra` entries survive; the thumbnail's longest side is 256 | an entry is lost | `CoreRaster.ORAWrite`: thumbnail longest side uses width only → `CodecRoundTripTests.thumbnailLongestSide`; `extra` dropped → `.extraEntriesKept` |
 | LC-9 | `CodecWalkTests.walk` (KJ-LC); `CodecBudgetTests`: open a 100-layer 4,000 × 3,000 PSD ≤ 1.5 s and ≤ 1.3 GB peak; save it ≤ 2 s (release, reported) | the walk's equalities fail | none |
 | LC-10 | the part names PSD, ORA and `PixelCodec`; status line says built | – | – |
@@ -191,7 +228,7 @@ is the prose task.
 |---|---|---|
 | Open a deep PSD | 100 layers, 12 MP ≤ 1.5 s, peak memory ≤ 1.3 GB | `CodecBudgetTests.openDeep` (release, reported; G1 reuses the fixture) |
 | Never crashes | 1,000 PSD and 500 ORA fuzz cases throw or open, each under 1 s | `PSDFuzzTests`, `ORAFuzzTests` |
-| Bounded | `maxSide`, `maxLayers` and every length checked before allocation | `PSDReadTests.refusesHuge` |
+| Bounded | PSD: `maxSide` on every record's bounds (Int from Int32), a canvas over `PixelBuffer.maxPixels`, `maxLayers`, `maxTotalPixels` from the record bounds before any channel is decoded, and every length checked before allocation. ORA: `OpenRaster.maxSide` on the canvas and each PNG's IHDR before decode, `maxLayers`, `maxDepth`, a repeated `src` refused, and `ZipStore`'s entry sizes summing to at most the archive size | `PSDReadTests.refusesHuge`, `ORAReadTests.refusesHuge`, `.repeatedSourceThrows`, `.overlappingEntriesThrow` |
 | Same bytes as Photo | the moved container writes Photo's bytes | `ORAContainerTests.sameBytesAsPhoto` |
 | Linux-safe | Foundation only; PNG through `PixelCodec` | `scripts/ci` |
 

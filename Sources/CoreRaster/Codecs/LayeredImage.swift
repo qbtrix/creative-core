@@ -4,19 +4,27 @@
 // groups, bottom to top, plus the optional merged composite. Any app maps its
 // own layers to and from this; PSD and OpenRaster translate it to bytes.
 // The ICC profile the file embeds rides along; nil when it has none.
-// CodecError is the one error the codecs throw.
+// CodecError is the error the layered codecs throw: `PSD.read`, `PSD.write`,
+// `OpenRaster.read`, `OpenRaster.write`, `ZipStore.archive`,
+// `ZipStore.entries` and a `PixelCodec`'s `decodePNG` and `encodePNG`. Every
+// other CoreRaster API throws `RasterError`.
 import CoreColor
 
 /// A layered image: canvas size, the layer tree bottom to top, the merged
 /// composite when the file carries one, the channel depth it was read at and
 /// the colour profile it embeds.
 public struct LayeredImage: Equatable, Sendable {
+    /// The canvas size in pixels. Layers and masks are placed on it.
     public var width: Int, height: Int
-    /// Bottom to top.
+    /// The layer tree, bottom to top: the first node is drawn first.
     public var nodes: [LayerNode]
-    /// The flattened image stored in the file, if any.
+    /// The flattened image stored in the file (canvas size), if any; nil when
+    /// the file carries none.
     public var composite: PixelBuffer?
-    /// Bits per channel in the file: 8 for now.
+    /// Bits per channel of the file's samples: 8 (0...255) or 16 (0...65535).
+    /// Pixels in memory are Float32 whatever this is; it records the depth the
+    /// file was read at and the depth a writer saves. Only 8 is read and
+    /// written for now.
     public var bitsPerChannel: Int
     /// The embedded colour profile; nil when the file has none.
     public var profile: ColorProfile?
@@ -40,15 +48,24 @@ public enum LayerNode: Equatable, Sendable {
 /// A pixel layer with its top left at (`x`, `y`) on the canvas; it may lie
 /// partly or wholly outside it.
 public struct PixelLayer: Equatable, Sendable {
+    /// The layer's name as the file stores it, in Unicode.
     public var name: String
+    /// The layer's own pixels; their size is the layer's bounds, not the canvas.
     public var pixels: PixelBuffer
+    /// The canvas pixel the layer's top left pixel sits on, counted from the
+    /// canvas's top left (0, 0), x to the right and y down. Negative or past
+    /// the canvas is allowed.
     public var x: Int, y: Int
-    /// 0...1.
+    /// How much of the layer shows, 0...1: 0 is invisible, 1 is fully opaque.
+    /// It multiplies the pixels' own alpha.
     public var opacity: Float
+    /// How the layer combines with what is below it.
     public var blendMode: BlendMode
+    /// Hidden layers are kept in the file but not drawn.
     public var isHidden: Bool
-    /// Clipped to the layer below it.
+    /// Clipped to the layer below it: shows only where that layer has alpha.
     public var clipsToBelow: Bool
+    /// The layer's mask, nil when it has none.
     public var mask: PlacedMask?
 
     public init(name: String, pixels: PixelBuffer, x: Int = 0, y: Int = 0,
@@ -69,10 +86,17 @@ public struct PixelLayer: Equatable, Sendable {
 /// A layer mask with its top left at (`x`, `y`) on the canvas, and the
 /// coverage of every canvas pixel outside it.
 public struct PlacedMask: Equatable, Sendable {
+    /// Coverage per mask pixel, 0 (hides the layer) to 1 (shows it).
     public var mask: Mask
+    /// The canvas pixel the mask's top left sits on, from the canvas's top
+    /// left, x to the right and y down; independent of the layer's offset.
     public var x: Int, y: Int
-    /// Coverage outside the mask's bounds, 0...1.
+    /// The coverage of every canvas pixel outside the mask's bounds: 0 hides
+    /// the layer there, 1 shows it. PSD stores it as a default colour of 0 or
+    /// 255, so a file reads 0 or 1.
     public var defaultCoverage: Float
+    /// A disabled mask is kept in the file but not applied: the layer draws
+    /// as if it had no mask.
     public var isDisabled: Bool
 
     public init(mask: Mask, x: Int = 0, y: Int = 0, defaultCoverage: Float = 0, isDisabled: Bool = false) {
@@ -86,12 +110,15 @@ public struct PlacedMask: Equatable, Sendable {
 
 /// A named group of entries, bottom to top.
 public struct LayerGroup: Equatable, Sendable {
+    /// The group's name, in Unicode.
     public var name: String
+    /// The group's entries, bottom to top.
     public var children: [LayerNode]
-    /// 0...1.
+    /// How much of the group shows, 0...1: 0 is invisible, 1 is fully opaque.
     public var opacity: Float
     /// nil is pass through: the children blend straight into what is below.
     public var blendMode: BlendMode?
+    /// A hidden group hides every entry in it.
     public var isHidden: Bool
     /// Shown expanded in a layers list.
     public var isOpen: Bool
