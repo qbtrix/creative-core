@@ -52,3 +52,4 @@ Next: VI-5 building, VI-7 building; Anatomy round 2 verdicts pending; Slice-Done
 
 - 14:37Z: VI R2-1 fixer opened #506 (c3c284d, 7/7, +90/-17): arc throws on non-finite centre/sweep/radii, segment count clamped via Int(exactly:), ellipse test solves F.6.5/F.6.6. Closes n4/12, n9 on merge.
 - 2026-10-18T14:54:08Z VI R2-1 #506 merged (14:37Z, c3c284d, 7/7): round-2 n4/12 and n9 closed.
+- 2026-10-18T14:59:41Z VI R2-2 #512 opened (f5a3348, 12/12 FlareLottieImport): depth cap 250 with tooLarge, group tr tests, opacity clamp. Closes n1, n8/15 once merged. VI-8 notes: exporter shape order not reversed (LottieExporter.swift ~94), colour track index follows; masks/mattes exporter stubs.
