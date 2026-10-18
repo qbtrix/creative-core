@@ -1,0 +1,4 @@
+[
+  {"note": "16-bit samples are read as little-endian samples (low byte first), caught by PSDDeepTests.bigEndianSamples", "file": "Sources/CoreRaster/Codecs/PSDDeep.swift", "anchor": "return Int(plane[i * 2]) << 8 | Int(plane[i * 2 + 1])", "replacement": "return Int(plane[i * 2 + 1]) << 8 | Int(plane[i * 2])", "filter": "PSDDeepTests.bigEndianSamples"},
+  {"note": "image resource 1039 skipped on read, so the embedded ICC profile is lost, caught by PSDDeepTests.profileRoundTrips", "file": "Sources/CoreRaster/Codecs/PSDDeep.swift", "anchor": "guard signature == Array(\"8BIM\".utf8), id == 1039 else { continue }", "replacement": "guard signature == Array(\"8BIM\".utf8), id == 1040 else { continue }", "filter": "PSDDeepTests.profileRoundTrips"}
+]
