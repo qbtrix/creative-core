@@ -14,3 +14,4 @@ utc	stage	event	ref	note
 2026-10-18T22:47Z	3	pr-merged	#576	task TP-1
 2026-10-18T22:47Z	3	wave-end	W2	wave 2 merged
 2026-10-18T22:47Z	3	wave-start	W3	TP-3 on dev 4feaaf9f
+2026-10-18T23:09Z	3	heartbeat	W3	container restart; TP-3 builder resumed from its local commit
