@@ -4,7 +4,7 @@ Issue: #442 · Packet: docs/blueprints/core/features/animate-properties.md
 Run: act-1a14ddaebc8-nwqn · Session: line lead (engine-contracts, animate-properties, color-profiles) · Started: 2026-10-18T07:15Z
 Stage: 3 line wave 4 (AP-7, AP-8 building) + fixes from engine-contracts round 3
 Base: 9d01972365f04da4fe6074e9bdd56ceab5b616a8
-Next: AP-7 (Lottie) and AP-8 (SVG) building (wf_a5b3a585-9ef). Fix batch ap-r1 for routed findings #1, #8, #11. AP-4 waits on path-geometry PG-edit (#430); AP-9, AP-10 after.
+Next: Belt-Slice-Done AP-sample and AP-export when dev CI 39126063033 (d51ef90) shows Linux green. Then Anatomy round 1 on the AP-sample/AP-export surface. AP-4 waits on path-geometry PG-edit (#430); AP-9, AP-10 after.
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -37,6 +37,7 @@ Next: AP-7 (Lottie) and AP-8 (SVG) building (wf_a5b3a585-9ef). Fix batch ap-r1 f
 - Wave 4 contract checks (wf_a5b3a585-9ef), after the lane merged both: AP-7 #480 also edited LottieExporter.swift (10+/10-: LottieItem ks/c/w widened to LottieProperty so keyed values fit, clamp through the shared unit); AP-8 #481 edited SVGExporter.swift (+3/-2, the seam so +Style sees layer tracks). The prompt allowed a hook in each base exporter; AP-7 went past one line but stayed on the seam the packet's Contract needs. Accepted; round 1 critics on AP-export will review both base-file edits. Everything else in both checks passed (232 lines/4 files and 102 lines/4 files, trailers, mutations 2/2 each).
 - Merged: AP-1 #457, AP-2 #463, AP-6 #464, AP-5 #477, AP-3 #479 (d7ad60b).
 - engine-contracts round 3 (f7413a6) routed 3 findings here: #1 (major) TrackCommands.notBuilt throws invalidDocument with an internal task id; #8 (major) no test that easing shapes the morph; #11 (minor) quad-to-cubic elevation untested. Fixer ap-r1 takes them; files kept disjoint from AP-7/AP-8.
+- ap-r1 → #484 (head d6b1a9c, merged d51ef90): new CommandError.notBuilt for the shape key stubs (names the command and feature), easingShapesTheMorph and quadElevatesToCubic tests, two new FlareMorphSampling entries caught (4/4). Ops note: about 34 finished worktrees had filled the root disk to 99%; the lead removed the unlocked ones (now 42%).
 - dev CI 39118832683 on 0660756: Linux green. AP-a merged-done.
 - #461 (e158c87) amended brief rule 9: a message starting `Belt released this run.` means stop at once; every other chat message still never stops the lead. Applied to this run.
 - "line N" in the wave column is the line lead's shared wave number (engine-contracts wave N runs beside it).
