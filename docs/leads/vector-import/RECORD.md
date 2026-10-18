@@ -1,11 +1,11 @@
 # vector-import lead record
 
 Issue: #439 · Packet: docs/blueprints/core/features/vector-import.md
-Run: act-1a14de006be-1kmq · Session: https://claude.ai/code/session_01WN1jNn5SUWJXTALMBvtq64 · Started: 2026-10-18T07:20Z
-Line lead for: preview-cache (#440), vector-import (#439), layered-codecs (#438)
-Stage: 3 wave 3; Anatomy round 1 on finished slices
-Base: b80c0871a391e1729578b0344c8884c10471c8ca
-Next: VI-5 building, VI-7 building; Anatomy round 2 verdicts pending; Slice-Done waits on round-2 verdicts (dev CI run 360 on 72fbef6: Linux green)
+Run: act-1a1511a1174-tlch (relaunch; earlier run act-1a14de006be-1kmq) · Started: 2026-10-18T22:40Z
+Line lead for: image-codecs (#562), preview-cache (#440), vector-import (#439)
+Stage: 4 round 3
+Base: 15e96dd47c720025f5ae49b3649608deb65ab216
+Next: R3-3 reader perf fixer (relaunched: the earlier one never pushed), then VI-9 feature-done
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -85,3 +85,4 @@ Next: VI-5 building, VI-7 building; Anatomy round 2 verdicts pending; Slice-Done
 - 20:21Z R3-3 reader perf fixer launched (Lottie 250 ms, SVG 150 ms release budgets, no loosening)
 - 20:22Z heartbeat: R3-3 reader perf fixer working; VI-9 waits on it
 - 20:45Z heartbeat: R3-3 editing Lottie/SVG readers (files touched 20:44); VI-9 waits on it
+- 22:40Z relaunch under act-1a1511a1174-tlch: branch rebased onto dev 15e96dd. R3-3 left no branch or PR; relaunching it (Lottie 5 MB ≤ 250 ms, SVG 2 MB ≤ 150 ms release). VI-9 follows it.
