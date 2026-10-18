@@ -10,3 +10,4 @@ utc	stage	event	ref	note
 2026-10-18T07:51Z	3	pr-opened	#450	wave
 2026-10-18T07:53Z	-	heartbeat	-	waiting
 2026-10-18T07:54Z	4	gate-run	83b20aa	round 1: CI PASS 1083 tests; mutate FlareW1Model 4/4, CoreRaster.W1Values 3/3
+2026-10-18T07:54Z	4	stage-start	round-1	critic panel: clarity, contract, compat, robustness, tests
