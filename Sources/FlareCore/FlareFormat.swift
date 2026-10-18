@@ -46,9 +46,12 @@ public enum FlareFormat {
     /// Most points allowed in the whole document, counting `Shape.points` and
     /// the points of every path element.
     public static let maxTotalPoints = 1_000_000
-    /// Most masks on one layer, and most keys in one colour or shape track.
+    /// Most masks on one layer.
     public static let maxMasksPerLayer = 32
+    /// Most keys in one colour or shape track.
     public static let maxKeysPerTrack = 4_096
+    /// Most colour and shape tracks, together, on one layer.
+    public static let maxTracksPerLayer = 1_024
 
     struct Header: Decodable {
         var format: String?
@@ -139,7 +142,7 @@ public enum FlareFormat {
             let before = inserted ? nil
                 : old.indices.contains(i) && old[i].id == layerID ? old[i] : old.first { $0.id == layerID }
             // The total was within the limits before, so only growth can break them.
-            if new.count > maxLayersPerScene || pointCount(layer.shapes) > pointCount(before?.shapes ?? []) {
+            if new.count > maxLayersPerScene || pointCount(layer) > before.map(pointCount) ?? 0 {
                 try checkLimits(document)
             }
             mattesChanged = mattesChanged || layer.matte != before?.matte
@@ -244,39 +247,78 @@ public enum FlareFormat {
         }
         func finite(_ path: Path) -> Bool { path.elements.allSatisfy { $0.points.allSatisfy(\.isFinite) } }
         func checkKeys(_ frames: [Int], _ track: String) throws {
-            try check(!frames.isEmpty && frames.count <= maxKeysPerTrack, "track \(track) needs 1...\(maxKeysPerTrack) keys")
-            let sorted = zip(frames, frames.dropFirst()).allSatisfy { $0 < $1 }
-            try check(sorted && frames.allSatisfy { $0 >= 0 && $0 <= duration }, "track \(track) unsorted or off the timeline")
+            try check(!frames.isEmpty && frames.count <= maxKeysPerTrack,
+                      "track \(track) has \(frames.count) keys, allowed 1...\(maxKeysPerTrack)")
+            for (k, frame) in frames.enumerated() {
+                try check(frame >= 0 && frame <= duration, "track \(track) key \(k): frame \(frame) is outside 0...\(duration)")
+                try check(k == 0 || frames[k - 1] < frame, "track \(track) key \(k): frame \(frame) is not after the key before it")
+            }
         }
-        try check(layer.masks.count <= maxMasksPerLayer, "more than \(maxMasksPerLayer) masks")
-        for mask in layer.masks {
-            try check(finite(mask.path) && mask.feather.isFinite && mask.feather >= 0 && (0...1).contains(mask.opacity),
-                      "mask needs finite points, feather >= 0 and opacity in 0...1")
+        try check(layer.masks.count <= maxMasksPerLayer, "\(layer.masks.count) masks, limit \(maxMasksPerLayer)")
+        for (i, mask) in layer.masks.enumerated() {
+            try check(finite(mask.path), "mask \(i): path has a non-finite point")
+            try check(mask.feather.isFinite && mask.feather >= 0, "mask \(i): feather \(mask.feather) must be finite and >= 0")
+            try check((0...1).contains(mask.opacity), "mask \(i): opacity \(mask.opacity) is outside 0...1")
         }
-        for text in layer.texts {
+        for (t, text) in layer.texts.enumerated() {
             let count = text.string.count
             var last = -1
-            for run in text.runs {
-                try check(run.start > last && run.length > 0 && run.start <= count - run.length, // last >= -1
-                          "text runs must lie in the string, sorted and not overlapping")
+            for (r, run) in text.runs.enumerated() {
+                let at = "text \(t) run \(r)"
+                try check(run.length > 0, "\(at): length \(run.length) must be > 0")
+                try check(run.start > last, "\(at): start \(run.start) is negative or overlaps the run before it")
+                try check(run.start <= count - run.length, // last >= -1, so start >= 0
+                          "\(at): start \(run.start) + length \(run.length) passes the \(count) graphemes")
                 last = run.start + run.length - 1
-                try check([run.tracking, run.baselineShift].allSatisfy { $0?.isFinite ?? true }
-                          && run.fontSize.map { $0.isFinite && $0 > 0 } ?? true, "text run values must be finite")
+                try check(run.tracking?.isFinite ?? true, "\(at): tracking must be finite")
+                try check(run.baselineShift?.isFinite ?? true, "\(at): baselineShift must be finite")
+                try check(run.fontSize.map { $0.isFinite && $0 > 0 } ?? true,
+                          "\(at): fontSize \(run.fontSize ?? 0) must be finite and > 0")
                 do { try run.fill?.validate() } catch let error as ModelError { throw FormatError(error) }
             }
             if let p = text.paragraph {
-                try check((0.5...4).contains(p.lineHeight) && p.tracking.isFinite && p.paragraphSpacing.isFinite
-                          && p.boxWidth.map { $0.isFinite && $0 > 0 } ?? true, "paragraph lineHeight or sizes out of range")
+                try check((0.5...4).contains(p.lineHeight), "text \(t): lineHeight \(p.lineHeight) is outside 0.5...4")
+                try check(p.tracking.isFinite, "text \(t): paragraph tracking must be finite")
+                try check(p.paragraphSpacing.isFinite, "text \(t): paragraphSpacing must be finite")
+                try check(p.boxWidth.map { $0.isFinite && $0 > 0 } ?? true,
+                          "text \(t): boxWidth \(p.boxWidth ?? 0) must be finite and > 0")
             }
-            if let on = text.onPath { try check(finite(on.path) && on.startOffset.isFinite, "text path must be finite") }
+            if let on = text.onPath {
+                try check(finite(on.path), "text \(t): onPath path has a non-finite point")
+                try check(on.startOffset.isFinite, "text \(t): onPath startOffset must be finite")
+            }
         }
+        let tracks = layer.colorTracks.count + layer.shapeTracks.count
+        try check(tracks <= maxTracksPerLayer, "\(tracks) colour and shape tracks, limit \(maxTracksPerLayer)")
         for (key, track) in layer.colorTracks {
+            try check(colorTrackTargetExists(key, in: layer), "colour track key \(key) must be fill.<i> or stroke.<i> "
+                      + "with i < \(layer.shapes.count) shapes, or text.<i> with i < \(layer.texts.count) texts")
             try checkKeys(track.map(\.frame), key)
-            try check(track.allSatisfy { $0.value.isFinite }, "track \(key) has a non-finite color")
+            for (k, keyframe) in track.enumerated() {
+                try check(keyframe.value.isFinite, "track \(key) key \(k): colour channels must be finite")
+            }
         }
-        for track in layer.shapeTracks {
-            try check(track.shapeIndex >= 0 && track.keys.allSatisfy { finite($0.path) }, "shape track index < 0 or non-finite")
+        var animated = Set<Int>()
+        for (s, track) in layer.shapeTracks.enumerated() {
+            try check(layer.shapes.indices.contains(track.shapeIndex),
+                      "shape track \(s): shapeIndex \(track.shapeIndex) is outside 0..<\(layer.shapes.count)")
+            try check(animated.insert(track.shapeIndex).inserted, "shape track \(s): shape \(track.shapeIndex) already has a track")
+            for (k, keyframe) in track.keys.enumerated() {
+                try check(finite(keyframe.path), "shape track \(s) key \(k): path has a non-finite point")
+            }
             try checkKeys(track.keys.map(\.frame), "shape \(track.shapeIndex)")
+        }
+    }
+
+    /// Whether `key` is `fill.<i>` or `stroke.<i>` with `i` a shape index of
+    /// `layer`, or `text.<i>` with `i` a text index, `i` written in plain decimal.
+    static func colorTrackTargetExists(_ key: String, in layer: Layer) -> Bool {
+        let parts = key.split(separator: ".", maxSplits: 1, omittingEmptySubsequences: false)
+        guard parts.count == 2, let i = Int(parts[1]), String(i) == parts[1] else { return false }
+        switch parts[0] {
+        case "fill", "stroke": return layer.shapes.indices.contains(i)
+        case "text": return layer.texts.indices.contains(i)
+        default: return false
         }
     }
 
@@ -310,7 +352,8 @@ public enum FlareFormat {
     }
 
     /// Throws `tooLarge` if a scene or symbol has too many layers or the
-    /// document too many points. Points are counted across scenes and symbols.
+    /// document too many points. Points are counted across scenes and symbols,
+    /// as `pointCount(_: Layer)` counts them.
     static func checkLimits(_ document: Document) throws {
         let containers = document.scenes.map { ("scene \($0.id)", $0.layers) }
             + document.symbols.map { ("symbol \($0.id)", $0.layers) }
@@ -320,12 +363,22 @@ public enum FlareFormat {
                 throw FormatError.tooLarge("\(owner): \(layers.count) layers, limit \(maxLayersPerScene)")
             }
             for layer in layers {
-                points += pointCount(layer.shapes)
+                points += pointCount(layer)
                 guard points <= maxTotalPoints else {
                     throw FormatError.tooLarge("more than \(maxTotalPoints) points")
                 }
             }
         }
+    }
+
+    /// Points stored in `layer` for the size limit: its shapes, mask paths,
+    /// text-on-path paths and the path of every shape-track key.
+    static func pointCount(_ layer: Layer) -> Int {
+        func count(_ path: Path) -> Int { path.elements.reduce(0) { $0 + $1.pointCount } }
+        let masks = layer.masks.reduce(0) { $0 + count($1.path) }
+        let onPaths = layer.texts.reduce(0) { $0 + ($1.onPath.map { count($0.path) } ?? 0) }
+        let shapeKeys = layer.shapeTracks.reduce(0) { total, track in track.keys.reduce(total) { $0 + count($1.path) } }
+        return pointCount(layer.shapes) + masks + onPaths + shapeKeys
     }
 
     /// Points stored in `shapes`, counting path elements, for the size limit.

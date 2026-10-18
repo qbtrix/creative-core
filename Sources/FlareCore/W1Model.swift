@@ -7,7 +7,10 @@
 // matte names another layer of the same list, with no cycle; text runs are
 // non-empty, inside the graphemes, sorted, not overlapping, fontSize > 0;
 // lineHeight in 0.5...4, boxWidth > 0; tracks hold 1...`maxKeysPerTrack` keys,
-// sorted, unique frames in 0...duration; shapeIndex >= 0 (readers bound it).
+// sorted, unique frames in 0...duration; at most `maxTracksPerLayer` tracks; a
+// shape track's shapeIndex is a distinct index into `shapes`; a colour track key
+// is fill.<i> or stroke.<i> (i indexes `shapes`) or text.<i> (i indexes `texts`);
+// mask, path-text and shape-key points count toward `maxTotalPoints`.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
