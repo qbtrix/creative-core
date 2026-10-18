@@ -12,7 +12,8 @@
 //   point, else the control point is the current point
 // - an arc becomes one cubic per <= 90 degrees of sweep by the W3C
 //   endpoint-to-centre conversion (implementation notes F.6.5), radii scaled up
-//   when too small (F.6.6), zero radius gives a line, zero length gives nothing
+//   when too small (F.6.6), zero radius gives a line, zero length gives nothing;
+//   a chord so short or long that the centre or sweep is not finite throws
 // - a bad token, a missing argument or a non-finite number or point throws
 //   `ImportError.damaged` saying "at byte N", N the 0-based UTF-8 offset; input over `maxBytes` or
 //   output over `maxElements` throws `ImportError.tooLarge`
@@ -138,7 +139,7 @@ private struct PathDataReader {
             let rx = abs(try number()), ry = abs(try number()), phi = try number()
             let largeArc = try flag(), sweep = try flag()
             let to = try point(base)
-            appendArc(to: to, rx: rx, ry: ry, degrees: phi, largeArc: largeArc, sweep: sweep)
+            try appendArc(to: to, rx: rx, ry: ry, degrees: phi, largeArc: largeArc, sweep: sweep)
         case UInt8(ascii: "z"):
             elements.append(.close)
             current = subpathStart
@@ -206,7 +207,7 @@ private struct PathDataReader {
     }
 
     /// The SVG elliptical arc from the current point to `to` as cubics.
-    mutating func appendArc(to: Point, rx: Double, ry: Double, degrees: Double, largeArc: Bool, sweep: Bool) {
+    mutating func appendArc(to: Point, rx: Double, ry: Double, degrees: Double, largeArc: Bool, sweep: Bool) throws {
         let from = current
         current = to
         guard from != to else { return }
@@ -233,11 +234,14 @@ private struct PathDataReader {
         var delta = end - start
         if !sweep, delta > 0 { delta -= 2 * Double.pi }
         if sweep, delta < 0 { delta += 2 * Double.pi }
+        // A chord near 1e-320 or 1e200 under- or overflows the centre to inf or NaN.
+        guard [delta, centre.x, centre.y, rx, ry].allSatisfy(\.isFinite) else { throw damaged("arc centre out of range") }
         // Step 3: unit circle to user space.
         let mid = Point(x: (from.x + to.x) / 2, y: (from.y + to.y) / 2)
         let toUser = Matrix.translation(x: mid.x, y: mid.y) * Matrix.rotation(degrees: degrees)
             * Matrix.translation(x: centre.x, y: centre.y) * Matrix.scale(x: rx, y: ry)
-        let count = Swift.max(1, Int((abs(delta) / (Double.pi / 2) - 1e-9).rounded(.up)))
+        let quarters = Swift.min(4, Swift.max(1, (abs(delta) / (Double.pi / 2) - 1e-9).rounded(.up)))
+        let count = Int(exactly: quarters) ?? 1
         let step = delta / Double(count)
         let handle = 4.0 / 3.0 * tan(step / 4)
         for i in 0..<count {

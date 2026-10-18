@@ -33,5 +33,19 @@
     "anchor": "let scale = lambda > 1 ? lambda.squareRoot() : 1",
     "replacement": "let scale = 1.0",
     "filter": "SVGPathDataTests.arcRadiiAndRotation"
+  },
+  {
+    "note": "svg path data arc drops the finite-centre guard, so extreme chords fail later with a vague message",
+    "file": "Sources/FlareCore/Import/SVGPathData.swift",
+    "anchor": "guard [delta, centre.x, centre.y, rx, ry].allSatisfy(\\.isFinite) else { throw damaged(\"arc centre out of range\") }",
+    "replacement": "",
+    "filter": "SVGPathDataTests.extremeArcChordsThrow"
+  },
+  {
+    "note": "svg path data arc swaps rx and ry in the centre formula, so ellipse arcs leave the ellipse",
+    "file": "Sources/FlareCore/Import/SVGPathData.swift",
+    "anchor": "let centre = Point(x: coef * rx * p.y / ry, y: -coef * ry * p.x / rx)",
+    "replacement": "let centre = Point(x: coef * ry * p.y / rx, y: -coef * rx * p.x / ry)",
+    "filter": "SVGPathDataTests.ellipticalArcOnEllipse"
   }
 ]
