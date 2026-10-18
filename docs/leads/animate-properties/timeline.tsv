@@ -67,3 +67,4 @@ utc	stage	event	ref	note
 2026-10-18T16:28Z	fix	ap2-b	#528	ap2-b PR #528: 5/5 fixed (incl. major last-key-drops-track), head e54a585, gate PASS, FlareTrackCommands 12/12. TrackTarget doc-only (used outside batch).
 2026-10-18T16:37Z	anatomy	wait	ap2-a	ap2-b merged c77f36b; ap2-a fix batch still running; round 3 after it merges
 2026-10-18T16:39Z	anatomy	fixed	#530	ap2-a 3/3 fixed (SVG keyed fill over gradient, path/width easing test, part-count guard mutation); changed-since 8/8; head e0ed50b
+2026-10-18T16:40Z	anatomy	r3-start	f1f2d7f	#530 merged as f1f2d7f; round 3 gate + 6 mutation plans running on dev f1f2d7f
