@@ -68,5 +68,19 @@
     "anchor": "if case .text(let index) = target { throw CommandError.invalidIndex(index) }",
     "replacement": "",
     "filter": "TrackCommandsTests.missingTextIsInvalidIndex"
+  },
+  {
+    "note": "a colour key remove leaves an empty track instead of dropping it",
+    "file": "Sources/FlareCore/TrackCommands.swift",
+    "anchor": "layer.colorTracks[target.key] = new.isEmpty ? nil : new",
+    "replacement": "layer.colorTracks[target.key] = new",
+    "filter": "TrackCommandsTests.removingLastKeyDropsTrack"
+  },
+  {
+    "note": "a colour key remove at a frame with no key succeeds instead of keyframeNotFound",
+    "file": "Sources/FlareCore/TrackCommands.swift",
+    "anchor": "throw CommandError.keyframeNotFound(property: key, frame: frame)",
+    "replacement": "return track",
+    "filter": "TrackCommandsTests.removeMissingKeyRefused"
   }
 ]

@@ -57,8 +57,10 @@ public enum TrackCommands {
     }
 }
 
-/// Which colour a colour track animates: a shape's fill or stroke, or a text's
-/// fill. Its `key` is the track's key in `Layer.colorTracks`.
+/// Colour tracks only: stroke width uses `Layer.trackKey(strokeWidthOf:)` and
+/// paths use `shape:`. Which colour a colour track animates: a shape's fill or
+/// stroke, or a text's fill. Its `key` is the track's key in `Layer.colorTracks`
+/// (on `Layer.tracks` it finds nothing).
 public enum TrackTarget: Hashable, Codable, Sendable {
     case fill(shape: Int)
     case stroke(shape: Int)
@@ -91,8 +93,10 @@ public enum TrackTarget: Hashable, Codable, Sendable {
 
 /// Sets the colour key at `frame` on `target`'s track of `owner`'s layer,
 /// adding it or replacing the key there. Throws invalidColor unless every
-/// channel is in 0...1 and invalidFrame outside 0...the owner's duration.
-/// A drag on one key merges into one undo step.
+/// channel is in 0...1, invalidFrame outside 0...the owner's duration,
+/// shapeNotFound(i) for a missing fill or stroke shape and invalidIndex(i) for
+/// a missing text. Performed repeatedly with the same `coalesceKey`, steps on
+/// one key (same owner, layer, target and frame) merge into one undo step.
 public struct SetColorKeyframe: LayerParamsCommand {
     public static let id = "colorKey.set"
     public var label: String { "Set Color Keyframe" }
@@ -140,9 +144,11 @@ public struct SetColorKeyframe: LayerParamsCommand {
         try TrackCommands.restoreColorTrack(&document, owner, layerID, target, previous)
     }
 
-    /// A drag step on the same key: the merged command keeps the track from
-    /// before the first step and takes the last step's value and easing, so one
-    /// undo restores it. Another owner, layer, target or frame never merges.
+    /// A step on the same key, performed with the same non-nil `coalesceKey`
+    /// (`CommandEngine.perform(_:coalesceKey:)`): the merged command keeps the
+    /// track from before the first step and takes the last step's value and
+    /// easing, so one undo restores it. Another owner, layer, target or frame
+    /// never merges.
     public mutating func merge(_ next: SetColorKeyframe) -> Bool {
         guard (next.owner, next.layerID, next.target, next.frame) == (owner, layerID, target, frame) else { return false }
         (value, easing) = (next.value, next.easing)
@@ -152,7 +158,8 @@ public struct SetColorKeyframe: LayerParamsCommand {
 
 /// Removes the colour key at `frame` from `target`'s track of `owner`'s
 /// layer, and the track with its last key; throws keyframeNotFound if there
-/// is no key there.
+/// is no key there, shapeNotFound(i) for a missing fill or stroke shape and
+/// invalidIndex(i) for a missing text.
 public struct RemoveColorKeyframe: LayerParamsCommand {
     public static let id = "colorKey.remove"
     public var label: String { "Remove Color Keyframe" }
@@ -195,7 +202,9 @@ public struct RemoveColorKeyframe: LayerParamsCommand {
 /// by `by` frames, all or nothing: throws keyframeNotFound if a frame has no
 /// key, invalidFrame(the key's frame) if a key would leave 0...the owner's
 /// duration (the number names the key that could not move, not where it
-/// would land), and frameOccupied if one would land on a key that is not moving.
+/// would land), frameOccupied if one would land on a key that is not moving,
+/// shapeNotFound(i) for a missing fill or stroke shape and invalidIndex(i) for
+/// a missing text.
 public struct MoveColorKeyframes: LayerParamsCommand {
     public static let id = "colorKey.move"
     public var label: String { "Move Color Keyframes" }
