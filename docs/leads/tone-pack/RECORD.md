@@ -2,9 +2,9 @@
 
 Issue: #432 · Packet: docs/blueprints/core/features/tone-pack.md
 Run: act-1a150bfbcf7-sfwy · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
-Stage: 3 wave 2
-Base: 15e96dd47c720025f5ae49b3649608deb65ab216
-Next: wave 2 builder running (TP-1 checks-first suites); then wave 3 once it merges
+Stage: 3 wave 3
+Base: 4feaaf9fac3cc050901f8b459a0908515a927f54
+Next: TP-1 part B gate running then PR; TP-3 building; TP-4, TP-5, TP-6 after (TP-5/6 need part B merged)
 
 Line lead for #434, #433 and #432 (rule 19); one wave plan across the three
 features, bookkeeping per feature. Packet v3 (has a Slices table).
@@ -14,8 +14,8 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 |---|---|---|---|---|---|---|---|---|
 | TP-0 | 1 | TP-a | Stubs for the contract slice's signatures (rule 18): the 13 ops, `CubeLUT.parse`, `AutoTone`; throwing ones throw `RasterError.invalid("not built")`, `inverted()` returns self | `Sources/CoreRaster/Tone/{ColorAdjust,ColorMix,ColorMap,CubeLUT,AutoTone}.swift`, `Tests/CoreRasterTests/ToneStubTests.swift` | `ToneStubTests` | none (no invariant) | #561 | merged |
 | TP-2 | 1 | TP-a | Reference colours, `.cube` fixtures (identity 17³, warm 33³, five damaged) generated as text in code, the cast photo | `Tests/CoreRasterTests/ToneFixtures.swift` | every fixture parses or fails as labelled (checked in TP-5) | none | #569 | merged |
-| TP-1 | 2 | TP-a | Checks first: six suites disabled by name | `Tests/CoreRasterTests/{ColorAdjust,ColorMix,ColorMap,ColorLUT,AutoTone}Tests.swift`, `Tests/CoreRenderTests/CPUColorTests.swift` | suites compile, disabled | none | #576 (A); B on lead/tone-pack-tp-1b | open |
-| TP-3 | 3 | TP-mix | `vibrance`, `hueSaturation`, `hsl`; turns on `ColorAdjustTests` | `Sources/CoreRaster/Tone/ColorAdjust.swift`, its tests, `Tests/mutations/CoreRaster.ColorAdjust.json` | `ColorAdjustTests` | 3 (packet) | | planned |
+| TP-1 | 2 | TP-a | Checks first: six suites disabled by name | `Tests/CoreRasterTests/{ColorAdjust,ColorMix,ColorMap,ColorLUT,AutoTone}Tests.swift`, `Tests/CoreRenderTests/CPUColorTests.swift` | suites compile, disabled | none | #576 (A); B on lead/tone-pack-tp-1b | merged |
+| TP-3 | 3 | TP-mix | `vibrance`, `hueSaturation`, `hsl`; turns on `ColorAdjustTests` | `Sources/CoreRaster/Tone/ColorAdjust.swift`, its tests, `Tests/mutations/CoreRaster.ColorAdjust.json` | `ColorAdjustTests` | 3 (packet) | | building |
 | TP-4 | 3 | TP-mix | `blackAndWhite`, `channelMixer`, `colorBalance`; turns on `ColorMixTests` | `Sources/CoreRaster/Tone/ColorMix.swift`, its tests, `Tests/mutations/CoreRaster.ColorMix.json` | `ColorMixTests` | 3 (packet) | | planned |
 | TP-5 | 3 | TP-map | `gradientMap`, LUT apply, `CubeLUT.parse` + fuzz, `posterized`, `thresholded`, `inverted`; turns on `ColorMapTests`, `ColorLUTTests` | `Sources/CoreRaster/Tone/ColorMap.swift`, `Sources/CoreRaster/Tone/CubeLUT.swift`, both tests, `Tests/mutations/CoreRaster.ColorMap.json`, `Tests/mutations/CoreRaster.CubeLUT.json` | `ColorMapTests`, `ColorLUTTests` | 5 (packet) | | planned |
 | TP-6 | 3 | TP-map | `AutoTone.suggest`; turns on `AutoToneTests` | `Sources/CoreRaster/Tone/AutoTone.swift`, its tests, `Tests/mutations/CoreRaster.AutoTone.json` | `AutoToneTests` | 2 (packet) | | planned |
