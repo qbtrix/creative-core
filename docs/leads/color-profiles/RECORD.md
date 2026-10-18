@@ -2,9 +2,9 @@
 
 Issue: #441 · Packet: docs/blueprints/core/features/color-profiles.md
 Run: act-1a14ddaebc8-nwqn · Session: line lead (engine-contracts, animate-properties, color-profiles) · Started: 2026-10-18T07:15Z
-Stage: 5 Anatomy budget spent (4 rounds). Round 4 doc findings go to fix batch cp4-a (wf_a049a93f-ee9); the test and compat findings are filed as gaps #550 and #551. CP-10 waits on layered-codecs' LC-10, which waits on its R3-2 fixer.
+Stage: 5 Anatomy budget spent (4 rounds). cp4-a merged #552 (1e38f30); gaps #549, #550, #551 open. CP-10 waits on layered-codecs' LC-10.
 Base: 9d01972365f04da4fe6074e9bdd56ceab5b616a8
-Next: cp4-a merges; CP-10 (feature-done, Closes #441) once LC-10 has merged, since both edit the codecs part; Mac-Finish-Wanted CP-z; contact sheet.
+Next: CP-10 (feature-done, Closes #441) once LC-10 has merged; Mac-Finish-Wanted CP-z; contact sheet.
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -62,3 +62,4 @@ Next: cp4-a merges; CP-10 (feature-done, Closes #441) once LC-10 has merged, sin
 - cp3-c merged #547 (1760ddc): convert24MP 6240.8 -> 606.6 ms (release, Linux), still over the 150 ms budget; gap #549 (p2) filed. #547 said "Closes #441" (the fixer template never said Refs), so its merge closed #441; the lead reopened #441, edited the #547 body to Refs, and patched the fixer templates to write Refs unless featureDone.
 - Round 4 is the last round (budget of 4). Its 5 doc-only findings are cheap and in the feature's own files, so they go in fix batch cp4-a (Refs #441). The 3 major test findings and the compat finding need new tests and a behaviour change, so they are filed as gaps #550 and #551 rather than starting a fifth round. cp3-c's 24 MP budget miss is gap #549.
 - fix-batch-v3.js referenced an undefined `A` in its Refs/Closes line (added after #547); it now reads `args`.
+- cp4-a merged #552 (1e38f30, head d119254): 5 doc fixes, plus the codecs C4 part's stale 8-bit PSD wording, which the fixer corrected to match the code. The scripts/ci gate passed, and mutation caught 14/14 on the changed plans. LC-10 edits the same part and will rebase onto it.

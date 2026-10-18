@@ -95,3 +95,4 @@ utc	stage	event	ref	note
 2026-10-18T18:48Z	anatomy	round4-gate	bd50d5b	CI: PASS try 1; 41/41; panel running
 2026-10-18T18:51Z	-	heartbeat	-	waiting
 2026-10-18T18:59Z	5	anatomy-r4	bd50d5b	round 4 not clean: 10 confirmed; cp4-a doc batch; gaps #550 #551; CP-10 waits LC-10
+2026-10-18T19:06Z	5	merge	#552	cp4-a doc fixes merged; CP-10 waits LC-10
