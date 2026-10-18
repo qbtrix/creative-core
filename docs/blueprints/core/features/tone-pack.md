@@ -138,7 +138,7 @@ public struct AutoTone: Hashable, Sendable { public var inBlack: Float, inWhite:
 | TP-7 | – | `CPUBackend+Color.swift` body: each colour case calls its CoreRaster op; turns on `CPUColorTests` | `Sources/CoreRender/CPU/CPUBackend+Color.swift`, `Tests/CoreRenderTests/CPUColorTests.swift`, `Tests/mutations/CoreRenderCPUColor.json` | TP-3, TP-4, TP-5, engine-contracts:EC-b | ~160, 3 |
 | TP-8 | – | `Samples+Color.swift` (one sample per case on the edge-case buffers) and the CPU goldens | `Sources/CoreRender/Parity/Samples+Color.swift`, `Tests/CoreRenderTests/Golden/color/` | TP-7 | ~120, 1 + goldens |
 | TP-9 | – | KJ-TP walk; `ToneBudgetTests` (release, `.serialized`) | `Tests/CoreRenderTests/ToneWalkTests.swift`, `Tests/CoreRasterTests/ToneBudgetTests.swift` | TP-6, TP-8 | ~180, 2 |
-| TP-10 | – | `waves.md` status; `feature-done` | `docs/blueprints/core/features/waves.md` | TP-9 | ~10, 1 |
+| TP-10 | – | the packet's status line; `feature-done` | `docs/blueprints/core/features/tone-pack.md` | TP-9 | ~10, 1 |
 
 ## Build waves
 
@@ -166,7 +166,7 @@ walk reads them, TP-10 is the prose task.
 | TP-7 | `CPUColorTests`: each colour case on the CPU backend `==` its CoreRaster call; a `RenderDispatcher` over a fake with `.adjust` sends `.vibrance` to the CPU and `.contrast` to the fake | a case calls the wrong op | `CoreRenderCPUColor`: `.threshold` mapped to `posterized` → `CPUColorTests.everyCaseEqualsDirect`; LUT applied twice → `.lutOnce` |
 | TP-8 | `CPUGoldenTests` reproduces every colour golden with zero delta | a golden changes | none: goldens |
 | TP-9 | `ToneWalkTests.walk` (KJ-TP); `ToneBudgetTests`: each colour op on 24 MP ≤ 120 ms, LUT 33³ ≤ 180 ms (release, reported) | the walk's checks fail | none: walk and budgets |
-| TP-10 | `waves.md` row says built | – | – |
+| TP-10 | status line says built | – | – |
 
 ## Quality tests
 

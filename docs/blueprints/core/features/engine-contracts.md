@@ -196,7 +196,7 @@ and track writing into `SVGExporter+Masks.swift`, `SVGExporter+Text.swift`,
 | EC-7 | – | Registry and undo seams: the three empty families and their test files with empty `undoSteps` and `expectedIDs`; `CommandRegistryTests.expectedIDs` as the union of every family's list | `Sources/FlareCore/CommandRegistry.swift`, `Sources/FlareCore/MaskCommands.swift`, `Sources/FlareCore/TextStyleCommands.swift`, `Sources/FlareCore/TrackCommands.swift`, `Tests/FlareCoreTests/CommandRegistryTests.swift`, `Tests/FlareCoreTests/UndoPropertyTests.swift`, `Tests/FlareCoreTests/MaskCommandsTests.swift`, `Tests/FlareCoreTests/TextStyleCommandsTests.swift`, `Tests/FlareCoreTests/TrackCommandsTests.swift` | EC-6 | ~240, 9 |
 | EC-8 | – | Exporter seams: move mask, text, style and track writing into the five extension files, byte for byte (the existing exporter tests and goldens are the oracle) | `Sources/FlareCore/Export/SVGExporter.swift`, `Sources/FlareCore/Export/SVGExporter+Masks.swift`, `Sources/FlareCore/Export/SVGExporter+Text.swift`, `Sources/FlareCore/Export/SVGExporter+Style.swift`, `Sources/FlareCore/Export/LottieExporter.swift`, `Sources/FlareCore/Export/LottieExporter+Masks.swift`, `Sources/FlareCore/Export/LottieExporter+Tracks.swift`, `docs/c4/parts/creative-core/flarecore/export.json` | EC-6 | ~300, 8 |
 | EC-9 | – | KJ-EC, the walk over the fakes and both files | `Tests/CoreRenderTests/W1ContractWalkTests.swift`, `Tests/FlareCoreTests/W1FileWalkTests.swift` | EC-3, EC-4, EC-5, EC-7, EC-8 | ~160, 2 |
-| EC-10 | – | `waves.md` status and the files-across table; `docs/engineering.md` names the CPU-first families and the seam files; `feature-done` | `docs/blueprints/core/features/waves.md`, `docs/engineering.md` | EC-9 | ~80, 2 |
+| EC-10 | – | The packet's status line; `docs/engineering.md` names the CPU-first families, the seam files and the path-ops rules; `feature-done` | `docs/blueprints/core/features/engine-contracts.md`, `docs/engineering.md` | EC-9 | ~80, 2 |
 
 EC-1 and EC-6 share nothing, so the render and the FlareCore halves start
 together. EC-3, EC-4 and EC-5 each own different files after EC-2. EC-7 and
@@ -233,7 +233,7 @@ task, with its fake-call cases disabled by name (`waits on EC-3`).
 | EC-7 | `CommandRegistryTests`: the union of family lists equals `ids` (58 today) and every family file's list is unique; the three new families are registered and empty; `UndoPropertyTests` unchanged and green | a family's ids leak into another's list | none: seams |
 | EC-8 | `SVGExporterTests`, `SVGRenderListTests`, `LottieExporterTests`, `LottieTracksTests`, `LottieGradientAlphaTests`: every existing expectation and golden byte unchanged | any output byte moves | none: a move (the existing tests guard it) |
 | EC-9 | `W1ContractWalkTests.walk`, `W1FileWalkTests.walk` (KJ-EC) | a stub traps, or an old file stops loading | none: walk |
-| EC-10 | the files-across table in `waves.md` names every W1 seam file once | a seam file has no owner | none |
+| EC-10 | `docs/engineering.md` names every seam file once; status line says built | a seam file is unnamed | none |
 
 ## Quality tests
 

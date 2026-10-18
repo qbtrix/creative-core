@@ -145,12 +145,12 @@ extension Path {
 | PG-9 | – | Boolean fuzz harness: 500 seeded polygon pairs (touching, nested, collinear, self-crossing) checked by point sampling | `Tests/FlareCoreTests/PathBooleanFuzzTests.swift` | PG-1, PG-7 | ~160, 1 |
 | PG-10 | – | Boolean body; turns on `PathBooleanTests` and the fuzz harness | `Sources/FlareCore/PathOps/PathBoolean.swift`, `Tests/FlareCoreTests/PathBooleanTests.swift`, `Tests/FlareCoreTests/PathBooleanFuzzTests.swift`, `Tests/mutations/FlarePathBoolean.json` | PG-2, PG-9 | ~390, 4 |
 | PG-11 | – | KJ-PG walk; `PathOpsBudgetTests` (release, `.serialized`) | `Tests/FlareCoreTests/PathOpsWalkTests.swift`, `Tests/FlareCoreTests/PathOpsBudgetTests.swift` | PG-4, PG-6, PG-8, PG-10 | ~160, 2 |
-| PG-12 | – | The `geometry` part's description names the path ops; `waves.md` status; `docs/engineering.md` (geometry rules); `feature-done` | `docs/c4/parts/creative-core/flarecore/geometry.json`, `docs/blueprints/core/features/waves.md`, `docs/engineering.md` | PG-11 | ~60, 3 |
+| PG-12 | – | The `geometry` part's description names the path ops; the packet's status line; `feature-done` | `docs/c4/parts/creative-core/flarecore/geometry.json`, `docs/blueprints/core/features/path-geometry.md` | PG-11 | ~50, 2 |
 
 PG-8 waits on PG-10 because the outline unions its pieces through `combine`.
-PG-12 and `engine-contracts`' EC-10 both edit `waves.md` and
-`docs/engineering.md`: whichever lands second rebases (one-line rows, no
-logic).
+PG-12 owns only this packet and its own part; `docs/engineering.md` and
+`waves.md` belong to `engine-contracts`' EC-10, so no two wave-5 features
+share a file.
 
 ## Build waves
 
@@ -182,7 +182,7 @@ budget time the finished ops, PG-12 is the prose task.
 | PG-9 | the harness runs (disabled until PG-10) | – | – |
 | PG-10 | `PathBooleanTests`: two overlapping squares: union, subtract, intersect and exclude areas exact; nested squares subtract to a ring with a clockwise hole; touching squares union to one contour; a figure-eight under even-odd vs nonzero differ as expected; `maxBooleanVertices + 1` throws `tooComplex`; fuzz: 500 pairs, 64 sampled points each agree with `HitTest` on `a op b` | a sample point disagrees with set algebra | `FlarePathBoolean`: exclude keeps edges inside both → `PathBooleanTests.excludeDropsOverlap`; fill rule ignored (always even-odd) → `.nonZeroDiffers`; snap 1e-9 removed (touching squares stay two) → `.touchingUnionIsOne`; vertex cap off by one → `.capThrows` |
 | PG-11 | `PathOpsWalkTests.walk` (KJ-PG); `PathOpsBudgetTests`: nearest on the 10,000-anchor scribble ≤ 2 ms; dash and trim of it ≤ 5 ms; a 2 × 5,000-vertex boolean ≤ 50 ms (release, reported) | the ops disagree on the walk | none: walk and budgets |
-| PG-12 | the part names `PathOps/`; `waves.md` row says built | – | – |
+| PG-12 | the part names `PathOps/`; status line says built | – | – |
 
 ## Quality tests
 

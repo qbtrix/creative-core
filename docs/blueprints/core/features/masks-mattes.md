@@ -136,7 +136,7 @@ public struct SetTrackMatte: LayerCommand { owner, layerID, matte: TrackMatte? }
 | MM-7 | – | The render list's `clips` and `matte`; turns on `MatteRenderListTests` | `Sources/FlareCore/RenderList.swift`, `Tests/FlareCoreTests/MatteRenderListTests.swift`, `Tests/mutations/FlareMatteRenderList.json` | MM-2 | ~240, 3 |
 | MM-8 | – | SVG and Lottie mask and matte writers; turns on both export suites | `Sources/FlareCore/Export/SVGExporter+Masks.swift`, `Sources/FlareCore/Export/LottieExporter+Masks.swift`, `Tests/FlareCoreTests/SVGMaskExportTests.swift`, `Tests/FlareCoreTests/LottieMaskExportTests.swift`, `Tests/mutations/FlareMaskExport.json` | MM-7 | ~320, 5 |
 | MM-9 | – | KJ-MM walk; `MaskBudgetTests` (release, `.serialized`) | `Tests/CoreRenderTests/MaskWalkTests.swift`, `Tests/CoreRasterTests/MaskBudgetTests.swift` | MM-3, MM-5, MM-6, MM-8 | ~180, 2 |
-| MM-10 | – | `geometry` part names the render list's clips and matte; `waves.md`; `feature-done` | `docs/c4/parts/creative-core/flarecore/geometry.json`, `docs/blueprints/core/features/waves.md` | MM-9, path-geometry | ~40, 2 |
+| MM-10 | – | `geometry` part names the render list's clips and matte; the packet's status line; `feature-done` | `docs/c4/parts/creative-core/flarecore/geometry.json`, `docs/blueprints/core/features/masks-mattes.md` | MM-9, path-geometry | ~40, 2 |
 
 ## Build waves
 
