@@ -14,3 +14,4 @@ utc	stage	event	ref	note
 2026-10-18T11:56:59Z	3	heartbeat	-	wave 3 building; round-1 mutations running
 2026-10-18T11:59:58Z	4	mutate	PC-6	round-1 PerceptualHash 4/4 caught on b80c087
 2026-10-18T12:09:47Z	3	status	PC-2	builder resumed for gate and PR
+2026-10-18T12:18:42Z	4	heartbeat	-	wave 3 builders running, no wave-3 PR open yet; R1 fixers running
