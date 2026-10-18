@@ -14,3 +14,4 @@ utc	stage	event	ref	note
 2026-10-18T09:29Z	3	stage-start	CP-2	wave 2 CP-2 (ICC byte builder, checks first) building on b5b782b
 2026-10-18T09:35Z	-	heartbeat	-	waiting
 2026-10-18T09:49Z	3	pr-opened	#462	CP-2 PR ed17631 (checks first, contract check ok)
+2026-10-18T09:49Z	3	pr-merged	#462	CP-2 merged 33d2376; CP-a tasks all merged; Belt-Slice-Done after Linux green
