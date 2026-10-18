@@ -19,5 +19,33 @@
     "anchor": "guard !overflow, length >= 8, end - 1 < size else",
     "replacement": "guard !overflow, length >= 8, end - 1 <= size else",
     "filter": "ICCFuzzTests/tagPastEndThrows"
+  },
+  {
+    "note": "icc read version guard accepts any major version",
+    "file": "Sources/CoreColor/ICC/ICCRead.swift",
+    "anchor": "guard major == 2 || major == 4 else",
+    "replacement": "guard major >= 0 else",
+    "filter": "ICCReadTests/otherVersionsThrow"
+  },
+  {
+    "note": "icc read para function type guard dropped, so type 5 indexes past the counts",
+    "file": "Sources/CoreColor/ICC/ICCRead.swift",
+    "anchor": "guard function < counts.count else",
+    "replacement": "guard function < 99 else",
+    "filter": "ICCFuzzTests/paraTypeFiveThrows"
+  },
+  {
+    "note": "icc read LUT detection dropped, so A2B/B2A profiles throw a missing-tag error",
+    "file": "Sources/CoreColor/ICC/ICCRead.swift",
+    "anchor": "table.tags.keys.contains(where: { $0.hasPrefix(\"A2B\") || $0.hasPrefix(\"B2A\") }) {",
+    "replacement": "false {",
+    "filter": "ICCReadTests/unsupportedProfilesThrowNamingThemselves"
+  },
+  {
+    "note": "icc read profile class guard accepts any class",
+    "file": "Sources/CoreColor/ICC/ICCRead.swift",
+    "anchor": "guard cls == \"mntr\" || cls == \"scnr\" else",
+    "replacement": "guard !cls.isEmpty else",
+    "filter": "ICCReadTests/unsupportedClassThrows"
   }
 ]
