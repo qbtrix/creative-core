@@ -56,3 +56,4 @@ Next: PC-4, PC-5 building (PC-3 #498 merged with round-2 recovery header); PC-ha
 - 2026-10-18T14:54:08Z PC-4 #510 merged (14:43:48Z). Dev CI run 364 (c294adb) queued; holds #502 and #510.
 - 2026-10-18T15:17:10Z Belt-Slice-Done: PC-hash https://github.com/qbtrix/creative-core/actions/runs/39137820117 (Linux green at c294adb; macOS red on SIGBUS, see #453).
 - 2026-10-18T15:18:31Z PC-5 #516 opened (01522cf, 3/3 CoreAsset.OfflineVolumes, 8/8 changed-since; rebuiltEntriesKeepTheirVolume enabled). PC-8 launches once it merges.
+- 2026-10-18T15:24:19Z PC-5 #516 merged (f7e5f0d). PC-8 builder launched (walk and budgets; relaunch 40 ms to be measured).
