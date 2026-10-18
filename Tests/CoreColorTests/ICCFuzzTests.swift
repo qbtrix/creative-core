@@ -1,5 +1,5 @@
 // ICCFuzzTests.swift: CP-3's never-crash checks. A tag past the end, every truncation and 1,000 seeded
-// byte mutations of the fixtures each throw `ColorError` or read a well-formed profile. Disabled until CP-3.
+// byte mutations of the fixtures each throw `ColorError` or read a well-formed profile.
 import CoreColor
 import Testing
 #if canImport(FoundationEssentials)
@@ -8,7 +8,6 @@ import FoundationEssentials
 import Foundation
 #endif
 
-@Suite(.disabled("waits on CP-3"))
 struct ICCFuzzTests {
     @Test func tagPastEndThrows() {
         #expect(throws: ColorError.self) { try ColorProfile(iccData: ICCFixture.damaged.data) }
