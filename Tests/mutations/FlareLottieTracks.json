@@ -8,7 +8,7 @@
   },
   {
     "note": "lottie animated track drops the hold flag",
-    "file": "Sources/FlareCore/Export/LottieExporter.swift",
+    "file": "Sources/FlareCore/Export/LottieExporter+Tracks.swift",
     "anchor": "out.h = 1",
     "replacement": "out.h = nil",
     "filter": "LottieTracksTests"
