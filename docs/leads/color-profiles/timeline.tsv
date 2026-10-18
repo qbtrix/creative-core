@@ -63,3 +63,4 @@ utc	stage	event	ref	note
 2026-10-18T15:20Z	anatomy-r2	gate-mutation	ad85831	Round 2 on ad85831: gate PASS try 1; mutation 25/25 (ICCRead 7/7, ICCWrite 4/4, ProfileTransform 7/7, ProfileConvert 7/7). Critic panel next.
 2026-10-18T15:26Z	anatomy	round2-fixes	wf_c291f212-d0b	round 2: 8 confirmed; cp2-a, cp2-b dispatched; CP-7/CP-8 wave wf_a4db31b1-dc6
 2026-10-18T15:32Z	-	heartbeat	-	waiting
+2026-10-18T15:50Z	-	heartbeat	-	waiting
