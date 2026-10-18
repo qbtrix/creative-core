@@ -73,3 +73,4 @@ Next: PC-4, PC-5 building (PC-3 #498 merged with round-2 recovery header); PC-ha
 
   Round-3 finding for PC-a: ThumbnailStore rewrites its whole index on every write, so filling it is quadratic. A debug fill of 2,000 took 284 s. Relaunch has only 7% to spare, so the Mac budgets need checking at PC-z.
 - 2026-10-18T16:28Z PC-8 #525 merged 16:21Z. Round 3: fixer lead/preview-cache-R3-1 launched for the ThumbnailStore quadratic index rewrite (PC-a). PC-9 feature-done waits on it. Dev CI run 370 (7fcd04d) queued.
+- 2026-10-18T16:51Z Heartbeat. Dev CI 369 (4eba850): Linux green; macOS red on DuplicateGroupsTests.groupManyBudget (debug 10k: 3.0 s vs 2 s, loaded runner). SIGBUS is gone. PC-hash owns it: fixer lead/preview-cache-R3-2 launched (release-only wall clock, deterministic debug guard). Run 370 queued.
