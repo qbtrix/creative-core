@@ -3,7 +3,6 @@
 import FlareCore
 import Testing
 
-@Suite(.disabled("AP-6 turns this on"))
 struct MorphSamplingTests {
     static func p(_ x: Double, _ y: Double) -> Point { Point(x: x, y: y) }
     static func near(_ a: Point, _ b: Point) -> Bool { abs(a.x - b.x) <= 1e-12 && abs(a.y - b.y) <= 1e-12 }
@@ -11,8 +10,9 @@ struct MorphSamplingTests {
     static func layer(_ keys: [PathKeyframe]) -> Layer { Layer(id: "l", name: "L", shapeTracks: [ShapeTrack(shapeIndex: 0, keys: keys)]) }
 
     @Test func keyFrameIsExact() {
-        // Coordinates that are not dyadic, so a blend at a key frame shows.
-        let paths = [0.1, 0.7, 1.3].map { s in Path(polyline: [Self.p(s, 0.3), Self.p(10.1 * s, 0.7), Self.p(3.3, 9.9 * s)], closed: true) }
+        // Coordinates that are not dyadic and shrink from the first key to the second, so a + (b - a) * 1
+        // rounds away from b: the previous segment's end at frame 7 is not key 7 bit for bit.
+        let paths = [1.3, 0.1, 0.7].map { s in Path(polyline: [Self.p(s, 0.3), Self.p(10.1 * s, 0.7), Self.p(3.3, 9.9 * s)], closed: true) }
         let layer = Self.layer(zip([0, 7, 24], paths).map { PathKeyframe(frame: $0, path: $1, easing: .easeInOut) })
         #expect(zip([0.0, 7, 24], paths).allSatisfy { layer.sampledPath(shape: 0, at: $0) == $1 })
     }
@@ -37,6 +37,15 @@ struct MorphSamplingTests {
         let mid = Self.layer([PathKeyframe(frame: 0, path: line), PathKeyframe(frame: 10, path: arch)]).sampledPath(shape: 0, at: 5)
         guard case .cubic(let c1, let c2, let to) = mid?.elements.last else { Issue.record("not a cubic: \(String(describing: mid))"); return }
         #expect(Self.near(c1, Self.p(0, 5)) && Self.near(c2, Self.p(10, 5)) && Self.near(to, Self.p(10, 0)))
+    }
+
+    @Test func unpairedKeysHoldTheLeftKey() {
+        // A file can hold keys AP-4 never made compatible: a different count, or a close against a line.
+        let tri = Path(polyline: [Self.p(0, 0), Self.p(4, 0), Self.p(0, 4)], closed: true)
+        let open = Path(polyline: [Self.p(0, 0), Self.p(4, 0), Self.p(0, 4), Self.p(2, 2)], closed: false)
+        let quad = Path(polyline: [Self.p(0, 0), Self.p(8, 0), Self.p(8, 8), Self.p(0, 8)], closed: true)
+        #expect([open, quad].allSatisfy { Self.layer([PathKeyframe(frame: 0, path: tri), PathKeyframe(frame: 10, path: $0)]).sampledPath(shape: 0, at: 5) == tri })
+        #expect(Self.layer([PathKeyframe(frame: 0, path: tri)]).sampledPath(shape: 0, at: .nan) == nil)
     }
 
     @Test func emptyIsNil() { #expect(Self.layer([]).sampledPath(shape: 0, at: 0) == nil && Layer(id: "l", name: "L").sampledPath(shape: 0, at: 0) == nil) }

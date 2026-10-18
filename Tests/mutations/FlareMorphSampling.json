@@ -1,0 +1,16 @@
+[
+  {
+    "note": "morph segment lookup off by one at a key frame blends into the previous key",
+    "file": "Sources/FlareCore/Sampling+TracksMorph.swift",
+    "anchor": "if frame < Double(keys[mid].frame) { hi = mid } else { lo = mid + 1 }",
+    "replacement": "if frame <= Double(keys[mid].frame) { hi = mid } else { lo = mid + 1 }",
+    "filter": "MorphSamplingTests"
+  },
+  {
+    "note": "morph handles not lerped keep the left key's handles",
+    "file": "Sources/FlareCore/Sampling+TracksMorph.swift",
+    "anchor": "out.append(.cubic(control1: lerp(ha.0, hb.0), control2: lerp(ha.1, hb.1), to: lerp(pa, pb)))",
+    "replacement": "out.append(.cubic(control1: ha.0, control2: ha.1, to: lerp(pa, pb)))",
+    "filter": "MorphSamplingTests"
+  }
+]
