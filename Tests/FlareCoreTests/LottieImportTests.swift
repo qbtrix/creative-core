@@ -133,8 +133,11 @@ struct LottieImportTests {
         for data in good { #expect(ImportFixture.kind { _ = try LottieImport.document(from: data) } == nil) }
     }
 
-    /// Exactly `maxDepth` nested groups read; one more, or 10,000, throws `tooLarge` (not the decoder's damaged).
+    /// Exactly `maxDepth` nested groups read; one more, or 10,000, throws `tooLarge` (not damaged), and so
+    /// do 10,000 nested arrays outside any group, which `checkNesting` stops before they are parsed.
     @Test func depthCapped() throws {
+        let arrays = "{\"ty\":4,\"ks\":{},\"x\":" + String(repeating: "[", count: 10_000) + String(repeating: "]", count: 10_000) + "}"
+        #expect(ImportFixture.error { _ = try LottieImport.document(from: file(layers: arrays)) } == .tooLarge("JSON nests deeper than 512"))
         func kind(_ n: Int) -> String? {
             let box = #"{"ty":"rc","p":{"a":0,"k":[0,0]},"s":{"a":0,"k":[4,2]}},{"ty":"fl","c":{"a":0,"k":[1,0,0,1]}}"#
             let layer = "{\"ty\":4,\"ks\":{},\"shapes\":[" + String(repeating: "{\"ty\":\"gr\",\"it\":[", count: n) + box + String(repeating: "]}", count: n) + "]}"
@@ -142,5 +145,15 @@ struct LottieImportTests {
         }
         let max = LottieImport.maxDepth
         #expect([kind(max), kind(max + 1), kind(max + 3), kind(10_000)] == [nil, "tooLarge", "tooLarge", "tooLarge"])
+    }
+
+    /// A group's own shape is placed once, at its first paint: above a nested group listed after that
+    /// paint, and not again at the second paint or at the group's end.
+    @Test func ownShapeAtFirstPaint() throws {
+        let rect = #"{"ty":"rc","p":{"a":0,"k":[0,0]},"s":{"a":0,"k":[4,2]}}"#
+        let red = #"{"ty":"fl","c":{"a":0,"k":[1,0,0,1]}}"#, blue = #"{"ty":"fl","c":{"a":0,"k":[0,0,1,1]}}"#
+        let shapes = "[\(red),\(rect),{\"ty\":\"gr\",\"it\":[\(rect),\(blue)]},\(red)]"
+        let (document, _) = try LottieImport.document(from: file(layers: "{\"ty\":4,\"ks\":{},\"shapes\":\(shapes)}"))
+        #expect(document.scenes.first?.layers.first?.shapes.map(\.fill) == [.solid(Self.blue), .solid(Self.red)])
     }
 }

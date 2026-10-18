@@ -47,8 +47,30 @@ extension LottieImport {
 }
 
 /// Any JSON value, read by `parse` (nesting is capped by `LottieImport.checkNesting` first).
-enum LottieJSON: Sendable, Hashable {
+/// Equatable but not Hashable: a synthesized `==` or `hash(into:)` recurses once per nesting level.
+enum LottieJSON: Sendable, Equatable {
     case null, bool(Bool), number(Double), string(String), array([LottieJSON]), object([String: LottieJSON])
+
+    /// Compares with an explicit stack of pairs, so a deep value needs no more call stack than a flat one.
+    static func == (lhs: LottieJSON, rhs: LottieJSON) -> Bool {
+        var pending = [(lhs, rhs)]
+        while let pair = pending.popLast() {
+            switch pair {
+            case (.null, .null): continue
+            case (.bool(let a), .bool(let b)) where a == b: continue
+            case (.number(let a), .number(let b)) where a == b: continue
+            case (.string(let a), .string(let b)) where a == b: continue
+            case (.array(let a), .array(let b)) where a.count == b.count: pending += zip(a, b)
+            case (.object(let a), .object(let b)) where a.count == b.count:
+                for (key, value) in a {
+                    guard let other = b[key] else { return false }
+                    pending.append((value, other))
+                }
+            default: return false
+            }
+        }
+        return true
+    }
 
     /// Parses JSON (RFC 8259) with an explicit stack of open containers: Foundation's decoder
     /// recurses per nesting level, which overflows the 512 KB stack of a secondary thread on macOS.

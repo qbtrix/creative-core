@@ -28,7 +28,8 @@ struct LottieJSONTests {
                      #"{"s":"\u+0ab"}"#, "{\"s\":\"a\u{01}\"}", #"{"a":1,}"#, #"{"a":[1,]}"#, #"{"a":01}"#, #"{"a":1.}"#,
                      #"{"a":.5}"#, #"{"a":+1}"#, #"{"a":1e400}"#, #"{"a":-}"#, #"{"a":NaN}"#, #"{"a":tru}"#, #"{"a":1} x"#,
                      #"{"a":1}}"#, #"{"a" 1}"#, #"{a:1}"#, #"{"a":1"b":2}"#, #"{"#, "", #"{"a":[[[]]]}"#,
-                     #"{"a":[,]}"#, #"{,}"#, #"{"a":[1,,2]}"#, #"{"a":1,,}"#, #"{"a":"x","a":"y"}"#]
+                     #"{"a":[,]}"#, #"{,}"#, #"{"a":[1,,2]}"#, #"{"a":1,,}"#, #"{"a":"x","a":"y"}"#,
+                     #"{"a":[1}}"#, #"{"a":1]"#, #"{"s":"\uD800\uE000"}"#]
         for json in cases { #expect(same(Array(json.utf8)), "\(json)") }
         #expect(same(Array(#"{"s":""#.utf8) + [0xC3, 0x28] + Array(#""}"#.utf8)))  // invalid UTF-8
     }
@@ -40,5 +41,34 @@ struct LottieJSONTests {
             let bytes = ImportFuzz.mutate(seeds[i % seeds.count], &rng)
             #expect(same(bytes), "case \(i): \(String(decoding: bytes, as: UTF8.self))")
         }
+    }
+
+    /// `==` compares every item and member: a shorter array, a renamed key or a changed leaf differs.
+    @Test func equalityComparesEveryLevel() {
+        let value = LottieJSON.object(["a": .array([.number(1), .string("x")]), "b": .object(["c": .null])])
+        #expect(value == .object(["b": .object(["c": .null]), "a": .array([.number(1), .string("x")])]))
+        #expect(value != .object(["a": .array([.number(1)]), "b": .object(["c": .null])]))
+        #expect(value != .object(["a": .array([.number(1), .string("x")]), "d": .object(["c": .null])]))
+        #expect(value != .object(["a": .array([.number(1), .string("y")]), "b": .object(["c": .null])]))
+        #expect(LottieJSON.array([.number(1)]) != .array([.number(1), .number(1)]) && LottieJSON.bool(true) != .number(1))
+    }
+
+    /// Two values at the nesting cap compare on a 64 KB thread stack, which a recursive `==` overflows.
+    @Test func deepValuesCompareOnASmallStack() {
+        func nest(_ leaf: LottieJSON) -> LottieJSON { (0..<(LottieImport.maxDepth + 6)).reduce(leaf) { v, _ in .array([.object(["k": v])]) } }
+        // Shared through `done`. The values are dropped here, not on the small thread, whose
+        // recursive deinit of a deep value would overflow it.
+        final class Box: @unchecked Sendable { var values: [LottieJSON] = [], same = false, differ = false }
+        let box = Box(), done = DispatchSemaphore(value: 0)
+        box.values = [nest(.number(1)), nest(.number(1)), nest(.number(2))]
+        let thread = Thread {
+            if box.values.count == 3 { (box.same, box.differ) = (box.values[0] == box.values[1], box.values[0] != box.values[2]) }
+            done.signal()
+        }
+        thread.stackSize = 64 << 10
+        thread.start()
+        done.wait()
+        box.values = []
+        #expect(box.same && box.differ)
     }
 }
