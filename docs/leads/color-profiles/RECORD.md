@@ -2,7 +2,7 @@
 
 Issue: #441 · Packet: docs/blueprints/core/features/color-profiles.md
 Run: act-1a14ddaebc8-nwqn · Session: line lead (engine-contracts, animate-properties, color-profiles) · Started: 2026-10-18T07:15Z
-Stage: 4 Anatomy round 3 fixes: cp3-a #537, cp3-b #538 merged; cp3-c convert24MP speed (wf_d02bdd3b-f68) running
+Stage: 4 Anatomy round 4 (the last) on bd50d5b: gate + 6 mutation plans running
 Base: 9d01972365f04da4fe6074e9bdd56ceab5b616a8
 Next: cp3-c merges (or a gap if the budget is out of reach); round 4 (last) gate + panel; CP-10 (feature-done, Closes #441); Mac-Finish-Wanted CP-z; contact sheet.
 
@@ -58,3 +58,4 @@ Next: cp3-c merges (or a gap if the budget is out of reach); round 4 (last) gate
 - Round 3 fix cp3-a merged #537 (e39537c): para types 2/4 below-knee tests, ICC table range cases, 2 mutations.
 - Round 3 fix cp3-b merged #538 (61b4f10): bitsPerChannel and PixelCodec docs; a refused embedded profile opens as nil in PSD and ORA; CodecError.profileData unwraps ColorError; gray profile writes a grayscale PSD (non-neutral pixel throws). PSDDeep 4/4, ORADeep 4/4.
 - CP-7 #523 and CP-8 #529 merged (40249d5); lead check on 40249d5: CodecWalk, ORADeep, PSDDeep, CodecRoundTrip, OpenRaster, PSD 41 tests pass.
+- cp3-c merged #547 (1760ddc): convert24MP 6240.8 -> 606.6 ms (release, Linux), still over the 150 ms budget; gap #549 (p2) filed. #547 said "Closes #441" (the fixer template never said Refs), so its merge closed #441; the lead reopened #441, edited the #547 body to Refs, and patched the fixer templates to write Refs unless featureDone.
