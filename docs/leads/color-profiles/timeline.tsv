@@ -54,3 +54,4 @@ utc	stage	event	ref	note
 2026-10-18T14:28Z	4	fix-merged	#503 #504; cp1-d started	cp1-a and cp1-b merged; s15Fixed16 decision as cp1-d
 2026-10-18T14:37Z	-	heartbeat	-	waiting
 2026-10-18T14:43Z	anatomy	merged	#509	cp1-d merged ba3aa63 (ICCWrite 4/4)
+2026-10-18T14:49Z	anatomy	gate	cp1-c	rebased on dev after #509, regating
