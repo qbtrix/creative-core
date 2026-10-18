@@ -80,7 +80,7 @@ struct SVGImportTests {
     }
 
     /// Gradients inherit stops through href, the clip path is one add mask, and text keeps its font and entity.
-    @Test(.disabled("waits on VI-5")) func gradientsClipAndText() throws {
+    @Test func gradientsClipAndText() throws {
         let layers = try layers("paint.svg")
         let stops = [GradientStop(offset: 0, color: Self.red), GradientStop(offset: 1, color: Self.blue)]
         #expect(layers[0].shapes[0].fill == .linear(stops: stops, start: Point(x: 0, y: 0), end: Point(x: 100, y: 0)))
@@ -117,6 +117,46 @@ struct SVGImportTests {
         let shapes = try svg("<rect width='40' height='20' rx='10' ry='5'/><rect width='40' height='20' ry='30'/>").0.layers.map { $0.shapes[0] }
         let corners = shapes.map { $0.path.map { [$0.elements[0], $0.elements[2]].compactMap(\.endPoint) } ?? [] }
         #expect(corners == [[Point(x: 10, y: 0), Point(x: 40, y: 5)], [Point(x: 20, y: 0), Point(x: 40, y: 10)]])
+    }
+
+    /// A gradient href loop and a clip-path loop end, each counted; a chain of maxDepth links reads, one more is a cycle.
+    @Test func referenceCyclesEnd() throws {
+        let loops = """
+            <linearGradient id='a' href='#b'><stop offset='0' stop-color='red'/><stop offset='1' stop-color='blue'/></linearGradient>
+            <linearGradient id='b' href='#a'/><clipPath id='c' clip-path='url(#d)'><rect width='5' height='5'/></clipPath>
+            <clipPath id='d' clip-path='url(#c)'><rect width='9' height='9'/></clipPath><rect width='10' height='10' fill='url(#b)' clip-path='url(#c)'/>
+            """
+        var result: (Scene, ImportReport)?
+        #expect(try ContinuousClock().measure { result = try svg(loops) } < .seconds(1))
+        let (scene, report) = try #require(result)
+        #expect(report.skipped == ["reference cycle (2)"] && scene.layers[0].masks.map(\.mode) == [.add, .intersect])
+        #expect(scene.layers[0].shapes[0].fill == .linear(stops: [GradientStop(offset: 0, color: Self.red), GradientStop(offset: 1, color: Self.blue)],
+                                                         start: Point(x: 0, y: 0), end: Point(x: 10, y: 0)))
+        func chain(_ n: Int) throws -> [String] {
+            let gradients = (0..<n).map { "<linearGradient id='g\($0)'" + ($0 + 1 < n ? " href='#g\($0 + 1)'/>" : "/>") }.joined()
+            let clips = (0..<n).map { "<clipPath id='k\($0)'" + ($0 + 1 < n ? " clip-path='url(#k\($0 + 1))'/>" : "/>") }.joined()
+            return try svg(gradients + clips + "<rect width='1' height='1' fill='url(#g0)' clip-path='url(#k0)'/>").1.skipped
+        }
+        #expect(try chain(SVGImport.maxDepth) == [] && chain(SVGImport.maxDepth + 1) == ["reference cycle (2)"])
+    }
+
+    @Test func addSceneThenUndoRestores() throws {
+        let before = Document(scenes: [Scene(id: "existing", name: "A")])
+        var document = before, add = AddScene(scene: try scene("paint.svg").0)
+        try add.execute(&document)
+        #expect(document.scenes.map(\.id) == ["existing", "scene-1"] && document.scenes[1].layers.count == 3)
+        try add.undo(&document)
+        #expect(document == before)
+    }
+
+    @Test func reportIsSortedAndExact() throws {
+        let (scene, report) = try svg("""
+            <use/><filter/><g clip-path='url(#x)'><path d='M0 0h1' clip-path='url(#x)' stroke='url(#x)'/></g>
+            <text x='1' y='2' transform='rotate(10)'>a <tspan>b</tspan></text><image/><use/>
+            """)
+        #expect(report.skipped == ["filter (1)", "gradient stroke (1)", "image (1)", "missing reference (2)", "nested clip-path (1)",
+                                   "rotated or skewed text (1)", "tspan (1)", "use (2)"])
+        #expect(scene.layers.count == 2 && scene.layers[1].texts.map(\.string) == ["a b"])
     }
 
     @Test func nonFiniteCoordinatesThrowDamaged() {

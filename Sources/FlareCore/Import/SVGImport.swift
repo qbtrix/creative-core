@@ -1,10 +1,11 @@
 // SVGImport.swift: the SVG document reader, from the W3C SVG 1.1 and SVG 2
 // specs only. The bounded tokenizer gives the element tree; each top-level
 // drawable child of the root becomes one layer, with every transform baked
-// into its geometry. Basic shapes and paths become shapes, and solid paint in
-// presentation attributes and `style` become fills and strokes. Every other
-// element is skipped with its subtree and counted in the report by name, as
-// is anything else the model cannot hold, such as a `clip-path` or a gradient.
+// into its geometry. Basic shapes and paths become shapes, solid paint and
+// gradients become fills (gradients follow `href` chains), a `clip-path` on a
+// top-level element becomes the layer's masks, and `text` becomes a text
+// shape. Every other element is skipped with its subtree and counted in the
+// report by name, as is anything else the model cannot hold.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -81,7 +82,9 @@ struct SVGReader {
             let (shapes, texts) = try draw(child, base, style)
             guard !shapes.isEmpty || !texts.isEmpty else { continue }
             let node = nodes[child]
-            layers.append(Layer(id: "layer-\(layers.count + 1)", name: node.attributes["id"] ?? node.name, shapes: shapes, texts: texts))
+            let masks = try clip(node.attributes, base * transform(node.attributes["transform"]))
+            layers.append(Layer(id: "layer-\(layers.count + 1)", name: node.attributes["id"] ?? node.name,
+                                shapes: shapes, texts: texts, masks: masks))
         }
         return Scene(id: "scene-1", name: name, width: size.width, height: size.height, layers: layers)
     }
@@ -104,13 +107,15 @@ struct SVGReader {
                 if !silent.contains(node.name) {
                     let ctm = parent * (try transform(node.attributes["transform"]))
                     let style = inherited.applying(node.attributes)
-                    if node.attributes["clip-path"] != nil { count("clip-path") }
+                    if !open.isEmpty && node.attributes["clip-path"] != nil { count("nested clip-path") }
                     switch node.name {
                     case "g", "a", "svg", "defs": open.append((i, ctm, style, 0, ([], []))); continue
+                    case "text": drawn.1 = try text(i, ctm, style).map { [$0] } ?? []
                     default:
                         if let local = try outline(node) {
                             if !local.elements.isEmpty {
-                                drawn.0 = [Shape(points: [], fill: fill(style), path: local.transformed(by: ctm), stroke: stroke(style, ctm))]
+                                drawn.0 = [Shape(points: [], fill: fill(style, local.bounds, ctm), path: local.transformed(by: ctm),
+                                              stroke: stroke(style, local.bounds, ctm))]
                             }
                         } else { count(node.name) }
                     }
@@ -191,5 +196,47 @@ struct SVGReader {
             throw ImportError.damaged("transform: coordinate out of range or trailing text")
         }
         return m
+    }
+}
+
+/// Clip paths and text.
+extension SVGReader {
+    /// The masks of a `clip-path` reference: the first clip path's children add, each chained clip path's children intersect.
+    mutating func clip(_ attributes: [String: String], _ ctm: Matrix) throws -> [LayerMask] {
+        var masks: [LayerMask] = [], seen: Set<Int> = [], next = attributes["clip-path"].map(SVGStyle.reference)
+        while let link = next {
+            guard let i = link.flatMap({ ids[$0] }), nodes[i].name == "clipPath" else { count("missing reference"); break }
+            guard !seen.contains(i), seen.count < SVGImport.maxDepth else { count("reference cycle"); break }
+            seen.insert(i)
+            let node = nodes[i], m = ctm * (try transform(node.attributes["transform"]))
+            guard node.attributes["clipPathUnits"] != "objectBoundingBox" else { count("clipPathUnits"); break }
+            for child in node.children {
+                guard let path = try outline(nodes[child]), !path.elements.isEmpty else { continue }
+                let placed = path.transformed(by: m * (try transform(nodes[child].attributes["transform"])))
+                masks.append(LayerMask(path: placed, mode: seen.count == 1 ? .add : .intersect))
+            }
+            next = node.attributes["clip-path"].map(SVGStyle.reference)
+        }
+        return masks
+    }
+
+    /// The text of a `text` element and its `tspan`s, white space collapsed, at its first `x`, `y`; nil when empty.
+    mutating func text(_ i: Int, _ ctm: Matrix, _ style: SVGStyle) throws -> TextShape? {
+        let words = content(i).split { $0 == " " || $0 == "\n" || $0 == "\t" || $0 == "\r" }.joined(separator: " ")
+        let a = nodes[i].attributes
+        let x = try numbers(a["x"] ?? "").first ?? 0, y = try numbers(a["y"] ?? "").first ?? 0
+        let size = (style.fontSize ?? 16) * abs(ctm.determinant).squareRoot()
+        guard !words.isEmpty, size > 0 else { return nil }
+        if ctm.b != 0 || ctm.c != 0 { count("rotated or skewed text") }
+        return TextShape(string: words, fontFamily: style.fontFamily ?? "sans-serif", fontSize: size,
+                         position: ctm.apply(Point(x: x, y: y)), fill: fill(style, nil, ctm))
+    }
+
+    /// The text under node `i`, counting each `tspan`, whose own position and style are dropped.
+    mutating func content(_ i: Int) -> String {
+        nodes[i].children.map { child in
+            if nodes[child].name == "tspan" { count("tspan") }
+            return nodes[child].name == "#text" ? nodes[child].text : nodes[child].name == "tspan" ? content(child) : ""
+        }.joined()
     }
 }
