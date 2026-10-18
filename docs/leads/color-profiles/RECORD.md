@@ -2,7 +2,7 @@
 
 Issue: #441 · Packet: docs/blueprints/core/features/color-profiles.md
 Run: act-1a14ddaebc8-nwqn · Session: line lead (engine-contracts, animate-properties, color-profiles) · Started: 2026-10-18T07:15Z
-Stage: 4 Anatomy round 3: gate and mutation on dev c3e0225 running (ICCRead, ICCWrite, ProfileTransform, ProfileConvert, PSDDeep, ORADeep)
+Stage: 4 Anatomy round 3 on c3e0225: gate CI: PASS try 1 (1407 tests), mutation 34/34; critic panel wf_14f7c680-115 running; CP-9 building (wf_015ab117-5c0)
 Base: 9d01972365f04da4fe6074e9bdd56ceab5b616a8
 Next: round 3 critic panel on c3e0225; CP-deep Slice-Done once a dev Linux job including 40249d5 is green; then CP-9/CP-10 (CP-z, feature-done, Mac-Finish-Wanted).
 
