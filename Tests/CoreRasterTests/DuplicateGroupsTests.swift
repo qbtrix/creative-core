@@ -4,8 +4,10 @@
 // distance to 0...10, finds a pair however its differing bits fall across
 // the four 16-bit blocks, on seeded clusters matches a brute-force grouping
 // over every pair, with each id in at most one group and a stable order,
-// leaves all but about 1% of 100,000 random hashes ungrouped, and groups
-// 100,000 hashes with 30% near copies within the 2 s budget.
+// leaves all but about 1% of 100,000 random hashes ungrouped, groups 10,000
+// hashes with 30% near copies into exactly the clusters (give or take 1%),
+// and, in optimized builds only, groups 100,000 of them within the 2 s
+// budget.
 import CoreRaster
 import Testing
 
@@ -179,18 +181,31 @@ private func clustered(_ count: Int, seed: UInt64) -> (hashes: [(id: String, has
     #expect(grouped <= input.count / 100, "\(grouped) of \(input.count) random ids grouped")
 }
 
+/// The ids `group` puts in groups at the largest distance, and whether that
+/// count is at least the clustered ids and at most 1% of the input more.
+private func groupsTheClusters(_ input: [(id: String, hash: PerceptualHash)], inClusters: Int) -> (grouped: Int, ok: Bool) {
+    let grouped = DuplicateGroups.group(input, within: DuplicateGroups.maxDistance).reduce(0) { $0 + $1.count }
+    return (grouped, grouped >= inClusters && grouped <= inClusters + input.count / 100)
+}
+
+// 10,000 hashes, 30% near copies, at the largest distance: at least as many
+// ids group as the clusters hold, and at most 1% more. Runs in every build,
+// with no clock.
+@Test func groupManyFindsTheClusters() {
+    let (input, inClusters) = clustered(10_000, seed: 706)
+    let result = groupsTheClusters(input, inClusters: inClusters)
+    #expect(result.ok, "\(result.grouped) grouped, \(inClusters) clustered")
+}
+
 // The budget: 100,000 hashes, 30% near copies, grouped at the largest
-// distance in 2 s or less. Debug builds, about 5 times slower per hash,
-// time 10,000 against the same budget: the quadratic tree this replaced took
-// 0.9 s on 10,000 even in an optimized build. At least as many ids group as
-// the clusters hold, and at most 1% more.
-@Test func groupManyBudget() {
-    let count = optimized ? 100_000 : 10_000
-    let (input, inClusters) = clustered(count, seed: 706)
-    var groups: [[String]] = []
-    let elapsed = ContinuousClock().measure { groups = DuplicateGroups.group(input, within: DuplicateGroups.maxDistance) }
-    print("budget groupMany \(count): \(elapsed) (budget 2 s)")
-    #expect(elapsed <= .seconds(2), "grouping \(count) hashes took \(elapsed)")
-    let grouped = groups.reduce(0) { $0 + $1.count }
-    #expect(grouped >= inClusters && grouped <= inClusters + count / 100)
+// distance in 2 s or less, with the same cluster bounds. Optimized builds
+// only, like every wall-clock budget here: a debug build on a loaded runner
+// measures the machine, not the code.
+@Test(.enabled(if: optimized)) func groupManyBudget() {
+    let (input, inClusters) = clustered(100_000, seed: 706)
+    var result = (grouped: 0, ok: false)
+    let elapsed = ContinuousClock().measure { result = groupsTheClusters(input, inClusters: inClusters) }
+    print("budget groupMany 100000: \(elapsed) (budget 2 s)")
+    #expect(elapsed <= .seconds(2), "grouping 100,000 hashes took \(elapsed)")
+    #expect(result.ok, "\(result.grouped) grouped, \(inClusters) clustered")
 }
