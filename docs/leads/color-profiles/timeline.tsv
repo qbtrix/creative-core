@@ -34,3 +34,4 @@ utc	stage	event	ref	note
 2026-10-18T11:00Z	4	pr-opened	#476	CP-6 PR opened head 829515c; contract check ok
 2026-10-18T11:00Z	4	pr-merged	#476	CP-6 merged 73a3ac9; CP-convert slice all merged, awaits dev Linux green
 2026-10-18T11:05Z	-	heartbeat	-	waiting
+2026-10-18T11:18Z	4	round3-triage	f7413a6	14 confirmed, routed

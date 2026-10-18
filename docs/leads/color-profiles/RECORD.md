@@ -2,9 +2,9 @@
 
 Issue: #441 · Packet: docs/blueprints/core/features/color-profiles.md
 Run: act-1a14ddaebc8-nwqn · Session: line lead (engine-contracts, animate-properties, color-profiles) · Started: 2026-10-18T07:15Z
-Stage: 3 CP-a
+Stage: 3 CP-a, CP-icc, CP-convert merged; CP-deep waits
 Base: 9d01972365f04da4fe6074e9bdd56ceab5b616a8
-Next: CP-1 PR merges, then CP-2. CP-7/CP-8 still wait on layered-codecs:LC-write.
+Next: Belt-Slice-Done CP-icc once dev CI 39121455101 shows Linux green; CP-convert on a later run that contains 73a3ac9. Fix batch cp-r1 for routed findings #9, #12, #13. CP-7/CP-8 wait on layered-codecs LC-write.
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -34,6 +34,8 @@ Next: CP-1 PR merges, then CP-2. CP-7/CP-8 still wait on layered-codecs:LC-write
 |---|---|---|---|---|---|---|---|---|
 
 ## Decisions
+- Merged: CP-1 #458, CP-2 #462 + #466, CP-3 #468, CP-5 #469, CP-4 #470, CP-6 #476 (73a3ac9).
+- engine-contracts round 3 (f7413a6) routed 3 findings here: #9 (major) no test that different whites adapt; #12 (minor) inversion guard half-covered; #13 (minor) equal-tag sharing unasserted. Fixer cp-r1 takes them.
 - dev CI 39118832683 on 0660756: Linux green. CP-a merged-done. macOS job red on CP-2 test helper Tests/CoreColorTests/ICCBytes.swift:59 (type-check timeout; dev-red #453): our finding, fixer branch lead/color-profiles-mac-typecheck.
 - #461 (e158c87) amended brief rule 9: a message starting `Belt released this run.` means stop at once; every other chat message still never stops the lead. Applied to this run.
 - CP-1 edits LayeredImage.swift, which layered-codecs' LC-a creates; nothing in this packet can start before it (the packet's CP-a waits on it).
