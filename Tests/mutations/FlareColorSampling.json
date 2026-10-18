@@ -24,7 +24,7 @@
     "note": "colour sampling pins alpha to 1 instead of interpolating it",
     "file": "Sources/FlareCore/Sampling+Tracks.swift",
     "anchor": "let a = component(\\.a)",
-    "replacement": "let a = component(\\.a).map { _ in 1.0 }",
+    "replacement": "let a = Optional(1.0)",
     "filter": "ColorSamplingTests.alphaInterpolates"
   }
 ]
