@@ -1,0 +1,16 @@
+[
+  {
+    "note": "profile transform target matrix not inverted",
+    "file": "Sources/CoreColor/ICC/ProfileTransform.swift",
+    "anchor": "return (m.inverse, white)",
+    "replacement": "return (m, white)",
+    "filter": "ProfileTransformTests/sRGBToP3MatchesCoreColor"
+  },
+  {
+    "note": "profile transform table curve inversion clamps past the last entry",
+    "file": "Sources/CoreColor/ICC/ProfileTransform.swift",
+    "anchor": "if y >= last { return rise > 0 ? 1 + (y - last) / rise : 1 }",
+    "replacement": "if y >= last { return 1 }",
+    "filter": "ProfileTransformTests/tableInverts"
+  }
+]
