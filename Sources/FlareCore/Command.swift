@@ -7,6 +7,9 @@
 // - perform commits only a result that passes FlareFormat.validate; otherwise it
 //   throws CommandError.invalidDocument and changes nothing. A LayerCommand gets
 //   the same check scoped to its layer, so a drag on a big scene stays cheap
+// - `pointTotal`, when not nil, is FlareFormat's point count of `document`:
+//   perform keeps it, so the scoped check adds one layer's delta instead of
+//   recounting; undo, redo and a group rollback set it to nil until a recount
 // - a group is atomic: if its body throws, the document rolls back to the
 //   state before the group and nothing is pushed
 // - perform, undo and redo throw CommandError, never ModelError (mapped here)
@@ -181,6 +184,8 @@ public struct CommandEngine: Sendable {
     private var pending: Entry?
     /// Key of the last top-level perform, while it may still absorb more.
     private var coalesceKey: String?
+    /// The point count of `document` as `FlareFormat.checkLimits` counts it, or nil when unknown.
+    private(set) var pointTotal: Int?
 
     /// `maxUndoDepth` below 0 is treated as 0 (no undo history).
     public init(document: Document, maxUndoDepth: Int = 500) {
@@ -201,16 +206,18 @@ public struct CommandEngine: Sendable {
         var cmd: any Command = command
         var doc = document
         try mappingModelErrors { try cmd.execute(&doc) }
+        var points = pointTotal
         do {
             if let scoped = cmd as? any LayerCommand {
-                try FlareFormat.validate(doc, layer: scoped.layerID, owner: scoped.owner, since: document)
+                try FlareFormat.validate(doc, layer: scoped.layerID, owner: scoped.owner, since: document, points: &points)
             } else {
-                try FlareFormat.validate(doc)
+                points = try FlareFormat.validateCountingPoints(doc)
             }
         } catch {
             throw CommandError.invalidDocument("\(cmd.label): \(error)")
         }
         document = doc
+        pointTotal = points
         if pending != nil {
             pending?.commands.append(cmd)
         } else if let key, key == coalesceKey, let last = undoStack.indices.last {
@@ -238,6 +245,7 @@ public struct CommandEngine: Sendable {
             try body(&self)
         } catch {
             document = before
+            pointTotal = nil
             pending = outer
             throw error
         }
@@ -259,6 +267,7 @@ public struct CommandEngine: Sendable {
             try mappingModelErrors { try cmd.undo(&doc) }
         }
         document = doc
+        pointTotal = nil
         undoStack.removeLast()
         redoStack.append(entry)
         coalesceKey = nil
@@ -272,6 +281,7 @@ public struct CommandEngine: Sendable {
             try mappingModelErrors { try entry.commands[i].execute(&doc) }
         }
         document = doc
+        pointTotal = nil
         redoStack.removeLast()
         undoStack.append(entry)
         coalesceKey = nil
