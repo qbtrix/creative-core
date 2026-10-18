@@ -13,6 +13,7 @@ it throws `RenderError.unsupported(op)` or `RasterError.invalid("not built:
 …")`, so callers and tests compile today and each feature fills only its
 own files.
 **Line:** `line:core` · **Wave:** 5 (`waves.md`) · **Lead branch:** `lead/engine-contracts`
+**Status:** planned
 
 **Covers:** the beta-80 plan (`paw-workspace/docs/design/drafts/2026-10-18-beta-80-plan.md`)
 section 8, "Contract and description updates"; rows E2, E3, E4, E5, E8, E14

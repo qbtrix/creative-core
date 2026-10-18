@@ -9,6 +9,7 @@ contour); dash (a pattern and a phase); outline a stroke (width, join, cap,
 miter limit) into a fillable path; and the four booleans (union, subtract,
 intersect, exclude) under either fill rule. Linux-safe, value types only.
 **Line:** `line:core` · **Wave:** 5 (`waves.md`) · **Lead branch:** `lead/path-geometry`
+**Status:** planned
 
 **Covers:** beta-80 plan row E1 ("path geometry: edit math, booleans, dash
 and trim outlines", the unfiled core issue); captain's answer to Q5 and kernel

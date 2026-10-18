@@ -10,6 +10,7 @@ feather, opacity, invert) and track mattes (alpha, luma, both inverted) as
 commands with exact undo, carried by the render list as clip and matte
 entries, and written by the SVG and Lottie exporters.
 **Line:** `line:core` · **Wave:** 6 (`waves.md`) · **Lead branch:** `lead/masks-mattes`
+**Status:** planned
 
 **Covers:** beta-80 plan row E2; Photo blueprint 8.4 CR-3 (`Mask.feathered`),
 CR-4 (`Mask.contours`, `Mask.coveredBounds`), CR-6 (the masked composite);
