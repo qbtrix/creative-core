@@ -3,7 +3,8 @@
 // (table endpoint and square-root index) and extends it along its line, keeps exposure and white balance as
 // their factors, matches every case outside 0...1 (levels with a gamma, sRGB levels and curves through the
 // octave tables), builds tables for extreme valid parameters the CPU accepts on 0...1, and throws the CPU's
-// errors.
+// errors. The Metal holdout (engine-contracts EC-3): every W1 colour case throws `unsupported(.color)`, and
+// `MetalHoldoutTests` checks that `MetalCapabilities` never claims a family in `RenderOp.notOnMetalYet`.
 import CoreRaster
 import CoreRender
 import Testing
@@ -27,6 +28,14 @@ import Testing
         .whiteBalance(temperature: 0, tint: 45), .whiteBalance(temperature: -100, tint: -100),
         .contrast(-100), .contrast(0), .contrast(100),
     ] + [-100, 0, 100].flatMap { h in [-100, 0, 100].map { ToneAdjustment.highlightsShadows(highlights: Float(h), shadows: Float($0)) } }
+
+    @Test func colorCasesAreNotOnMetal() throws {
+        let cases = try W1ContractTests.colorCases()
+        #expect(!cases.isEmpty)
+        for adjustment in cases {
+            #expect(throws: RenderError.unsupported(.color), "\(adjustment)") { try AdjustTable(adjustment) }
+        }
+    }
 
     @Test func mapsTheParitySamplesAsTheCPUDoes() throws {
         let cpu = CPUBackend()
@@ -169,5 +178,14 @@ import Testing
                 #expect(throws: expected) { try AdjustTable(bad) }
             }
         }
+    }
+}
+
+@Suite struct MetalHoldoutTests {
+    @Test func capabilitiesNeverClaimANotOnMetalYetFamily() {
+        var capabilities = MetalCapabilities()
+        for op in RenderOp.allCases { capabilities.enable(op) }
+        #expect(capabilities.supported == Set(RenderOp.allCases).subtracting(RenderOp.notOnMetalYet))
+        #expect(capabilities.effectiveSupports.isDisjoint(with: RenderOp.notOnMetalYet))
     }
 }

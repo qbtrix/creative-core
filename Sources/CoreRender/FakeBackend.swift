@@ -5,7 +5,12 @@
 // rotate and resample give
 // CoreRaster's result so sizes are right, display gives `rgba8`, the filter
 // ops (blur, unsharp, adjust, clone) return a new surface with the pixels
-// unchanged, and composite checks both surfaces and leaves `b` alone.
+// unchanged, and composite checks both surfaces and leaves `b` alone. The W1
+// calls (engine-contracts EC-3) follow the same rules: `transformed` gives a
+// blank surface of the asked size, `flipped` and `applying` the pixels
+// unchanged, and both W1 composites leave `b` alone; each records its
+// arguments (`Call.maskedComposite` and the four after it), and `adjusted` is
+// gated by its adjustment's `family`, so a `.color` case needs `.color`.
 // Invariants: every method records its call first; an op outside `supports`
 // then throws `unsupported` with the family that gates it; a surface this fake
 // did not make, or released, throws `surfaceMismatch`. Copies share the log
@@ -28,6 +33,16 @@ public struct FakeBackend: RenderBackend {
         /// An op method, named by the family that gates it (a composite
         /// through `.hue` records `.op(.blendNonSeparable)`).
         case op(RenderOp)
+        /// The masked composite (`.maskedComposite`), with its arguments.
+        case maskedComposite(x: Int, y: Int, mode: BlendMode, opacity: Float, mask: Mask, maskX: Int, maskY: Int)
+        /// `transformed` (`.affine`), with its arguments.
+        case transformed(AffineMatrix, width: Int, height: Int, filter: ResampleFilter)
+        /// `flipped` (`.affine`), with its axis.
+        case flipped(FlipAxis)
+        /// The composite through a matrix (`.affine`), with its arguments.
+        case compositeThrough(AffineMatrix, mode: BlendMode, opacity: Float, filter: ResampleFilter)
+        /// `applying` (`.effect`), with its effect.
+        case applying(LayerEffect)
     }
 
     public let name: String
@@ -75,7 +90,7 @@ public struct FakeBackend: RenderBackend {
     public func composite(_ s: RenderSurface, onto b: inout RenderSurface, x: Int, y: Int,
                           mode: BlendMode, opacity: Float) throws {
         _ = try input(s, RenderOp(compositing: mode))
-        _ = try store.buffer(for: b)
+        try checkBackdrop(b)
     }
 
     public func cropped(_ s: RenderSurface, x: Int, y: Int, width: Int, height: Int) throws -> RenderSurface {
@@ -98,20 +113,52 @@ public struct FakeBackend: RenderBackend {
         store.insert(try input(s, .blur))
     }
     public func adjusted(_ s: RenderSurface, _ adjustment: ToneAdjustment) throws -> RenderSurface {
-        store.insert(try input(s, .adjust))
+        store.insert(try input(s, adjustment.family))
     }
     public func cloned(_ s: RenderSurface, offset: (dx: Int, dy: Int), through mask: Mask) throws -> RenderSurface {
         store.insert(try input(s, .retouch))
+    }
+
+    // The W1 calls: each records its arguments, then is gated by its family.
+    /// Checks both surfaces and `.maskedComposite`, then leaves `b` unchanged.
+    public func composite(_ s: RenderSurface, onto b: inout RenderSurface, x: Int, y: Int, mode: BlendMode,
+                          opacity: Float, mask: Mask, maskX: Int, maskY: Int) throws {
+        let call = Call.maskedComposite(x: x, y: y, mode: mode, opacity: opacity, mask: mask, maskX: maskX, maskY: maskY)
+        _ = try input(s, .maskedComposite, recording: call)
+        try checkBackdrop(b)
+    }
+    /// A blank surface of `width` x `height`, so sizes are right.
+    public func transformed(_ s: RenderSurface, _ m: AffineMatrix, width: Int, height: Int,
+                            filter: ResampleFilter) throws -> RenderSurface {
+        _ = try input(s, .affine, recording: .transformed(m, width: width, height: height, filter: filter))
+        return store.insert(try RenderError.mapping { try PixelBuffer(width: width, height: height) })
+    }
+    public func flipped(_ s: RenderSurface, _ axis: FlipAxis) throws -> RenderSurface {
+        store.insert(try input(s, .affine, recording: .flipped(axis)))
+    }
+    /// Checks both surfaces and `.affine`, then leaves `b` unchanged.
+    public func composite(_ s: RenderSurface, onto b: inout RenderSurface, through m: AffineMatrix, mode: BlendMode,
+                          opacity: Float, filter: ResampleFilter) throws {
+        _ = try input(s, .affine, recording: .compositeThrough(m, mode: mode, opacity: opacity, filter: filter))
+        try checkBackdrop(b)
+    }
+    public func applying(_ s: RenderSurface, _ effect: LayerEffect) throws -> RenderSurface {
+        store.insert(try input(s, .effect, recording: .applying(effect)))
+    }
+
+    /// Throws `surfaceMismatch` unless `b` is a live surface of this fake.
+    private func checkBackdrop(_ b: RenderSurface) throws {
+        _ = try store.buffer(for: b)
     }
 
     private func record(_ call: Call) {
         log.withLock { $0.append(call) }
     }
 
-    /// Records `.op(op)`, throws `unsupported(op)` outside `supports`, then
-    /// returns `s`'s pixels or throws `surfaceMismatch`.
-    private func input(_ s: RenderSurface, _ op: RenderOp) throws -> PixelBuffer {
-        record(.op(op))
+    /// Records `call` (`.op(op)` when nil), throws `unsupported(op)` outside
+    /// `supports`, then returns `s`'s pixels or throws `surfaceMismatch`.
+    private func input(_ s: RenderSurface, _ op: RenderOp, recording call: Call? = nil) throws -> PixelBuffer {
+        record(call ?? .op(op))
         guard supports.contains(op) else { throw RenderError.unsupported(op) }
         return try store.buffer(for: s)
     }
