@@ -11,3 +11,6 @@ utc	stage	event	ref	note
 2026-10-18T22:03Z	3	wave-start	W2	AC-1 on dev 15e96dd4
 2026-10-18T22:25Z	3	heartbeat	W2	AC-1 builder running, no PR yet
 2026-10-18T22:34Z	3	pr-opened	#574	task AC-1 head 7deb964f
+2026-10-18T22:47Z	3	pr-merged	#574	task AC-1
+2026-10-18T22:47Z	3	wave-end	W2	wave 2 merged
+2026-10-18T22:47Z	3	wave-start	W3	AC-3 on dev 4feaaf9f
