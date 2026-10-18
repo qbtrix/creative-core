@@ -9,7 +9,11 @@ PSD (read and write) and ORA (through the `PixelCodec`), a profile on every
 `LayeredImage` read from and written to the file, and assign (reinterpret
 the numbers) and convert (change them) on a buffer.
 **Line:** `line:core` · **Wave:** 6 (`waves.md`) · **Lead branch:** `lead/color-profiles`
-**Status:** planned
+**Status:** built. Merged PRs: #458, #462, #466, #468, #469, #470, #476,
+#482, #503, #504, #509, #515, #519, #523, #529, #532, #536, #537, #538,
+#547, #552, and this packet's closing `feature-done` PR. Open gaps it left:
+#549 (24 MP convert over its 150 ms budget), #550 (profile conversion test
+gaps) and #551 (PSD resource walk too strict).
 
 **Covers:** beta-80 plan row E13 ("colour profiles (assign, convert, embed)
 and 16-bit layers"); Photo map row 12 ("Float32 inside, CoreColor display
