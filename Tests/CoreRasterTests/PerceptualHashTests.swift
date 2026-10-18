@@ -6,9 +6,9 @@
 import CoreRaster
 import Testing
 
-/// A seeded 128 x 96 opaque picture: a 10 x 8 grid of random colors,
-/// smoothly enlarged.
-private func picture(_ rng: inout SplitMix64) throws -> PixelBuffer {
+/// A seeded opaque picture, 128 x 96 unless told: a 10 x 8 grid of random
+/// colors, smoothly enlarged. DuplicateWalkTests uses it too.
+func picture(_ rng: inout SplitMix64, width: Int = 128, height: Int = 96) throws -> PixelBuffer {
     var grid = try PixelBuffer(width: 10, height: 8)
     for y in 0..<8 {
         for x in 0..<10 {
@@ -16,7 +16,7 @@ private func picture(_ rng: inout SplitMix64) throws -> PixelBuffer {
                                                b: .random(in: 0...1, using: &rng), a: 1))
         }
     }
-    return try grid.resized(width: 128, height: 96, filter: .bilinear)
+    return try grid.resized(width: width, height: height, filter: .bilinear)
 }
 
 /// The largest distance between a seeded picture's hash and its copy's, over
