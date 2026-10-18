@@ -24,3 +24,6 @@ utc	stage	event	ref	note
 2026-10-18T12:55:43Z	3	pr	VI-3	#491 opened, head ddd35d9, CI PASS, mutate 3/3; EngineStressTests wall-clock budget over (7.6-11.2s vs 5s) under shared load, passed on rerun
 2026-10-18T12:55:52Z	3	merge	VI-4	#490 merged 12:51Z
 2026-10-18T13:03:03Z	-	heartbeat	-	VI-3 #491 conflicted after VI-4 merge, builder rebasing; attribution footer stripped from body; VI-6 building
+2026-10-18T13:07:21Z	3	pr	VI-6	#494 opened head 71c00e8, CI PASS, mutate 7/7; R1 majors closed (anchor/group tr, Int traps on fr/ip/op, depth cap); note for VI-8: shape order in export round trip
+2026-10-18T13:07:21Z	3	merge	VI-6	#494 merged 13:06Z
+2026-10-18T13:07:21Z	4	launch	VI-7	builder launched (animation, masks, mattes)

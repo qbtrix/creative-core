@@ -5,7 +5,7 @@ Run: act-1a14de006be-1kmq · Session: https://claude.ai/code/session_01WN1jNn5SU
 Line lead for: preview-cache (#440), vector-import (#439), layered-codecs (#438)
 Stage: 3 wave 3; Anatomy round 1 on finished slices
 Base: b80c0871a391e1729578b0344c8884c10471c8ca
-Next: build VI-3, VI-4, VI-6; Anatomy round 1 on VI-a (VI-1, VI-2 merged)
+Next: VI-3 #491 rebasing; VI-7 building; VI-5 after #491; Anatomy round 2 on VI-a + VI-lottie(VI-6)
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -23,8 +23,8 @@ Next: build VI-3, VI-4, VI-6; Anatomy round 1 on VI-a (VI-1, VI-2 merged)
 | VI-3 | 3 | XMLTokens | Import/XMLTokens.swift, XMLTokensTests | XMLTokensTests | FlareXMLTokens (3, 3/3 caught) | #491 | PR open (ddd35d9) |
 | VI-4 | 3 | SVGPathData with arcs | Import/SVGPathData.swift, SVGPathDataTests | SVGPathDataTests | FlareSVGPathData (5, 5/5 caught) | #490 (d060a8a) | merged |
 | VI-5 | after VI-3,4, EC-f | SVGImport.scene | Import/SVGImport.swift, SVGStyle.swift, SVGImportTests, SVGImportFuzzTests | both | FlareSVGImport (3) | | open |
-| VI-6 | after VI-2, EC-f | Lottie shapes, static transform | Import/LottieImport.swift, LottieImportTests | LottieImportTests | FlareLottieImport (2) |  | building |
-| VI-7 | after VI-6 | Lottie animation, masks, mattes | Import/LottieImport+Animation.swift, LottieImportAnimationTests, LottieImportFuzzTests | both | FlareLottieImportAnimation (3) | | open |
+| VI-6 | after VI-2, EC-f | Lottie shapes, static transform | Import/LottieImport.swift, LottieImportTests | LottieImportTests | FlareLottieImport (7, 7/7 caught) | #494 (71c00e8) | merged |
+| VI-7 | after VI-6 | Lottie animation, masks, mattes | Import/LottieImport+Animation.swift, LottieImportAnimationTests, LottieImportFuzzTests | both | FlareLottieImportAnimation (3) | | building |
 | VI-8 | after VI-5,7 | round trip and budgets | ImportRoundTripTests, ImportBudgetTests | KJ-VI | none | | open |
 | VI-9 | last | part words, status, `feature-done` | import.json, packet | – | – | | open |
 
