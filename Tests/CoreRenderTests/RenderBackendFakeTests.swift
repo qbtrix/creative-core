@@ -217,4 +217,20 @@ private func seededBuffer(width: Int, height: Int, seed: UInt64) throws -> Pixel
         #expect(throws: RenderError.unsupported(.affine)) { try none.flipped(s, .vertical) }
         #expect(none.calls.last == .flipped(.vertical), "recorded before it is refused")
     }
+
+    @Test func w1CompositesCheckTheBackdrop() throws {
+        let fake = FakeBackend(supports: Set(RenderOp.allCases))
+        let other = FakeBackend(name: "other", supports: Set(RenderOp.allCases))
+        let foreign = try other.surface(try PixelBuffer(width: 2, height: 2))
+        let own = try fake.surface(try PixelBuffer(width: 2, height: 2))
+        let mask = try Mask(width: 2, height: 2)
+        var b = foreign
+        #expect(throws: RenderError.surfaceMismatch) {
+            try fake.composite(own, onto: &b, x: 0, y: 0, mode: .normal, opacity: 1, mask: mask, maskX: 0, maskY: 0)
+        }
+        #expect(throws: RenderError.surfaceMismatch) {
+            try fake.composite(own, onto: &b, through: .identity, mode: .normal, opacity: 1, filter: .bilinear)
+        }
+        #expect(b == foreign)
+    }
 }

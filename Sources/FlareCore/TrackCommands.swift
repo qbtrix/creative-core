@@ -14,6 +14,7 @@ import Foundation
 
 /// The colour and shape track commands, registered in `CommandRegistry.builtIn`.
 public enum TrackCommands {
+    /// Every colour and shape track command type, in registration order.
     public static let all: [any Command.Type] = [
         SetColorKeyframe.self, RemoveColorKeyframe.self, MoveColorKeyframes.self,
         SetShapeKeyframe.self, RemoveShapeKeyframe.self,
@@ -26,6 +27,7 @@ public enum TrackCommands {
     /// Replaces `target`'s colour track on the editable layer with what `edit`
     /// makes of it (given the track, empty if none, and the owner's duration);
     /// an empty result removes the track. Returns the track it replaced.
+    /// A missing shape throws shapeNotFound, a missing text invalidIndex.
     static func editColorTrack(
         _ document: inout Document, _ owner: LayerOwner, _ layerID: String, _ target: TrackTarget,
         _ edit: ([ColorKeyframe], Int) throws -> [ColorKeyframe]
@@ -35,7 +37,10 @@ public enum TrackCommands {
         case .symbol(let id): try document.symbols[document.symbolIndex(id)].durationFrames
         }
         return try document.withEditableLayer(owner, layer: layerID) { layer in
-            guard target.exists(in: layer) else { throw CommandError.shapeNotFound(target.index) }
+            guard target.exists(in: layer) else {
+                if case .text(let index) = target { throw CommandError.invalidIndex(index) }
+                throw CommandError.shapeNotFound(target.index)
+            }
             let old = layer.colorTracks[target.key]
             let new = try edit(old ?? [], duration)
             layer.colorTracks[target.key] = new.isEmpty ? nil : new

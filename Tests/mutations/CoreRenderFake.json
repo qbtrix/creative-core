@@ -37,5 +37,8 @@
    "replacement": "store.insert(try input(s, .adjust))"},
   {"note": "metal capabilities enable a family that is not on metal yet", "filter": "MetalHoldoutTests", "file": "Sources/CoreRender/Metal/MetalCapabilities.swift",
    "anchor": "guard !RenderOp.notOnMetalYet.contains(op) else { return }",
-   "replacement": ""}
+   "replacement": ""},
+  {"note": "fake masked composite skips the backdrop check, so a foreign backdrop is accepted", "filter": "RenderBackendFakeTests.w1CompositesCheckTheBackdrop", "file": "Sources/CoreRender/FakeBackend.swift",
+   "anchor": "_ = try input(s, .maskedComposite, recording: call)\n        try checkBackdrop(b)",
+   "replacement": "_ = try input(s, .maskedComposite, recording: call)"}
 ]
