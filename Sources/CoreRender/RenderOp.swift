@@ -78,6 +78,10 @@ public enum RenderError: Error, Equatable, Sendable {
     /// (cloned)): run it on the CPU backend, which
     /// has no such limit. The backend stays healthy, and RenderDispatcher
     /// passes this error on without retrying the op on its `fallback`.
+    /// A W1 family `f` in `RenderOp.notOnMetalYet` is the exception to that
+    /// remedy: until its feature lands, every backend, the CPU included,
+    /// throws `unsupported(f)` from a method that is not built yet, even when
+    /// `f` is in `supports`. There is no fallback: the caller skips the op.
     case unsupported(RenderOp)
     /// The GPU stopped answering, with the reason the platform gave: no
     /// command queue, a tile texture it would not allocate (out of memory), a
