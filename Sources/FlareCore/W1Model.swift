@@ -5,9 +5,10 @@
 // Invariants (`FlareFormat.validateW1` on load and after commands): Doubles are
 // finite; feather >= 0, opacity in 0...1, at most `maxMasksPerLayer` masks; a
 // matte names another layer of the same list, with no cycle; text runs are
-// non-empty, inside the graphemes, sorted, not overlapping, fontSize > 0;
-// lineHeight in 0.5...4, boxWidth > 0; tracks hold 1...`maxKeysPerTrack` keys,
-// sorted, unique frames in 0...duration; at most `maxTracksPerLayer` tracks; a
+// non-empty, inside the graphemes, sorted, not overlapping, fontSize > 0,
+// weight in 100...900; lineHeight in 0.5...4, boxWidth > 0; colour key
+// channels in 0...1; tracks hold 1...`maxKeysPerTrack` keys, sorted, unique
+// frames in 0...duration; at most `maxTracksPerLayer` tracks; a
 // shape track's shapeIndex is a distinct index into `shapes`; a colour track key
 // is fill.<i> or stroke.<i> (i indexes `shapes`) or text.<i> (i indexes `texts`);
 // mask, path-text and shape-key points count toward `maxTotalPoints`.
@@ -19,7 +20,9 @@ import Foundation
 
 /// A closed path that limits where its layer draws.
 public struct LayerMask: Codable, Sendable, Hashable {
+    /// The closed outline, in layer coordinates; points finite.
     public var path: Path
+    /// How this mask combines with the masks before it.
     public var mode: MaskMode
     /// Edge softness in points.
     public var feather: Double
@@ -37,6 +40,7 @@ public enum MaskMode: String, Codable, Sendable, Hashable { case add, subtract, 
 
 /// The layer draws only where `sourceLayerID`, in the same layer list, covers it.
 public struct TrackMatte: Codable, Sendable, Hashable {
+    /// The id of another layer in the same list; mattes may not form a cycle.
     public var sourceLayerID: String
     /// Which of the source's values limits this layer.
     public var kind: MatteKind
@@ -140,7 +144,9 @@ public struct PathKeyframe: Codable, Sendable, Hashable {
 
 /// Keyframed geometry for the layer's shape at `shapeIndex`.
 public struct ShapeTrack: Codable, Sendable, Hashable {
+    /// Index into the layer's `shapes`; no two tracks share one.
     public var shapeIndex: Int
+    /// Path keys sorted by frame, 1...FlareFormat.maxKeysPerTrack, frames unique and in 0...duration.
     public var keys: [PathKeyframe]
     public init(shapeIndex: Int, keys: [PathKeyframe]) { (self.shapeIndex, self.keys) = (shapeIndex, keys) }
 }

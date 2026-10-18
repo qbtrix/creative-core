@@ -235,6 +235,31 @@ import Testing
 
     @Test func refusesMatteCycleTwoDeep() {
         Self.refuses({ $0.matte = TrackMatte(sourceLayerID: "ball") }, "bg <-> ball", layers: 0)
+        var doc = Self.w1Document()
+        doc.scenes[0].layers[0].matte = TrackMatte(sourceLayerID: "ball")
+        var message = "no invalid error"
+        do { try FlareFormat.validate(doc) } catch FormatError.invalid(let m) { message = m } catch {}
+        #expect(message.contains("ball -> bg -> ball") || message.contains("bg -> ball -> bg"), "\(message)")
+        #expect(message.contains("cycle") && message.contains("remove one layer's matte"), "\(message)")
+    }
+
+    @Test func refusesColourKeyOutOfRange() {
+        Self.refuses({ $0.colorTracks["fill.0"]?[0].value = Color(r: 2, g: 0, b: 0) }, "colour key red 2")
+        Self.refuses({ $0.colorTracks["fill.0"]?[1].value = Color(r: 0, g: 0, b: 0, a: -0.1) }, "colour key alpha -0.1")
+        let message = Self.message { $0.colorTracks["fill.0"]?[0].value = Color(r: 2, g: 0, b: 0) }
+        #expect(message.contains("fill.0") && message.contains("0...1"), "\(message)")
+    }
+
+    @Test func refusesRunWeightOutOfRange() throws {
+        Self.refuses({ $0.texts[0].runs[0].weight = 5000 }, "weight 5000")
+        Self.refuses({ $0.texts[0].runs[0].weight = 99 }, "weight 99")
+        let message = Self.message { $0.texts[0].runs[0].weight = 5000 }
+        #expect(message.contains("5000") && message.contains("100...900"), "\(message)")
+        for weight in [100, 900] {
+            var doc = Self.w1Document()
+            doc.scenes[0].layers[1].texts[0].runs[0].weight = weight
+            try FlareFormat.validate(doc)
+        }
     }
 
     @Test func refusesTouchingRunsThatOverlap() {

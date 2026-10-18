@@ -276,6 +276,8 @@ public enum FlareFormat {
                 try check(run.baselineShift?.isFinite ?? true, "\(at()): baselineShift must be finite")
                 try check(run.fontSize.map { $0.isFinite && $0 > 0 } ?? true,
                           "\(at()): fontSize \(run.fontSize ?? 0) must be finite and > 0")
+                try check(run.weight.map { (100...900).contains($0) } ?? true,
+                          "\(at()): weight \(run.weight ?? 0) is outside 100...900")
                 do { try run.fill?.validate() } catch let error as ModelError { throw FormatError(error) }
             }
             if let p = text.paragraph {
@@ -297,7 +299,7 @@ public enum FlareFormat {
                       + "with i < \(layer.shapes.count) shapes, or text.<i> with i < \(layer.texts.count) texts")
             try checkKeys(track.map(\.frame), key)
             for (k, keyframe) in track.enumerated() {
-                try check(keyframe.value.isFinite, "track \(key) key \(k): colour channels must be finite")
+                try check(keyframe.value.isInRange, "track \(key) key \(k): colour \(keyframe.value) has a channel outside 0...1")
             }
         }
         var animated = Set<Int>()
@@ -339,9 +341,14 @@ public enum FlareFormat {
                 throw FormatError.invalid("\(owner): layer \(start) matte source \(first) is not another layer here")
             }
             var seen: Set<String> = [start]
+            var path = [start] // walk order, built beside `seen` for the error
             var next: String? = first
             while let id = next, !acyclic.contains(id) {
-                guard seen.insert(id).inserted else { throw FormatError.invalid("\(owner): layer \(start) matte cycle") }
+                path.append(id)
+                guard seen.insert(id).inserted else {
+                    let chain = path.joined(separator: " -> ")
+                    throw FormatError.invalid("\(owner): mattes form a cycle \(chain); remove one layer's matte")
+                }
                 next = source[id]
             }
             acyclic.formUnion(seen)
