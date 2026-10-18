@@ -78,3 +78,4 @@ utc	stage	event	ref	note
 2026-10-18T17:06Z	anatomy	record-fix	-	drop duplicated round rows
 2026-10-18T17:07Z	build	CP-9-dispatched	wf_015ab117-5c0	CP-9 (ProfileWalkTests, ProfileBudgetTests; tests only) dispatched on c3e0225 in parallel with round 3
 2026-10-18T17:13Z	anatomy	round3-critics	c3e0225	gate PASS try 1 (1407 tests); mutation 34/34 (ICCRead 7/7, ICCWrite 4/4, ProfileTransform 11/11, ProfileConvert 7/7, PSDDeep 2/2, ORADeep 3/3); critic panel wf_14f7c680-115
+2026-10-18T17:17Z	anatomy	round3-done	c3e0225	7 confirmed (5 major, 2 minor), 0 refuted; not clean; fixes cp3-a, cp3-b
