@@ -8,10 +8,17 @@ import Testing
 
 @Suite struct TrackCommandsTests {
     /// Every id in `TrackCommands.all`, in order, written out by hand.
-    static let expectedIDs: [String] = []
+    static let expectedIDs: [String] = [
+        "colorKey.set", "colorKey.remove", "colorKey.move", "shapeKey.set", "shapeKey.remove",
+    ]
 
-    /// One sample of every track command, each valid on
-    /// `CommandRegistryTests.sampleDocument()`, in `expectedIDs` order.
+    /// The ids whose commands are still stubs that throw "not built"; each
+    /// leaves this set when its task builds it and adds a registry sample.
+    static let notBuiltIDs: Set<String> = Set(expectedIDs)
+
+    /// One sample of every built track command (not in `notBuiltIDs`), each
+    /// valid on `CommandRegistryTests.sampleDocument()`, in `expectedIDs` order.
+    /// The shared tests execute every sample, so a stub gets one when it is built.
     static func registrySamples() -> [any Command] { [] }
 
     /// Random track steps, valid and invalid, for assertUndoRestoresDocument.
@@ -22,6 +29,6 @@ import Testing
     }
 
     @Test func samplesListExactlyItsIDs() {
-        #expect(Self.registrySamples().map { type(of: $0).id } == Self.expectedIDs)
+        #expect(Self.registrySamples().map { type(of: $0).id } == Self.expectedIDs.filter { !Self.notBuiltIDs.contains($0) })
     }
 }
