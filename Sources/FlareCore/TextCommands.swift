@@ -84,13 +84,15 @@ public struct AddTextShape: LayerParamsCommand {
     }
 }
 
+/// Removes a text with its `text.<i>` colour track; the tracks of later texts
+/// move down one index with their texts.
 public struct RemoveTextShape: LayerItemCommand {
     public static let id = "text.remove"
     public var label: String { "Delete Text" }
     public var owner: LayerOwner
     public var layerID: String
     public var index: Int
-    var removed: TextShape?
+    var removed: (text: TextShape, colorTracks: [String: [ColorKeyframe]])?
 
     public init(owner: LayerOwner, layerID: String, index: Int) {
         self.owner = owner
@@ -101,7 +103,9 @@ public struct RemoveTextShape: LayerItemCommand {
     public mutating func execute(_ document: inout Document) throws {
         removed = try document.withEditableLayer(owner, layer: layerID) { [index] layer in
             try layer.checkTextIndex(index)
-            return layer.texts.remove(at: index)
+            let colorTracks = layer.colorTracks
+            layer.colorTracks = Layer.removingIndex(index, prefixes: ["text"], from: colorTracks)
+            return (layer.texts.remove(at: index), colorTracks)
         }
     }
 
@@ -109,7 +113,8 @@ public struct RemoveTextShape: LayerItemCommand {
         guard let removed else { throw CommandError.notExecuted }
         try document.withLayer(owner, layer: layerID) { [index] layer in
             guard index >= 0, index <= layer.texts.count else { throw CommandError.shapeNotFound(index) }
-            layer.texts.insert(removed, at: index)
+            layer.texts.insert(removed.text, at: index)
+            layer.colorTracks = removed.colorTracks
         }
     }
 }

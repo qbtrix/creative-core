@@ -1,0 +1,44 @@
+[
+  {
+    "note": "removing a shape leaves its tracks keyed by the old indexes",
+    "file": "Sources/FlareCore/ShapeCommands.swift",
+    "anchor": "layer.removeShapeTracks(at: index)\n",
+    "replacement": "\n",
+    "filter": "RemoveShapeTrackTests"
+  },
+  {
+    "note": "removing a shape keeps later shapes' colour and width keys at their old index",
+    "file": "Sources/FlareCore/ShapeCommands.swift",
+    "anchor": "result[i > index ? \"\\(parts[0]).\\(i - 1)\" : key] = value",
+    "replacement": "result[key] = value",
+    "filter": "RemoveShapeTrackTests"
+  },
+  {
+    "note": "removing a shape keeps later shapes' path tracks at their old shapeIndex",
+    "file": "Sources/FlareCore/ShapeCommands.swift",
+    "anchor": "return track.shapeIndex > index ? ShapeTrack(shapeIndex: track.shapeIndex - 1, keys: track.keys) : track",
+    "replacement": "return track",
+    "filter": "RemoveShapeTrackTests"
+  },
+  {
+    "note": "undoing a shape removal leaves its tracks dropped",
+    "file": "Sources/FlareCore/ShapeCommands.swift",
+    "anchor": "layer.indexedTracks = removed.tracks",
+    "replacement": "",
+    "filter": "RemoveShapeTrackTests"
+  },
+  {
+    "note": "removing a text leaves its text colour track keyed by the old index",
+    "file": "Sources/FlareCore/TextCommands.swift",
+    "anchor": "layer.colorTracks = Layer.removingIndex(index, prefixes: [\"text\"], from: colorTracks)",
+    "replacement": "",
+    "filter": "RemoveShapeTrackTests"
+  },
+  {
+    "note": "undoing a text removal leaves its colour track dropped",
+    "file": "Sources/FlareCore/TextCommands.swift",
+    "anchor": "layer.colorTracks = removed.colorTracks",
+    "replacement": "",
+    "filter": "RemoveShapeTrackTests"
+  }
+]
