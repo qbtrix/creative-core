@@ -75,9 +75,18 @@ extension OpenRaster {
 private struct StackWriter {
     var xml = "", layers: [PixelBuffer] = [], count = 0
 
-    /// `nodes` (bottom to top) as elements top first, under `depth` groups.
+    /// `nodes` (bottom to top) as elements top first, under `depth` groups. Nested groups are
+    /// walked with an explicit stack: recursing `maxDepth` deep overflows the 512 KB stack of a
+    /// secondary thread on macOS. Each list's `rest` is popped from its end, so top first.
     mutating func add(_ nodes: [LayerNode], depth: Int) throws {
-        for node in nodes.reversed() {
+        var open = [(rest: nodes, depth: depth)]
+        while let top = open.indices.last {
+            guard let node = open[top].rest.popLast() else {
+                open.removeLast()
+                if !open.isEmpty { xml += "</stack>" }
+                continue
+            }
+            let depth = open[top].depth
             // The reader pushes each element under `image`, the root stack and `depth` groups,
             // and opens a stack at most `maxDepth` deep and a layer one level below.
             let room = if case .group = node { 0 } else { 1 }
@@ -96,8 +105,7 @@ private struct StackWriter {
                 layers.append(layer.pixels)
             case .group(let group):
                 xml += "<stack \(try Self.common(group.name, group.opacity, group.isHidden, group.blendMode))>"
-                try add(group.children, depth: depth + 1)
-                xml += "</stack>"
+                open.append((group.children, depth + 1))
             }
         }
     }

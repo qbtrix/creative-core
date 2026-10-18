@@ -43,6 +43,26 @@ public struct LayeredImage: Equatable, Sendable {
 /// One entry of a layer tree: a pixel layer or a group of entries.
 public enum LayerNode: Equatable, Sendable {
     case pixels(PixelLayer), group(LayerGroup)
+
+    /// The synthesized `==`, compared with an explicit stack: recursing through
+    /// `OpenRaster.maxDepth` groups overflows the 512 KB stack of a secondary
+    /// thread on macOS. Groups compare every field but `children` with their
+    /// own `==`, then their children pairwise.
+    public static func == (lhs: LayerNode, rhs: LayerNode) -> Bool {
+        var pending = [(lhs, rhs)]
+        while let (a, b) = pending.popLast() {
+            switch (a, b) {
+            case let (.pixels(a), .pixels(b)): guard a == b else { return false }
+            case let (.group(a), .group(b)):
+                var (bareA, bareB) = (a, b)
+                (bareA.children, bareB.children) = ([], [])
+                guard bareA == bareB, a.children.count == b.children.count else { return false }
+                pending += zip(a.children, b.children)
+            default: return false
+            }
+        }
+        return true
+    }
 }
 
 /// A pixel layer with its top left at (`x`, `y`) on the canvas; it may lie
