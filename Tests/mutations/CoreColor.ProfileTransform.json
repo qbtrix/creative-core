@@ -26,5 +26,26 @@
     "anchor": "!(g > 0) || c < 0 {",
     "replacement": "c < 0 {",
     "filter": "ProfileTransformTests/uninvertibleTargetsThrow"
+  },
+  {
+    "note": "profile transform gray target reads X instead of Y",
+    "file": "Sources/CoreColor/ICC/ProfileTransform.swift",
+    "anchor": "0, 1 / v[1], 0, 0, 1 / v[1], 0, 0, 1 / v[1], 0",
+    "replacement": "1 / v[1], 0, 0, 1 / v[1], 0, 0, 1 / v[1], 0, 0",
+    "filter": "ProfileTransformTests/sRGBToGrayIsLuminance"
+  },
+  {
+    "note": "profile transform accepts a gray white with Y at or below zero",
+    "file": "Sources/CoreColor/ICC/ProfileTransform.swift",
+    "anchor": "guard !profile.isGray || v[1] > 0 else {",
+    "replacement": "guard !profile.isGray || v[1] == v[1] else {",
+    "filter": "ProfileTransformTests/sRGBToGrayIsLuminance"
+  },
+  {
+    "note": "profile transform accepts a parametric slope a of zero",
+    "file": "Sources/CoreColor/ICC/ProfileTransform.swift",
+    "anchor": "guard a > 0 else",
+    "replacement": "guard a > -1 else",
+    "filter": "ProfileTransformTests/uninvertibleTargetsThrow"
   }
 ]

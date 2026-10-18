@@ -24,12 +24,17 @@ public enum ProfileCurve: Hashable, Sendable {
 public struct ColorProfile: Hashable, Sendable {
     /// The profile description.
     public var name: String
+    /// True for a gray profile: one `kTRC` curve and a white point instead of three colourants.
     public var isGray: Bool
-    /// 3 x 3, row-major, linear RGB to XYZ D50; gray: the white point column.
+    /// 3 x 3, row-major, linear RGB to XYZ D50; gray: the white point column. RGB colourants are
+    /// adapted to D50 by linear Bradford from the profile's media white; `iccData()` assumes that
+    /// white is D65 and writes `chad` accordingly.
     public var toXYZD50: [Double]
     /// 3 (RGB) or 1 (gray).
     public var curves: [ProfileCurve]
 
+    /// Values are not checked here; `toXYZD50` must hold 9 (RGB) or 3 (gray) finite values and
+    /// `curves` 3 or 1. `ProfileTransform.init` and `iccData()` throw `.invalid` when they do not.
     public init(name: String, isGray: Bool, toXYZD50: [Double], curves: [ProfileCurve]) {
         self.name = name
         self.isGray = isGray
@@ -44,7 +49,9 @@ public struct ColorProfile: Hashable, Sendable {
     }
 
     /// Writes a v4 profile: `mluc` description, D50 `wtpt`, `chad`, colourants and curves (gray: its
-    /// white in `wtpt` and `kTRC`). A value that does not fit its ICC field throws `.invalid`.
+    /// white in `wtpt` and `kTRC`). For RGB it assumes `toXYZD50` was adapted from a D65 white and
+    /// writes `chad` as the Bradford D65-to-D50 matrix. A value that does not fit its ICC field
+    /// throws `.invalid`.
     public func iccData() throws(ColorError) -> Data {
         try ICCWrite.profile(self)
     }
@@ -53,6 +60,7 @@ public struct ColorProfile: Hashable, Sendable {
     static let sRGBCurve = ProfileCurve.parametric(
         type: 3, params: [2.4, 1 / 1.055, 0.055 / 1.055, 1 / 12.92, 0.04045])
 
+    /// IEC 61966-2-1 sRGB: its primaries and curve, D65 adapted to D50.
     public static let sRGB = rgb("sRGB", Matrix3.xyzFromLinearSRGB, sRGBCurve)
     /// P3 primaries, D65 white, the sRGB curve.
     public static let displayP3 = rgb("Display P3", Matrix3.xyzFromLinearSRGB * Matrix3.linearSRGBFromP3, sRGBCurve)

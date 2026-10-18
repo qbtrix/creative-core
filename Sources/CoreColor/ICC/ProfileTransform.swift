@@ -27,6 +27,11 @@ public struct ProfileTransform: Sendable {
     private let encode: [Tone]
     private let matrix: Matrix3
 
+    /// Builds the transform. Throws `.invalid` for a profile with the wrong count of `toXYZD50`
+    /// values or curves, non-finite values, singular target colourants, a gray white with Y <= 0,
+    /// or a curve that cannot be inverted (a falling or flat table, a gamma <= 0, a parametric
+    /// slope a <= 0 or linear slope c < 0). A gray source reads only `c0` of `apply`'s input; a
+    /// gray target writes r == g == b.
     public init(from source: ColorProfile, to target: ColorProfile) throws(ColorError) {
         let (toPCS, sourceWhite) = try Self.toPCS(source)
         let (fromPCS, targetWhite) = try Self.fromPCS(target)
