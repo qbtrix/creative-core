@@ -2,9 +2,9 @@
 
 Issue: #432 · Packet: docs/blueprints/core/features/tone-pack.md
 Run: act-1a150bfbcf7-sfwy · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
-Stage: 2 plan
+Stage: 3 wave 1
 Base: a8a08d25e34e119dd399ede9d77880a2d16bc04b
-Next: launch wave 1 (TP-0 stubs, TP-2 fixtures) on the base
+Next: wave 1 builders running (TP-0, TP-2); then wave 2 once they merge
 
 Line lead for #434, #433 and #432 (rule 19); one wave plan across the three
 features, bookkeeping per feature. Packet v3 (has a Slices table).

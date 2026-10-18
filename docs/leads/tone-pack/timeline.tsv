@@ -3,3 +3,5 @@ utc	stage	event	ref	note
 2026-10-18T20:46Z	0	stage-end	a8a08d25	lead branch and RECORD created; engine-contracts in code on base
 2026-10-18T20:46Z	1	stage-end	packet	tasks, acceptance and quality bars copied
 2026-10-18T20:46Z	2	stage-start	plan	combined wave plan across #434 #433 #432
+2026-10-18T20:48Z	2	stage-end		plan recorded
+2026-10-18T20:48Z	3	wave-start	W1	TP-0, TP-2 launched on a8a08d25
