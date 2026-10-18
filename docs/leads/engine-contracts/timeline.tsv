@@ -17,3 +17,4 @@ utc	stage	event	ref	note
 2026-10-18T08:29Z	-	heartbeat	-	waiting
 2026-10-18T08:32Z	3	pr-merged	#450	EC-2 merged 1a4d84b
 2026-10-18T08:32Z	4	pr-merged	#452	r1-c merged c614b52
+2026-10-18T08:33Z	3	stage-start	wave-3	EC-3, EC-4, EC-5 building on c614b52
