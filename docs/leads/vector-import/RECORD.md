@@ -31,6 +31,7 @@ Next: build VI-3, VI-4, VI-6; Anatomy round 1 on VI-a (VI-1, VI-2 merged)
 ## Rounds
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
 |---|---|---|---|---|---|---|---|---|
+| 1 (VI-a) | b80c087 | PASS | n/a (VI-a has no plan) | - | clarity, contract, undo, robustness, tests | 3 major: Lottie anchor/group tr (VI-6), Lottie Int(Double) traps on fr/ip/op (VI-6), arc large-arc/scale-up/rotation (VI-4); 4 downgraded to minor (ref cycles, fill none spec, ...) | builders VI-4, VI-6 + R1 doc batch (packet: anchor, fill=none, AddScene id, cycles) | no |
 
 ## Decisions
 - One wave plan across the three features (rule 19); wave 1 is PC-1, VI-1, LC-1.
