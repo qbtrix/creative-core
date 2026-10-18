@@ -1,3 +1,4 @@
 utc	stage	event	ref	note
 2026-10-18T22:40Z	0	stage-start	15e96dd	lead act-1a1511a1174-tlch set up on dev 15e96dd
 2026-10-18T22:40Z	3	stage-start	wave 1	IC-1 building
+2026-10-18T22:24Z	3	agent-launched	IC-1	IC-1 builder launched (worktree, branch lead/image-codecs-IC-1)
