@@ -1,0 +1,18 @@
+{"format": "flare", "version": 1, "document": {"scenes": [{
+  "id": "tracks", "name": "Tracks", "fps": 24, "durationFrames": 24, "width": 40, "height": 40,
+  "layers": [{"id": "shape", "name": "Shape", "shapes": [{"closed": true, "fill": {"r": 1, "g": 0, "b": 0, "a": 1},
+    "stroke": {"color": {"r": 0, "g": 0, "b": 0, "a": 1}, "width": 2, "join": "miter", "cap": "butt"},
+    "points": [{"x": 0, "y": 0}, {"x": 20, "y": 0}, {"x": 40, "y": 0}, {"x": 40, "y": 20},
+               {"x": 40, "y": 40}, {"x": 20, "y": 40}, {"x": 0, "y": 40}, {"x": 0, "y": 20}]}],
+    "tracks": {"strokeWidth.0": [{"frame": 0, "value": 2, "easing": {"linear": {}}}, {"frame": 24, "value": 8, "easing": {"linear": {}}}]},
+    "colorTracks": {
+      "fill.0": [{"frame": 0, "value": {"r": 1, "g": 0, "b": 0, "a": 1}, "easing": {"cubicBezier": {"x1": 0.42, "y1": 0, "x2": 0.58, "y2": 1}}},
+                 {"frame": 24, "value": {"r": 0, "g": 0, "b": 1, "a": 1}, "easing": {"linear": {}}}],
+      "stroke.0": [{"frame": 0, "value": {"r": 0, "g": 0, "b": 0, "a": 1}, "easing": {"hold": {}}},
+                   {"frame": 24, "value": {"r": 1, "g": 1, "b": 1, "a": 1}, "easing": {"linear": {}}}]},
+    "shapeTracks": [{"shapeIndex": 0, "keys": [{"frame": 0, "easing": {"linear": {}}, "path": {"elements": [
+      {"move": {"to": {"x": 0, "y": 0}}}, {"line": {"to": {"x": 20, "y": 0}}}, {"line": {"to": {"x": 40, "y": 0}}}, {"line": {"to": {"x": 40, "y": 20}}},
+      {"line": {"to": {"x": 40, "y": 40}}}, {"line": {"to": {"x": 20, "y": 40}}}, {"line": {"to": {"x": 0, "y": 40}}}, {"line": {"to": {"x": 0, "y": 20}}}, {"close": {}}]}},
+      {"frame": 24, "easing": {"linear": {}}, "path": {"elements": [
+      {"move": {"to": {"x": 15, "y": 15}}}, {"line": {"to": {"x": 20, "y": 0}}}, {"line": {"to": {"x": 25, "y": 15}}}, {"line": {"to": {"x": 40, "y": 20}}},
+      {"line": {"to": {"x": 25, "y": 25}}}, {"line": {"to": {"x": 20, "y": 40}}}, {"line": {"to": {"x": 15, "y": 25}}}, {"line": {"to": {"x": 0, "y": 20}}}, {"close": {}}]}}]}]}]}]}}
