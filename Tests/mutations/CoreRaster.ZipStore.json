@@ -1,7 +1,7 @@
 [
   {
     "note": "the CRC table uses the unreflected polynomial",
-    "file": "Sources/CoreRaster/Codecs/ZipStore.swift",
+    "file": "Sources/CoreRaster/Codecs/ByteReader.swift",
     "anchor": "(crc >> 1) ^ 0xEDB8_8320 : crc >> 1",
     "replacement": "(crc >> 1) ^ 0x04C1_1DB7 : crc >> 1",
     "filter": "ORAContainerTests.crcMatches"
@@ -22,7 +22,7 @@
   },
   {
     "note": "the slicing-by-8 tables advance by the wrong table",
-    "file": "Sources/CoreRaster/Codecs/ZipStore.swift",
+    "file": "Sources/CoreRaster/Codecs/ByteReader.swift",
     "anchor": "^ tables[256 + Int(input[index + 6])] ^ tables[Int(input[index + 7])]",
     "replacement": "^ tables[Int(input[index + 6])] ^ tables[256 + Int(input[index + 7])]",
     "filter": "ORAContainerTests.crcMatches"

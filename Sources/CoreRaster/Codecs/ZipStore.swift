@@ -57,7 +57,7 @@ public enum ZipStore {
             guard data.count <= Int(UInt32.max) else { throw CodecError.tooLarge("entry \(name)") }
             guard local.count <= Int(UInt32.max) else { throw CodecError.tooLarge("archive offset at \(name)") }
             let flags: UInt16 = nameBytes.contains { $0 >= 0x80 } ? utf8Flag : 0
-            let crc = crc32(data)
+            let crc = ByteReader.crc32(data)
             let offset = UInt32(local.count)
             // Shared tail of both headers: flags through extra length.
             var common: [UInt8] = []
@@ -132,7 +132,7 @@ public enum ZipStore {
             let localName = Int(try readLE16(bytes, localStart + 26))
             let localExtra = Int(try readLE16(bytes, localStart + 28))
             let body = try slice(bytes, localStart + localHeaderCount + localName + localExtra, size)
-            guard crc32(body) == crc else { throw CodecError.damaged("CRC of \(name)") }
+            guard ByteReader.crc32(body) == crc else { throw CodecError.damaged("CRC of \(name)") }
             guard result.updateValue(Data(body), forKey: name) == nil else {
                 throw CodecError.damaged("duplicate entry \(name)")
             }
@@ -172,41 +172,6 @@ public enum ZipStore {
         for index in 0..<(T.bitWidth / 8) { bytes.append(UInt8(truncatingIfNeeded: value >> (index * 8))) }
     }
 
-    /// Eight 256-entry tables, flat: table k at `k * 256`. Table 0 is the
-    /// byte-at-a-time table; table k advances table k - 1 by one zero byte.
-    static let crcTables: [UInt32] = {
-        var tables = [UInt32](repeating: 0, count: 8 * 256)
-        for byte in 0..<256 {
-            var crc = UInt32(byte)
-            for _ in 0..<8 { crc = crc & 1 == 1 ? (crc >> 1) ^ 0xEDB8_8320 : crc >> 1 }
-            tables[byte] = crc
-        }
-        for index in 256..<(8 * 256) {
-            let previous = tables[index - 256]
-            tables[index] = (previous >> 8) ^ tables[Int(previous & 0xFF)]
-        }
-        return tables
-    }()
-
-    /// The IEEE CRC-32 of `bytes`, eight bytes per step.
-    static func crc32<Bytes: Collection>(_ bytes: Bytes) -> UInt32 where Bytes.Element == UInt8 {
-        let input = Array(bytes)
-        let tables = crcTables
-        var crc: UInt32 = 0xFFFF_FFFF
-        var index = 0
-        while input.count - index >= 8 {
-            let low = crc ^ (UInt32(input[index]) | UInt32(input[index + 1]) << 8
-                | UInt32(input[index + 2]) << 16 | UInt32(input[index + 3]) << 24)
-            crc = tables[7 * 256 + Int(low & 0xFF)] ^ tables[6 * 256 + Int((low >> 8) & 0xFF)]
-                ^ tables[5 * 256 + Int((low >> 16) & 0xFF)] ^ tables[4 * 256 + Int(low >> 24)]
-                ^ tables[3 * 256 + Int(input[index + 4])] ^ tables[2 * 256 + Int(input[index + 5])]
-                ^ tables[256 + Int(input[index + 6])] ^ tables[Int(input[index + 7])]
-            index += 8
-        }
-        while index < input.count {
-            crc = tables[Int((crc ^ UInt32(input[index])) & 0xFF)] ^ (crc >> 8)
-            index += 1
-        }
-        return crc ^ 0xFFFF_FFFF
-    }
+    /// `ByteReader.crc32`, under the name `RawPixelCodec` and the container tests use.
+    static func crc32<Bytes: Collection>(_ bytes: Bytes) -> UInt32 where Bytes.Element == UInt8 { ByteReader.crc32(bytes) }
 }
