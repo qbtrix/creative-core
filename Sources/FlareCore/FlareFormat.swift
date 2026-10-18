@@ -254,6 +254,8 @@ public enum FlareFormat {
                 try check(k == 0 || frames[k - 1] < frame, "track \(track) key \(k): frame \(frame) is not after the key before it")
             }
         }
+        // A layer with no W1 fields and no text has nothing below to check: skip the work.
+        guard layer.hasW1Fields || !layer.texts.isEmpty else { return }
         try check(layer.masks.count <= maxMasksPerLayer, "\(layer.masks.count) masks, limit \(maxMasksPerLayer)")
         for (i, mask) in layer.masks.enumerated() {
             try check(finite(mask.path), "mask \(i): path has a non-finite point")
@@ -261,19 +263,19 @@ public enum FlareFormat {
             try check((0...1).contains(mask.opacity), "mask \(i): opacity \(mask.opacity) is outside 0...1")
         }
         for (t, text) in layer.texts.enumerated() {
-            let count = text.string.count
+            let count = text.runs.isEmpty ? 0 : text.string.count // graphemes, only read by runs
             var last = -1
             for (r, run) in text.runs.enumerated() {
-                let at = "text \(t) run \(r)"
-                try check(run.length > 0, "\(at): length \(run.length) must be > 0")
-                try check(run.start > last, "\(at): start \(run.start) is negative or overlaps the run before it")
+                func at() -> String { "text \(t) run \(r)" } // built only for an error
+                try check(run.length > 0, "\(at()): length \(run.length) must be > 0")
+                try check(run.start > last, "\(at()): start \(run.start) is negative or overlaps the run before it")
                 try check(run.start <= count - run.length, // last >= -1, so start >= 0
-                          "\(at): start \(run.start) + length \(run.length) passes the \(count) graphemes")
+                          "\(at()): start \(run.start) + length \(run.length) passes the \(count) graphemes")
                 last = run.start + run.length - 1
-                try check(run.tracking?.isFinite ?? true, "\(at): tracking must be finite")
-                try check(run.baselineShift?.isFinite ?? true, "\(at): baselineShift must be finite")
+                try check(run.tracking?.isFinite ?? true, "\(at()): tracking must be finite")
+                try check(run.baselineShift?.isFinite ?? true, "\(at()): baselineShift must be finite")
                 try check(run.fontSize.map { $0.isFinite && $0 > 0 } ?? true,
-                          "\(at): fontSize \(run.fontSize ?? 0) must be finite and > 0")
+                          "\(at()): fontSize \(run.fontSize ?? 0) must be finite and > 0")
                 do { try run.fill?.validate() } catch let error as ModelError { throw FormatError(error) }
             }
             if let p = text.paragraph {
@@ -326,7 +328,9 @@ public enum FlareFormat {
     /// returns to a layer it passed. Linear: a layer proven acyclic is not walked again.
     static func checkMattes(_ layers: [Layer], owner: String) throws {
         var source: [String: String] = [:]
-        for layer in layers { if let matte = layer.matte { source[layer.id] = matte.sourceLayerID } }
+        for layer in layers where layer.hasW1Fields { // no box, no matte
+            if let matte = layer.matte { source[layer.id] = matte.sourceLayerID }
+        }
         guard !source.isEmpty else { return }
         let ids = Set(layers.map(\.id))
         var acyclic = Set<String>()
@@ -374,6 +378,7 @@ public enum FlareFormat {
     /// Points stored in `layer` for the size limit: its shapes, mask paths,
     /// text-on-path paths and the path of every shape-track key.
     static func pointCount(_ layer: Layer) -> Int {
+        guard layer.hasW1Fields || !layer.texts.isEmpty else { return pointCount(layer.shapes) }
         func count(_ path: Path) -> Int { path.elements.reduce(0) { $0 + $1.pointCount } }
         let masks = layer.masks.reduce(0) { $0 + count($1.path) }
         let onPaths = layer.texts.reduce(0) { $0 + ($1.onPath.map { count($0.path) } ?? 0) }
