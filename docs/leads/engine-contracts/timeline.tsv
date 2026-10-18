@@ -29,3 +29,4 @@ utc	stage	event	ref	note
 2026-10-18T09:05Z	-	heartbeat	-	waiting
 2026-10-18T09:22Z	3	pr-merged	#456	EC-3 merged f279048; EC-a's tasks all merged (Mac-Finish-Wanted after Linux green)
 2026-10-18T09:28Z	3	pr-merged	#459	stress fix merged b5b782b (EC-f perf); dev-red #453 should clear on next CI
+2026-10-18T09:29Z	3	stage-start	EC-4	EC-4 unheld: rebasing on b5b782b, gate, PR
