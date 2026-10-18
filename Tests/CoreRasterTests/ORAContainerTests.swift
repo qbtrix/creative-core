@@ -1,5 +1,5 @@
 // ORAContainerTests.swift: ZipStore, the stored-only zip container of
-// OpenRaster files. The writer gives pinned bytes, puts `mimetype` at offset
+// OpenRaster files. The writer gives the pinned golden bytes, puts `mimetype` at offset
 // 30 and round-trips; the reader refuses compressed entries by name, bad
 // CRCs, every truncation and seeded byte damage without crashing; the CRC-32
 // matches the published check values.
@@ -21,8 +21,8 @@ import Foundation
     /// from the PKWARE APPNOTE (stored, DOS date 1980-01-01 00:00, version
     /// needed 1.0, made by 2.0, paths after `mimetype` sorted by byte:
     /// Thumbnails/t.png, data/b.png, stack.xml) and checked with an independent
-    /// zip reader. Photo's adoption of ZipStore compares its own output
-    /// against these same bytes.
+    /// zip reader. Pinned here: Photo's adoption of ZipStore is to check its
+    /// own output against these same bytes.
     static let golden: [UInt8] = hexBytes([
         "504b03040a000000000000002100c79af08c1000000010000000080000006d696d6574797065696d6167652f6f70656e",
         "726173746572504b03040a000000000000002100607a04be0100000001000000100000005468756d626e61696c732f74",
@@ -51,7 +51,7 @@ import Foundation
         }
     }
 
-    @Test func sameBytesAsPhoto() throws {
+    @Test func pinnedGoldenBytes() throws {
         #expect([UInt8](try ZipStore.archive(Self.files, first: "mimetype")) == Self.golden)
     }
 

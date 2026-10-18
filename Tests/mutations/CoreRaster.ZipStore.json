@@ -11,7 +11,7 @@
     "file": "Sources/CoreRaster/Codecs/ZipStore.swift",
     "anchor": ".sorted { $0.utf8.lexicographicallyPrecedes($1.utf8) }",
     "replacement": ".sorted { $1.utf8.lexicographicallyPrecedes($0.utf8) }",
-    "filter": "ORAContainerTests.sameBytesAsPhoto"
+    "filter": "ORAContainerTests.pinnedGoldenBytes"
   },
   {
     "note": "a compressed entry is read as if stored",

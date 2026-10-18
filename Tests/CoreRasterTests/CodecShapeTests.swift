@@ -78,7 +78,7 @@ private func sampleImage() throws -> LayeredImage {
         }
         let bits = Bool.random(using: &rng) ? 8 : 16
         let data = try codec.encodePNG(buffer, bitsPerChannel: bits)
-        #expect(data.count == 13 + width * height * 16)
+        #expect(data.count == 33 + width * height * 16)
         #expect(try codec.decodePNG(data) == buffer)
     }
 }
@@ -97,15 +97,15 @@ private func sampleImage() throws -> LayeredImage {
     badMagic[0] = 0
     #expect(throws: CodecError.self) { try codec.decodePNG(Data(badMagic)) }
     var badBits = good
-    badBits[4] = 7
+    badBits[24] = 7
     #expect(throws: CodecError.self) { try codec.decodePNG(Data(badBits)) }
     var zeroWidth = good
-    zeroWidth.replaceSubrange(5..<9, with: [0, 0, 0, 0])
+    zeroWidth.replaceSubrange(16..<20, with: [0, 0, 0, 0])
     #expect(throws: CodecError.self) { try codec.decodePNG(Data(zeroWidth)) }
     var huge = good
-    huge.replaceSubrange(5..<13, with: [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF])
+    huge.replaceSubrange(16..<24, with: [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF])
     #expect(throws: CodecError.self) { try codec.decodePNG(Data(huge)) }
     var nan = good
-    nan.replaceSubrange(13..<17, with: [0x7F, 0xC0, 0, 0])
+    nan.replaceSubrange(33..<37, with: [0x7F, 0xC0, 0, 0])
     #expect(throws: CodecError.pixelCodec("component 0 is not finite")) { try codec.decodePNG(Data(nan)) }
 }

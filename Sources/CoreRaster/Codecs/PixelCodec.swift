@@ -14,13 +14,16 @@ public protocol PixelCodec: Sendable {
     func encodePNG(_ buffer: PixelBuffer, bitsPerChannel: Int) throws -> Data
 }
 
-/// A test stand-in for PNG: not PNG at all, but a tiny header and the raw
-/// components, so a round trip is exact. Layout, big-endian: the magic
-/// `RAWP`, one byte of bits per channel (8 or 16, recorded only), UInt32
-/// width, UInt32 height, then width x height x 4 Float32 bit patterns.
+/// A test stand-in for PNG: a PNG's signature and IHDR chunk, laid out as
+/// the PNG spec has them, so a reader can size it before decoding, then the
+/// raw components instead of IDAT, so a round trip is exact. Layout,
+/// big-endian: the 8-byte PNG signature, the IHDR chunk (length 13, `IHDR`,
+/// UInt32 width, UInt32 height, bit depth 8 or 16 (recorded only), colour
+/// type 6, three zero bytes, its CRC-32), then width x height x 4 Float32
+/// bit patterns.
 public struct RawPixelCodec: PixelCodec {
-    static let magic: [UInt8] = Array("RAWP".utf8)
-    static let headerCount = 13
+    static let magic: [UInt8] = OpenRaster.pngSignature + [0, 0, 0, 13] + Array("IHDR".utf8)
+    static let headerCount = 33
 
     public init() {}
 
@@ -31,23 +34,24 @@ public struct RawPixelCodec: PixelCodec {
         let components = buffer.components
         var bytes = Self.magic
         bytes.reserveCapacity(Self.headerCount + components.count * 4)
-        bytes.append(UInt8(bitsPerChannel))
         // Width and height are at most maxPixels, so they fit in UInt32.
         for side in [buffer.width, buffer.height] { Self.appendBigEndian(UInt32(side), to: &bytes) }
+        bytes += [UInt8(bitsPerChannel), 6, 0, 0, 0]
+        Self.appendBigEndian(ZipStore.crc32(bytes[12...]), to: &bytes)
         for value in components { Self.appendBigEndian(value.bitPattern, to: &bytes) }
         return Data(bytes)
     }
 
     public func decodePNG(_ data: Data) throws -> PixelBuffer {
         let bytes = [UInt8](data)
-        guard bytes.count >= Self.headerCount, Array(bytes[0..<4]) == Self.magic else {
+        guard bytes.count >= Self.headerCount, bytes.starts(with: Self.magic) else {
             throw CodecError.pixelCodec("not a raw pixel image")
         }
-        guard bytes[4] == 8 || bytes[4] == 16 else {
-            throw CodecError.pixelCodec("bits per channel \(bytes[4]): only 8 or 16")
+        guard bytes[24] == 8 || bytes[24] == 16 else {
+            throw CodecError.pixelCodec("bits per channel \(bytes[24]): only 8 or 16")
         }
-        let width = Int(Self.readBigEndian(bytes, at: 5))
-        let height = Int(Self.readBigEndian(bytes, at: 9))
+        let width = Int(Self.readBigEndian(bytes, at: 16))
+        let height = Int(Self.readBigEndian(bytes, at: 20))
         let pixels: Int
         do {
             pixels = try PixelBuffer.validatedSize(width: width, height: height)

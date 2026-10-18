@@ -3,10 +3,12 @@
 // nested `stack` and `layer` elements (name, src, x, y, opacity, visibility,
 // composite-op) and skips every other element with all it holds.
 // Invariants a reader must keep:
-// - Nothing is trusted: the text is at most `maxBytes`; elements nest at most
-//   `OpenRaster.maxDepth` stacks deep (checked before each push onto an
-//   explicit stack, never by recursion) and there are at most
-//   `OpenRaster.maxLayers` layers and stacks; the canvas w and h are in
+// - Nothing is trusted: the text is at most `maxBytes`; stacks nest at most
+//   `OpenRaster.maxDepth` deep, the root stack the first, and any other
+//   element at most one level below that (checked before each push onto an
+//   explicit stack, never by recursion); there are at most
+//   `OpenRaster.maxLayers` layers and nested stacks, the root stack not
+//   counted; the canvas w and h are in
 //   1...`OpenRaster.maxSide` and within `PixelBuffer.maxPixels`; x and y are
 //   Ints within +-`maxOffset`, so summing them down the tree and adding a
 //   layer's size cannot overflow; opacity must be finite (nan and inf throw)
@@ -54,9 +56,6 @@ struct StackXML: Equatable, Sendable {
         while let tag = try scanner.nextTag() {
             switch tag {
             case .start(let name, let attributes, let closed):
-                guard open.count <= OpenRaster.maxDepth else {
-                    throw CodecError.tooLarge("stack.xml nested over \(OpenRaster.maxDepth) deep")
-                }
                 let kind: Kind
                 switch (open.last?.kind, name) {
                 case (nil, "image"):
@@ -66,10 +65,14 @@ struct StackXML: Equatable, Sendable {
                 case (.stack?, "layer"): kind = .layer
                 default: kind = .skipped
                 }
-                if kind == .stack || kind == .layer {
+                // open holds the image and every enclosing stack, so a stack pushed now is open.count deep.
+                guard open.count <= OpenRaster.maxDepth + (kind == .stack ? 0 : 1) else {
+                    throw CodecError.tooLarge("stack.xml stacks nested over \(OpenRaster.maxDepth) deep")
+                }
+                if kind == .layer || (kind == .stack && open.last?.kind == .stack) {
                     count += 1
                     guard count <= OpenRaster.maxLayers else {
-                        throw CodecError.tooLarge("stack.xml over \(OpenRaster.maxLayers) layers")
+                        throw CodecError.tooLarge("stack.xml over \(OpenRaster.maxLayers) layers and nested stacks")
                     }
                 }
                 open.append(Frame(name: name, kind: kind, attributes: attributes))
@@ -118,7 +121,7 @@ struct StackXML: Equatable, Sendable {
     /// The attribute as an integer within +-`maxOffset`; 0 when absent.
     private static func integer(_ attributes: [String: String], _ key: String) throws -> Int {
         guard let text = attributes[key] else { return 0 }
-        guard let value = Int(text), abs(value) <= maxOffset else { throw CodecError.damaged("stack.xml \(key)=\(text)") }
+        guard let value = Int(text), value.magnitude <= UInt(maxOffset) else { throw CodecError.damaged("stack.xml \(key)=\(text)") }
         return value
     }
 }

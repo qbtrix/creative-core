@@ -33,6 +33,11 @@ enum ORAFixtures {
         StoredZip.archive([("mimetype", Data("image/openraster".utf8)), ("stack.xml", Data(stack.utf8))]
             + (try layers.map { ($0.0, try RawPixelCodec().encodePNG(pixels($0.1), bitsPerChannel: 8)) }))
     }
+    /// A PNG's signature and IHDR size alone, as the PNG spec lays them out: enough to size, too short to decode.
+    static func ihdr(_ width: Int, _ height: Int) -> Data {
+        Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 13] + Array("IHDR".utf8)
+            + [width, height].flatMap { side in (0..<4).map { UInt8(truncatingIfNeeded: side >> (24 - 8 * $0)) } })
+    }
     /// Every entry another app writes: the layers, a merged image and a thumbnail.
     static func a(stack: String = stackA) throws -> Data {
         try zip(stack, [("data/ink.png", 1), ("data/hidden.png", 2), ("data/inner.png", 3), ("data/paper.png", 4), ("mergedimage.png", 5), ("Thumbnails/thumbnail.png", 6)])
@@ -70,13 +75,16 @@ enum ORAFixtures {
         let named = "<image w='2' h='2'><stack><layer src='a.png' name='Ink &amp; &lt;Wash&gt; &#233;&#x41;'/></stack></image>"
         let image = try OpenRaster.read(try ORAFixtures.zip(named, [("a.png", 8)]), pixels: RawPixelCodec())
         #expect(pixelLayer(image.nodes.first)?.name == "Ink & <Wash> \u{E9}A")
-        func nested(_ depth: Int, closed: Bool = true) throws -> LayeredImage {
-            let stacks = String(repeating: "<stack>", count: depth) + String(repeating: "</stack>", count: closed ? depth : 0)
-            return try OpenRaster.read(try ORAFixtures.zip("<image w='2' h='2'>\(stacks)</image>", []), pixels: RawPixelCodec())
+        // The root stack is the first level: maxDepth levels, a layer in the deepest, read; one more level throws.
+        func nested(_ depth: Int, closed: Bool = true, layer: Bool = true) throws -> LayeredImage {
+            let stacks = String(repeating: "<stack>", count: depth) + (layer ? "<layer src='a.png'/>" : "") + String(repeating: "</stack>", count: closed ? depth : 0)
+            return try OpenRaster.read(try ORAFixtures.zip("<image w='2' h='2'>\(stacks)</image>", [("a.png", 8)]), pixels: RawPixelCodec())
         }
-        #expect(layerGroup(try nested(OpenRaster.maxDepth).nodes.first) != nil)
-        for (depth, closed) in [(OpenRaster.maxDepth + 1, true), (100_000, false)] {
-            let error = #expect(throws: CodecError.self) { try nested(depth, closed: closed) }
+        var deepest = try nested(OpenRaster.maxDepth).nodes.first
+        for _ in 2..<OpenRaster.maxDepth { deepest = layerGroup(deepest)?.children.first }
+        #expect(pixelLayer(layerGroup(deepest)?.children.first) != nil)
+        for (depth, closed, layer) in [(OpenRaster.maxDepth + 1, true, true), (OpenRaster.maxDepth + 1, true, false), (100_000, false, false)] {
+            let error = #expect(throws: CodecError.self) { try nested(depth, closed: closed, layer: layer) }
             #expect(kind(error) == "tooLarge")
         }
         for mimetype in [[("mimetype", Data("image/png".utf8))], []] {
@@ -98,9 +106,31 @@ enum ORAFixtures {
         for size in ["w='0' h='2'", "w='30001' h='2'", "w='-4' h='2'", "w='30000' h='30000'"] {
             #expect(failure("<image \(size)><stack>\(one)</stack></image>").hasPrefix("tooLarge"))
         }
-        #expect(failure("<image w='2' h='2'><stack>\(String(repeating: one, count: 8_001))</stack></image>").hasPrefix("tooLarge"))
-        let ihdr: [UInt8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 13] + Array("IHDR".utf8) + [0, 0, 0x9C, 0x40, 0, 0, 0, 10]
-        #expect(failure("<image w='2' h='2'><stack>\(one)</stack></image>", [("a.png", Data(ihdr))]).hasPrefix("tooLarge"))
+        let tiny = try RawPixelCodec().encodePNG(ORAFixtures.pixels(8, 1, 1), bitsPerChannel: 8), many = (0..<OpenRaster.maxLayers).map { ("l\($0).png", tiny) }
+        let layers = many.map { "<layer src='\($0.0)'/>" }.joined()
+        #expect(try read("<image w='30000' h='2'><stack>\(layers)</stack></image>", many).nodes.count == OpenRaster.maxLayers)
+        #expect(failure("<image w='2' h='2'><stack><stack/>\(layers)</stack></image>", many).contains("over 8000 layers and nested stacks"))
+        let side = try RawPixelCodec().encodePNG(ORAFixtures.pixels(8, OpenRaster.maxSide, 1), bitsPerChannel: 8)
+        #expect(try read("<image w='2' h='2'><stack>\(one)</stack></image>", [("a.png", side)]).nodes.count == 1)
+        #expect(failure("<image w='2' h='2'><stack>\(one)</stack></image>", [("a.png", Data("RAWP".utf8) + ORAFixtures.ihdr(1, 1).dropFirst(4))]).hasPrefix("damaged"))
+        #expect(failure("<image w='2' h='2'><stack>\(one)</stack></image>", [("a.png", ORAFixtures.ihdr(40_000, 10))]).hasPrefix("tooLarge"))
+    }
+    /// IHDR-only entries: the sum is checked before any decode, so these never reach the codec.
+    @Test func totalPixelsBounded() throws {
+        struct Stub: PixelCodec {
+            func decodePNG(_ data: Data) throws -> PixelBuffer { try PixelBuffer(width: 1, height: 1) }
+            func encodePNG(_ buffer: PixelBuffer, bitsPerChannel: Int) throws -> Data { Data() }
+        }
+        let layers = (0..<16).map { ("l\($0).png", ORAFixtures.ihdr(4_096, 4_096)) }, merged = [("mergedimage.png", ORAFixtures.ihdr(1, 1))]
+        func open(_ entries: [(String, Data)], _ codec: any PixelCodec) throws -> LayeredImage {
+            let stack = "<image w='1' h='1'><stack>\(layers.map { "<layer src='\($0.0)'/>" }.joined())</stack></image>"
+            let files = [("mimetype", Data("image/openraster".utf8)), ("stack.xml", Data(stack.utf8))] + entries
+            return try OpenRaster.read(StoredZip.archive(files), pixels: codec)
+        }
+        #expect(16 * 4_096 * 4_096 == OpenRaster.maxTotalPixels)
+        #expect(try open(layers, Stub()).nodes.count == 16)
+        let error = #expect(throws: CodecError.self) { try open(layers + merged, RawPixelCodec()) }
+        #expect(kind(error) == "tooLarge" && String(describing: error).contains("mergedimage.png"))
     }
     @Test func repeatedSourceThrows() {
         #expect(failure("<image w='2' h='2'><stack><layer src='a.png'/><layer src='a.png'/></stack></image>").contains("a.png repeats"))
@@ -131,8 +161,9 @@ enum ORAFixtures {
         }
         #expect(try opacity("-1") == 0 && opacity("2") == 1 && opacity("0.25") == 0.25)
         for text in ["nan", "inf", "-inf", "half"] { #expect(failure("<image w='2' h='2'><stack><layer src='a.png' opacity='\(text)'/></stack></image>").hasPrefix("damaged")) }
-        for x in ["99999999999999999999", "1073741825", "1.5"] { #expect(failure("<image w='2' h='2'><stack><layer src='a.png' x='\(x)'/></stack></image>").hasPrefix("damaged")) }
+        for x in ["99999999999999999999", "1073741825", "-1073741825", "-9223372036854775808", "-9223372036854775807", "1.5"] { #expect(failure("<image w='2' h='2'><stack><layer src='a.png' x='\(x)'/></stack></image>").hasPrefix("damaged")) }
         let group = layerGroup(try read("<image w='2' h='2'><stack><stack x='1073741824'><layer src='a.png' x='-1073741823'/></stack></stack></image>").nodes.first)
         #expect(pixelLayer(group?.children.first)?.x == 1, "stack offsets add to their layers'")
+        for x in [1 << 30, -(1 << 30)] { #expect(try pixelLayer(read("<image w='2' h='2'><stack><layer src='a.png' x='\(x)'/></stack></image>").nodes.first)?.x == x) }
     }
 }
