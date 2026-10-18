@@ -15,3 +15,4 @@ utc	stage	event	ref	note
 2026-10-18T22:47Z	3	wave-end	W2	wave 2 merged
 2026-10-18T22:47Z	3	wave-start	W3	AC-3 on dev 4feaaf9f
 2026-10-18T23:09Z	3	heartbeat	W3	container restart; AC-3 builder resumed from its local commit
+2026-10-18T23:30Z	3	heartbeat	-	W3 builders running; gates waiting on load
