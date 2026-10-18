@@ -222,8 +222,8 @@ func previewKey(_ asset: String, _ size: SizeClass = .medium) -> PreviewKey {
         for (seed, key) in keys.enumerated() {
             try writer.write(previewBytes(UInt8(seed)), for: key, volume: VolumeRef(id: "v", name: "V"), relativePath: "a/b")
         }
-        // The index, whole, and each preview file's header (all but its 100-byte payload).
-        let targets = try [(scratch.index, 0)] + scratch.previewFiles().map { (URL(fileURLWithPath: $0), 100) }
+        // The index and its journal, whole, and each preview file's header (all but its 100-byte payload).
+        let targets = try [(scratch.index, 0), (scratch.folder.appendingPathComponent("index.journal"), 0)] + scratch.previewFiles().map { (URL(fileURLWithPath: $0), 100) }
         let valid = try targets.map { [UInt8](try Data(contentsOf: $0.0)) }
         var rng = SplitMix64(state: 487)
         for _ in 0..<300 {

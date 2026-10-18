@@ -88,7 +88,9 @@ public enum DuplicateGroups { public static func group(_ hashes: [(id: String, h
 
 ## Pseudocode
 
-- **Layout on disk.** `folder/index.json` (entries, a version, the budget)
+- **Layout on disk.** `folder/index.json` (entries, a version, the budget;
+  version 2 adds a 16-hex generation), `folder/index.journal` (`FLPJ1:`, the
+  generation, a newline, then one JSON put or drop per line)
   and `folder/p/<2 hex>/<key digest>.bin`, the digest a stable 64-bit
   FNV-1a of the key's fields (written here, Foundation only), so names
   never carry user text. Each `.bin` is a header (`FLPV`, a version byte,
@@ -97,17 +99,19 @@ public enum DuplicateGroups { public static func group(_ hashes: [(id: String, h
   `byteCount`, `usedBytes` and `read` see the payload only. Writes go to a
   temp file then an atomic rename,
   under an exclusive lock file (the suite's `FileStore` rule), and the
-  index is rewritten after the file.
+  entries changed are appended to the journal, which past max(64, N/2)
+  records is compacted into a new snapshot; a version 1 index still loads.
 - **Budget.** After a write, while `usedBytes > budgetBytes`, remove the
   entry with the oldest `lastRead` (ties: the larger size class first).
   `lastRead` updates on read in memory and is flushed at most every 2 s and
   on deinit, so a scroll doesn't rewrite the index per thumbnail.
-- **Recovery.** An index that fails to decode or names a newer version is
-  set aside (`index.damaged.json`) and rebuilt from the files present
+- **Recovery.** An index that fails to decode or names a newer version, or
+  a damaged journal line, is set aside (`index.damaged.json` and
+  `.journal`) and rebuilt from the files present
   (key, volume and path from each file's header, `byteCount` from its
   payload; a file whose header doesn't decode is skipped),
   with `lastRead` from their modification dates; files the index names but
-  that are missing are dropped.
+  that are missing are dropped. A journal of another generation is ignored.
 - **Offline.** The caller passes the volumes mounted now; an entry whose
   `volume.id` isn't in the set reads as `.offline(volume)` and its bytes
   still read.

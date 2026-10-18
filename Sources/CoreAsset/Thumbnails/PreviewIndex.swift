@@ -1,6 +1,7 @@
 // PreviewIndex.swift: the preview store's index codec and its recovery.
-// `index.json` holds a version, the budget and the entries. An index that
-// fails to decode, names a version other than 1 or an impossible size is
+// `index.json` holds a version, the budget, the entries and (v2) the journal's
+// generation (PreviewJournal.swift). An index that fails to decode, names a
+// version other than 1 or 2, an impossible size or a damaged journal line is
 // renamed to `index.damaged.json` (kept, never deleted) and rebuilt from the
 // preview files: key, volume and path from each file's header, `byteCount`
 // from its payload, `lastRead` from its modification date. A file whose header
@@ -24,10 +25,11 @@ import Darwin
 
 /// The index file's contents.
 struct PreviewIndexFile: Codable, Sendable {
-    static let currentVersion = 1
+    static let currentVersion = 2
     var version: Int
     var budgetBytes: Int
     var entries: [PreviewEntry]
+    var generation: String?
 }
 
 extension PreviewFiles {
@@ -35,12 +37,12 @@ extension PreviewFiles {
 
     /// The entries an index's bytes list; throws when they are damaged, name
     /// another version or an impossible size.
-    static func decodeIndex(_ data: Data) throws(AssetError) -> [PreviewKey: PreviewEntry] {
+    static func decodeIndex(_ data: Data) throws(AssetError) -> (entries: [PreviewKey: PreviewEntry], generation: String?) {
         let decoded: PreviewIndexFile
         do { decoded = try JSONDecoder().decode(PreviewIndexFile.self, from: data) } catch {
             throw .invalid("the preview index is damaged")
         }
-        guard decoded.version == PreviewIndexFile.currentVersion else { throw .invalid("preview index version \(decoded.version) is not supported") }
+        guard (1...PreviewIndexFile.currentVersion).contains(decoded.version) else { throw .invalid("preview index version \(decoded.version) is not supported") }
         var entries: [PreviewKey: PreviewEntry] = [:]
         var total = 0
         for entry in decoded.entries {
@@ -49,42 +51,60 @@ extension PreviewFiles {
             total = sum
             entries[entry.key] = entry
         }
-        return entries
+        return (entries, decoded.generation)
     }
 
-    /// Writes `entries` as the index, in a stable order.
-    func saveIndex(_ entries: [PreviewKey: PreviewEntry], budgetBytes: Int) throws(AssetError) {
+    /// Writes `entries` as the index of `generation`, in a stable order; returns its size.
+    func saveIndex(_ entries: [PreviewKey: PreviewEntry], budgetBytes: Int, generation: String) throws(AssetError) -> Int {
         let sorted = entries.values.sorted { Self.digest($0.key) < Self.digest($1.key) }
-        let file = PreviewIndexFile(version: PreviewIndexFile.currentVersion, budgetBytes: budgetBytes, entries: sorted)
+        let file = PreviewIndexFile(version: PreviewIndexFile.currentVersion, budgetBytes: budgetBytes, entries: sorted, generation: generation)
         let data: Data
         do { data = try JSONEncoder().encode(file) } catch { throw .invalid("cannot encode the preview index") }
         try replace(index, with: data)
+        return data.count
     }
 
-    /// The index's entries and whether they were rebuilt: a missing index is
-    /// rebuilt from the files, a damaged one set aside first. `present` is the
-    /// sweep's result when the caller already has it.
-    func loadIndex(present: Set<String>? = nil) throws(AssetError) -> (entries: [PreviewKey: PreviewEntry], rebuilt: Bool) {
+    /// Loads the index and its journal into `ledger`, keeping its I/O counts:
+    /// a missing index is rebuilt from the files, a damaged one set aside
+    /// first. `present` is the sweep's result when the caller already has it.
+    func load(_ ledger: inout PreviewLedger, present: Set<String>? = nil) throws(AssetError) {
+        ledger = PreviewLedger(stale: true, bytesRead: ledger.bytesRead, bytesWritten: ledger.bytesWritten, indexWrites: ledger.indexWrites)
         let data: Data
         do { data = try Data(contentsOf: index) } catch {
             guard !FileManager.default.fileExists(atPath: index.path) else { throw .invalid("cannot read the preview index") }
-            return (try rebuild(from: present ?? sweep()), true)
+            ledger.entries = try rebuild(from: present ?? sweep())
+            return
         }
-        do throws(AssetError) { return (try Self.decodeIndex(data), false) } catch {
+        ledger.bytesRead += data.count
+        do throws(AssetError) {
+            let snapshot = try Self.decodeIndex(data)
+            ledger.entries = snapshot.entries
+            guard let generation = snapshot.generation,
+                  case let (header, tail)? = readJournal(from: 0, ledger: &ledger),
+                  header == Self.journalHeader(generation) else { return }  // stale: the snapshot holds everything
+            (ledger.generation, ledger.journalEnd, ledger.stale) = (generation, header.count, false)
+            try replay(tail, into: &ledger)
+        } catch {
             guard rename(index.path, damagedIndex.path) == 0 else { throw .invalid("cannot set the damaged preview index aside") }
-            return (try rebuild(from: present ?? sweep()), true)
+            _ = rename(journal.path, damagedJournal.path)
+            ledger.stale = true
+            ledger.entries = try rebuild(from: present ?? sweep())
         }
     }
 
     /// At open: deletes orphan temp files, loads (or rebuilds) the index, drops
-    /// entries whose file is gone, and saves the index when that changed it.
-    func openIndex(budgetBytes: Int) throws(AssetError) -> [PreviewKey: PreviewEntry] {
+    /// entries whose file is gone, and compacts the index when that changed it.
+    func openIndex(budgetBytes: Int) throws(AssetError) -> PreviewLedger {
         try? FileManager.default.removeItem(atPath: index.path + ".tmp")
+        try? FileManager.default.removeItem(atPath: journal.path + ".tmp")
         let present = sweep()
-        let (loaded, rebuilt) = try loadIndex(present: present)
-        let entries = loaded.filter { present.contains(Self.name(for: $0.key)) }
-        if rebuilt || entries.count != loaded.count { try saveIndex(entries, budgetBytes: budgetBytes) }
-        return entries
+        var ledger = PreviewLedger()
+        try load(&ledger, present: present)
+        let entries = ledger.entries.filter { present.contains(Self.name(for: $0.key)) }
+        if entries.count != ledger.entries.count { ledger.stale = true }
+        ledger.entries = entries
+        if ledger.stale { try compact(&ledger, budgetBytes: budgetBytes) }
+        return ledger
     }
 
     /// The `.bin` files under `p/` as `<2 hex>/<16 hex>.bin`; deletes every

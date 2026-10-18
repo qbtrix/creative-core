@@ -9,7 +9,7 @@
   {
     "note": "a preview read doesn't bump its recency, caught by readBumpsRecency",
     "file": "Sources/CoreAsset/Thumbnails/ThumbnailStore.swift",
-    "anchor": "entries[key]?.lastRead = tick()",
+    "anchor": "ledger.entries[key]?.lastRead = tick()",
     "replacement": "_ = tick()",
     "filter": "ThumbnailStoreTests"
   },

@@ -1,0 +1,9 @@
+[
+  {
+    "note": "the preview journal is never compacted and grows without bound, caught by fillingWritesLinearIndexBytes",
+    "file": "Sources/CoreAsset/Thumbnails/PreviewJournal.swift",
+    "anchor": "var needsCompaction: Bool { stale || journalRecords > max(64, entries.count / 2) }",
+    "replacement": "var needsCompaction: Bool { stale }",
+    "filter": "PreviewJournalTests"
+  }
+]
