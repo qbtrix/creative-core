@@ -1,6 +1,7 @@
 // MetalSurface.swift: one RenderSurface's storage: a SurfaceTiling grid of rgba16Float
-// textures (linear, premultiplied, one per tile, row-major) filled from a PixelBuffer
-// through HalfFloat; a tile can leave the GPU for a CPU shadow (MB-16, MetalSurface+Eviction.swift).
+// textures (linear, premultiplied, one per tile, row-major) filled from a PixelBuffer's components
+// a row at a time (Float16 on arm64, HalfFloat elsewhere, bit for bit the same), or from zeros for a
+// blank surface; a tile can leave the GPU for a CPU shadow (MB-16, MetalSurface+Eviction.swift).
 // Invariants: `tiles`, `shadows` and `lastUse` have `tiling.tileCount` entries; tile `i` is resident
 // (`tiles[i]` set, `shadows[i]` nil) or shadowed (`tiles[i]` nil, `shadows[i]` sized to `tiling.rect(i)`),
 // never neither; `residentBytes` is width x height x `bytesPerPixel` over the resident tiles; textures use
@@ -23,9 +24,9 @@ final class MetalSurface {
     /// Bytes per rgba16Float pixel: four 16-bit components.
     static let bytesPerPixel = 8
     /// Half floats per pixel (R, G, B, A).
-    private static let channels = 4
+    static let channels = 4
     /// The largest finite binary16: upload clamps each component to plus or minus this.
-    private static let halfMax: Float = 65504
+    static let halfMax: Float = 65504
 
     /// The 256 px tile grid over the surface, row-major.
     let tiling: SurfaceTiling
@@ -44,14 +45,35 @@ final class MetalSurface {
     /// infinity) and stamps every tile's `lastUse` with `clock`. Throws `RenderError.raster` for a size
     /// the tiling rejects, `RenderError.deviceLost` when the device returns no texture (the backend
     /// marks itself failed before passing it on).
-    init(device: any MTLDevice, buffer: PixelBuffer, clock: UInt64) throws {
-        let tiling = try SurfaceTiling(width: buffer.width, height: buffer.height)
+    convenience init(device: any MTLDevice, buffer: PixelBuffer, clock: UInt64) throws {
+        let components = buffer.components
+        try self.init(device: device, width: buffer.width, height: buffer.height, clock: clock) { rect in
+            try Self.halves(of: components, width: buffer.width, in: rect)
+        }
+    }
+
+    /// A `width` x `height` surface with every pixel clear: each tile filled from zeros, no conversion.
+    /// Throws as `init(device:buffer:clock:)` does.
+    convenience init(device: any MTLDevice, width: Int, height: Int, clock: UInt64) throws {
+        var zeros: [UInt16] = []
+        try self.init(device: device, width: width, height: height, clock: clock) { rect in
+            let count = rect.width * rect.height * Self.channels
+            if zeros.count != count { zeros = [UInt16](repeating: 0, count: count) }
+            return zeros
+        }
+    }
+
+    /// Allocates each tile of a `width` x `height` tiling and fills it with `halves(rect)`, that tile's
+    /// row-major RGBA binary16 values; stamps every tile's `lastUse` with `clock`.
+    private init(device: any MTLDevice, width: Int, height: Int, clock: UInt64,
+                 halves: (TileRect) throws -> [UInt16]) throws {
+        let tiling = try SurfaceTiling(width: width, height: height)
         var tiles: [(any MTLTexture)?] = []
         tiles.reserveCapacity(tiling.tileCount)
         var bytes = 0
         for index in 0..<tiling.tileCount {
             let rect = try tiling.rect(index)
-            let halves = try Self.halves(of: buffer, in: rect)
+            let values = try halves(rect)
             let descriptor = MTLTextureDescriptor.texture2DDescriptor(
                 pixelFormat: .rgba16Float, width: rect.width, height: rect.height, mipmapped: false)
             descriptor.storageMode = MetalBackend.tileStorageMode(unifiedMemory: device.hasUnifiedMemory)
@@ -61,9 +83,9 @@ final class MetalSurface {
             }
             let region = MTLRegionMake2D(0, 0, rect.width, rect.height)
             let bytesPerRow = rect.width * Self.bytesPerPixel
-            try halves.withUnsafeBytes { raw in
-                guard let base = raw.baseAddress else {
-                    throw RenderError.raster("empty upload for tile \(index), \(rect.width)x\(rect.height)")
+            try values.withUnsafeBytes { raw in
+                guard let base = raw.baseAddress, raw.count == bytesPerRow * rect.height else {
+                    throw RenderError.raster("upload of \(raw.count) bytes for tile \(index), \(rect.width)x\(rect.height)")
                 }
                 texture.replace(region: region, mipmapLevel: 0, withBytes: base, bytesPerRow: bytesPerRow)
             }
@@ -175,25 +197,37 @@ final class MetalSurface {
         return tile
     }
 
-    /// The premultiplied pixels of `rect` in `buffer` as row-major RGBA binary16, `rect.width * rect.height
-    /// * channels` values, each clamped to +-`halfMax` first (65520 and up would encode as infinity).
-    /// Throws `RenderError.raster` for a coordinate outside `buffer` (the tiling never does).
-    private static func halves(of buffer: PixelBuffer, in rect: TileRect) throws -> [UInt16] {
-        var halves: [UInt16] = []
-        halves.reserveCapacity(rect.width * rect.height * channels)
-        for y in rect.y..<(rect.y + rect.height) {
-            for x in rect.x..<(rect.x + rect.width) {
-                let pixel = try RenderError.mapping { try buffer.pixel(x: x, y: y) }
-                halves.append(half(pixel.r))
-                halves.append(half(pixel.g))
-                halves.append(half(pixel.b))
-                halves.append(half(pixel.a))
+    /// The premultiplied pixels of `rect` in a `width`-wide buffer's `components` as row-major RGBA binary16,
+    /// `rect.width * rect.height * channels` values, each clamped to +-`halfMax` first (65520 and up would
+    /// encode as infinity). Whole rows at a time through `half`. Throws `RenderError.raster` for a rect
+    /// outside the buffer (the tiling never gives one).
+    static func halves(of components: [Float], width: Int, in rect: TileRect) throws -> [UInt16] {
+        let rowCount = rect.width * channels
+        guard rect.x >= 0, rect.y >= 0, rect.x + rect.width <= width,
+              (rect.y + rect.height) * width * channels <= components.count else {
+            throw RenderError.raster("tile \(rect.x),\(rect.y) \(rect.width)x\(rect.height) is outside a \(width)-wide buffer")
+        }
+        var halves = [UInt16](repeating: 0, count: rowCount * rect.height)
+        components.withUnsafeBufferPointer { source in
+            halves.withUnsafeMutableBufferPointer { out in
+                for row in 0..<rect.height {
+                    let from = ((rect.y + row) * width + rect.x) * channels, to = row * rowCount
+                    for i in 0..<rowCount { out[to + i] = half(source[from + i]) }
+                }
             }
         }
         return halves
     }
 
-    /// `value` (finite, as buffers hold) clamped to +-`halfMax`, then encoded as binary16.
-    private static func half(_ value: Float) -> UInt16 { HalfFloat.encode(min(max(value, -halfMax), halfMax)) }
+    /// `value` (finite, as buffers hold) clamped to +-`halfMax`, then encoded as binary16: the hardware
+    /// conversion where Float16 exists (arm64), else `HalfFloat.encode`; both round to nearest, ties to even.
+    static func half(_ value: Float) -> UInt16 {
+        let clamped = min(max(value, -halfMax), halfMax)
+        #if arch(arm64)
+        return Float16(clamped).bitPattern
+        #else
+        return HalfFloat.encode(clamped)
+        #endif
+    }
 }
 #endif
