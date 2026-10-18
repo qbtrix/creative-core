@@ -75,5 +75,19 @@
     "anchor": "case 2: self = .segments(g: g, a: a, b: b, c: 0, d: -b / a, e: p[3], f: p[3])",
     "replacement": "case 2: self = .segments(g: g, a: a, b: b, c: 0, d: -b / a, e: 0, f: 0)",
     "filter": "ProfileTransformTests/everyParametricTypeRoundTrips"
+  },
+  {
+    "note": "profile transform para type 4 drops f from its linear segment",
+    "file": "Sources/CoreColor/ICC/ProfileTransform.swift",
+    "anchor": "default: self = .segments(g: g, a: a, b: b, c: p[3], d: p[4], e: p[5], f: p[6])",
+    "replacement": "default: self = .segments(g: g, a: a, b: b, c: p[3], d: p[4], e: p[5], f: 0)",
+    "filter": "ProfileTransformTests/everyParametricTypeRoundTrips"
+  },
+  {
+    "note": "profile transform para type 2 drops f below its knee",
+    "file": "Sources/CoreColor/ICC/ProfileTransform.swift",
+    "anchor": "case 2: self = .segments(g: g, a: a, b: b, c: 0, d: -b / a, e: p[3], f: p[3])",
+    "replacement": "case 2: self = .segments(g: g, a: a, b: b, c: 0, d: -b / a, e: p[3], f: 0)",
+    "filter": "ProfileTransformTests/everyParametricTypeRoundTrips"
   }
 ]
