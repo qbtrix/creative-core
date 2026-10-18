@@ -76,3 +76,4 @@ utc	stage	event	ref	note
 2026-10-18T17:02Z	-	heartbeat	-	waiting
 2026-10-18T17:06Z	anatomy	round3-start	c3e0225	cp2-a #519 and cp2-b #532 merged; round 3 gate and 6 mutation plans on c3e0225
 2026-10-18T17:06Z	anatomy	record-fix	-	drop duplicated round rows
+2026-10-18T17:07Z	build	CP-9-dispatched	wf_015ab117-5c0	CP-9 (ProfileWalkTests, ProfileBudgetTests; tests only) dispatched on c3e0225 in parallel with round 3
