@@ -72,9 +72,10 @@ struct ICCTagTable {
             let offset = try profile.int(at + 4), length = try profile.int(at + 8)
             let (end, overflow) = offset.addingReportingOverflow(length)
             // Every tag type starts with its signature and four reserved bytes (10.1), and its
-            // last byte lies inside the profile.
+            // last byte lies inside the profile. This guard is the only bound on the slice below
+            // (the profile window starts at index 0).
             guard !overflow, length >= 8, end - 1 < size else { throw ICCSpan.fail("tag '\(name)' runs past the end") }
-            if tags[name] == nil { tags[name] = try profile.span(offset, length, "tag '\(name)'") }
+            if tags[name] == nil { tags[name] = ICCSpan(bytes: profile.bytes[offset..<end]) }
         }
         header = profile
         self.tags = tags
