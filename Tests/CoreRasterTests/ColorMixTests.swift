@@ -1,6 +1,6 @@
 // ColorMixTests.swift: tone-pack TP-4's acceptance, written first (TP-1 of
 // docs/blueprints/core/features/tone-pack.md): blackAndWhite, channelMixer and
-// colorBalance. Disabled until TP-4 lands. Grays and luma are on the encoded
+// colorBalance. Grays and luma are on the encoded
 // values, as ToneFixtures states them.
 import CoreRaster
 import Testing
@@ -8,7 +8,7 @@ import Testing
 @Suite struct ColorMixTests {
     let identity = ChannelMatrix(red: [1, 0, 0, 0], green: [0, 1, 0, 0], blue: [0, 0, 1, 0], monochrome: false)
 
-    @Test(.disabled("waits on TP-4")) func neutralIsIdentity() throws {
+    @Test func neutralIsIdentity() throws {
         let b = try ToneCheck.seeded(width: 16, height: 8, seed: 0xB1)
         #expect(try b.channelMixer(identity) == b)
         #expect(try b.colorBalance(ToneBalance(shadows: .zero, midtones: .zero, highlights: .zero,
@@ -16,7 +16,7 @@ import Testing
     }
 
     /// Default mix: pure red is the reds weight (40%), pure blue the blues weight (20%).
-    @Test(.disabled("waits on TP-4")) func redWeightIsForty() throws {
+    @Test func redWeightIsForty() throws {
         for c in [ToneFixtures.pureRed, ToneFixtures.pureBlue] {
             let gray = ToneCheck.encoded(try ToneCheck.pixels(ToneCheck.row([c.pixel]).blackAndWhite(GrayMix()))[0])
             #expect(abs(gray.x - Double(c.grayDefault ?? -1)) <= 1e-5, "\(c.name)")
@@ -24,7 +24,7 @@ import Testing
         }
     }
 
-    @Test(.disabled("waits on TP-4")) func monochromeWritesOneGray() throws {
+    @Test func monochromeWritesOneGray() throws {
         let b = try ToneCheck.seeded(width: 16, height: 8, seed: 0xB2, opaque: true)
         let m = ChannelMatrix(red: [0.3, 0.6, 0.1, 0], green: [1, 0, 0, 0], blue: [0, 0, 1, 0], monochrome: true)
         for (p, q) in zip(try ToneCheck.pixels(b), try ToneCheck.pixels(b.channelMixer(m))) {
@@ -33,7 +33,7 @@ import Testing
         }
     }
 
-    @Test(.disabled("waits on TP-4")) func whiteUnmovedByShadows() throws {
+    @Test func whiteUnmovedByShadows() throws {
         let balance = ToneBalance(shadows: [100, 0, 0], midtones: .zero, highlights: .zero, preserveLuminosity: false)
         let input = [ToneCheck.pixel([1, 1, 1]), ToneCheck.pixel([0.95, 0.95, 0.95]), ToneCheck.pixel([0.1, 0.1, 0.1])]
         let out = try ToneCheck.pixels(ToneCheck.row(input).colorBalance(balance))
@@ -44,7 +44,7 @@ import Testing
         #expect(dark.x > dark.y + 1e-3)
     }
 
-    @Test(.disabled("waits on TP-4")) func preserveKeepsLuma() throws {
+    @Test func preserveKeepsLuma() throws {
         var rng = SplitMix64(seed: 0xB3)
         let input = (0..<64).map { _ in
             ToneCheck.pixel(SIMD3((0..<3).map { _ in Double.random(in: 0.2...0.8, using: &rng) }))
@@ -58,7 +58,7 @@ import Testing
         #expect(zip(input, out).contains { abs($0.r - $1.r) > 1e-3 })
     }
 
-    @Test(.disabled("waits on TP-4")) func alphaKept() throws {
+    @Test func alphaKept() throws {
         let tint = GrayMix(tint: RGBA(r: 0.9, g: 0.6, b: 0.3, a: 0.5))
         let mix = ChannelMatrix(red: [0.8, 0.2, 0, 0], green: [0, 1, 0, 0.05], blue: [0.1, 0, 0.9, 0], monochrome: false)
         let balance = ToneBalance(shadows: [20, 0, -20], midtones: [0, 10, 0], highlights: [0, 0, 30], preserveLuminosity: true)
@@ -67,7 +67,7 @@ import Testing
         try ToneCheck.expectAlphaKept("colorBalance") { try $0.colorBalance(balance) }
     }
 
-    @Test(.disabled("waits on TP-4")) func nanThrows() throws {
+    @Test func nanThrows() throws {
         let b = try ToneCheck.seeded(width: 2, height: 2, seed: 0xB4)
         let nan = Float.nan
         #expect(throws: RasterError.self) { try b.blackAndWhite(GrayMix(reds: nan)) }

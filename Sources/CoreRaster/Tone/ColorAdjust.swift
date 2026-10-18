@@ -98,7 +98,7 @@ extension PixelBuffer {
     /// Maps each straight pixel with alpha above 0 through `transform`, which
     /// must keep alpha; alpha-0 pixels are copied as they are. Throws for a
     /// non-finite result, as `setPixel` does.
-    private func mappingStraight(_ transform: (RGBA) -> RGBA) throws -> PixelBuffer {
+    func mappingStraight(_ transform: (RGBA) -> RGBA) throws -> PixelBuffer {
         var out = components
         let n = Self.channels
         for base in stride(from: 0, to: out.count, by: n) where out[base + 3] != 0 {

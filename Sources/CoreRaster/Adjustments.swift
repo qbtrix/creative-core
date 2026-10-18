@@ -159,7 +159,7 @@ extension PixelBuffer {
     }
 
     /// 0 at or below `edge0`, 1 at or above `edge1`, a smooth cubic between.
-    private static func smoothstep(_ edge0: Float, _ edge1: Float, _ x: Float) -> Float {
+    static func smoothstep(_ edge0: Float, _ edge1: Float, _ x: Float) -> Float {
         let t = min(max((x - edge0) / (edge1 - edge0), 0), 1)
         return t * t * (3 - 2 * t)
     }

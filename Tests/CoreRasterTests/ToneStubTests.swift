@@ -1,5 +1,5 @@
 // ToneStubTests.swift: the tone-pack contract stubs (TP-0) as they stand
-// before TP-3..TP-6 fill them. Every throwing op throws
+// before TP-5 and TP-6 fill them. Every throwing op throws
 // `RasterError.invalid("not built")`, `inverted()` returns its input, and
 // `AutoTone` holds the five values it is given. Each filling task deletes the
 // rows here that its op outgrows.
@@ -10,15 +10,6 @@ private let notBuilt = RasterError.invalid("not built")
 
 private func sample() throws -> PixelBuffer {
     try PixelBuffer(width: 2, height: 2, fill: RGBA(r: 0.2, g: 0.4, b: 0.6, a: 1))
-}
-
-@Test func mixStubsThrowNotBuilt() throws {
-    let buffer = try sample()
-    let identity = ChannelMatrix(red: [1, 0, 0, 0], green: [0, 1, 0, 0], blue: [0, 0, 1, 0], monochrome: false)
-    let balance = ToneBalance(shadows: .zero, midtones: .zero, highlights: .zero, preserveLuminosity: true)
-    #expect(throws: notBuilt) { try buffer.blackAndWhite(GrayMix()) }
-    #expect(throws: notBuilt) { try buffer.channelMixer(identity) }
-    #expect(throws: notBuilt) { try buffer.colorBalance(balance) }
 }
 
 @Test func mapStubsThrowNotBuilt() throws {

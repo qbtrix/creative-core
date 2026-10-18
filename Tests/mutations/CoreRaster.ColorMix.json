@@ -1,0 +1,23 @@
+[
+  {
+    "note": "blackAndWhite reads its weight by the dominant channel's index instead of the hue range, so pure blue takes the greens weight, caught by ColorMixTests.redWeightIsForty",
+    "file": "Sources/CoreRaster/Tone/ColorMix.swift",
+    "anchor": "let i = Int(hp) % 6",
+    "replacement": "let i = Int(hp) / 2",
+    "filter": "ColorMixTests"
+  },
+  {
+    "note": "colorBalance skips preserveLuminosity, so the result keeps the shifted luma, caught by ColorMixTests.preserveKeepsLuma",
+    "file": "Sources/CoreRaster/Tone/ColorMix.swift",
+    "anchor": "if b.preserveLuminosity {",
+    "replacement": "if false {",
+    "filter": "ColorMixTests"
+  },
+  {
+    "note": "colorBalance swaps the shadows smoothstep edges, so shadows weigh fully on white, caught by ColorMixTests.whiteUnmovedByShadows",
+    "file": "Sources/CoreRaster/Tone/ColorMix.swift",
+    "anchor": "let shadows = 1 - Self.smoothstep(0, 0.33, l)",
+    "replacement": "let shadows = 1 - Self.smoothstep(0.33, 0, l)",
+    "filter": "ColorMixTests"
+  }
+]
