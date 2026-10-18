@@ -15,7 +15,18 @@ public enum ProfileCurve: Hashable, Sendable {
     case gamma(Double)
     /// `curv` with n entries spread evenly over 0...1.
     case table([Double])
-    /// `para`, function type 0 to 4 with its parameters (g, a, b, c, d, e, f).
+    /// `para` (ICC.1 10.18): function `type` 0 to 4, and `params` holding exactly that type's count
+    /// of values, the first ones of g, a, b, c, d, e, f in that order (X encoded, Y linear):
+    ///
+    /// | type | params | Y |
+    /// |------|--------|---|
+    /// | 0 | 1: g | X^g |
+    /// | 1 | 3: g, a, b | (aX + b)^g when X >= -b/a, else 0 |
+    /// | 2 | 4: g, a, b, c | (aX + b)^g + c when X >= -b/a, else c |
+    /// | 3 | 5: g, a, b, c, d | (aX + b)^g when X >= d, else cX |
+    /// | 4 | 7: g, a, b, c, d, e, f | (aX + b)^g + e when X >= d, else cX + f |
+    ///
+    /// Any other type or count makes `ProfileTransform.init` and `iccData()` throw `.invalid`.
     case parametric(type: Int, params: [Double])
 }
 
