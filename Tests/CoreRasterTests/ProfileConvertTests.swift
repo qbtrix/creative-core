@@ -8,7 +8,9 @@
 // decodes with its own curve; between built-ins the sRGB curve gets no
 // curve pass, so sRGB to Display P3 and back is exact to 1e-6; a target
 // whose curve is not the sRGB curve encodes with its own curve; the input
-// is file numbers decoded with TransferCurve, not curve-free linear light.
+// is file numbers decoded with TransferCurve, not curve-free linear light;
+// the fast curve tables match the exact per-pixel path within 1e-5, and
+// values the tables do not cover (out of gamut, tiny) take that exact path.
 import CoreColor
 import CoreRaster
 import Testing
@@ -151,5 +153,53 @@ private func close(_ a: RGBA, _ b: RGBA, within eps: Float) -> Bool {
         let want = Float(TransferCurve.decode(0.5))  // encoded 0.5, held as TransferCurve's linear light
         #expect(abs(out.r - want) <= 1e-6 && abs(out.g - want) <= 1e-6 && abs(out.b - want) <= 1e-6)
         #expect(out.a == 1)
+    }
+
+    /// The fast path (curve tables, hoisted matrix) against the documented exact path, pixel by pixel, both
+    /// ways between the walk's wide-gamut gamma profile and linear sRGB: in-range values, out-of-gamut and
+    /// tiny values the tables do not cover, and alpha 0 pixels.
+    @Test func curveTablesMatchExactPath() throws {
+        let width = 64, height = 16, wide = ProfileWalkTests.wide
+        var rng = SplitMix64(seed: 0xC3_7AB1)
+        var buffer = try PixelBuffer(width: width, height: height)
+        for y in 0..<height {
+            for x in 0..<width {
+                func channel() -> Float {
+                    switch Int.random(in: 0..<20, using: &rng) {
+                    case 0: return .random(in: -0.5...0, using: &rng)
+                    case 1: return .random(in: 1...1.5, using: &rng)
+                    case 2: return .random(in: 0...1e-8, using: &rng)
+                    default: return .random(in: 0...1, using: &rng)
+                    }
+                }
+                let a: Float = (x + y) % 9 == 0 ? 0 : .random(in: 0.05...1, using: &rng)
+                try buffer.setPixel(x: x, y: y, RGBA(r: channel(), g: channel(), b: channel(), a: a).premultiplied())
+            }
+        }
+        let decode = try ProfileTransform(from: wide, to: .linearSRGB)
+        let encode = try ProfileTransform(from: .linearSRGB, to: wide)
+        let cases: [(ColorProfile, ColorProfile, (Color3) -> Color3)] = [
+            (wide, .linearSRGB, { s in
+                decode.apply(Color3(TransferCurve.encode(s.c0), TransferCurve.encode(s.c1), TransferCurve.encode(s.c2)))
+            }),
+            (.linearSRGB, wide, { s in
+                let e = encode.apply(s)
+                return Color3(TransferCurve.decode(e.c0), TransferCurve.decode(e.c1), TransferCurve.decode(e.c2))
+            }),
+        ]
+        for (source, target, exact) in cases {
+            let out = try buffer.converted(from: source, to: target)
+            for y in 0..<height {
+                for x in 0..<width {
+                    let p = try buffer.pixel(x: x, y: y), q = try out.pixel(x: x, y: y)
+                    guard p.a > 0 else { #expect(q == p); continue }
+                    let s = p.unpremultiplied(), got = q.unpremultiplied()
+                    let want = exact(Color3(Double(s.r), Double(s.g), Double(s.b)))
+                    #expect(q.a == p.a)
+                    #expect(abs(Double(got.r) - want.c0) <= 1e-5 && abs(Double(got.g) - want.c1) <= 1e-5
+                            && abs(Double(got.b) - want.c2) <= 1e-5, "\(source.name) (\(x), \(y)): \(got) against \(want)")
+                }
+            }
+        }
     }
 }

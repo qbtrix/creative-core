@@ -46,7 +46,7 @@ extension PixelBuffer {
         // Curve-only passes (same primaries, so the matrix is the identity), nil on a side that decodes as the buffer.
         let decodeIn = Self.decodesAsBuffer(source) ? nil : try Self.transform(from: source, to: Self.linear(source), for: asked)
         let encodeOut = Self.decodesAsBuffer(target) ? nil : try Self.transform(from: Self.linear(target), to: target, for: asked)
-        func convert(_ c: Color3) -> Color3 {
+        @inline(never) func convert(_ c: Color3) -> Color3 {
             var v = c
             if let decodeIn {
                 v = decodeIn.apply(Color3(TransferCurve.encode(v.c0), TransferCurve.encode(v.c1), TransferCurve.encode(v.c2)))
@@ -58,21 +58,69 @@ extension PixelBuffer {
             }
             return v
         }
-        var storage = components
-        for i in stride(from: 0, to: storage.count, by: Self.channels) {
-            let a = storage[i + 3]
-            guard a != 0 else { continue }
-            let alpha = Double(a)
-            let straight = Color3(Double(storage[i]) / alpha, Double(storage[i + 1]) / alpha, Double(storage[i + 2]) / alpha)
-            let mapped = convert(straight)
-            let rgb = (Float(mapped.c0 * alpha), Float(mapped.c1 * alpha), Float(mapped.c2 * alpha))
-            guard rgb.0.isFinite, rgb.1.isFinite, rgb.2.isFinite else {
-                let n = i / Self.channels
-                throw RasterError.invalid("converted pixel at (\(n % width), \(n / width)) is not finite")
+        // The fast path: each curve pass through its CurveTables, the matrix with hoisted coefficients (the
+        // same products, in the same order, as applyLinear), and convert(_:) for any pixel a table does not cover.
+        let inTables = decodeIn.flatMap { t in source.isGray ? nil : CurveTables { x in
+            let e = TransferCurve.encode(x)
+            return t.apply(Color3(e, e, e))
+        } }
+        let outTables = encodeOut.flatMap { t in target.isGray ? nil : CurveTables { x in
+            let v = t.apply(Color3(x, x, x))
+            return Color3(TransferCurve.decode(v.c0), TransferCurve.decode(v.c1), TransferCurve.decode(v.c2))
+        } }
+        let exactOnly = (decodeIn != nil && inTables == nil) || (encodeOut != nil && outTables == nil)
+        let (x, y, z) = (transform.applyLinear(Color3(1, 0, 0)), transform.applyLinear(Color3(0, 1, 0)),
+                         transform.applyLinear(Color3(0, 0, 1)))
+        let (m0, m1, m2, m3, m4, m5, m6, m7, m8) = (x.c0, y.c0, z.c0, x.c1, y.c1, z.c1, x.c2, y.c2, z.c2)
+        let (n, channels, hasIn, hasOut) = (CurveTables.stride, Self.channels, inTables != nil, outTables != nil)
+        // One pass from the source components into fresh storage: no copy first, and every element written.
+        var notFinite: Int?
+        let storage = components.withUnsafeBufferPointer { s in
+            (inTables?.table ?? []).withUnsafeBufferPointer { ti in
+                (outTables?.table ?? []).withUnsafeBufferPointer { to in
+                    [Float](unsafeUninitializedCapacity: s.count) { p, initialized in
+                        for i in stride(from: 0, to: s.count, by: channels) {
+                            let a = s[i + 3]
+                            p[i + 3] = a
+                            guard a != 0 else {
+                                (p[i], p[i + 1], p[i + 2]) = (s[i], s[i + 1], s[i + 2])
+                                continue
+                            }
+                            let alpha = Double(a), inverse = 1 / alpha
+                            let straight = (Double(s[i]) * inverse, Double(s[i + 1]) * inverse, Double(s[i + 2]) * inverse)
+                            var (r, g, b) = straight
+                            var covered = !exactOnly
+                            if covered, hasIn {
+                                covered = CurveTables.covers(r) && CurveTables.covers(g) && CurveTables.covers(b)
+                                if covered {
+                                    (r, g, b) = (CurveTables.lookup(ti, 0, r), CurveTables.lookup(ti, n, g),
+                                                 CurveTables.lookup(ti, 2 * n, b))
+                                }
+                            }
+                            var mapped = (m0 * r + m1 * g + m2 * b, m3 * r + m4 * g + m5 * b, m6 * r + m7 * g + m8 * b)
+                            if covered, hasOut {
+                                covered = CurveTables.covers(mapped.0) && CurveTables.covers(mapped.1)
+                                    && CurveTables.covers(mapped.2)
+                                if covered {
+                                    mapped = (CurveTables.lookup(to, 0, mapped.0), CurveTables.lookup(to, n, mapped.1),
+                                              CurveTables.lookup(to, 2 * n, mapped.2))
+                                }
+                            }
+                            if !covered {
+                                let v = convert(Color3(straight.0, straight.1, straight.2))
+                                mapped = (v.c0, v.c1, v.c2)
+                            }
+                            let rgb = (Float(mapped.0 * alpha), Float(mapped.1 * alpha), Float(mapped.2 * alpha))
+                            if !(rgb.0.isFinite && rgb.1.isFinite && rgb.2.isFinite), notFinite == nil { notFinite = i / channels }
+                            (p[i], p[i + 1], p[i + 2]) = rgb
+                        }
+                        initialized = s.count
+                    }
+                }
             }
-            storage[i] = rgb.0
-            storage[i + 1] = rgb.1
-            storage[i + 2] = rgb.2
+        }
+        if let n = notFinite {
+            throw RasterError.invalid("converted pixel at (\(n % width), \(n / width)) is not finite")
         }
         return PixelBuffer(checkedWidth: width, height: height, storage: storage)
     }
