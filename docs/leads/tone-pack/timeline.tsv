@@ -17,3 +17,4 @@ utc	stage	event	ref	note
 2026-10-18T23:09Z	3	heartbeat	W3	container restart; TP-3 builder resumed from its local commit
 2026-10-18T23:19Z	3	pr-opened	#578	task TP-3 head 52d2576b, mutate 3/3
 2026-10-18T23:19Z	3	task-start	TP-4	builder launched
+2026-10-18T23:23Z	3	pr-merged	#578	task TP-3 squash f847c42
