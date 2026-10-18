@@ -53,3 +53,4 @@ Next: PC-4, PC-5 building (PC-3 #498 merged with round-2 recovery header); PC-ha
 - 14:31Z: #502 merged (n7 closed). PC-hash waits on a dev CI run with a green Linux job.
 
 - 14:43Z: PC-4 opened #510 (3597824, 6/6 CoreAsset.PreviewIndex, 399 lines). rebuiltEntriesKeepTheirVolume disabled until PC-5; PC-5 told to enable it and merge the C4 sentence. PC-8 note: relaunch 40 ms budget at 2,000 entries not measured yet.
+- 2026-10-18T14:54:08Z PC-4 #510 merged (14:43:48Z). Dev CI run 364 (c294adb) queued; holds #502 and #510.
