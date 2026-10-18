@@ -4,6 +4,14 @@
 # FAIL and exits with the real status. CI runs exactly this on Linux and
 # macOS; run it locally before every PR.
 #
+# swift test runs in two passes. The first runs every test in parallel except
+# the wall-clock budget tests in `budget_tests`; the second runs only those,
+# one at a time with nothing else running, so a loaded runner's other suites
+# can't push a budget over. A new test that gates on a measured duration goes
+# in that list. The gate fails unless the two passes together ran exactly the
+# tests `swift test list` names, and the second ran exactly the listed budget
+# tests, so a filter that drifts from the skip can't drop a test.
+#
 # The lint fails on crash-prone constructs in Sources/ (tests are exempt):
 #   try!  as!  fatalError(  preconditionFailure(  precondition(  unowned  .first!  .last!
 #
@@ -115,13 +123,55 @@ fi
 echo "== swift build"
 swift build ${flags[@]+"${flags[@]}"} || fail "swift build"
 
-echo "== swift test"
-log="$(mktemp)"
-trap 'rm -f "$log"' EXIT
-swift test ${flags[@]+"${flags[@]}"} 2>&1 | tee "$log"
+# Every test that gates on a measured wall-clock duration (debug-build gates,
+# per-case hang guards, and the optimized-only budget suites), as
+# `swift test list` names them. Thread-CPU budgets (RetouchBoundsTests) and
+# report-only timings (ContrastSpeedTests, WhiteBalanceSpeedTests) stay parallel.
+budget_tests=(
+  'FlareCoreTests\.EngineStressTests/'
+  'FlareCoreTests\.FlareBudgetTests/'
+  'FlareCoreTests\.DragStepBudgetTests/'
+  'FlareCoreTests\.StageBudgetTests/'
+  'FlareCoreTests\.CommandFuzzTests/'
+  'FlareCoreTests\.HitTestTests/hugeOutlineHitNearFirstSegmentReturnsQuickly\('
+  'FlareCoreTests\.FormatLimitsTests/oversizeInputThrowsBeforeParsing\('
+  'FlareCoreTests\.SVGPathDataTests/fuzzThrowsInsteadOfCrashing\('
+  'FlareCoreTests\.XMLTokensTests/fuzzThrowsInsteadOfCrashing\('
+  'FlareCoreTests\.SVGImportFuzzTests/mutationsThrowOrImport\('
+  'FlareCoreTests\.LottieImportFuzzTests/mutationsThrowOrImport\('
+  'CoreRasterTests\.groupManyBudget\('
+  'CoreRasterTests\.PSDFuzzTests/'
+  'CoreRasterTests\.ORAFuzzTests/'
+  'CoreRasterTests\.CodecBudgetTests/'
+  'CoreRasterTests\.ContrastHighlightsTargetTests/'
+  'CoreRasterTests\.RasterThroughputBudgetTests/'
+  'CoreRasterTests\.DuplicateWalkTests/(hash|group)Budget\('
+  'CoreAssetTests\.ThumbnailStoreRecoveryTests/fuzzedIndexThrowsOrRecovers\('
+  'CoreAssetTests\.PreviewWalkTests/(relaunch|read)Budget\('
+  'CoreRenderTests\.RenderBudgetTests/'
+  'CoreRenderMetalTests\.MetalBudgetTests/'
+)
+budget=$(IFS='|'; echo "${budget_tests[*]}")
+# ran LOG: the tests every "Test run with N tests" line in LOG adds up to.
+ran() { sed -nE 's/.*Test run with ([0-9]+) tests?.*/\1/p' "$1" | awk '{ n += $1 } END { print n + 0 }'; }
+
+echo "== swift test (parallel, without the budget tests)"
+log="$(mktemp)" serial_log="$(mktemp)" list="$(mktemp)"
+trap 'rm -f "$log" "$serial_log" "$list"' EXIT
+swift test ${flags[@]+"${flags[@]}"} --skip "$budget" 2>&1 | tee "$log"
 status=${PIPESTATUS[0]}
 (( status == 0 )) || fail "swift test exited $status"
 
+echo "== swift test (budget tests, one at a time)"
+swift test ${flags[@]+"${flags[@]}"} --skip-build --no-parallel --filter "$budget" 2>&1 | tee "$serial_log"
+status=${PIPESTATUS[0]}
+(( status == 0 )) || fail "budget swift test exited $status"
+
+swift test list ${flags[@]+"${flags[@]}"} --skip-build 2>/dev/null >"$list" || fail "swift test list"
+total=$(grep -c . "$list") budgets=$(grep -cE "$budget" "$list")
+parallel=$(ran "$log") serial=$(ran "$serial_log")
 echo
-grep -E "Test run with [0-9]+ tests?" "$log" | tail -1
+echo "parallel pass: $parallel tests; budget pass: $serial tests; swift test list: $total ($budgets budget)"
+(( serial == budgets && parallel + serial == total )) \
+  || fail "the two swift test passes did not run exactly the listed tests; check budget_tests"
 echo "CI: PASS"
