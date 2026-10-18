@@ -36,3 +36,4 @@ utc	stage	event	ref	note
 2026-10-18T12:02Z	3	contract-check	#480 #481	base exporter seams accepted
 2026-10-18T12:10Z	fix-merged	pr-merged	#484	ap-r1 merged d51ef90
 2026-10-18T12:12Z	-	heartbeat	-	waiting
+2026-10-18T12:13Z	slice-done	belt-slice-done	#442	AP-sample, AP-export done, run 39126063033

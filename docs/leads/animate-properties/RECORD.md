@@ -4,15 +4,15 @@ Issue: #442 · Packet: docs/blueprints/core/features/animate-properties.md
 Run: act-1a14ddaebc8-nwqn · Session: line lead (engine-contracts, animate-properties, color-profiles) · Started: 2026-10-18T07:15Z
 Stage: 3 line wave 4 (AP-7, AP-8 building) + fixes from engine-contracts round 3
 Base: 9d01972365f04da4fe6074e9bdd56ceab5b616a8
-Next: Belt-Slice-Done AP-sample and AP-export when dev CI 39126063033 (d51ef90) shows Linux green. Then Anatomy round 1 on the AP-sample/AP-export surface. AP-4 waits on path-geometry PG-edit (#430); AP-9, AP-10 after.
+Next: Anatomy round 1 on the AP-sample/AP-export surface (includes the AP-7/AP-8 base-exporter edits). AP-4 waits on path-geometry PG-edit (#430); AP-9, AP-10 after.
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
 |---|---|---|---|---|---|
 | AP-a | AP-1, AP-2 | engine-contracts:EC-f | merged-done | 39118832683 | |
 | AP-cmd | AP-3, AP-4 | AP-a; path-geometry:PG-edit (AP-4) | open | | |
-| AP-sample | AP-5, AP-6 | AP-a | merged (5430f32); waits a dev run with it | | |
-| AP-export | AP-7, AP-8 | AP-sample | merged (#480 b80c087, #481 0c92bfc); waits a dev run with them | | |
+| AP-sample | AP-5, AP-6 | AP-a | merged-done (run 39126063033, Linux green on d51ef90) | | |
+| AP-export | AP-7, AP-8 | AP-sample | merged-done (run 39126063033, Linux green on d51ef90) | | |
 | AP-z | AP-9, AP-10 | AP-cmd, AP-export | open | | |
 
 ## Tasks
