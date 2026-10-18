@@ -1,0 +1,30 @@
+[
+  {
+    "note": "the repeat packet writes n copies (as -n) instead of 1 - n, caught by PackBitsTests.publishedExample",
+    "file": "Sources/CoreRaster/Codecs/PackBits.swift",
+    "anchor": "let run = 1 - header",
+    "replacement": "let run = -header",
+    "filter": "PackBitsTests"
+  },
+  {
+    "note": "the row bound uses < for <=, so a run that exactly fills the row throws, caught by PackBitsTests.runPastEndThrows",
+    "file": "Sources/CoreRaster/Codecs/PackBits.swift",
+    "anchor": "guard length <= count - written else {",
+    "replacement": "guard length < count - written else {",
+    "filter": "PackBitsTests"
+  },
+  {
+    "note": "the byte reader bound lets a read run one byte past the end, caught by PackBitsTests.everyTruncationThrows",
+    "file": "Sources/CoreRaster/Codecs/ByteReader.swift",
+    "anchor": "guard count >= 0, count <= remaining else {",
+    "replacement": "guard count >= 0, count <= remaining + 1 else {",
+    "filter": "PackBitsTests"
+  },
+  {
+    "note": "the encoder caps a repeat run at 129 bytes, past the 128 a header byte can hold, caught by PackBitsTests.seededRowsRoundTrip",
+    "file": "Sources/CoreRaster/Codecs/PackBits.swift",
+    "anchor": "while index + run < bytes.count, run < 128, bytes[index + run] == value { run += 1 }",
+    "replacement": "while index + run < bytes.count, run < 129, bytes[index + run] == value { run += 1 }",
+    "filter": "PackBitsTests"
+  }
+]
