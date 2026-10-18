@@ -44,6 +44,12 @@ private func stamp(_ url: URL) throws -> String {
         }
         #expect(store.usedBytes == 300)
         #expect(try Data(contentsOf: scratch.damagedIndex) == index.prefix(index.count / 2))
+        // The volume and path come back from each file's header.
+        #expect(store.entries(on: card).count == 3)
+        #expect(store.availability(of: keys[0], mounted: []) == .offline(card))
+        try store.remove(asset: keys[0].asset)
+        #expect(try store.read(keys[0]) == nil)
+        #expect(store.usedBytes == 200)
     }
 
     @Test(.disabled("waits on PC-4")) func newerSetAside() throws {

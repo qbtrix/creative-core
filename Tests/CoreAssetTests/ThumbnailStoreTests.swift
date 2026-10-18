@@ -1,7 +1,7 @@
 // ThumbnailStoreTests.swift: the preview store's write, read, relaunch, budget,
-// remove, atomic replace and lock (PC-3), from the packet's acceptance tests,
-// plus a seeded fuzz of the index it reads. Also holds the scratch-folder
-// helpers the recovery and offline suites share.
+// remove, atomic replace, lock and file header (PC-3), plus a seeded fuzz of
+// the index and headers. Also holds the scratch-folder helpers the recovery
+// and offline suites share.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -201,27 +201,39 @@ func previewKey(_ asset: String, _ size: SizeClass = .medium) -> PreviewKey {
         }
     }
 
-    @Test func fuzzedIndexThrowsOrOpens() throws {
+    @Test func filesCarryTheirKeyAheadOfThePayload() throws {
+        let scratch = try PreviewScratch()
+        let store = try ThumbnailStore(folder: scratch.folder, budgetBytes: 1 << 20)
+        try store.write(previewBytes(1), for: previewKey("a"), volume: nil, relativePath: nil)
+        let fileA = try #require(try scratch.previewFiles().first)
+        let bytes = try Data(contentsOf: URL(fileURLWithPath: fileA))
+        #expect(bytes.prefix(4) == Data("FLPV".utf8) && bytes.suffix(100) == previewBytes(1))
+        try store.write(previewBytes(2), for: previewKey("b"), volume: nil, relativePath: nil)
+        let fileB = try #require(try scratch.previewFiles().first { $0 != fileA })
+        try bytes.write(to: URL(fileURLWithPath: fileB))  // a's file under b's name
+        #expect(throws: AssetError.self) { try store.read(previewKey("b")) }
+    }
+
+    @Test func fuzzedIndexAndHeadersThrowOrRead() throws {
         let scratch = try PreviewScratch()
         let keys = SizeClass.allCases.map { previewKey("IMG_0001", $0) }
-        do {
-            let store = try ThumbnailStore(folder: scratch.folder, budgetBytes: 1 << 20)
-            for (seed, key) in keys.enumerated() {
-                try store.write(previewBytes(UInt8(seed)), for: key, volume: VolumeRef(id: "v", name: "V"), relativePath: "a/b")
-            }
+        let writer = try ThumbnailStore(folder: scratch.folder, budgetBytes: 1 << 20)
+        for (seed, key) in keys.enumerated() {
+            try writer.write(previewBytes(UInt8(seed)), for: key, volume: VolumeRef(id: "v", name: "V"), relativePath: "a/b")
         }
-        let valid = [UInt8](try Data(contentsOf: scratch.index))
-        var rng = SplitMix64(seed: 487)
+        // The index, whole, and each preview file's header (all but its 100-byte payload).
+        let targets = try [(scratch.index, 0)] + scratch.previewFiles().map { (URL(fileURLWithPath: $0), 100) }
+        let valid = try targets.map { [UInt8](try Data(contentsOf: $0.0)) }
+        var rng = SplitMix64(state: 487)
         for _ in 0..<300 {
-            var bytes = valid
-            if Bool.random(using: &rng) {
-                bytes = Array(bytes.prefix(Int.random(in: 0..<bytes.count, using: &rng)))
-            } else {
-                for _ in 0..<Int.random(in: 1...4, using: &rng) {
-                    bytes[Int.random(in: 0..<bytes.count, using: &rng)] = UInt8.random(in: 0...255, using: &rng)
-                }
+            for (target, bytes) in zip(targets, valid) { try Data(bytes).write(to: target.0) }
+            let pick = Int.random(in: 0..<targets.count, using: &rng)
+            var bytes = valid[pick]
+            let span = bytes.count - targets[pick].1
+            if Bool.random(using: &rng) { bytes = Array(bytes.prefix(Int.random(in: 0..<span, using: &rng))) } else {
+                for _ in 0..<Int.random(in: 1...4, using: &rng) { bytes[Int.random(in: 0..<span, using: &rng)] = .random(in: 0...255, using: &rng) }
             }
-            try Data(bytes).write(to: scratch.index)
+            try Data(bytes).write(to: targets[pick].0)
             do throws(AssetError) {
                 let store = try ThumbnailStore(folder: scratch.folder, budgetBytes: 1 << 20)
                 for (seed, key) in keys.enumerated() {
@@ -240,12 +252,9 @@ func previewKey(_ asset: String, _ size: SizeClass = .medium) -> PreviewKey {
 private struct SplitMix64: RandomNumberGenerator {
     var state: UInt64
 
-    init(seed: UInt64) { state = seed }
-
     mutating func next() -> UInt64 {
         state &+= 0x9E37_79B9_7F4A_7C15
-        var z = state
-        z = (z ^ (z >> 30)) &* 0xBF58_476D_1CE4_E5B9
+        var z = (state ^ (state >> 30)) &* 0xBF58_476D_1CE4_E5B9
         z = (z ^ (z >> 27)) &* 0x94D0_49BB_1331_11EB
         return z ^ (z >> 31)
     }

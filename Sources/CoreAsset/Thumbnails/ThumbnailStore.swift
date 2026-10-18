@@ -1,16 +1,13 @@
-// ThumbnailStore.swift: the disk preview store's public contract and its write,
-// read, remove and budget. Encoded preview bytes are keyed by the caller's asset
-// key, content token and size class, held to a byte budget by least-recently-used
-// eviction, and each entry names its volume and relative path so a preview of a
-// file on an unplugged drive still reads and reports offline. CoreAsset stays
-// dependency-free: the store keeps opaque `Data` and never decodes images.
-// Invariants: every failure is an `AssetError`; a write or remove reloads the
-// index under the folder lock (PreviewFiles.swift), so stores sharing a folder
-// never lose each other's entries, replaces the preview file before the index,
-// and leaves `usedBytes <= budgetBytes` by dropping the entry read longest ago
-// first (ties: the larger size class); a read bumps `lastRead` in memory and the
-// next write persists it. Status: PC-4 adds index recovery and the read flush,
-// PC-5 volume entries and `availability`, which answer empty until then.
+// ThumbnailStore.swift: the disk preview store's public contract. Encoded
+// preview bytes are keyed by the caller's asset key, content token and size
+// class, held to a byte budget by least-recently-used eviction, and each entry
+// names its volume and relative path so a preview of a file on an unplugged
+// drive still reads and reports offline. CoreAsset stays dependency-free: the
+// store keeps opaque `Data` and never decodes images.
+// Invariants: every failure is an `AssetError`; writes and removes reload the
+// index under the folder lock (PreviewFiles.swift) and leave `usedBytes <=
+// budgetBytes`, counting payloads only; a read checks its file's header names
+// its key. PC-4 adds recovery and the read flush, PC-5 volumes.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -73,7 +70,7 @@ public enum Availability: Hashable, Sendable {
 }
 
 /// A preview store in one folder. A store, not a model value: it is a class
-/// because it owns files, and its entries change only on its serial queue.
+/// because it owns files and, from PC-3, one lock that guards its index.
 public final class ThumbnailStore: @unchecked Sendable {
     /// The folder the store keeps its index and preview files in.
     public let folder: URL
@@ -85,7 +82,7 @@ public final class ThumbnailStore: @unchecked Sendable {
     private var entries: [PreviewKey: PreviewEntry]
     private var clock = Date.distantPast
 
-    /// Opens the store in `folder`, creating the folder when it is missing.
+    /// Opens (or, from PC-3, creates) the store in `folder`.
     public init(folder: URL, budgetBytes: Int) throws(AssetError) {
         guard budgetBytes >= 0 else { throw .invalid("a preview budget cannot be negative") }
         let files = PreviewFiles(folder: folder)
@@ -99,7 +96,8 @@ public final class ThumbnailStore: @unchecked Sendable {
     /// Stores `data` as the preview for `key`, replacing any earlier one.
     public func write(_ data: Data, for key: PreviewKey, volume: VolumeRef?, relativePath: String?) throws(AssetError) {
         try changeFolder { (current: inout [PreviewKey: PreviewEntry]) throws(AssetError) in
-            try files.replace(files.file(for: key), with: data)
+            let header = PreviewFileHeader(key: key, volume: volume, relativePath: relativePath)
+            try files.replace(files.file(for: key), with: PreviewFiles.encode(header, payload: data))
             current[key] = PreviewEntry(key: key, byteCount: data.count, volume: volume,
                                         relativePath: relativePath, lastRead: tick())
             evict(&current)
@@ -112,17 +110,14 @@ public final class ThumbnailStore: @unchecked Sendable {
             guard entries[key] != nil else { return nil }
             let file = files.file(for: key)
             let data: Data
-            do {
-                data = try Data(contentsOf: file)
-            } catch {
-                guard FileManager.default.fileExists(atPath: file.path) else {
-                    entries[key] = nil
-                    return nil
-                }
+            do { data = try Data(contentsOf: file) } catch {
+                guard FileManager.default.fileExists(atPath: file.path) else { entries[key] = nil; return nil }
                 throw .invalid("cannot read preview file \(file.lastPathComponent)")
             }
+            let (header, payload) = try PreviewFiles.decode(data)
+            guard header.key == key else { throw .invalid("preview file \(file.lastPathComponent) is another key's") }
             entries[key]?.lastRead = tick()
-            return data
+            return payload
         }
     }
 
@@ -164,8 +159,8 @@ public final class ThumbnailStore: @unchecked Sendable {
         try locked { () throws(AssetError) in
             try files.withLock { () throws(AssetError) in
                 var current = try files.loadIndex()
-                for (key, mine) in entries {
-                    if let theirs = current[key], theirs.lastRead < mine.lastRead { current[key]?.lastRead = mine.lastRead }
+                for (key, mine) in entries where current[key].map({ $0.lastRead < mine.lastRead }) == true {
+                    current[key]?.lastRead = mine.lastRead
                 }
                 try body(&current)
                 try files.saveIndex(current, budgetBytes: budgetBytes)
@@ -177,7 +172,6 @@ public final class ThumbnailStore: @unchecked Sendable {
     /// While over budget, drops the entry read longest ago and its file.
     private func evict(_ current: inout [PreviewKey: PreviewEntry]) {
         var used = current.values.reduce(0) { $0 + $1.byteCount }
-        guard used > budgetBytes else { return }
         for victim in current.values.sorted(by: Self.evictsBefore) where used > budgetBytes {
             current[victim.key] = nil
             used -= victim.byteCount

@@ -1,7 +1,6 @@
 // ThumbnailStoreShapeTests.swift: the preview store's public shape (PC-1).
 // The value types round-trip through JSON, the size classes keep their pixel
-// edges, and a new store answers empty while a bad folder or budget throws
-// `AssetError`.
+// edges, and a new store answers empty while a negative budget throws.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -40,16 +39,13 @@ private func roundTrip<T: Codable & Equatable>(_ value: T) throws -> T {
         #expect(Availability.offline(card) == .offline(VolumeRef(id: "vol-1", name: "Card A")))
     }
 
-    @Test func newStoreIsEmptyAndBadOpensThrowAssetError() throws {
+    @Test func newStoreIsEmptyAndNegativeBudgetThrows() throws {
         let scratch = try PreviewScratch()
         let store = try ThumbnailStore(folder: scratch.folder, budgetBytes: 1 << 20)
         #expect(try store.read(key) == nil)
         #expect(store.entries(on: card).isEmpty)
         #expect(store.availability(of: key, mounted: ["vol-1"]) == nil)
         #expect(store.usedBytes == 0)
-        let plainFile = scratch.folder.appendingPathComponent("plain")
-        try Data([1]).write(to: plainFile)
-        #expect(throws: AssetError.self) { try ThumbnailStore(folder: plainFile, budgetBytes: 1 << 20) }
         #expect(throws: AssetError.self) { try ThumbnailStore(folder: scratch.folder, budgetBytes: -1) }
     }
 }

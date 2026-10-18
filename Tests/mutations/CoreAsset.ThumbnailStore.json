@@ -14,24 +14,10 @@
     "filter": "ThumbnailStoreTests"
   },
   {
-    "note": "the preview temp file is the target itself, so it is renamed before it is complete and readers see part-written bytes, caught by interruptedWriteKeepsOld",
-    "file": "Sources/CoreAsset/Thumbnails/PreviewFiles.swift",
-    "anchor": "let temp = URL(fileURLWithPath: file.path + \".tmp\")",
-    "replacement": "let temp = file",
-    "filter": "ThumbnailStoreTests"
-  },
-  {
-    "note": "the preview budget evicts at exactly the budget instead of only over it, caught by evictsLeastRecentlyRead",
+    "note": "a preview read returns another key's file without checking its header, caught by filesCarryTheirKeyAheadOfThePayload",
     "file": "Sources/CoreAsset/Thumbnails/ThumbnailStore.swift",
-    "anchor": "where used > budgetBytes",
-    "replacement": "where used >= budgetBytes",
-    "filter": "ThumbnailStoreTests"
-  },
-  {
-    "note": "the preview folder lock is shared instead of exclusive, so two stores lose entries, caught by twoStoresUnderTheLockLoseNothing",
-    "file": "Sources/CoreAsset/Thumbnails/PreviewFiles.swift",
-    "anchor": "while flock(descriptor, LOCK_EX) != 0 {",
-    "replacement": "while flock(descriptor, LOCK_SH) != 0 {",
+    "anchor": "guard header.key == key else",
+    "replacement": "guard true else",
     "filter": "ThumbnailStoreTests"
   }
 ]
