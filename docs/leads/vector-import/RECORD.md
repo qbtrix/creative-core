@@ -59,3 +59,10 @@ Next: VI-5 building, VI-7 building; Anatomy round 2 verdicts pending; Slice-Done
 - 2026-10-18T15:43Z incident: the disk filled up at about 15:39Z. I deleted the .build caches of finished worktrees and told the running agents to rerun any gate that failed. No dev CI run newer than 364 yet. #518 (LC R2-2) needs a rebase onto 168c73d.
 - 2026-10-18T16:05Z heartbeat.
 - 2026-10-18T16:05Z Another session's PRs fix the macOS stack-depth SIGBUS: #520 (ORA read, write and ==), #521 (Lottie JSON), #522 (SVG groups). They are open and checked together on ci/macos-reds-combined. My R2-3 fixer is stood down so it doesn't duplicate them. VI-svg, VI-lottie and LC-ora merged-done still need a green Linux job on a dev run that holds their PRs.
+- 2026-10-18T16:08Z The stack-depth fixer has stood down. #520 covers ORA completely. #521 (Lottie, from another session) leaves gaps that matter to this feature:
+  - Nothing pins `checkNesting` yet. A deep non-group array would catch it.
+  - No mutation entries cover the moved group-walk invariants: the shapes merge, `placed` and depth + 1.
+  - No test checks that a group's own shape goes in once, at its first paint.
+  - The JSON value's `==` and `hash` still recurse; that only matters to tests.
+
+  Plan: after #521 merges, run a follow-up fixer PR in round 3 that reuses the unpushed lead/vector-import-R2-3 work in /tmp/claude-0/-home-user-creative-core/ddd489f2-63fc-556a-b5ff-d210f2448d09/scratchpad/vi (13 mutation entries, 25/25 caught, not gated yet).
