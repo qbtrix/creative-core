@@ -5,8 +5,8 @@
 // bottom-to-top nodes (nested stacks become groups, stack offsets add to their
 // layers'), sums every `src` and `mergedimage.png` IHDR within
 // `maxTotalPixels`, then decodes each once. ORA carries no ICC
-// profile, so `profile` is nil. Write lands in a later task and throws
-// `CodecError.unsupported("not built")` until then.
+// profile, so `profile` is nil. `write`'s validation and encoding live in
+// OpenRasterWrite.swift.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -71,10 +71,7 @@ public enum OpenRaster {
         func decode(_ path: String) throws -> PixelBuffer {
             if let buffer = decoded[path] { return buffer }
             guard let bytes = entries[path] else { throw CodecError.damaged("missing layer source \(path)") }
-            let buffer: PixelBuffer
-            do { buffer = try pixels.decodePNG(bytes) } catch let error as CodecError { throw error } catch {
-                throw CodecError.pixelCodec("\(path): \(error)")
-            }
+            let buffer = try codec(path) { try pixels.decodePNG(bytes) }
             try checkSize(buffer.width, buffer.height, path)
             decoded[path] = buffer
             return buffer
@@ -119,6 +116,13 @@ public enum OpenRaster {
 
     static let pngSignature: [UInt8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
 
+    /// `body`'s result; an error that is not a `CodecError` becomes `pixelCodec` naming `path`.
+    static func codec<T>(_ path: String, _ body: () throws -> T) throws -> T {
+        do { return try body() } catch let error as CodecError { throw error } catch {
+            throw CodecError.pixelCodec("\(path): \(error)")
+        }
+    }
+
     static func checkSize(_ width: Int, _ height: Int, _ path: String) throws {
         guard (1...maxSide).contains(width), (1...maxSide).contains(height),
               (try? PixelBuffer.validatedSize(width: width, height: height)) != nil else {
@@ -128,9 +132,13 @@ public enum OpenRaster {
 
     /// Saves an image as `.ora` bytes, encoding each layer's PNG with `pixels`.
     /// `extra` holds app entries stored beside the standard ones, keyed by path
-    /// (for example `photo/document.json`).
+    /// (for example `photo/document.json`); one that collides with a standard
+    /// entry throws `unsupported`. Throws a `CodecError`, before encoding
+    /// anything, for an image the format cannot hold (see OpenRasterWrite.swift):
+    /// a profile, a missing composite, a mask or clipping. A group's `isOpen`
+    /// is not kept; it reopens open.
     public static func write(_ image: LayeredImage, pixels: any PixelCodec,
                              extra: [String: Data] = [:]) throws -> Data {
-        throw CodecError.unsupported("not built")
+        try encode(image, pixels: pixels, extra: extra)
     }
 }
