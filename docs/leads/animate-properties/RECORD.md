@@ -2,9 +2,9 @@
 
 Issue: #442 · Packet: docs/blueprints/core/features/animate-properties.md
 Run: act-1a14ddaebc8-nwqn · Session: line lead (engine-contracts, animate-properties, color-profiles) · Started: 2026-10-18T07:15Z
-Stage: 4 Anatomy round 4 (the last) on f6d1492: gate CI: PASS try 1, mutation 41/41; critic panel wf_23eb0eca-072 running
+Stage: 5 Anatomy budget spent (4 rounds); open findings filed as gaps #540, #541; AP-cmd and AP-z wait on path-geometry PG-edit (#430)
 Base: 9d01972365f04da4fe6074e9bdd56ceab5b616a8
-Next: round 4 critic panel; findings left open after round 4 become gap issues. AP-4 waits on path-geometry PG-edit (#430); AP-9, AP-10 (AP-z) after it, so the feature stays open beyond this run.
+Next: nothing more this run. When PG-edit (#430) merges, a later lead builds AP-4, then AP-9/AP-10 (AP-z, feature-done) and runs Mac-Finish for AP-z.
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -53,5 +53,5 @@ Next: round 4 critic panel; findings left open after round 4 become gap issues. 
 |---|---|---|---|---|---|---|
 | 1 | ca537c1 | CI: PASS | 16/16 (6 plans) | clarity, contract, undo, robustness, compat, tests | 10 (5 major; 2 are planned AP-4/AP-z) | ap1-a (strokeWidth key helper, Lottie alpha as animated o, export mutation entries), ap1-b (colour command errors pinned, frame bound), ap1-c (RemoveShape/RemoveTextShape drop and renumber index tracks), ap1-d (index docs, quad morph test, sampler mutations) |
 | 2 | c294adb | CI: PASS | 32/32 (6 plans) | clarity, contract, compat, robustness, tests | 8 (1 major), 0 refuted | ap2-a (3 findings), ap2-b (5 findings, after ec4-a) |
-
 | 3 | f1f2d7f | CI: PASS (1404 tests) | 38/38 (6 plans) | clarity, contract, compat, robustness, tests | 5 (1 major) | ap3-a #534 (ee1bd83: one missing-text error, redo-checked colour key drag), ap3-b #539 (f6d1492: Lottie golden bytes, alpha interpolation test, 2 mutations) |
+| 4 | f6d1492 | CI: PASS try 1 (1381 + 35 tests) | 41/41 (6 plans) | clarity, contract, compat, robustness, tests | 4 (1 major), 0 refuted; not clean | none: budget spent; gaps #540 (symbol-layer static colour/path, keyed SVG golden, colour undo mutants; p2) and #541 (Lottie shape-track error names layer, shape, cause; p3) |
