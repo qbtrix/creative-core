@@ -32,3 +32,4 @@ utc	stage	event	ref	note
 2026-10-18T14:26Z	pr	PC-hash R2-1 #502
 2026-10-18T14:31Z	merged	PC-hash R2-1 #502
 2026-10-18T14:31Z	heartbeat	PC-4, PC-5 building; PC-hash Slice-Done waits on a dev CI run holding #502 (latest is run 360, 72fbef6)
+2026-10-18T14:43Z	pr	PC-4 #510

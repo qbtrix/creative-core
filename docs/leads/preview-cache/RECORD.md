@@ -51,3 +51,5 @@ Next: PC-4, PC-5 building (PC-3 #498 merged with round-2 recovery header); PC-ha
 - 14:26Z: PC-hash fixer R2-1 opened #502 (866346b, 8/8, 284 lines): multi-index table, max distance 16 to 10, 100k in 0.62 to 0.73 s (was 248 s), random grouping 0.1%. Closes n7 on merge.
 
 - 14:31Z: #502 merged (n7 closed). PC-hash waits on a dev CI run with a green Linux job.
+
+- 14:43Z: PC-4 opened #510 (3597824, 6/6 CoreAsset.PreviewIndex, 399 lines). rebuiltEntriesKeepTheirVolume disabled until PC-5; PC-5 told to enable it and merge the C4 sentence. PC-8 note: relaunch 40 ms budget at 2,000 entries not measured yet.
