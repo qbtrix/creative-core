@@ -1,0 +1,30 @@
+[
+  {
+    "note": "the perceptual hash keeps the DC term (window from 0), caught by differentPicturesFar and hashIsDeterministic",
+    "file": "Sources/CoreRaster/Hash/PerceptualHash.swift",
+    "anchor": "let window = 1...8",
+    "replacement": "let window = 0...7",
+    "filter": "PerceptualHashTests"
+  },
+  {
+    "note": "the perceptual hash thresholds at the mean instead of the median, caught by differentPicturesFar and hashIsDeterministic",
+    "file": "Sources/CoreRaster/Hash/PerceptualHash.swift",
+    "anchor": "let threshold = (sorted[middle - 1] + sorted[middle]) / 2",
+    "replacement": "let threshold = coefficients.reduce(0, +) / Double(coefficients.count)",
+    "filter": "PerceptualHashTests"
+  },
+  {
+    "note": "the perceptual hash takes its DCT over 16 x 16 instead of 32 x 32, caught by differentPicturesFar",
+    "file": "Sources/CoreRaster/Hash/PerceptualHash.swift",
+    "anchor": "let side = 32",
+    "replacement": "let side = 16",
+    "filter": "PerceptualHashTests"
+  },
+  {
+    "note": "the perceptual hash distance counts OR bits instead of XOR, caught by hashIsDeterministic",
+    "file": "Sources/CoreRaster/Hash/PerceptualHash.swift",
+    "anchor": "(bits ^ other.bits).nonzeroBitCount",
+    "replacement": "(bits | other.bits).nonzeroBitCount",
+    "filter": "PerceptualHashTests"
+  }
+]
