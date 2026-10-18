@@ -2,13 +2,10 @@ import Foundation
 import Testing
 @testable import FlareCore
 
-/// The import contract (VI-1): the values, the error and the two stubs.
+/// The import contract (VI-1): the values, the error and the entry points.
 struct ImportShapeTests {
-    @Test func svgStubThrowsNotBuilt() {
-        let data = Data("<svg xmlns=\"http://www.w3.org/2000/svg\"/>".utf8)
-        #expect(throws: ImportError.unsupported("not built")) {
-            _ = try SVGImport.scene(from: data, name: "Scene 1")
-        }
+    @Test func svgReadsOnlyAnSVGRoot() {
+        #expect(throws: ImportError.notThisFormat) { _ = try SVGImport.scene(from: Data("<html/>".utf8), name: "Scene 1") }
     }
 
     @Test func lottieReaderIsBuilt() throws {

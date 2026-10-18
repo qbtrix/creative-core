@@ -48,7 +48,7 @@ struct SVGImportTests {
         }
     }
 
-    @Test(.disabled("waits on VI-5")) func basicShapesAndSize() throws {
+    @Test func basicShapesAndSize() throws {
         let (scene, report) = try scene("shapes.svg")
         let layers = scene.layers
         #expect(scene.name == "Scene 1" && scene.width == 200 && scene.height == 100 && report.skipped.isEmpty)
@@ -65,14 +65,16 @@ struct SVGImportTests {
         #expect(bare.width == 1000 && bare.height == 1000)
     }
 
-    @Test(.disabled("waits on VI-5")) func fillOpacity() throws { #expect(try layers("shapes.svg")[5].shapes[0].fill == .solid(Color(r: 1, g: 0, b: 0, a: 0.5))) }
+    @Test func fillOpacity() throws { #expect(try layers("shapes.svg")[5].shapes[0].fill == .solid(Color(r: 1, g: 0, b: 0, a: 0.5))) }
 
-    @Test(.disabled("waits on VI-5")) func styleWinsOverAttribute() throws { #expect(try layers("shapes.svg")[6].shapes[0].fill == .solid(Self.blue)) }
+    @Test func styleWinsOverAttribute() throws { #expect(try layers("shapes.svg")[6].shapes[0].fill == .solid(Self.blue)) }
 
-    /// translate(100,0) then scale(2) on the child; then rotate, rotate about (50, 50), skewX over a translate.
-    @Test(.disabled("waits on VI-5")) func groupTransformOrder() throws {
+    /// translate(100,0) then scale(2) on the child; then rotate, rotate about (50, 50), skewX over a translate;
+    /// then a rotated group over a translated child, and translate then skewX in one list, where order matters.
+    @Test func groupTransformOrder() throws {
         let layers = try layers("groups.svg")
-        #expect(layers.count == 4)
+        #expect(layers.count == 6)
+        #expect(try ImportFixture.near(layers[4], [(0, 10), (-10, 10)]) && ImportFixture.near(layers[5], [(10, 10), (20, 10)]))
         #expect(try ImportFixture.near(layers[0], [(120, 0), (140, 0)]) && ImportFixture.near(layers[1], [(0, 10), (0, 20)]))
         #expect(try ImportFixture.near(layers[2], [(50, 60), (50, 70)]) && ImportFixture.near(layers[3], [(15, 10), (25, 20)]))
     }
@@ -91,12 +93,35 @@ struct SVGImportTests {
         #expect(text.position == Point(x: 10, y: 20) && text.fill == .solid(Self.red))
     }
 
-    @Test(.disabled("waits on VI-5")) func reportValidateAndDamageThrows() throws {
+    @Test func reportValidateAndDamageThrows() throws {
         #expect(try Set(scene("skipped.svg").1.skipped) == ["filter (3)", "pattern (1)", "use (1)"])
         for name in ["shapes.svg", "groups.svg", "paint.svg", "skipped.svg"] {
             #expect(throws: Never.self, "\(name)") { try FlareFormat.validate(Document(scenes: [try scene(name).0])) }
         }
         #expect(ImportFixture.kind { _ = try scene("damaged.svg") } == "damaged")
         #expect(ImportFixture.error { _ = try SVGImport.scene(from: ImportFixture.data("shapes.json"), name: "s") } == .notThisFormat)
+    }
+
+    func svg(_ body: String) throws -> (Scene, ImportReport) {
+        try SVGImport.scene(from: Data("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\">\(body)</svg>".utf8), name: "s")
+    }
+
+    @Test func missingFillIsBlack() throws { #expect(try svg("<rect width='1' height='1'/>").0.layers[0].shapes[0].fill == .solid(.black)) }
+
+    @Test func fillNoneIsClear() throws {
+        #expect(try svg("<rect width='1' height='1' fill='none'/>").0.layers[0].shapes[0].fill == .solid(Color(r: 0, g: 0, b: 0, a: 0)))
+    }
+
+    /// rx and ry round the corners apart; one alone sets both, then each clamps to half its side.
+    @Test func rectRxRy() throws {
+        let shapes = try svg("<rect width='40' height='20' rx='10' ry='5'/><rect width='40' height='20' ry='30'/>").0.layers.map { $0.shapes[0] }
+        let corners = shapes.map { $0.path.map { [$0.elements[0], $0.elements[2]].compactMap(\.endPoint) } ?? [] }
+        #expect(corners == [[Point(x: 10, y: 0), Point(x: 40, y: 5)], [Point(x: 20, y: 0), Point(x: 40, y: 10)]])
+    }
+
+    @Test func nonFiniteCoordinatesThrowDamaged() {
+        for body in ["<path transform='scale(1e300)' d='M1e300 0 L0 0'/>", "<g transform='scale(1e300) scale(1e300)'/>", "<path transform='skewX(90)' d='M0 0 L1 1'/>"] {
+            #expect(ImportFixture.kind { _ = try svg(body) } == "damaged", "\(body)")
+        }
     }
 }

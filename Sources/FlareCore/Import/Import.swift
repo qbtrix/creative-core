@@ -7,8 +7,8 @@
 // checks the byte size first and counts elements or layers and depth as it
 // goes, throwing `ImportError.tooLarge` past the caps below. What a reader
 // does not turn into the model it lists in the `ImportReport` instead of
-// dropping it in silence. Until the SVG reader is built, it throws
-// `ImportError.unsupported("not built")`; Lottie is in LottieImport.swift.
+// dropping it in silence. The SVG reader is in SVGImport.swift and its paint
+// in SVGStyle.swift; Lottie is in LottieImport.swift.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -57,7 +57,7 @@ public enum SVGImport {
 
     /// One scene named `name` from the SVG in `data`, with what was skipped.
     public static func scene(from data: Data, name: String) throws -> (Scene, ImportReport) {
-        throw ImportError.unsupported("not built")
+        try read(data, name: name)
     }
 }
 

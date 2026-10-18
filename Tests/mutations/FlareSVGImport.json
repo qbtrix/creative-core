@@ -1,0 +1,8 @@
+[
+  {"note": "svg import groupTransformOrder: a child's transform applies inside its parent's", "file": "Sources/FlareCore/Import/SVGImport.swift", "anchor": "let ctm = parent * (try transform(node.attributes[\"transform\"]))", "replacement": "let ctm = (try transform(node.attributes[\"transform\"])) * parent", "filter": "SVGImportTests"},
+  {"note": "svg import transform list order: the leftmost entry is outermost", "file": "Sources/FlareCore/Import/SVGImport.swift", "anchor": "case (\"skewX\", 1): m = m * Matrix(a: 1, b: 0, c: skew, d: 1, tx: 0, ty: 0)", "replacement": "case (\"skewX\", 1): m = Matrix(a: 1, b: 0, c: skew, d: 1, tx: 0, ty: 0) * m", "filter": "SVGImportTests"},
+  {"note": "svg import styleWinsOverAttribute: a style declaration beats the presentation attribute", "file": "Sources/FlareCore/Import/SVGStyle.swift", "anchor": "Dictionary(attributes.map { ($0.key, $0.value) } + inline) { $1 }", "replacement": "Dictionary(inline + attributes.map { ($0.key, $0.value) }) { $1 }", "filter": "SVGImportTests"},
+  {"note": "svg import fillOpacity scales the fill alpha", "file": "Sources/FlareCore/Import/SVGStyle.swift", "anchor": "let alpha = (style.fillOpacity ?? 1) * style.opacity", "replacement": "let alpha = style.opacity", "filter": "SVGImportTests"},
+  {"note": "svg import fill none is clear, not black", "file": "Sources/FlareCore/Import/SVGStyle.swift", "anchor": "case .none: return .solid(Self.clear)", "replacement": "case .none: return .solid(.black)", "filter": "SVGImportTests"},
+  {"note": "svg import rect rx ry round the corners apart", "file": "Sources/FlareCore/Import/SVGImport.swift", "anchor": "let squash = rx / ry", "replacement": "let squash = 1.0", "filter": "SVGImportTests"}
+]

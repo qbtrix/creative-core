@@ -40,7 +40,7 @@ struct SVGImportFuzzTests {
     static let svg = "<svg xmlns=\"http://www.w3.org/2000/svg\">"
     func kind(_ body: String) -> String? { ImportFixture.kind { _ = try SVGImport.scene(from: Data((Self.svg + body + "</svg>").utf8), name: "s") } }
 
-    @Test(.disabled("waits on VI-5")) func mutationsThrowOrImport() throws {
+    @Test func mutationsThrowOrImport() throws {
         let seeds = try ["shapes.svg", "groups.svg", "paint.svg", "skipped.svg"].map(ImportFixture.data)
         ImportFuzz.run(seeds: seeds, cases: 1_000, seed: 0x5649_5F35) { data in
             let (scene, _) = try SVGImport.scene(from: data, name: "fuzz")
@@ -48,10 +48,13 @@ struct SVGImportFuzzTests {
         }
     }
 
-    @Test(.disabled("waits on VI-5")) func capsOnBytesElementsAndNesting() {
-        #expect(kind(String(repeating: " ", count: SVGImport.maxBytes)) == "tooLarge")
-        #expect(kind(String(repeating: "<g/>", count: SVGImport.maxElements + 1)) == "tooLarge")
-        #expect(kind(String(repeating: "<g>", count: 200) + String(repeating: "</g>", count: 200)) == nil)
-        #expect(kind(String(repeating: "<g>", count: 300) + String(repeating: "</g>", count: 300)) == "tooLarge")
+    /// Each cap reads exactly at its limit and throws one past it; the root `<svg>` is one element and depth 1.
+    @Test func capsOnBytesElementsAndNesting() {
+        let comment = { (n: Int) in "<!--" + String(repeating: " ", count: n - Self.svg.utf8.count - "<!---->".utf8.count - "</svg>".utf8.count) + "-->" }
+        #expect(kind(comment(SVGImport.maxBytes)) == nil && kind(comment(SVGImport.maxBytes + 1)) == "tooLarge")
+        #expect(kind(String(repeating: "<g/>", count: SVGImport.maxElements - 1)) == nil)
+        #expect(kind(String(repeating: "<g/>", count: SVGImport.maxElements)) == "tooLarge")
+        let nest = { (n: Int) in String(repeating: "<g>", count: n) + String(repeating: "</g>", count: n) }
+        #expect(kind(nest(SVGImport.maxDepth - 1)) == nil && kind(nest(SVGImport.maxDepth)) == "tooLarge")
     }
 }
