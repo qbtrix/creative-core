@@ -42,6 +42,7 @@ Next: EC-2 #450 merges after its Metal check -> wave 3 (EC-3, EC-4, EC-5). Round
 - EC-2 also touched compile-only switch arms (CPUBackend+Ops, AdjustTable, ParitySamples, MetalBackend+Warmup) and four tests; the lead allowed it in the prompt. W1ContractTests is a suite inside RenderContractTests.swift so the PR stays at 15 files.
 - EC-8 adds no new test: the packet names the existing exporter tests and goldens as the oracle for the move.
 - Round 1 finding on Sources/CoreRaster/Codecs/PixelCodec.swift (RawPixelCodec guards without mutations) belongs to layered-codecs, not this feature: left to that lead.
+- dev full CI run 39111859890 on c614b52 is red (#453): Linux EngineStressTests.thousandCommandsNearTheLayerLimitStayInBudget 5.75s > 5s; macOS green. The range is this run's merges and validate runs per command, so the lead treats it as ours: a fixer measures before/after and removes the W1 happy-path cost (budget untouched). EC-f Belt-Slice-Done waits for a green Linux job.
 
 ## Open
 - none
