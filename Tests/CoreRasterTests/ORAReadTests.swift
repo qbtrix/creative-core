@@ -114,10 +114,15 @@ enum ORAFixtures {
     @Test func overlappingEntriesThrow() throws {
         let one = [UInt8](try ZipStore.archive(["0000": Data(repeating: 7, count: 1 << 16)], first: nil))
         let localCount = 30 + 4 + (1 << 16), entry = Array(one[localCount..<(localCount + 50)])
-        let le = { (value: Int, count: Int) in (0..<count).map { UInt8(truncatingIfNeeded: value >> (8 * $0)) } }
+        let le = { (value: Int, count: Int) -> [UInt8] in (0..<count).map { UInt8(truncatingIfNeeded: value >> (8 * $0)) } }
         var bytes = Array(one[..<localCount])
-        for index in 0..<1_000 { bytes += entry[..<46] + Array(String(1_000 + index).suffix(4).utf8) }
-        bytes += [0x50, 0x4B, 5, 6] + le(0, 4) + le(1_000, 2) + le(1_000, 2) + le(50_000, 4) + le(localCount, 4) + le(0, 2)
+        for index in 0..<1_000 {
+            bytes += entry[..<46]
+            bytes += Array(String(1_000 + index).suffix(4).utf8)
+        }
+        // One field per statement: the chained `+` is too slow for the macOS runner's type checker.
+        let end: [[UInt8]] = [[0x50, 0x4B, 5, 6], le(0, 4), le(1_000, 2), le(1_000, 2), le(50_000, 4), le(localCount, 4), le(0, 2)]
+        for field in end { bytes += field }
         #expect(throws: CodecError.damaged("entries overlap at 1001")) { try ZipStore.entries(Data(bytes)) }
     }
     @Test func attributesBounded() throws {
