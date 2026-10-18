@@ -16,7 +16,11 @@ public enum PSD {
     /// The most pixels the canvas, every layer and every mask may hold together
     /// (summed from the record bounds before any channel is decoded): the
     /// same cap as one `PixelBuffer`, so a file cannot multiply it by layers.
+    /// The canvas counts once because the merged image decodes only its
+    /// colour channels and one alpha; its other channels are skipped.
     public static let maxTotalPixels = PixelBuffer.maxPixels
+    /// The deepest groups may nest, the same as `OpenRaster.maxDepth`.
+    public static let maxDepth = OpenRaster.maxDepth
 
     /// Saves an image as 8-bit RGB PSD bytes that `read` reopens equal. Throws
     /// a `CodecError`, before writing anything, for an image the format cannot

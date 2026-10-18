@@ -86,6 +86,7 @@ public struct RawPixelCodec: PixelCodec { }                                     
 // Sources/CoreRaster/Codecs/PSD.swift (LC-1 stubs, LC-4 read, LC-7 write)
 public enum PSD { public static let maxSide = 30_000; public static let maxLayers = 8_000
     public static let maxTotalPixels = PixelBuffer.maxPixels                     // summed area of every layer, mask and composite
+    public static let maxDepth = OpenRaster.maxDepth                             // nested groups, 256
     public static func read(_ data: Data) throws -> LayeredImage
     public static func write(_ image: LayeredImage) throws -> Data }
 // Sources/CoreRaster/Codecs/OpenRaster.swift (LC-1 stubs, LC-6 read, LC-8 write)
@@ -118,13 +119,15 @@ public enum ZipStore { public static func archive(_ files: [String: Data], first
   `BlendMode`; an unknown key reads as `.normal`, which `PSD.read`'s doc
   comment says, and `PSDReadTests` has a case for it), opacity, clipping,
   flags (hidden bit), mask
-  record (bounds, default colour 0 or 255 → `defaultCoverage` 0 or 1,
-  disabled flag → `isDisabled`), Pascal name, then tagged
+  record (bounds, default colour byte → `defaultCoverage` byte / 255, so
+  the spec's 0 or 255 reads 0 or 1, disabled flag → `isDisabled`), Pascal
+  name, then tagged
   blocks: `luni` (Unicode name), `lsct` (section divider: open folder,
   closed folder, bounding divider) for groups. Channel data per channel:
   compression 0 raw, 1 RLE (PackBits rows with per-row byte counts),
   2 and 3 (zip) → `unsupported("zip-compressed channel")` (no inflate in
-  the module; see Not in this packet).
+  the module; see Not in this packet). A channel id that repeats in one
+  record → `damaged`; groups nested deeper than `maxDepth` → `tooLarge`.
 - **PSD limits.** Every record's bounds (layer and mask) are four Int32
   values; width and height are computed in Int (`right − left`,
   `bottom − top`, so no Int32 overflow), a negative one → `damaged`, one
@@ -136,7 +139,10 @@ public enum ZipStore { public static func archive(_ files: [String: Data], first
   left before it is read.
 - **PSD pixels.** Pixels become premultiplied linear
   Float32 through CoreColor's sRGB tables. The merged image section fills
-  `composite`.
+  `composite`: only its colour channels and, with a negative layer count,
+  the first alpha are decoded, so the canvas counts once in
+  `maxTotalPixels`; every other channel (up to 56) is skipped by its RLE
+  row lengths, or its plane size when raw, without allocating.
 - **Groups.** Records are bottom to top; a bounding divider opens a group
   and the matching folder record closes it, carrying its name, opacity,
   blend (`pass` → nil) and hidden flag. Unbalanced dividers → `damaged`.
@@ -218,7 +224,7 @@ is the prose task.
 | LC-1 | `CodecShapeTests`: every entry point exists, stubs throw `unsupported("not built")`; `RawPixelCodec` round-trips | a signature is missing | none: declarations |
 | LC-2 | the byte builder's fixture opens nowhere yet (suites disabled) | – | – |
 | LC-3 | `PackBitsTests`: the published example row decodes exactly; encode then decode is identity for 1,000 seeded rows; a run past the row's end throws; the reader throws at every truncation point of a 64-byte sample | a run overflows the row | `CoreRaster.PackBits`: run length `n` for `1 − n` → `PackBitsTests.publishedExample`; row bound `<=` for `<` → `.runPastEndThrows` |
-| LC-4 | `PSDReadTests`: `layers.psd` gives 5 nodes with exact bounds, opacity 0.6 Multiply, hidden, clipped, the mask at its offset with default 0, the group's two children, the Unicode name; grayscale opens as grey RGB; the merged image matches; version 2, CMYK, 16-bit, zip channels each throw their named error; an unknown blend key reads as `.normal` (`.unknownBlendKeyIsNormal`); unbalanced dividers throw `damaged` (`.unbalancedDividersThrow`); a mask with default colour 255 and the disabled flag reads `defaultCoverage` 1 and `isDisabled` (`.maskDefaultAndDisabled`); `.refusesHuge`: record bounds over `maxSide`, a canvas within `maxSide` but over `PixelBuffer.maxPixels`, summed areas over `maxTotalPixels` and more than `maxLayers` records each throw `tooLarge` before any channel is decoded; `PSDFuzzTests`: 1,000 seeded mutations of three fixtures throw or open, never crash, each under 1 s | a layer is misplaced or a damaged file crashes | `CoreRaster.PSDRead`: negative layer count not treated as "merged alpha" → `PSDReadTests.negativeCountHasAlpha`; group closes at the bounding divider (order inverted) → `.groupsNest`; mask offset ignored → `.maskAtOffset`; hidden bit 1 for bit 2 → `.hiddenFlag` |
+| LC-4 | `PSDReadTests`: `layers.psd` gives 5 nodes with exact bounds, opacity 0.6 Multiply, hidden, clipped, the mask at its offset with default 0, the group's two children, the Unicode name; grayscale opens as grey RGB; the merged image matches; version 2, CMYK, 16-bit, zip channels each throw their named error; an unknown blend key reads as `.normal` (`.unknownBlendKeyIsNormal`); unbalanced dividers throw `damaged` (`.unbalancedDividersThrow`); a mask with default colour 255 and the disabled flag reads `defaultCoverage` 1 and `isDisabled` (`.maskDefaultAndDisabled`); `.refusesHuge`: record bounds over `maxSide`, a canvas within `maxSide` but over `PixelBuffer.maxPixels`, summed areas over `maxTotalPixels` (a mask alone, or layers each under it) and more than `maxLayers` records each throw `tooLarge` before any channel is decoded; a layer side of exactly `maxSide` reads and `maxSide + 1` throws (`.layerSideBoundary`); `maxDepth` nested groups read and one more throws `tooLarge` (`.groupDepthLimit`); a repeated channel id throws `damaged` (`.repeatedChannelIdThrows`); a merged image with 52 extra channels decodes colour and alpha only (`.mergedImageSkipsExtraChannels`); `PSDFuzzTests`: 1,000 seeded mutations of three fixtures throw or open, never crash, each under 1 s | a layer is misplaced or a damaged file crashes | `CoreRaster.PSDRead`: negative layer count not treated as "merged alpha" → `PSDReadTests.negativeCountHasAlpha`; group closes at the bounding divider (order inverted) → `.groupsNest`; mask offset ignored → `.maskAtOffset`; hidden bit 1 for bit 2 → `.hiddenFlag` |
 | LC-5 | `ORAContainerTests`: `.pinnedGoldenBytes`, an archive laid out field by field from the PKWARE APPNOTE, is equal (Photo's adoption of `ZipStore` checks its own output against this pinned golden); `mimetype` at offset 30; a compressed entry throws `compressedEntry` naming it; truncated archives throw | a byte moves from Photo's output | `CoreRaster.ZipStore`: CRC table reflected wrong → `ORAContainerTests.crcMatches`; paths not sorted → `.pinnedGoldenBytes` |
 | LC-6 | `ORAReadTests`: both third-party files open with offsets, opacity, hidden layers and `svg:multiply` as `.multiply`; a nested stack is a group; a missing `src` throws `damaged` naming it; a wrong or missing `mimetype` throws `notThisFormat`; `mergedimage.png` fills `composite`, and a file without it reads nil; `.refusesHuge`: a canvas or PNG IHDR over `maxSide` or `PixelBuffer.maxPixels`, more than `maxLayers` layers and nested stacks, stacks deeper than `maxDepth` and an entry without a PNG IHDR (`damaged`) each throw before any decode, while `maxLayers` layers, a `maxSide` canvas and `maxDepth` stacks read; `.totalPixelsBounded`: IHDRs summing past `maxTotalPixels` throw `tooLarge` before any decode, and exactly at it read; `.repeatedSourceThrows`: two layers naming one `src` throw `damaged`; `.overlappingEntriesThrow`: a zip whose entry sizes sum past its byte count throws `damaged`; `ORAFuzzTests`: 1,000 seeded mutations of `stack.xml` throw or open | an offset or op is lost | `CoreRaster.StackXML`: `x` read as `y` → `ORAReadTests.offsetsKept`; visibility default hidden → `.visibleByDefault` |
 | LC-7 | `PSDWriteTests`: `PSD.read(PSD.write(img)) == img` for the fixture and 50 seeded stacks; every channel RLE; the file opens through LC-2's byte reader expectations; `.invalidValuesThrow`: NaN, −0.1 and 1.5 opacity, an offset past Int32 and `bitsPerChannel` 12 each throw a `CodecError`, never trap | a written attribute reads back different | `CoreRaster.PSDWrite`: divider records swapped → `PSDWriteTests.groupsRoundTrip`; opacity rounded down → `.opacityRoundTrips` |
@@ -232,7 +238,7 @@ is the prose task.
 |---|---|---|
 | Open a deep PSD | 100 layers, 12 MP ≤ 1.5 s, peak memory ≤ 1.3 GB | `CodecBudgetTests.openDeep` (release, reported; G1 reuses the fixture) |
 | Never crashes | 1,000 PSD and 1,000 ORA fuzz cases throw or open, each under 1 s | `PSDFuzzTests`, `ORAFuzzTests` |
-| Bounded | PSD: `maxSide` on every record's bounds (Int from Int32), a canvas over `PixelBuffer.maxPixels`, `maxLayers`, `maxTotalPixels` from the record bounds before any channel is decoded, and every length checked before allocation. ORA: `OpenRaster.maxSide` on the canvas and each PNG's IHDR before decode, `maxTotalPixels` summed from every layer's and the merged image's IHDR before any decode, `maxLayers`, `maxDepth`, x and y within ±2^30, a repeated `src` refused, and `ZipStore`'s entry sizes summing to at most the archive size | `PSDReadTests.refusesHuge`, `ORAReadTests.refusesHuge`, `.totalPixelsBounded`, `.attributesBounded`, `.repeatedSourceThrows`, `.overlappingEntriesThrow` |
+| Bounded | PSD: `maxSide` on every record's bounds (Int from Int32), a canvas over `PixelBuffer.maxPixels`, `maxLayers`, `maxDepth`, `maxTotalPixels` from the record bounds before any channel is decoded, the merged image decoding only colour and one alpha, and every length checked before allocation. ORA: `OpenRaster.maxSide` on the canvas and each PNG's IHDR before decode, `maxTotalPixels` summed from every layer's and the merged image's IHDR before any decode, `maxLayers`, `maxDepth`, x and y within ±2^30, a repeated `src` refused, and `ZipStore`'s entry sizes summing to at most the archive size | `PSDReadTests.refusesHuge`, `.groupDepthLimit`, `.mergedImageSkipsExtraChannels`, `ORAReadTests.refusesHuge`, `.totalPixelsBounded`, `.attributesBounded`, `.repeatedSourceThrows`, `.overlappingEntriesThrow` |
 | Same bytes as Photo | the moved container writes the pinned golden, built field by field from the PKWARE APPNOTE; Photo's adoption checks its own output against this pinned golden | `ORAContainerTests.pinnedGoldenBytes` |
 | Linux-safe | Foundation only; PNG through `PixelCodec` | `scripts/ci` |
 

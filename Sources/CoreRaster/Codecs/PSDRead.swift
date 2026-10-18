@@ -8,12 +8,17 @@
 //   against `PSD.maxSide`, `PSD.maxLayers` or the bytes left before anything
 //   is allocated from it; the canvas, layer and mask bounds together stay
 //   within `PSD.maxTotalPixels` before any channel decodes; and a pixel
-//   buffer is only built from planes that were fully decoded.
+//   buffer is only built from planes that were fully decoded. The merged
+//   image decodes only its colour channels and, with a negative layer count,
+//   one alpha, so the canvas counts once; every other channel is skipped by
+//   its RLE row lengths (or its plane size when raw) without allocating.
+// - A layer record names each channel id once; groups nest at most
+//   `PSD.maxDepth` deep.
 // - Records run bottom to top: a bounding divider opens a group and the
 //   folder record above it closes it, carrying the group's attributes.
 //   Unbalanced dividers throw `damaged`.
-// - Colour becomes premultiplied linear light through the sRGB curve; mask
-//   and opacity bytes are fractions of 255.
+// - Colour becomes premultiplied linear light through the sRGB curve; mask,
+//   mask default colour and opacity bytes are fractions of 255.
 import CoreColor
 #if canImport(FoundationEssentials)
 import FoundationEssentials
@@ -31,8 +36,9 @@ extension PSD {
         try reader.skip(try reader.length32()) // image resources
         var section = try reader.reader(try reader.length32())
         let (nodes, mergedAlpha) = try readLayers(&section, header)
-        let planes = try readPlanes(&reader, count: header.channels, width: header.width, height: header.height)
-        let alpha = mergedAlpha && planes.count > header.colorChannels ? planes[header.colorChannels] : nil
+        let keep = min(header.channels, header.colorChannels + (mergedAlpha ? 1 : 0))
+        let planes = try readPlanes(&reader, count: header.channels, keep: keep, width: header.width, height: header.height)
+        let alpha = planes.count > header.colorChannels ? planes[header.colorChannels] : nil
         let composite = try buffer(width: header.width, height: header.height,
                                    color: Array(planes.prefix(header.colorChannels)), alpha: alpha)
         return LayeredImage(width: header.width, height: header.height, nodes: nodes, composite: composite)
@@ -61,10 +67,11 @@ extension PSD {
                 var data = try info.reader(channel.length)
                 let rect = channel.id == -2 ? record.mask?.rect ?? .empty : record.rect
                 if channel.id >= -2, Int(channel.id) < header.colorChannels {
-                    planes[channel.id] = try readPlanes(&data, count: 1, width: rect.width, height: rect.height).first
+                    planes[channel.id] = try readPlanes(&data, count: 1, keep: 1, width: rect.width, height: rect.height).first
                 }
             }
             if let type = record.section, opens.contains(type) {
+                guard parents.count < PSD.maxDepth else { throw CodecError.tooLarge("groups nested over \(PSD.maxDepth) deep") }
                 parents.append(current)
                 current = []
                 continue
@@ -111,26 +118,33 @@ extension PSD {
                           clipsToBelow: record.clipping != 0, mask: mask)
     }
 
-    /// `count` planes of `width` x `height` bytes behind one compression value:
-    /// 0 raw, 1 RLE (every row's byte count first, then the PackBits rows).
-    private static func readPlanes(_ reader: inout ByteReader, count: Int, width: Int, height: Int) throws -> [[UInt8]] {
+    /// The first `keep` of `count` planes of `width` x `height` bytes behind one
+    /// compression value: 0 raw, 1 RLE (every row's byte count first, then the
+    /// PackBits rows). The other planes are skipped, never decoded or allocated.
+    private static func readPlanes(_ reader: inout ByteReader, count: Int, keep: Int,
+                                   width: Int, height: Int) throws -> [[UInt8]] {
         switch try reader.u16() {
         case 0:
             let size = try ByteReader.multiplying(width, height)
-            return try (0..<count).map { _ in try reader.bytes(size) }
+            let planes = try (0..<keep).map { _ in try reader.bytes(size) }
+            try reader.skip(try ByteReader.multiplying(count - keep, size))
+            return planes
         case 1:
-            guard width > 0, height > 0 else { return Array(repeating: [], count: count) }
-            let rows = try ByteReader.multiplying(count, height)
+            guard width > 0, height > 0 else { return Array(repeating: [], count: keep) }
+            let rows = try ByteReader.multiplying(count, height), kept = try ByteReader.multiplying(keep, height)
             guard try ByteReader.multiplying(rows, 2) <= reader.remaining else {
                 throw CodecError.damaged("\(rows) RLE row counts pass the end")
             }
-            let lengths = try (0..<rows).map { _ in Int(try reader.u16()) }
+            let lengths = try (0..<kept).map { _ in Int(try reader.u16()) }
+            var skipped = 0
+            for _ in kept..<rows { skipped += Int(try reader.u16()) } // at most 56 x maxSide x 65,535: no overflow
             var planes: [[UInt8]] = [], plane: [UInt8] = []
             for (index, length) in lengths.enumerated() {
                 var row = try reader.reader(length)
                 plane += try PackBits.decode(&row, count: width)
                 if (index + 1) % height == 0 { planes.append(plane); plane = [] }
             }
+            try reader.skip(skipped)
             return planes
         case 2, 3: throw CodecError.unsupported("zip-compressed channel")
         case let other: throw CodecError.damaged("compression \(other)")
@@ -247,6 +261,7 @@ private struct PSDLayerRecord {
         let channelCount = Int(try r.u16())
         guard channelCount <= 56 else { throw CodecError.damaged("\(channelCount) layer channels") }
         channels = try (0..<channelCount).map { _ in (try r.i16(), try r.length32()) }
+        guard Set(channels.map(\.id)).count == channelCount else { throw CodecError.damaged("a channel id repeats in one layer") }
         blendKey = try Self.key(&r)
         (opacity, clipping, flags) = (try r.u8(), try r.u8(), try r.u8())
         try r.skip(1)
