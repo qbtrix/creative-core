@@ -100,9 +100,9 @@ private func hashesApart<T: Hashable>(_ value: T, _ other: T) -> Bool {
         #expect(hashesApart(FlipAxis.horizontal, .vertical))
         #expect(hashesApart(CanvasAnchor.topLeft, .bottomRight))
         #expect(hashesApart(MatteSource.alpha, .luminance))
-        let range = HSLRange(hue: 10, saturation: -20, lightness: 5)
-        #expect(hashesApart(range, HSLRange()))
-        #expect(hashesApart(HSLAdjustment(reds: range), HSLAdjustment()))
+        let shift = HSLShift(hue: 10, saturation: -20, lightness: 5)
+        #expect(hashesApart(shift, HSLShift()))
+        #expect(hashesApart(HSLAdjustment(reds: shift), HSLAdjustment()))
         #expect(hashesApart(GrayMix(reds: 40, yellows: 60, greens: 40, cyans: 60, blues: 20, magentas: 80, tint: red),
                             GrayMix(reds: 40, yellows: 60, greens: 40, cyans: 60, blues: 20, magentas: 80, tint: nil)))
         let channels = ChannelMatrix(red: SIMD4(1, 0, 0, 0), green: SIMD4(0, 1, 0, 0), blue: SIMD4(0, 0, 1, 0),

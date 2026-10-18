@@ -32,7 +32,7 @@ import Testing
         return [
             .vibrance(25),
             .hueSaturation(hue: 10, saturation: -20, lightness: 5),
-            .hsl(HSLAdjustment(reds: HSLRange(hue: 10))),
+            .hsl(HSLAdjustment(reds: HSLShift(hue: 10))),
             .blackAndWhite(GrayMix(reds: 40, yellows: 60, greens: 40, cyans: 60, blues: 20, magentas: 80)),
             .channelMixer(ChannelMatrix(red: [1, 0, 0, 0], green: [0, 1, 0, 0], blue: [0, 0, 1, 0], monochrome: false)),
             .colorBalance(ToneBalance(shadows: [0.1, 0, 0], midtones: .zero, highlights: [0, 0, 0.1],

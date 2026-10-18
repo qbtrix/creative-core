@@ -77,13 +77,13 @@ public struct AffineMatrix: Hashable, Sendable { public var a, b, c, d, tx, ty: 
 public enum FlipAxis: Hashable, Sendable { case horizontal, vertical }
 public enum CanvasAnchor: Hashable, Sendable { case topLeft, top, topRight, left, center, right, bottomLeft, bottom, bottomRight }
 public enum MatteSource: Hashable, Sendable { case alpha, luminance }                       // Mask(from:_:)
-public struct HSLRange: Hashable, Sendable { public var hue, saturation, lightness: Float }  // -100...100 each
-public struct HSLAdjustment: Hashable, Sendable { public var reds, oranges, yellows, greens, aquas, blues, purples, magentas: HSLRange }
-public struct GrayMix: Hashable, Sendable { public var reds, yellows, greens, cyans, blues, magentas: Float; public var tint: RGBA? }
+public struct HSLShift: Hashable, Sendable { public var hue, saturation, lightness: Float }  // -100...100 each
+public struct HSLAdjustment: Hashable, Sendable { public var reds, oranges, yellows, greens, aquas, blues, purples, magentas: HSLShift }
+public struct GrayMix: Hashable, Sendable { public var reds, yellows, greens, cyans, blues, magentas: Float; public var tint: RGBA? }  // tint: straight sRGB-encoded, alpha = strength
 public struct ChannelMatrix: Hashable, Sendable { public var red, green, blue: SIMD4<Float>; public var monochrome: Bool }  // rgb weights + constant
 public struct ToneBalance: Hashable, Sendable { public var shadows, midtones, highlights: SIMD3<Float>; public var preserveLuminosity: Bool }
-public struct GradientMapStop: Hashable, Sendable { public var offset: Float; public var color: RGBA }
-public struct ColorLUT: Hashable, Sendable { public let size: Int; public let table: [SIMD3<Float>]   // size³ entries, r fastest
+public struct GradientMapStop: Hashable, Sendable { public var offset: Float; public var color: RGBA }  // color: straight sRGB-encoded, alpha ignored
+public struct ColorLUT: Hashable, Sendable { public let size: Int; public let table: [SIMD3<Float>]   // size³ entries, r fastest, sRGB-encoded 0...1
     public init(size: Int, table: [SIMD3<Float>]) throws }                                           // 2...65, count checked
 public enum LayerEffect: Hashable, Sendable {
     case boxBlur(radius: Double), motionBlur(degrees: Double, distance: Double), denoise(strength: Double, detail: Double)

@@ -52,7 +52,7 @@ public enum MatteSource: Hashable, Sendable { case alpha, luminance }
 
 /// One hue band's shift. Each component is in -100...100; 0 changes nothing.
 /// The tone ops clamp a value outside that range.
-public struct HSLRange: Hashable, Sendable {
+public struct HSLShift: Hashable, Sendable {
     public var hue, saturation, lightness: Float
 
     public init(hue: Float = 0, saturation: Float = 0, lightness: Float = 0) {
@@ -62,14 +62,14 @@ public struct HSLRange: Hashable, Sendable {
     }
 }
 
-/// Per-hue-band shifts for the HSL adjustment, one `HSLRange` per band.
+/// Per-hue-band shifts for the HSL adjustment, one `HSLShift` per band.
 /// The default changes nothing.
 public struct HSLAdjustment: Hashable, Sendable {
-    public var reds, oranges, yellows, greens, aquas, blues, purples, magentas: HSLRange
+    public var reds, oranges, yellows, greens, aquas, blues, purples, magentas: HSLShift
 
-    public init(reds: HSLRange = HSLRange(), oranges: HSLRange = HSLRange(), yellows: HSLRange = HSLRange(),
-                greens: HSLRange = HSLRange(), aquas: HSLRange = HSLRange(), blues: HSLRange = HSLRange(),
-                purples: HSLRange = HSLRange(), magentas: HSLRange = HSLRange()) {
+    public init(reds: HSLShift = HSLShift(), oranges: HSLShift = HSLShift(), yellows: HSLShift = HSLShift(),
+                greens: HSLShift = HSLShift(), aquas: HSLShift = HSLShift(), blues: HSLShift = HSLShift(),
+                purples: HSLShift = HSLShift(), magentas: HSLShift = HSLShift()) {
         self.reds = reds
         self.oranges = oranges
         self.yellows = yellows
@@ -84,7 +84,9 @@ public struct HSLAdjustment: Hashable, Sendable {
 /// The black-and-white mix: how much each hue band contributes to the gray,
 /// each in percent, -200...300, and an optional tint laid over the result.
 /// The default mix is 40, 60, 40, 60, 20, 80 with no tint. The tone ops clamp
-/// a value outside that range.
+/// a value outside that range. `tint` is a straight-alpha (not premultiplied),
+/// sRGB-encoded color, as a color picker gives it; its alpha is the tint's
+/// strength in 0...1 (0 leaves the gray untinted, 1 applies it fully).
 public struct GrayMix: Hashable, Sendable {
     public var reds, yellows, greens, cyans, blues, magentas: Float
     public var tint: RGBA?
@@ -135,7 +137,9 @@ public struct ToneBalance: Hashable, Sendable {
 }
 
 /// One stop of a gradient map: the luminance `offset` in 0...1 it sits at,
-/// and the color it maps to.
+/// and the color it maps to. `color` is straight-alpha (not premultiplied),
+/// sRGB-encoded RGB in 0...1, the space the map runs in; its alpha is
+/// ignored and each pixel keeps its own alpha.
 public struct GradientMapStop: Hashable, Sendable {
     public var offset: Float
     public var color: RGBA
@@ -147,7 +151,9 @@ public struct GradientMapStop: Hashable, Sendable {
 }
 
 /// A 3D color lookup table: `size` samples per axis and `table` holding
-/// size³ output colors, red index fastest, then green, then blue.
+/// size³ output colors, red index fastest, then green, then blue. It is
+/// indexed by and holds sRGB-encoded (not linear) straight RGB values in
+/// 0...1, as a `.cube` file stores them; alpha is not looked up.
 public struct ColorLUT: Hashable, Sendable {
     public let size: Int
     public let table: [SIMD3<Float>]
@@ -178,6 +184,8 @@ public struct ColorLUT: Hashable, Sendable {
 /// `detail` are 0...1 (strength 0 changes nothing), clarity `amount` is
 /// -100...100 (0 changes nothing, negative softens), glow `intensity` is 0...1
 /// (0 changes nothing). The effect ops throw on a value outside its range.
+/// Glow, shadow and stroke `color` are linear, premultiplied RGBA like a
+/// `PixelBuffer`'s pixels; their alpha is the effect's opacity.
 public enum LayerEffect: Hashable, Sendable {
     case boxBlur(radius: Double), motionBlur(degrees: Double, distance: Double), denoise(strength: Double, detail: Double)
     case clarity(amount: Double, radius: Double), glow(color: RGBA, radius: Double, intensity: Double, inner: Bool)
