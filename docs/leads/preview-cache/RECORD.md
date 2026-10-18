@@ -1,11 +1,11 @@
 # preview-cache lead record
 
 Issue: #440 · Packet: docs/blueprints/core/features/preview-cache.md
-Run: act-1a14de006be-1kmq · Session: https://claude.ai/code/session_01WN1jNn5SUWJXTALMBvtq64 · Started: 2026-10-18T07:20Z
-Line lead for: preview-cache (#440), vector-import (#439), layered-codecs (#438)
-Stage: 3 wave 3; Anatomy round 1 on finished slices
-Base: b80c0871a391e1729578b0344c8884c10471c8ca
-Next: PC-4, PC-5 building (PC-3 #498 merged with round-2 recovery header); PC-hash fixer R2-1 (n7); PC-8 after PC-4, PC-5 and the fixer
+Run: act-1a1511a1174-tlch (relaunch; earlier run act-1a14de006be-1kmq) · Started: 2026-10-18T22:40Z
+Line lead for: image-codecs (#562), preview-cache (#440), vector-import (#439)
+Stage: done
+Base: 15e96dd47c720025f5ae49b3649608deb65ab216
+Next: nothing: every slice has its Belt-Slice-Done line and the contact sheet is posted; PC-z waits on the Mac finisher
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -84,3 +84,4 @@ Next: PC-4, PC-5 building (PC-3 #498 merged with round-2 recovery header); PC-ha
 - 18:41Z #548 (PC-9, feature-done) merged; awaiting dev CI with Linux green for PC-z
 - 18:43Z heartbeat: 18G free; dev CI 374 (bd50d5b, has #544 #545 #546 #548) Linux running; no open lead PRs; VI-8 and LC R3-2 working
 - 19:00Z run 374 Linux green: Belt-Slice-Done PC-z, Mac-Finish-Wanted PC-z, Belt-Contact-Sheet posted on #440 (footers stripped)
+- 22:40Z relaunch under act-1a1511a1174-tlch: branch rebased onto dev 15e96dd. preview-cache is done (contact sheet on #440 at 18:59Z); nothing left for the lead.

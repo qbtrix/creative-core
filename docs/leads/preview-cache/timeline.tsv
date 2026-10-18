@@ -56,3 +56,4 @@ utc	stage	event	ref	note
 18:41Z	merge	#548 merged 18:41 (PC-9, feature-done): C4 parts thumbnail-store + image-ops, packet status built
 18:43Z	heartbeat	heartbeat: 18G free; dev CI 374 (bd50d5b, has #544 #545 #546 #548) Linux running; no open lead PRs; VI-8 and LC R3-2 working
 19:00Z	done	run 374 Linux green: Belt-Slice-Done PC-z, Mac-Finish-Wanted PC-z, Belt-Contact-Sheet posted on #440 (footers stripped)
+2026-10-18T22:40Z	done	stage-start	15e96dd	22:40Z relaunch under act-1a1511a1174-tlch: branch rebased onto dev 15e96dd. preview-cache is done (contact sheet on #440 at 18:59Z); nothing left for the lead.
