@@ -37,8 +37,10 @@ public enum OpenRaster {
     /// IHDR sizes summing over `maxTotalPixels`, and whatever `ZipStore`,
     /// `StackXML` and `pixels` throw. Every image is sized and summed before
     /// any is decoded, and each is decoded once. `bitsPerChannel` is 16 when
-    /// any PNG's IHDR says 16; `profile` is read from `profile.icc`, which
-    /// throws `damaged` or `tooLarge` when bad (OpenRasterDeep.swift).
+    /// any PNG's IHDR says 16. `profile` is read from `profile.icc`: one over
+    /// `maxProfileBytes` throws `tooLarge`; one `ColorProfile(iccData:)`
+    /// refuses (damaged, LUT-based, CMYK) is dropped, so `profile` is nil
+    /// (OpenRasterDeep.swift).
     public static func read(_ data: Data, pixels: any PixelCodec) throws -> LayeredImage {
         let entries = try ZipStore.entries(data)
         guard entries["mimetype"] == Data("image/openraster".utf8) else { throw CodecError.notThisFormat }

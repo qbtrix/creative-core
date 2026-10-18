@@ -53,8 +53,10 @@ public struct ColorProfile: Hashable, Sendable {
         self.curves = curves
     }
 
-    /// Reads ICC bytes. Matrix and curve only; LUT-based, CMYK and Lab
-    /// profiles throw `.invalid` naming what they are.
+    /// Reads ICC bytes, matrix-and-curve RGB or gray only. Throws `.invalid`
+    /// naming the cause for damaged bytes, LUT-based, CMYK or Lab profiles,
+    /// another colour space, a non-XYZ PCS, a class other than display or
+    /// input, or a version other than 2 or 4.
     public init(iccData: Data) throws(ColorError) {
         self = try ICCRead.profile(iccData)
     }

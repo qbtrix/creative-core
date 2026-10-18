@@ -7,7 +7,8 @@ import FoundationEssentials
 import Foundation
 #endif
 
-/// Reads and writes 8-bit RGB and grayscale PSD files as a `LayeredImage`.
+/// Reads and writes 8- and 16-bit RGB and grayscale PSD files, with the
+/// embedded ICC profile, as a `LayeredImage`.
 public enum PSD {
     /// The largest width or height a PSD (not the large document format) may have.
     public static let maxSide = 30_000
@@ -22,9 +23,13 @@ public enum PSD {
     /// The deepest groups may nest, the same as `OpenRaster.maxDepth`.
     public static let maxDepth = OpenRaster.maxDepth
 
-    /// Saves an image as 8-bit RGB PSD bytes that `read` reopens equal. Throws
-    /// a `CodecError`, before writing anything, for an image the format cannot
-    /// hold: see PSDWrite.swift.
+    /// Saves an image as PSD bytes that `read` reopens equal: at
+    /// `image.bitsPerChannel` (8 or 16), embedding `image.profile` as image
+    /// resource 1039, and grayscale when that profile is gray (RGB otherwise).
+    /// Throws a `CodecError`, before writing anything, for an image the format
+    /// cannot hold: `unsupported` for another depth, a profile the ICC writer
+    /// refuses, or a non-grey pixel under a gray profile; see PSDWrite.swift
+    /// for the size limits.
     public static func write(_ image: LayeredImage) throws -> Data {
         try encode(image)
     }
