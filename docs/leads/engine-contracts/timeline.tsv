@@ -64,3 +64,4 @@ utc	stage	event	ref	note
 2026-10-18T14:01Z	-	heartbeat	-	waiting
 2026-10-18T14:19Z	-	heartbeat	-	waiting
 2026-10-18T14:37Z	-	heartbeat	-	waiting
+2026-10-18T14:40Z	4	round4-start	0a3c7f3 #508	r3-b merged; round 4 gate on 0a3c7f3

@@ -2,9 +2,9 @@
 
 Issue: #429 · Packet: docs/blueprints/core/features/engine-contracts.md
 Run: act-1a14ddaebc8-nwqn · Session: line lead (engine-contracts, animate-properties, color-profiles) · Started: 2026-10-18T07:15Z
-Stage: 4 round 3 fixes
+Stage: 4 round 4 (last allowed): gate and mutation on dev 0a3c7f3 running; dev CI run 39137019273 queued on the same SHA
 Base: 9d01972365f04da4fe6074e9bdd56ceab5b616a8
-Next: r3-a merged (#483, a5f952a), EC-9 merged (#485, ca537c1). Waiting on r3-b; then round 4 (last allowed) on the dev SHA with r3-b, then EC-10 with feature-done.
+Next: r3-a merged (#483), r3-b merged (#508, 0a3c7f3). Round 4 critic panel on 0a3c7f3 once gate and mutation finish; then EC-10 with feature-done.
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
