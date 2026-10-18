@@ -44,18 +44,19 @@ public enum OpenRaster {
         let stack = try StackXML.parse(xml)
         // Every source in the tree, then the merged image: sized and summed before any decode.
         var sources: [String] = [], used: Set<String> = []
-        func collect(_ list: [StackXML.Node]) throws {
-            for node in list {
-                switch node {
-                case .layer(let layer):
-                    guard let src = layer.src else { throw CodecError.damaged("layer \(layer.name) has no src") }
-                    guard used.insert(src).inserted else { throw CodecError.damaged("layer source \(src) repeats") }
-                    sources.append(src)
-                case .stack(_, let children): try collect(children)
-                }
+        // Both tree walks keep an explicit stack: recursing maxDepth deep overflows the 512 KB stack
+        // of a secondary thread on macOS. This one is depth first in file order (top first).
+        var pending = [stack.nodes[...]]
+        while let top = pending.indices.last {
+            switch pending[top].popFirst() {
+            case .layer(let layer)?:
+                guard let src = layer.src else { throw CodecError.damaged("layer \(layer.name) has no src") }
+                guard used.insert(src).inserted else { throw CodecError.damaged("layer source \(src) repeats") }
+                sources.append(src)
+            case .stack(_, let children)?: pending.append(children[...])
+            case nil: pending.removeLast()
             }
         }
-        try collect(stack.nodes)
         let merged = "mergedimage.png"
         if entries[merged] != nil, !used.contains(merged) { sources.append(merged) }
         var total = 0
@@ -76,22 +77,27 @@ public enum OpenRaster {
             decoded[path] = buffer
             return buffer
         }
+        // Depth first again, each list bottom to top: `rest` is popped from its end, the bottom of the stack.
         // Offsets are each within StackXML.maxOffset and at most maxDepth deep, so sums cannot overflow.
-        func nodes(_ list: [StackXML.Node], x: Int, y: Int) throws -> [LayerNode] {
-            try list.reversed().map { node in
-                switch node {
-                case .layer(let layer):
-                    // collect has checked that every layer has a src.
-                    return .pixels(PixelLayer(name: layer.name, pixels: try decode(layer.src ?? ""), x: x + layer.x, y: y + layer.y,
-                                              opacity: layer.opacity, blendMode: layer.blendMode ?? .normal,
-                                              isHidden: layer.isHidden))
-                case .stack(let group, let children):
-                    return .group(LayerGroup(name: group.name, children: try nodes(children, x: x + group.x, y: y + group.y),
-                                             opacity: group.opacity, blendMode: group.blendMode, isHidden: group.isHidden))
-                }
+        var open: [(rest: [StackXML.Node], group: StackXML.Element?, x: Int, y: Int, built: [LayerNode])] = [(stack.nodes, nil, 0, 0, [])]
+        var tree: [LayerNode] = []
+        while let top = open.indices.last {
+            let (x, y) = (open[top].x, open[top].y)
+            switch open[top].rest.popLast() {
+            case .layer(let layer)?:
+                // the walk above has checked that every layer has a src.
+                open[top].built.append(.pixels(PixelLayer(name: layer.name, pixels: try decode(layer.src ?? ""), x: x + layer.x,
+                                                          y: y + layer.y, opacity: layer.opacity,
+                                                          blendMode: layer.blendMode ?? .normal, isHidden: layer.isHidden)))
+            case .stack(let group, let children)?:
+                open.append((children, group, x + group.x, y + group.y, []))
+            case nil:
+                let done = open.removeLast()
+                guard let group = done.group, top > 0 else { tree = done.built; continue }
+                open[top - 1].built.append(.group(LayerGroup(name: group.name, children: done.built, opacity: group.opacity,
+                                                             blendMode: group.blendMode, isHidden: group.isHidden)))
             }
         }
-        let tree = try nodes(stack.nodes, x: 0, y: 0)
         let composite = try entries[merged].map { _ in try decode(merged) }
         guard composite.map({ $0.width == stack.width && $0.height == stack.height }) ?? true else {
             throw CodecError.damaged("mergedimage.png is not the canvas size")
