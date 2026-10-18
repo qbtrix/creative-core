@@ -63,3 +63,4 @@ utc	stage	event	ref	note
 2026-10-18T15:50Z	-	heartbeat	-	waiting
 2026-10-18T16:08Z	-	heartbeat	-	waiting
 2026-10-18T16:14Z	fix	ap2-b-dispatched	wa1pdtd8p	ap2-b dispatched on 4c9ded2 (after #524): command error docs, coalesceKey wording, TrackTarget doc, last-key-drops-track and keyframeNotFound tests+mutations.
+2026-10-18T16:26Z	-	heartbeat	-	waiting
