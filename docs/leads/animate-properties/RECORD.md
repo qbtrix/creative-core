@@ -2,9 +2,9 @@
 
 Issue: #442 · Packet: docs/blueprints/core/features/animate-properties.md
 Run: act-1a14ddaebc8-nwqn · Session: line lead (engine-contracts, animate-properties, color-profiles) · Started: 2026-10-18T07:15Z
-Stage: 4 Anatomy round 1 running (dev ca537c1; gate CI: PASS; mutation all caught)
+Stage: 4 Anatomy round 1 done, not clean (10 confirmed, 2 refuted); fix batches ap1-a, ap1-b, ap1-c, ap1-d running (base ca537c1)
 Base: 9d01972365f04da4fe6074e9bdd56ceab5b616a8
-Next: Anatomy round 1 on the AP-sample/AP-export surface (includes the AP-7/AP-8 base-exporter edits). AP-4 waits on path-geometry PG-edit (#430); AP-9, AP-10 after.
+Next: round 1 fix PRs merge, then Anatomy round 2. AP-4 waits on path-geometry PG-edit (#430); AP-9, AP-10 (AP-z) after it. Critic findings "AP-4 not built" and "AP-z missing" are that planned work, not fixes.
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -45,3 +45,8 @@ Next: Anatomy round 1 on the AP-sample/AP-export surface (includes the AP-7/AP-8
 
 ## Open
 - AP-4 waits on path-geometry:PG-edit (#430: no PR yet). AP-cmd and AP-z wait with it.
+
+## Anatomy
+| round | dev sha | gate | mutation | critics | confirmed | fixes |
+|---|---|---|---|---|---|---|
+| 1 | ca537c1 | CI: PASS | 16/16 (6 plans) | clarity, contract, undo, robustness, compat, tests | 10 (5 major; 2 are planned AP-4/AP-z) | ap1-a (strokeWidth key helper, Lottie alpha as animated o, export mutation entries), ap1-b (colour command errors pinned, frame bound), ap1-c (RemoveShape/RemoveTextShape drop and renumber index tracks), ap1-d (index docs, quad morph test, sampler mutations) |

@@ -38,3 +38,4 @@ utc	stage	event	ref	note
 2026-10-18T12:12Z	-	heartbeat	-	waiting
 2026-10-18T12:13Z	slice-done	belt-slice-done	#442	AP-sample, AP-export done, run 39126063033
 2026-10-18T12:19Z	anatomy	round-start	r1	critic panel wf_121c877a-e58 on ca537c1, mutate 16/16
+2026-10-18T12:28Z	anatomy	round-done	r1	10 confirmed (2 planned), not clean; fixes ap1-a/b/c/d
