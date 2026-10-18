@@ -11,3 +11,4 @@ utc	stage	event	ref	note
 2026-10-18T11:52Z	3	stage-start	wave3	PC-2 PC-7 at b80c087
 2026-10-18T11:56:24Z	3	builder-start	PC-2	under flock gate
 2026-10-18T11:56:24Z	3	builder-start	PC-7	under flock gate
+2026-10-18T11:56:59Z	3	heartbeat	-	wave 3 building; round-1 mutations running
