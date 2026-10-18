@@ -12,3 +12,4 @@ utc	stage	event	ref	note
 2026-10-18T11:56:24Z	3	builder-start	PC-2	under flock gate
 2026-10-18T11:56:24Z	3	builder-start	PC-7	under flock gate
 2026-10-18T11:56:59Z	3	heartbeat	-	wave 3 building; round-1 mutations running
+2026-10-18T11:59:58Z	4	mutate	PC-6	round-1 PerceptualHash 4/4 caught on b80c087
