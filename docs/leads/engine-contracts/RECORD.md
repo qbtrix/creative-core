@@ -36,6 +36,7 @@ Next: Round 3 fixes r3-a (W1Values: #2 colour encoding docs, #5 HSLRange->HSLShi
 | 3 | f7413a6 | CI: PASS (2nd run; 1st EngineStress 6.9s under load) | FlareW1Model 19/19, CoreRaster.W1Values 5/5, CoreRender.W1Contract 2/2, CoreRenderFake 13/13, CoreRenderDispatcherW1 4/4 | - | clarity, contract, compat, robustness, tests | 14 (4 major, 10 minor); 2 refuted; #1, #8, #11 routed to animate-properties; #9, #12, #13 to color-profiles; #6, #7 are EC-9/EC-10 (planned); #10 covered by each feature's own round | r3-a, r3-b | no |
 
 ## Decisions
+- dev CI 39121455101 (33d046a): Linux green, macOS red only on ParityTests.resample (16x400000 to 400000x16, column 64000). No commit in main..33d046a touches resampling; our Metal edits (AdjustTable .color throw, enable ignores notOnMetalYet, Warmup W1 arms) are off that path. Not ours; noted on #453 (comment 6249304129) and left to the render-metal owner.
 - Round 3 (wf_754b6005-2a0) reviewed firstBase..f7413a6 on the shared dev, so it saw animate-properties and color-profiles code too; those findings went to their own records and fixers.
 - dev CI 39118832683 on 0660756: Linux green. EC-a, EC-b, EC-f merged-done; Mac-Finish-Wanted EC-a posted.
 - #461 (e158c87) amended brief rule 9: a message starting `Belt released this run.` means stop at once; every other chat message still never stops the lead. Applied to this run.
