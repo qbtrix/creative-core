@@ -48,10 +48,12 @@ import Testing
         }
     }
 
+    /// The commands still stubs (`TrackCommandsTests.notBuiltIDs`); CommandFuzzTests fuzzes the built ones.
+    static func stubs() -> [any Command] { commands().filter { TrackCommandsTests.notBuiltIDs.contains(type(of: $0).id) } }
+
     @Test func stubsThrowNotBuilt() throws {
-        let tasks = ["AP-3", "AP-3", "AP-3", "AP-4", "AP-4"]
-        for (command, task) in zip(Self.commands(), tasks) {
-            let notBuilt = CommandError.invalidDocument("not built: \(task)")
+        for command in Self.stubs() {
+            let notBuilt = CommandError.invalidDocument("not built: AP-4")
             var cmd = command
             var doc = Fixtures.document()
             #expect(throws: notBuilt) { try cmd.execute(&doc) }
@@ -67,7 +69,7 @@ import Testing
     /// Seeded byte fuzz of the stubs' envelopes: decode throws a CommandError or
     /// yields a command whose perform throws one and changes nothing.
     @Test func envelopeFuzzThrowsCleanly() throws {
-        let valid = try Self.commands().map { Array(try CommandRegistry.builtIn.encode($0)) }
+        let valid = try Self.stubs().map { Array(try CommandRegistry.builtIn.encode($0)) }
         let alphabet = Array(#"{}[]",:0123456789-.eE truefalsn\"#.utf8)
         var rng = SplitMix64(seed: 442)
         for _ in 0..<2000 {
