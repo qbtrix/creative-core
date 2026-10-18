@@ -49,3 +49,4 @@ utc	stage	event	ref	note
 2026-10-18T14:19Z	-	heartbeat	-	waiting
 2026-10-18T14:37Z	-	heartbeat	-	waiting
 2026-10-18T14:43Z	anatomy	pr-open	#511	ap1-d opened (gate PASS try 4 on 1892abf)
+2026-10-18T14:45Z	anatomy	merged	#511	ap1-d merged 7389464 (FlareMorphSampling 6/6)
