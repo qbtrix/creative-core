@@ -41,3 +41,5 @@ utc	stage	event	ref	note
 2026-10-18T15:40Z	heartbeat	checking merges, dev CI, agents
 2026-10-18T15:43Z	incident	disk full (ENOSPC) at about 15:39Z; deleted .build caches of finished worktrees; told running agents to rerun failed gates
 2026-10-18T16:05Z	heartbeat	checking merges, dev CI, agents
+2026-10-18T16:22Z	pr	#525 PC-8 walk+budgets open, head e6b2056, CI PASS 1386; release relaunch 37.3/40ms, read 0.018/0.3ms, hash 1.21/1.5s, group 1.09/2s
+2026-10-18T16:22Z	finding	ThumbnailStore rewrites whole index per write: quadratic fill (debug 2000 fill 284 s); relaunch margin 7%; round 3 PC-a

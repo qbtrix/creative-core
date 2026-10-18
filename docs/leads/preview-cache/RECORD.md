@@ -60,3 +60,15 @@ Next: PC-4, PC-5 building (PC-3 #498 merged with round-2 recovery header); PC-ha
 - 2026-10-18T15:40Z heartbeat: checking merges, dev CI and agents.
 - 2026-10-18T15:43Z incident: the disk filled up at about 15:39Z. I deleted the .build caches of finished worktrees and told the running agents to rerun any gate that failed. No dev CI run newer than 364 yet. #518 (LC R2-2) needs a rebase onto 168c73d.
 - 2026-10-18T16:05Z heartbeat.
+- 2026-10-18T16:22Z #525 (PC-8, the walk and budgets) is open: head e6b2056, scripts/ci CI: PASS (1386 tests). Release timings against their budgets, Linux under load:
+
+  | case | release | budget |
+  |---|---|---|
+  | relaunch, 2,000 entries | 37.3 ms | 40 ms |
+  | read | 0.018 ms | 0.3 ms |
+  | hash 1,000 | 1.21 s | 1.5 s |
+  | group 100k | 1.09 s | 2 s |
+
+  The debug walk uses 200 previews.
+
+  Round-3 finding for PC-a: ThumbnailStore rewrites its whole index on every write, so filling it is quadratic. A debug fill of 2,000 took 284 s. Relaunch has only 7% to spare, so the Mac budgets need checking at PC-z.
