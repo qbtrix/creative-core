@@ -12,5 +12,12 @@
     "anchor": "tags.append((\"chad\", try sf32([c.0, c.1, c.2, c.3, c.4, c.5, c.6, c.7, c.8])))",
     "replacement": "_ = c",
     "filter": "ICCWriteTests/roundTripsAdapted"
+  },
+  {
+    "note": "icc write equal tags not shared, each gets its own offset",
+    "file": "Sources/CoreColor/ICC/ICCWrite.swift",
+    "anchor": "let offset = placed[bytes] ?? start + body.count",
+    "replacement": "let offset = start + body.count",
+    "filter": "ICCWriteTests/equalTagsShareOneCopy"
   }
 ]

@@ -52,6 +52,13 @@ struct ICCWriteTests {
         #expect(nearlyEqual(try ColorProfile(iccData: Data(bytes)), .sRGB, 1e-5))
     }
 
+    @Test func equalTagsShareOneCopy() throws {
+        // sRGB's three curves are equal, so rTRC, gTRC and bTRC point at one copy (ICC.1 7.3.1).
+        let tags = ICC.tags([UInt8](try ColorProfile.sRGB.iccData()))
+        let offsets = ["rTRC", "gTRC", "bTRC"].map { name in tags.first { $0.sig == name }?.offset }
+        #expect(offsets[0] != nil && offsets[0] == offsets[1] && offsets[1] == offsets[2], "\(offsets)")
+    }
+
     @Test func roundTripsGrayTableAndParametric() throws {
         let gray = ColorProfile(name: "Gray ✓", isGray: true, toXYZD50: ICCFixture.d50.map(ICC.q15), curves: [.gamma(ICC.q8(1.8))])
         let table = ColorProfile(name: "Table", isGray: false, toXYZD50: ICCFixture.primariesB.map(ICC.q15),

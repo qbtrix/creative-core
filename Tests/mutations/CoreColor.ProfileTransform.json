@@ -12,5 +12,19 @@
     "anchor": "if y >= last { return rise > 0 ? 1 + (y - last) / rise : 1 }",
     "replacement": "if y >= last { return 1 }",
     "filter": "ProfileTransformTests/tableInverts"
+  },
+  {
+    "note": "profile transform skips Bradford adaptation between different whites",
+    "file": "Sources/CoreColor/ICC/ProfileTransform.swift",
+    "anchor": "guard source != target else { return identity }",
+    "replacement": "if source == source { return identity }",
+    "filter": "ProfileTransformTests/differentWhitesAdapt"
+  },
+  {
+    "note": "profile transform accepts a zero gamma target curve",
+    "file": "Sources/CoreColor/ICC/ProfileTransform.swift",
+    "anchor": "!(g > 0) || c < 0 {",
+    "replacement": "c < 0 {",
+    "filter": "ProfileTransformTests/uninvertibleTargetsThrow"
   }
 ]
