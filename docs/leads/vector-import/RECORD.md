@@ -22,8 +22,8 @@ Next: build VI-3, VI-4, VI-6; Anatomy round 1 on VI-a (VI-1, VI-2 merged)
 | VI-2 | 2 | fixtures and every suite disabled | Tests/FlareCoreTests/Fixtures/import/, six suite files | suites compile | – | #478 (a59c5c2) | merged |
 | VI-3 | 3 | XMLTokens | Import/XMLTokens.swift, XMLTokensTests | XMLTokensTests | FlareXMLTokens (3) |  | building |
 | VI-4 | 3 | SVGPathData with arcs | Import/SVGPathData.swift, SVGPathDataTests | SVGPathDataTests | FlareSVGPathData (3) |  | building |
-| VI-5 | after VI-3,4, EC-f | SVGImport.scene | Import/SVGImport.swift, SVGStyle.swift, SVGImportTests, SVGImportFuzzTests | both | FlareSVGImport (3) | | | open 
-| VI-6 | after VI-2, EC-f | Lottie shapes, static transform | Import/LottieImport.swift, LottieImportTests | LottieImportTests | FlareLottieImport (2) |  | building | open 
+| VI-5 | after VI-3,4, EC-f | SVGImport.scene | Import/SVGImport.swift, SVGStyle.swift, SVGImportTests, SVGImportFuzzTests | both | FlareSVGImport (3) | | open |
+| VI-6 | after VI-2, EC-f | Lottie shapes, static transform | Import/LottieImport.swift, LottieImportTests | LottieImportTests | FlareLottieImport (2) |  | building |
 | VI-7 | after VI-6 | Lottie animation, masks, mattes | Import/LottieImport+Animation.swift, LottieImportAnimationTests, LottieImportFuzzTests | both | FlareLottieImportAnimation (3) | | open |
 | VI-8 | after VI-5,7 | round trip and budgets | ImportRoundTripTests, ImportBudgetTests | KJ-VI | none | | open |
 | VI-9 | last | part words, status, `feature-done` | import.json, packet | – | – | | open |

@@ -18,3 +18,5 @@ utc	stage	event	ref	note
 2026-10-18T12:09:47Z	4	verify	VI-a	round 1: 13 verifiers; not clean, confirmed majors routed
 2026-10-18T12:10:38Z	4	fix-start	R1-1	docs batch: anchor, fill none, cycles, AddScene id, frame ranges, cap docs
 2026-10-18T12:18:42Z	4	heartbeat	-	wave 3 builders running, no wave-3 PR open yet; R1 fixers running
+2026-10-18T12:38:41Z	5	merge	R1-1	#488 merged 12:38Z (packet: anchor fold, fill none, ref cycles, AddScene, Lottie frame ranges; Import.swift cap docs)
+2026-10-18T12:38:41Z	4	heartbeat	-	VI-3, VI-4, VI-6 building; R1-1 merged
