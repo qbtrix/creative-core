@@ -18,6 +18,20 @@ features; the source issues carry their own labels (#220 to #225 and #228 are
 | 2 | Onion frames, Lottie tracks and the core budgets | `motion-tracks.md` | #218, #227, #228 | p2 | nothing | Flare LM-8, LM-13a; the QB-L5 to QB-L8 model budgets | #313 | planned |
 | 3 | A `RenderBackend` contract, the CPU backend over CoreRaster, the dispatcher and the parity harness | `render-backend.md` | dual-renderer design 2026-10-17 (sections 1, 5) | p1 | nothing (RT-3's in-place composite is a swap, not a wait) | creative-apps `canvas-host` CH-10 (live presenter); every app's Model drawing through a `RenderDispatcher` | #347 | built on `dev` (RB-1 to RB-7); `RenderBudgetTests` fails on release until the CPU composite stops copying its backdrop |
 | 4 | The Metal backend, one op family per slice behind capability flags, each with a parity test; one dedicated lead on its own Belt line | `metal-backend.md` | dual-renderer design 2026-10-17 (sections 1, 5, 7) | p2 | render-backend | Automatic and GPU in Settings > Rendering doing anything; big-document speed in Photo and Halo | file when ready | planned |
+| 5 | The W1 contract: four CPU-first render families, the W1 tone cases, CoreRaster W1 values, the W1 FlareCore model fields and the registry, undo and exporter seams | `engine-contracts.md` | beta-80 plan section 8 (the shared-file halves of E2, E3, E4, E5, E8, E14) | p1 | nothing | every wave-6 packet | file when ready | planned |
+| 5 | Path edit math, measure, trim, dash, stroke outline and booleans on FlareCore `Path` | `path-geometry.md` | E1 (the unfiled core path issue; Q5 answered: FlareCore geometry) | p1 | nothing | Design Pen F7, S17, S18, `text-engine` (type on a path), `animate-properties` (morph) | file when ready | planned |
+| 5 | PSD read and write, OpenRaster moved in from Photo, a neutral `LayeredImage` (new `coreraster/codecs`) | `layered-codecs.md` | E10 | p1 | nothing | Photo PSD open and save, G1's deep-PSD fixtures, `color-profiles` | file when ready | planned |
+| 5 | SVG and Lottie readers (new `flarecore/import`) | `vector-import.md` | E11 | p2 | nothing (its Lottie slice: `engine-contracts:EC-f`) | Flare A2, SVG import in Flare, Halo and Design, vector paste | file when ready | planned |
+| 5 | A disk preview store with offline volumes (new `coreasset/thumbnail-store`) and a perceptual hash with duplicate groups | `preview-cache.md` | E12 | p2 | nothing (its hash slice: `engine-contracts:EC-a`) | Library previews, offline drives and the duplicate finder | file when ready | planned |
+| 6 | Mask feather, outlines, mattes from alpha or luma, the masked composite; vector layer masks and track mattes | `masks-mattes.md` | E2; Photo CR-3, CR-4, CR-6 | p1 | engine-contracts | S4, S5 (Halo, Flare, Photo, Design) | file when ready | planned |
+| 6 | The colour family: vibrance, Hue/Sat (moved from Photo), HSL, B&W, mixers, colour balance, gradient map, LUT, posterize, threshold, invert, auto tone | `tone-pack.md` | E3; Photo CR-5 | p1 | engine-contracts | S1, S3 (Photo, Library, Halo) | file when ready | planned |
+| 6 | The effect family: box and motion blur, denoise, clarity, glow, shadows, stroke | `effects-engine.md` | E4 (re-cut of Halo #39's pixels) | p1 | engine-contracts | S2 (Halo, Photo, Library, Design) | file when ready | planned |
+| 6 | The affine family: free transform, flip, canvas size, composite through a matrix | `affine-composite.md` | E5; Photo CR-1, CR-2; H6 | p1 | engine-contracts | S7, S20 (Photo, Design, Halo, Flare) | file when ready | planned |
+| 6 | Flood fill, colour range and raster gradients | `fill-tools.md` | E6 | p2 | engine-contracts | Photo's bucket, wand, colour range and gradient | file when ready | planned |
+| 6 | True heal, fill from surroundings, dodge, burn, sponge, smudge | `retouch-heal.md` | E7; Photo CR-7 | p2 | engine-contracts | Photo's retouch tools | file when ready | planned |
+| 6 | Styled runs, paragraphs, type on a path, layout from measured advances, SVG text | `text-engine.md` | E8 (core half) | p1 | engine-contracts, path-geometry | creative-apps `shell-text`, S21, every app's text tool | file when ready | planned |
+| 6 | Colour, stroke and shape-morph keys, their sampling and export | `animate-properties.md` | E14 | p2 | engine-contracts, path-geometry | S16; Flare's inspector keys | file when ready | planned |
+| 6 | ICC profiles (new `corecolor/icc-profiles`), assign and convert, 16-bit PSD and ORA | `color-profiles.md` | E13 | p2 | layered-codecs | Photo's profiles and 16-bit documents | file when ready | planned |
 
 What the apps wait on, mapped to the task that closes each issue:
 
@@ -39,6 +53,56 @@ PRs, after a `feature-done` merge, and daily; wave 2 opens about 18 PRs, so
 at least one mid-wave run is expected. A lead whose closing PRs for an app
 task have merged tells the supervisor, which files or wakes that app's
 feature once `main` holds them.
+
+## Waves 5 and 6: the beta-80 W1 engines (2026-10-18)
+
+The captain approved the beta-80 plan (`paw-workspace/docs/design/drafts/2026-10-18-beta-80-plan.md`)
+on 2026-10-18. Its W1 wave is these fourteen packets; the suite's media and
+text halves (E9, E8's Core Text and the font picker) are creative-apps
+packets (`docs/blueprints/suite/features/shell-media.md`, `shell-text.md`,
+`docs/blueprints/suiteui/features/font-picker.md`). Base: `origin/dev`
+4f91e04.
+
+- **One contract first.** Four engines widen the `RenderBackend` contract
+  and three add FlareCore model fields, and each of those changes lands in a
+  file all of them would otherwise share (`RenderOp.swift`,
+  `RenderBackend.swift`, `ToneAdjustment.swift`, `FakeBackend.swift`,
+  `RenderDispatcher.swift`, `CPUBackend+Ops.swift`, `ParitySamples.swift`,
+  `Document.swift`, `FlareFormat.swift`, `CommandRegistry.swift`,
+  `UndoPropertyTests.swift`, the two exporters, and the `image-ops`,
+  `compositing` and `corerender` parts). `engine-contracts` makes every one
+  of those edits once, with stubs and one seam file per family, so the nine
+  wave-6 features own disjoint files and run at once.
+- **CPU first, Metal later.** The four new families (`maskedComposite`,
+  `affine`, `effect`, `color`) are in `RenderOp.notOnMetalYet`; Metal
+  claims none of them, so the dispatcher sends them to the CPU and
+  `everyFamilyIsOn` stays green. R2 (beta-80 W4) ports them one family at a
+  time and removes each from the set.
+- **Wave 5 runs beside the contract.** `path-geometry`, `layered-codecs`,
+  `vector-import` and `preview-cache` touch no seam file, so they start with
+  `engine-contracts` (their few slices that need a seam name it).
+- **No shared status line.** Each W1 feature's last task sets the
+  `**Status:**` line in its own packet, not this table, so nine
+  `feature-done` PRs never conflict here; this table's status column is
+  refreshed by the supervisor.
+
+| file | owner in waves 5 and 6 |
+|---|---|
+| the seam files above, `W1Model.swift`, `W1Values.swift`, the four `CPUBackend+<Family>.swift` and `Samples+<Family>.swift` stubs, the five exporter seam files, `MaskCommands.swift`, `TextStyleCommands.swift`, `TrackCommands.swift` and their test files (created) | `engine-contracts` (wave 5), then the wave-6 feature its name says |
+| `Sources/FlareCore/PathOps/`, `Geometry.swift`, the `flarecore/geometry` part | `path-geometry` (`masks-mattes`' MM-10 edits the part after it) |
+| `Sources/CoreRaster/Codecs/`, the `coreraster/codecs` part | `layered-codecs` (`color-profiles` after it) |
+| `Sources/FlareCore/Import/`, the `flarecore/import` part | `vector-import` |
+| `Sources/CoreAsset/Thumbnails/`, `Sources/CoreRaster/Hash/`, the `coreasset/thumbnail-store` part | `preview-cache` |
+| `Sources/CoreRaster/{Masks,Compositing/CompositeMasked}`, `RenderList.swift` | `masks-mattes` |
+| `Sources/CoreRaster/Tone/` | `tone-pack` |
+| `Sources/CoreRaster/Effects/` | `effects-engine` |
+| `Sources/CoreRaster/Affine/`, `Compositing/CompositeAffine.swift` | `affine-composite` |
+| `Sources/CoreRaster/Fill/` | `fill-tools` |
+| `Sources/CoreRaster/Heal/` | `retouch-heal` |
+| `TextLayout*.swift`, `TextStyleCommands*.swift`, `SVGExporter+Text*.swift` | `text-engine` |
+| `TrackCommands*.swift`, `Sampling+Tracks*.swift` | `animate-properties` |
+| `Sources/CoreColor/ICC/`, the `corecolor/icc-profiles` part | `color-profiles` |
+| new test files and `Tests/mutations/<plan>.json` files, `Tests/CoreRenderTests/Golden/<family>/` | the task that names them |
 
 ## Why this order
 
