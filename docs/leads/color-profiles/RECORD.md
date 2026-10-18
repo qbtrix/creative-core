@@ -2,14 +2,14 @@
 
 Issue: #441 · Packet: docs/blueprints/core/features/color-profiles.md
 Run: act-1a14ddaebc8-nwqn · Session: line lead (engine-contracts, animate-properties, color-profiles) · Started: 2026-10-18T07:15Z
-Stage: 0 setup (blocked)
+Stage: 3 CP-a
 Base: 9d01972365f04da4fe6074e9bdd56ceab5b616a8
-Next: check whether layered-codecs:LC-a has merged on dev (Sources/CoreRaster/Codecs/LayeredImage.swift exists); if so start CP-1
+Next: CP-1 PR merges, then CP-2. CP-7/CP-8 still wait on layered-codecs:LC-write.
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
 |---|---|---|---|---|---|
-| CP-a | CP-1, CP-2 | layered-codecs:LC-a | blocked | | |
+| CP-a | CP-1, CP-2 | layered-codecs:LC-a (merged #446) | building | | |
 | CP-icc | CP-3, CP-4 | CP-a | open | | |
 | CP-convert | CP-5, CP-6 | CP-icc | open | | |
 | CP-deep | CP-7, CP-8 | CP-icc; layered-codecs:LC-write | blocked | | |
@@ -18,7 +18,7 @@ Next: check whether layered-codecs:LC-a has merged on dev (Sources/CoreRaster/Co
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
 |---|---|---|---|---|---|---|---|
-| CP-1 | – | values, stubs, LayeredImage.profile, icc-profiles part | ICC/ColorProfile, ICC/ProfileTransform, Codecs/LayeredImage | ICCShapeTests | none | | blocked: LC-a |
+| CP-1 | – | values, stubs, LayeredImage.profile, icc-profiles part | ICC/ColorProfile, ICC/ProfileTransform, Codecs/LayeredImage | ICCShapeTests | none | | building on 83b20aa |
 | CP-2 | – | ICC byte builder, fixtures, suites disabled | Tests/CoreColorTests/ICC* | compile | – | | waits CP-1 |
 | CP-3 | – | ICC read | ICC/ICCRead.swift | ICCReadTests, ICCFuzzTests | CoreColor.ICCRead (3) | | waits CP-2 |
 | CP-4 | – | ICC write | ICC/ICCWrite.swift | ICCWriteTests | CoreColor.ICCWrite (2) | | waits CP-3 |
@@ -37,4 +37,4 @@ Next: check whether layered-codecs:LC-a has merged on dev (Sources/CoreRaster/Co
 - CP-1 edits LayeredImage.swift, which layered-codecs' LC-a creates; nothing in this packet can start before it (the packet's CP-a waits on it).
 
 ## Open
-- Blocked on layered-codecs (#438): no Sources/CoreRaster/Codecs/ on dev 9d01972 and no open PR. Re-checked at every wave boundary.
+- CP-deep (CP-7, CP-8) waits on layered-codecs:LC-write. LC-a merged as #446.

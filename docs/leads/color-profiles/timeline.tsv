@@ -2,3 +2,4 @@ utc	stage	event	ref	note
 2026-10-18T07:15Z	0	stage-start	-	line lead start, base 9d01972
 2026-10-18T07:35Z	-	heartbeat	-	waiting
 2026-10-18T07:53Z	-	heartbeat	-	waiting
+2026-10-18T08:01Z	3	stage-start	CP-1	LC-a merged (#446); CP-1 building
