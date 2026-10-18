@@ -1,0 +1,9 @@
+[
+  {"note": "lottie import reads the in tangent as absolute, not relative to its vertex", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "let c2 = Point(x: b.vertex.x + b.tangentIn.x, y: b.vertex.y + b.tangentIn.y)", "replacement": "let c2 = b.tangentIn", "filter": "LottieImportTests"},
+  {"note": "lottie import keeps the file's top-first layer order", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "for json in layers.reversed() {", "replacement": "for json in layers {", "filter": "LottieImportTests"},
+  {"note": "lottie import drops the layer anchor from the shapes", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "let root = Matrix.translation(x: -anchor.x, y: -anchor.y)", "replacement": "let root = Matrix.identity", "filter": "LottieImportTests"},
+  {"note": "lottie import adds the anchor instead of subtracting it", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "let root = Matrix.translation(x: -anchor.x, y: -anchor.y)", "replacement": "let root = Matrix.translation(x: anchor.x, y: anchor.y)", "filter": "LottieImportTests"},
+  {"note": "lottie import fps range widened to 0...240", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "let fps = try frame(root[\"fr\"], \"fr\", 30, 1...240)", "replacement": "let fps = try frame(root[\"fr\"], \"fr\", 30, 0...240)", "filter": "LottieImportTests"},
+  {"note": "lottie import frame range has no upper cap", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "static let frames = 0...1_000_000", "replacement": "static let frames = 0...Int.max", "filter": "LottieImportTests"},
+  {"note": "lottie import nesting check lets deep groups through", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "guard depth <= limit else {", "replacement": "guard depth <= Int.max else {", "filter": "LottieImportTests"}
+]
