@@ -4,7 +4,7 @@
 // against the bytes left first and throws `CodecError.damaged` instead of
 // trapping; length arithmetic goes through `adding` and `multiplying`, which
 // throw `CodecError.tooLarge` on overflow. A sub-reader shares storage, so
-// framing a section by its length copies nothing.
+// framing a section by its length copies nothing. `crc32`, the IEEE CRC-32, is shared by zip and PNG.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -100,5 +100,45 @@ struct ByteReader: Sendable {
         let (product, overflow) = a.multipliedReportingOverflow(by: b)
         guard !overflow else { throw CodecError.tooLarge("size \(a) x \(b) overflows") }
         return product
+    }
+}
+
+extension ByteReader {
+    /// Eight 256-entry tables, flat: table k at `k * 256`. Table 0 is the
+    /// byte-at-a-time table; table k advances table k - 1 by one zero byte.
+    static let crcTables: [UInt32] = {
+        var tables = [UInt32](repeating: 0, count: 8 * 256)
+        for byte in 0..<256 {
+            var crc = UInt32(byte)
+            for _ in 0..<8 { crc = crc & 1 == 1 ? (crc >> 1) ^ 0xEDB8_8320 : crc >> 1 }
+            tables[byte] = crc
+        }
+        for index in 256..<(8 * 256) {
+            let previous = tables[index - 256]
+            tables[index] = (previous >> 8) ^ tables[Int(previous & 0xFF)]
+        }
+        return tables
+    }()
+
+    /// The IEEE CRC-32 of `bytes`, eight bytes per step.
+    static func crc32<Bytes: Collection>(_ bytes: Bytes) -> UInt32 where Bytes.Element == UInt8 {
+        let input = Array(bytes)
+        let tables = crcTables
+        var crc: UInt32 = 0xFFFF_FFFF
+        var index = 0
+        while input.count - index >= 8 {
+            let low = crc ^ (UInt32(input[index]) | UInt32(input[index + 1]) << 8
+                | UInt32(input[index + 2]) << 16 | UInt32(input[index + 3]) << 24)
+            crc = tables[7 * 256 + Int(low & 0xFF)] ^ tables[6 * 256 + Int((low >> 8) & 0xFF)]
+                ^ tables[5 * 256 + Int((low >> 16) & 0xFF)] ^ tables[4 * 256 + Int(low >> 24)]
+                ^ tables[3 * 256 + Int(input[index + 4])] ^ tables[2 * 256 + Int(input[index + 5])]
+                ^ tables[256 + Int(input[index + 6])] ^ tables[Int(input[index + 7])]
+            index += 8
+        }
+        while index < input.count {
+            crc = tables[Int((crc ^ UInt32(input[index])) & 0xFF)] ^ (crc >> 8)
+            index += 1
+        }
+        return crc ^ 0xFFFF_FFFF
     }
 }
