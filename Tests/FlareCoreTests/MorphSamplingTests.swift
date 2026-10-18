@@ -39,5 +39,14 @@ struct MorphSamplingTests {
         #expect(Self.near(c1, Self.p(0, 5)) && Self.near(c2, Self.p(10, 5)) && Self.near(to, Self.p(10, 0)))
     }
 
+    @Test func unpairedKeysHoldTheLeftKey() {
+        // A file can hold keys AP-4 never made compatible: a different count, or a close against a line.
+        let tri = Path(polyline: [Self.p(0, 0), Self.p(4, 0), Self.p(0, 4)], closed: true)
+        let open = Path(polyline: [Self.p(0, 0), Self.p(4, 0), Self.p(0, 4), Self.p(2, 2)], closed: false)
+        let quad = Path(polyline: [Self.p(0, 0), Self.p(8, 0), Self.p(8, 8), Self.p(0, 8)], closed: true)
+        #expect([open, quad].allSatisfy { Self.layer([PathKeyframe(frame: 0, path: tri), PathKeyframe(frame: 10, path: $0)]).sampledPath(shape: 0, at: 5) == tri })
+        #expect(Self.layer([PathKeyframe(frame: 0, path: tri)]).sampledPath(shape: 0, at: .nan) == nil)
+    }
+
     @Test func emptyIsNil() { #expect(Self.layer([]).sampledPath(shape: 0, at: 0) == nil && Layer(id: "l", name: "L").sampledPath(shape: 0, at: 0) == nil) }
 }
