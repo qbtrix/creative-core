@@ -19,5 +19,12 @@
     "anchor": "easing: $0.easing) }, at: frame)",
     "replacement": "easing: $0.easing == .hold ? .linear : $0.easing) }, at: frame)",
     "filter": "ColorSamplingTests.holdKeepsLeft"
+  },
+  {
+    "note": "colour sampling pins alpha to 1 instead of interpolating it",
+    "file": "Sources/FlareCore/Sampling+Tracks.swift",
+    "anchor": "let a = component(\\.a)",
+    "replacement": "let a = component(\\.a).map { _ in 1.0 }",
+    "filter": "ColorSamplingTests.alphaInterpolates"
   }
 ]

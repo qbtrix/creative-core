@@ -79,9 +79,27 @@ import Testing
         }
     }
 
+    /// The fixture's whole export, pinned: key order, number format and key layout are part of the contract.
+    /// Re-record it from the failure message only when the change is meant.
+    static let golden = [
+        #"{"assets":[],"ddd":0,"fr":24,"h":40,"ip":0,"layers":[{"ddd":0,"hd":false,"ind":1,"ip":0,"#,
+        #""ks":{"a":{"a":0,"k":[0,0]},"o":{"a":0,"k":100},"p":{"a":0,"k":[0,0]},"r":{"a":0,"k":0},"s":{"a":0,"k":[100,100]}},"#,
+        #""nm":"Shape","op":24,"shapes":[{"it":[{"ks":{"a":1,"k":[{"i":{"x":[1],"y":[1]},"o":{"x":[0],"y":[0]},"#,
+        #""s":[{"c":true,"i":[[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]],"o":[[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]],"#,
+        #""v":[[0,0],[20,0],[40,0],[40,20],[40,40],[20,40],[0,40],[0,20]]}],"t":0},"#,
+        #"{"s":[{"c":true,"i":[[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]],"o":[[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]],"#,
+        #""v":[[15,15],[20,0],[25,15],[40,20],[25,25],[20,40],[15,25],[0,20]]}],"t":24}]},"ty":"sh"},"#,
+        #"{"c":{"a":1,"k":[{"h":1,"s":[0,0,0,1],"t":0},{"s":[1,1,1,1],"t":24}]},"lc":1,"lj":1,"o":{"a":0,"k":100},"ty":"st","#,
+        #""w":{"a":1,"k":[{"i":{"x":[1],"y":[1]},"o":{"x":[0],"y":[0]},"s":[2],"t":0},{"s":[8],"t":24}]}},"#,
+        #"{"c":{"a":1,"k":[{"i":{"x":[0.58],"y":[1]},"o":{"x":[0.42],"y":[0]},"s":[1,0,0,1],"t":0},{"s":[0,0,1,1],"t":24}]},"#,
+        #""o":{"a":0,"k":100},"r":1,"ty":"fl"},"#,
+        #"{"a":{"a":0,"k":[0,0]},"o":{"a":0,"k":100},"p":{"a":0,"k":[0,0]},"r":{"a":0,"k":0},"s":{"a":0,"k":[100,100]},"ty":"tr"}],"#,
+        #""ty":"gr"}],"sr":1,"st":0,"ty":4}],"nm":"Tracks","op":24,"v":"5.7.0","w":40}"#,
+    ].joined()
+
     @Test func byteStable() throws {
-        let scene = try TrackCommandsTests.fixtureScene()
-        #expect(try LottieExporter.export(scene: scene) == LottieExporter.export(scene: scene))
+        let actual = try #require(String(data: try LottieExporter.export(scene: TrackCommandsTests.fixtureScene()), encoding: .utf8))
+        #expect(actual == Self.golden, "export bytes changed; actual output:\n\(actual)")
     }
 
     @Test func singleKeysWriteStaticValues() throws {
