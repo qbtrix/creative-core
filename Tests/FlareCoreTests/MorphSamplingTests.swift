@@ -10,8 +10,9 @@ struct MorphSamplingTests {
     static func layer(_ keys: [PathKeyframe]) -> Layer { Layer(id: "l", name: "L", shapeTracks: [ShapeTrack(shapeIndex: 0, keys: keys)]) }
 
     @Test func keyFrameIsExact() {
-        // Coordinates that are not dyadic, so a blend at a key frame shows.
-        let paths = [0.1, 0.7, 1.3].map { s in Path(polyline: [Self.p(s, 0.3), Self.p(10.1 * s, 0.7), Self.p(3.3, 9.9 * s)], closed: true) }
+        // Coordinates that are not dyadic and shrink from the first key to the second, so a + (b - a) * 1
+        // rounds away from b: the previous segment's end at frame 7 is not key 7 bit for bit.
+        let paths = [1.3, 0.1, 0.7].map { s in Path(polyline: [Self.p(s, 0.3), Self.p(10.1 * s, 0.7), Self.p(3.3, 9.9 * s)], closed: true) }
         let layer = Self.layer(zip([0, 7, 24], paths).map { PathKeyframe(frame: $0, path: $1, easing: .easeInOut) })
         #expect(zip([0.0, 7, 24], paths).allSatisfy { layer.sampledPath(shape: 0, at: $0) == $1 })
     }
