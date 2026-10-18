@@ -32,8 +32,8 @@ import Foundation
             }
             do {
                 let image = try codec.decodePNG(Data(bytes))
-                // A 13-byte header, then four 4-byte components per pixel.
-                #expect(13 + image.width * image.height * 16 == bytes.count)
+                // A 33-byte header, then four 4-byte components per pixel.
+                #expect(33 + image.width * image.height * 16 == bytes.count)
                 for y in 0..<image.height { for x in 0..<image.width { #expect(try image.pixel(x: x, y: y).isFinite) } }
                 decoded += 1
             } catch is CodecError {
