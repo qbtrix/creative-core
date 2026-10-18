@@ -7,8 +7,11 @@
 // `MetalBackend.tileStorageMode` (shared on unified memory, managed on a discrete GPU); upload clamps every
 // component to the finite half range. GPU kernels write tiles: composite in place on the backdrop's, the
 // other ops into new surfaces' tiles. Each op waits for its command buffer, and synchronizes a managed tile,
-// before any `download`; a tile evicted while composite writes it in place can be shadowed mid-write, so
-// composite downloads it again once the GPU is done (MetalBackend+Composite.swift).
+// before any `download`. Every CPU read of a tile (`read`, `download`, eviction) goes through `readback`: one
+// blit into shared staging buffers on the backend's queue, waited for, never `getBytes`, which returned stale
+// pixels right after a kernel's write on the macOS runners' paravirtual GPU (#453). A tile evicted while
+// composite writes it in place can be shadowed mid-write, so composite downloads it again once the GPU is
+// done (MetalBackend+Composite.swift).
 #if canImport(Metal)
 import CoreRaster
 import CoreRender
@@ -115,17 +118,39 @@ final class MetalSurface {
     }
 
     /// Each tile's pixels (a texture and its tile's rect) as row-major RGBA binary16, `rect.width *
-    /// rect.height * channels` values per tile.
+    /// rect.height * channels` values per tile, copied by one blit into shared staging buffers on `queue` and
+    /// waited for. Never `getBytes`: on the macOS runners' paravirtual GPU it returned a tile's old pixels
+    /// straight after the kernel that wrote it completed (#453); a blit queued after that kernel cannot.
+    /// Throws `RenderError.raster` when a buffer or command buffer is unavailable or the blit fails.
     static func readback(_ tiles: [(texture: any MTLTexture, rect: TileRect)],
                          queue: any MTLCommandQueue) throws -> [[UInt16]] {
-        try tiles.map { tile in
-            var halves = [UInt16](repeating: 0, count: tile.rect.width * tile.rect.height * channels)
-            try halves.withUnsafeMutableBytes { raw in
-                guard let base = raw.baseAddress else { throw RenderError.raster("empty tile readback") }
-                tile.texture.getBytes(base, bytesPerRow: tile.rect.width * bytesPerPixel,
-                                      from: MTLRegionMake2D(0, 0, tile.rect.width, tile.rect.height), mipmapLevel: 0)
+        guard !tiles.isEmpty else { return [] }
+        let device = queue.device
+        let staging = try tiles.map { tile -> any MTLBuffer in
+            guard let buffer = device.makeBuffer(length: bytes(of: tile.rect), options: .storageModeShared) else {
+                throw RenderError.raster("tile readback: no \(bytes(of: tile.rect))-byte buffer on \(device.name)")
             }
-            return halves
+            return buffer
+        }
+        guard let commands = queue.makeCommandBuffer(), let blit = commands.makeBlitCommandEncoder() else {
+            throw RenderError.raster("tile readback: no blit command buffer on \(device.name)")
+        }
+        for (tile, buffer) in zip(tiles, staging) {
+            let rowBytes = tile.rect.width * bytesPerPixel
+            blit.copy(from: tile.texture, sourceSlice: 0, sourceLevel: 0, sourceOrigin: MTLOrigin(x: 0, y: 0, z: 0),
+                      sourceSize: MTLSize(width: tile.rect.width, height: tile.rect.height, depth: 1), to: buffer,
+                      destinationOffset: 0, destinationBytesPerRow: rowBytes,
+                      destinationBytesPerImage: rowBytes * tile.rect.height)
+        }
+        blit.endEncoding()
+        commands.commit()
+        commands.waitUntilCompleted()
+        guard commands.status == .completed, commands.error == nil else {
+            throw RenderError.raster("tile readback failed on \(device.name): \(commands.error.map { "\($0)" } ?? "status \(commands.status.rawValue)")")
+        }
+        return zip(tiles, staging).map { tile, buffer in
+            let count = tile.rect.width * tile.rect.height * channels
+            return Array(UnsafeBufferPointer(start: buffer.contents().bindMemory(to: UInt16.self, capacity: count), count: count))
         }
     }
 

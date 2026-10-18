@@ -11,8 +11,9 @@
 // `effectiveSupports`), and display, resample, blur (gaussianBlur and unsharpMask) and retouch (cloned) also
 // throw it, without failing the backend, when a buffer would exceed `maxBufferLength`. A probe, a command buffer or a texture allocation that fails
 // leaves the backend unhealthy with the reason in `capabilities.lastError` (so `deviceLost` is only ever thrown with `isHealthy` false), and only a
-// `recover` whose probe passes makes it healthy again. No GPU wait or runtime compile of a custom
-// source runs under the lock: `supports` and `isHealthy` answer while a probe is in flight. A backend from
+// `recover` whose probe passes makes it healthy again. No probe's GPU wait or runtime compile of a
+// custom source runs under the lock: `supports` and `isHealthy` answer while a probe is in flight; only the short
+// blit of a tile readback (MetalSurface.readback, for `read` and eviction) waits on the GPU under it. A backend from
 // `startingInBackground` (MetalBackend+Warmup.swift, MB-17) leaves each family out of `supports` until its
 // pipelines finish compiling off the caller's queue; the plain init compiles each on first use.
 #if canImport(Metal)
