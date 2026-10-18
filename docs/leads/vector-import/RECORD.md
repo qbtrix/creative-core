@@ -5,7 +5,7 @@ Run: act-1a14de006be-1kmq · Session: https://claude.ai/code/session_01WN1jNn5SU
 Line lead for: preview-cache (#440), vector-import (#439), layered-codecs (#438)
 Stage: 3 wave 3; Anatomy round 1 on finished slices
 Base: b80c0871a391e1729578b0344c8884c10471c8ca
-Next: VI-3 #491 rebasing; VI-7 building; VI-5 after #491; Anatomy round 2 on VI-a + VI-lottie(VI-6)
+Next: VI-5 building, VI-7 building; Anatomy round 2 verdicts pending; Slice-Done waits on round-2 verdicts (dev CI run 360 on 72fbef6: Linux green)
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -20,9 +20,9 @@ Next: VI-3 #491 rebasing; VI-7 building; VI-5 after #491; Anatomy round 2 on VI-
 |---|---|---|---|---|---|---|---|
 | VI-1 | 1 | values, errors, two stubs, `import` part | Sources/FlareCore/Import/Import.swift, Tests/FlareCoreTests/ImportShapeTests.swift, docs/c4/parts/creative-core/flarecore/import.json | ImportShapeTests | none | #449 (83b20aa) | merged |
 | VI-2 | 2 | fixtures and every suite disabled | Tests/FlareCoreTests/Fixtures/import/, six suite files | suites compile | – | #478 (a59c5c2) | merged |
-| VI-3 | 3 | XMLTokens | Import/XMLTokens.swift, XMLTokensTests | XMLTokensTests | FlareXMLTokens (3, 3/3 caught) | #491 | PR open (6eeab52, rebased twice) |
+| VI-3 | 3 | XMLTokens | Import/XMLTokens.swift, XMLTokensTests | XMLTokensTests | FlareXMLTokens (3, 3/3 caught) | #491 | merged (72fbef6) |
 | VI-4 | 3 | SVGPathData with arcs | Import/SVGPathData.swift, SVGPathDataTests | SVGPathDataTests | FlareSVGPathData (5, 5/5 caught) | #490 (d060a8a) | merged |
-| VI-5 | after VI-3,4, EC-f | SVGImport.scene | Import/SVGImport.swift, SVGStyle.swift, SVGImportTests, SVGImportFuzzTests | both | FlareSVGImport (3) | | open |
+| VI-5 | after VI-3,4, EC-f | SVGImport.scene | Import/SVGImport.swift, SVGStyle.swift, SVGImportTests, SVGImportFuzzTests | both | FlareSVGImport (3) | | building |
 | VI-6 | after VI-2, EC-f | Lottie shapes, static transform | Import/LottieImport.swift, LottieImportTests | LottieImportTests | FlareLottieImport (7, 7/7 caught) | #494 (71c00e8) | merged |
 | VI-7 | after VI-6 | Lottie animation, masks, mattes | Import/LottieImport+Animation.swift, LottieImportAnimationTests, LottieImportFuzzTests | both | FlareLottieImportAnimation (3) | | building |
 | VI-8 | after VI-5,7 | round trip and budgets | ImportRoundTripTests, ImportBudgetTests | KJ-VI | none | | open |
