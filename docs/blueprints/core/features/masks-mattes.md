@@ -37,7 +37,7 @@ formats. No task reads another product's code.
 
 | slice | behavior (one sentence) | tasks | checks | waits on |
 |---|---|---|---|---|
-| MM-a | The raster and vector checks are written and disabled, with a fixture document (a shape layer with two masks and a luma-matted layer) and seeded masks. | MM-1, MM-2 | `MaskOpsTests`, `MaskCompositeTests`, `MaskCommandsTests`, `MatteRenderListTests` | engine-contracts:EC-f (MM-2) |
+| MM-a | The raster and vector checks are written and disabled, with a fixture document (a shape layer with two masks and a luma-matted layer) and seeded masks. | MM-1, MM-2 | `MaskOpsTests`, `MaskCompositeTests`, `MaskCommandsTests`, `MatteRenderListTests` | engine-contracts:EC-a (MM-1), engine-contracts:EC-f (MM-2) |
 | MM-raster | A mask feathers by a radius, traces its outlines and bounds, comes from a buffer's alpha or luminance (inverted or not), and a layer composites through it in place, equal on the CPU backend and the direct CoreRaster call. | MM-3, MM-4, MM-5 | `MaskOpsTests`, `MaskCompositeTests`, `CPUMaskedCompositeTests` | MM-a; engine-contracts:EC-a (MM-3, MM-4), engine-contracts:EC-b (MM-5) |
 | MM-vector | Adding, editing, removing and reordering layer masks and setting a track matte are commands with exact undo that refuse cycles and locked layers, the render list gives each item its clip paths and matte source, and SVG and Lottie write both. | MM-6, MM-7, MM-8 | `MaskCommandsTests`, `MatteRenderListTests`, `SVGMaskExportTests`, `LottieMaskExportTests` | MM-a |
 | MM-z | A walk masks a Halo-style layer stack end to end on both halves, the budgets hold, and the feature is built. | MM-9, MM-10 | `MaskWalkTests`, `MaskBudgetTests` | MM-raster, MM-vector; path-geometry (MM-10) |
