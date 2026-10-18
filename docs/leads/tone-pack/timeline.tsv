@@ -18,3 +18,4 @@ utc	stage	event	ref	note
 2026-10-18T23:19Z	3	pr-opened	#578	task TP-3 head 52d2576b, mutate 3/3
 2026-10-18T23:19Z	3	task-start	TP-4	builder launched
 2026-10-18T23:23Z	3	pr-merged	#578	task TP-3 squash f847c42
+2026-10-18T23:34Z	3	pr-opened	#581	task TP-1 part B head 1276f63d, mutate 0/0 none
