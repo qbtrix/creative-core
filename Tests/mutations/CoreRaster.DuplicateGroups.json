@@ -1,0 +1,37 @@
+[
+  {
+    "note": "duplicate groups union the pair itself instead of its roots, so chains break (no transitivity), caught by chainsGroup",
+    "file": "Sources/CoreRaster/Hash/DuplicateGroups.swift",
+    "anchor": "var big = root(a), small = root(b)",
+    "replacement": "var big = a, small = b",
+    "filter": "DuplicateGroupsTests"
+  },
+  {
+    "note": "duplicate groups keep singleton groups, caught by singletonsDropped",
+    "file": "Sources/CoreRaster/Hash/DuplicateGroups.swift",
+    "anchor": "filter { $0.count >= 2 }",
+    "replacement": "filter { $0.count >= 1 }",
+    "filter": "DuplicateGroupsTests"
+  },
+  {
+    "note": "duplicate groups treat a hash exactly the distance away as far, caught by distanceIsInclusive",
+    "file": "Sources/CoreRaster/Hash/DuplicateGroups.swift",
+    "anchor": "if d <= radius { found.append(node) }",
+    "replacement": "if d < radius { found.append(node) }",
+    "filter": "DuplicateGroupsTests"
+  },
+  {
+    "note": "duplicate groups do not clamp the distance to 16, caught by distanceIsClamped",
+    "file": "Sources/CoreRaster/Hash/DuplicateGroups.swift",
+    "anchor": "let radius = min(distance, maxDistance)",
+    "replacement": "let radius = distance",
+    "filter": "DuplicateGroupsTests"
+  },
+  {
+    "note": "duplicate groups BK-tree prunes edges one bit too tight, caught by matchesBruteForceOnSeededClusters",
+    "file": "Sources/CoreRaster/Hash/DuplicateGroups.swift",
+    "anchor": "where edge >= d - radius && edge <= d + radius",
+    "replacement": "where edge > d - radius && edge <= d + radius",
+    "filter": "DuplicateGroupsTests"
+  }
+]
