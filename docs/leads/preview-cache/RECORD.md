@@ -47,3 +47,5 @@ Next: PC-4, PC-5 building (PC-3 #498 merged with round-2 recovery header); PC-ha
 - PC-6 `differentPicturesFar` seed 624 has zero margin (closest pair = 20) and `hashIsDeterministic` pins 0xFF0CB51C37665241; both rest on identical floating point on macOS. PC-hash Anatomy reviews this.
 
 - 2026-10-18T13:44:23Z round 2: dev 8e258c5, gate PASS (EngineStress flake rerun), mutants 37/37, lenses 5, clean=no; majors n2/11/16 recovery header (PC-3 builder), n7 DuplicateGroups quadratic (fixer lead/preview-cache-R2-1)
+
+- 14:26Z: PC-hash fixer R2-1 opened #502 (866346b, 8/8, 284 lines): multi-index table, max distance 16 to 10, 100k in 0.62 to 0.73 s (was 248 s), random grouping 0.1%. Closes n7 on merge.
