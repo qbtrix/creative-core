@@ -31,3 +31,4 @@ utc	stage	event	ref	note
 2026-10-18T10:50Z	5	stage-start	CP-6	CP-6 launched (wf_7f23e743-ee3) on aac58b4; CP-7/CP-8 wait layered-codecs:LC-write
 2026-10-18T10:52Z	4	pr-merged	#470	CP-4 merged 6d74e04; CP-icc tasks all merged
 2026-10-18T10:53Z	4	stage-end	wf_92d29b5f-79b	CP-4/CP-5 contract checks: only miss is ICCShapeTests stub assertion edited (explained in bodies, needed for gate); accepted
+2026-10-18T11:00Z	4	pr-opened	#476	CP-6 PR opened head 829515c; contract check ok
