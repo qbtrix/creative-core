@@ -10,7 +10,7 @@ struct LottieImportFuzzTests {
         return "{\"v\":\"5.7.0\",\"fr\":30,\"ip\":0,\"op\":10,\"w\":\(width),\"h\":10,\"layers\":[\(layers)]}"
     }
 
-    @Test(.disabled("waits on VI-7")) func mutationsThrowOrImport() throws {
+    @Test func mutationsThrowOrImport() throws {
         let seeds = try ["shapes.json", "animated.json"].map(ImportFixture.data)
         ImportFuzz.run(seeds: seeds, cases: 1_000, seed: 0x5649_5F37) { data in
             let (document, _) = try LottieImport.document(from: data)
@@ -18,7 +18,7 @@ struct LottieImportFuzzTests {
         }
     }
 
-    @Test(.disabled("waits on VI-7")) func capsOnBytesAndLayers() {
+    @Test func capsOnBytesAndLayers() {
         #expect(kind(file(layers: 0) + String(repeating: " ", count: LottieImport.maxBytes)) == "tooLarge")
         #expect(kind(file(layers: LottieImport.maxLayers)) == nil)
         #expect(kind(file(layers: LottieImport.maxLayers + 1)) == "tooLarge")
