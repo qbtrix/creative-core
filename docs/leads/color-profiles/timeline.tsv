@@ -110,3 +110,4 @@ utc	stage	event	ref	note
 2026-10-18T21:08Z	5	heartbeat	-	waiting on CI 39164401954 (pending) for Slice-Done CP-z and contact sheet
 2026-10-18T21:16Z	-	heartbeat	-	waiting
 2026-10-18T21:34Z	-	heartbeat	-	waiting
+2026-10-18T21:51Z	5	heartbeat	-	CI 39167458602 (bf5426e, has CP-10): Linux running
