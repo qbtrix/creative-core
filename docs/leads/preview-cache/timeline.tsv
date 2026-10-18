@@ -20,3 +20,4 @@ utc	stage	event	ref	note
 2026-10-18T12:38:41Z	3	merge	PC-2	#487 merged 12:31Z
 2026-10-18T12:38:41Z	3	merge	PC-7	#486 merged 12:28Z
 2026-10-18T12:38:41Z	4	heartbeat	-	PC-2, PC-7 merged; PC-3 builder starting
+2026-10-18T13:03:03Z	-	heartbeat	-	PC-3 building; dev CI #359 (d51ef90) Linux green but lacks #487, PC-a waits for newer run
