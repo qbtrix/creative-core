@@ -68,3 +68,4 @@ Next: VI-5 building, VI-7 building; Anatomy round 2 verdicts pending; Slice-Done
   Plan: after #521 merges, run a follow-up fixer PR in round 3 that reuses the unpushed lead/vector-import-R2-3 work in /tmp/claude-0/-home-user-creative-core/ddd489f2-63fc-556a-b5ff-d210f2448d09/scratchpad/vi (13 mutation entries, 25/25 caught, not gated yet).
 - 2026-10-18T16:28Z #520-522 merged 16:08Z. Round 3: fixer lead/vector-import-R3-1 launched for the #521 gaps (checkNesting pin, group-walk mutations, own-shape test, iterative JSON ==/hash). VI-5 builder resumed to open its second PR. Dev CI run 370 queued.
 - 2026-10-18T16:51Z Heartbeat. Dev CI 369 Linux green; macOS SIGBUS gone after #520-522 (red only on a preview-cache budget test). R3-1 Lottie fixer gating; VI-5 second PR builder running.
+- 16:54Z Belt-Slice-Done posted for VI-a and VI-lottie on run 39143654502. VI-svg waits on VI-5's second PR. Resumed VI R3-1, which had stopped early.

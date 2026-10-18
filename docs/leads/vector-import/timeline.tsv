@@ -51,3 +51,4 @@ utc	stage	event	ref	note
 2026-10-18T16:08Z	followup	after #521 merges: pin checkNesting (deep non-group arrays -> tooLarge), ownShapeAtFirstPaint test, mutation entries for group-walk merge/placed/depth; unpushed work on lead/vector-import-R2-3 ($S/vi)
 2026-10-18T16:28Z	launch	#520-522 merged 16:08Z. Round 3: fixer lead/vector-import-R3-1 launched for the #521 gaps (checkNesting pin, group-walk mutations, own-shape test, iterative JSON ==/hash). VI-5 builder resumed to open its second PR. Dev CI run 370 queued.
 2026-10-18T16:51Z	heartbeat	Heartbeat. Dev CI 369 Linux green; macOS SIGBUS gone after #520-522 (red only on a preview-cache budget test). R3-1 Lottie fixer gating; VI-5 second PR builder running.
+16:54Z	slice-done	Belt-Slice-Done posted for VI-a and VI-lottie on run 39143654502. VI-svg waits on VI-5's second PR. Resumed VI R3-1, which had stopped early.
