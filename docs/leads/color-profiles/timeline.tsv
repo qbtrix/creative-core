@@ -59,3 +59,4 @@ utc	stage	event	ref	note
 2026-10-18T15:01Z	anatomy	fix-dispatch	cp1-e	cp1-c rebased on #509 fails keepsOutOfGamut (2e-6 drift through rounded sRGB curve). Lead decision: curves == ColorProfile.sRGB.curves count as buffer encoding, built-in to built-in stays exact matrix. cp1-c pushed (ce6495b), fixer cp1-e (wf_74669e0d-d02) cherry-picks it + fix in one PR
 2026-10-18T15:04Z	status	dev-ci	39137820117	Dev CI on c294adb: Linux green, macOS SIGBUS again in Metal ParityTests.resample (not ours; #507 did not fix it). Noted on #453.
 2026-10-18T15:10Z	fix-r1	merged	#515 ad85831	cp1-e merged (carries cp1-c + sRGB-curve shortcut): Mutate 7/7 CoreRaster.ProfileConvert, 3 files +143/-16. Round 1 fixes all merged. Round 2 gate+mutation queued on ad85831 after AP r2.
+2026-10-18T15:13Z	-	heartbeat	-	waiting
