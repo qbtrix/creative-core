@@ -70,3 +70,4 @@ Next: VI-5 building, VI-7 building; Anatomy round 2 verdicts pending; Slice-Done
 - 2026-10-18T16:51Z Heartbeat. Dev CI 369 Linux green; macOS SIGBUS gone after #520-522 (red only on a preview-cache budget test). R3-1 Lottie fixer gating; VI-5 second PR builder running.
 - 16:54Z Belt-Slice-Done posted for VI-a and VI-lottie on run 39143654502. VI-svg waits on VI-5's second PR. Resumed VI R3-1, which had stopped early.
 - 17:16Z Heartbeat: run 370 (7fcd04d) has Linux green. macOS is red only on EngineStressTests (7.0 s vs 5 s), which is outside this lead; groupManyBudget passed. All round-3 agents are gating, queued on the CI lock. No new lead PRs since #525 and #526. VI-svg waits on VI-5's second PR.
+- 17:38Z Heartbeat: all five round-3 agents are gating, serialized on the CI lock. No lead PR is open. Dev run 373 (66bd163, #535 engine-stress perf) is queued. Disk: 17 GB free.
