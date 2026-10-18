@@ -48,3 +48,4 @@ utc	stage	event	ref	note
 2026-10-18T14:19Z	4	fix-gate-wait	#501 merged; #496 #500 ap1-d gating	ap1-c merged; three heads wait for a quiet gate
 2026-10-18T14:19Z	-	heartbeat	-	waiting
 2026-10-18T14:37Z	-	heartbeat	-	waiting
+2026-10-18T14:43Z	anatomy	pr-open	#511	ap1-d opened (gate PASS try 4 on 1892abf)
