@@ -19,18 +19,20 @@ public struct ParityPack: Equatable, Sendable {
     /// The tolerance a result is compared to the golden with.
     public let tolerance: ParityTolerance
 
-    private init(_ op: RenderOp, _ rest: RenderOp..., tolerance: ParityTolerance) {
+    /// Internal so each W1 family's `Samples+<Family>.swift` can declare its own `packs`.
+    init(_ op: RenderOp, _ rest: RenderOp..., tolerance: ParityTolerance) {
         (self.op, ops, self.tolerance) = (op, [op] + rest, tolerance)
     }
 
-    /// The checked-in packs, which cover every `RenderOp` once.
+    /// The checked-in packs, which cover every `RenderOp` with samples once; the W1 families'
+    /// packs come from their `Samples+<Family>.swift` files.
     public static let all = [
         ParityPack(.display, .blur, .adjust, .retouch, tolerance: .standard),
         ParityPack(.composite, .blendSeparable, tolerance: .standard),
         ParityPack(.blendNonSeparable, tolerance: .nonSeparable),
         ParityPack(.transform, tolerance: .standard),
         ParityPack(.resample, tolerance: .standard),
-    ]
+    ] + MaskedCompositeSamples.packs + AffineSamples.packs + EffectSamples.packs + ColorSamples.packs
 
     /// The golden's file name: the ops' raw values joined by `-`.
     public var name: String { ops.map(\.rawValue).joined(separator: "-") }
