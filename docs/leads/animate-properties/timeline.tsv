@@ -54,3 +54,4 @@ utc	stage	event	ref	note
 2026-10-18T14:50Z	anatomy	merged	#496,#500	ap1-a f2ad1a5, ap1-b b2f87b9 merged: all round 1 batches in
 2026-10-18T14:52Z	anatomy	round-start	c294adb	round 2: gate + 6 mutation plans on dev c294adb queued behind EC round 4 mutation
 2026-10-18T14:55Z	-	heartbeat	-	waiting
+2026-10-18T15:04Z	status	dev-ci	39137820117	Dev CI on c294adb: Linux green, macOS SIGBUS again in Metal ParityTests.resample (not ours; #507 did not fix it). Noted on #453.
