@@ -1,7 +1,7 @@
 {
   "id": "import",
   "name": "Import",
-  "description": "Importers that read the vector formats export writes, its inverse: the contract for an SVG document read into one scene and a Lottie JSON document read into a document, with byte, element, layer and depth caps, a typed ImportError and an ImportReport listing what was skipped; and SVGPathData, which reads SVG path data (every command, absolute and relative, arcs as cubics) into a Path. The document readers are stubs that throw unsupported until they are built.",
+  "description": "Importers that read the vector formats export writes, its inverse: the contract for an SVG document read into one scene and a Lottie JSON document read into a document, with byte, element, layer and depth caps, a typed ImportError and an ImportReport listing what was skipped; and SVGPathData, which reads SVG path data (every command, absolute and relative, arcs as cubics) into a Path. The Lottie reader turns shape and solid layers, their paths, rectangles, ellipses, fills, strokes, gradients and static transforms into one scene, counting keyframes, masks, mattes and other layer kinds as skipped; the SVG document reader is a stub that throws unsupported until it is built.",
   "technology": "Swift 6, Foundation",
   "paths": [
     "Sources/FlareCore/Import/"

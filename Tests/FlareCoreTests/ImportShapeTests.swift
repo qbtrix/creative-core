@@ -11,11 +11,9 @@ struct ImportShapeTests {
         }
     }
 
-    @Test func lottieStubThrowsNotBuilt() {
-        let data = Data("{\"v\":\"5.7.0\",\"layers\":[]}".utf8)
-        #expect(throws: ImportError.unsupported("not built")) {
-            _ = try LottieImport.document(from: data)
-        }
+    @Test func lottieReaderIsBuilt() throws {
+        let data = Data("{\"v\":\"5.7.0\",\"w\":10,\"h\":10,\"layers\":[]}".utf8)
+        #expect(try LottieImport.document(from: data).0.scenes.count == 1)
     }
 
     @Test func caps() {
