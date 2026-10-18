@@ -4,8 +4,8 @@
 // `mimetype`, parses `stack.xml` with StackXML, turns its top-first stacks into
 // bottom-to-top nodes (nested stacks become groups, stack offsets add to their
 // layers'), sums every `src` and `mergedimage.png` IHDR within
-// `maxTotalPixels`, then decodes each once. ORA carries no ICC
-// profile, so `profile` is nil. `write`'s validation and encoding live in
+// `maxTotalPixels`, then decodes each once. The depth and the `profile.icc`
+// entry are read in OpenRasterDeep.swift. `write`'s validation and encoding live in
 // OpenRasterWrite.swift.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
@@ -36,7 +36,9 @@ public enum OpenRaster {
     /// (read from its IHDR before decoding, and checked again after) or for
     /// IHDR sizes summing over `maxTotalPixels`, and whatever `ZipStore`,
     /// `StackXML` and `pixels` throw. Every image is sized and summed before
-    /// any is decoded, and each is decoded once.
+    /// any is decoded, and each is decoded once. `bitsPerChannel` is 16 when
+    /// any PNG's IHDR says 16; `profile` is read from `profile.icc`, which
+    /// throws `damaged` or `tooLarge` when bad (OpenRasterDeep.swift).
     public static func read(_ data: Data, pixels: any PixelCodec) throws -> LayeredImage {
         let entries = try ZipStore.entries(data)
         guard entries["mimetype"] == Data("image/openraster".utf8) else { throw CodecError.notThisFormat }
@@ -102,8 +104,8 @@ public enum OpenRaster {
         guard composite.map({ $0.width == stack.width && $0.height == stack.height }) ?? true else {
             throw CodecError.damaged("mergedimage.png is not the canvas size")
         }
-        return LayeredImage(width: stack.width, height: stack.height, nodes: tree,
-                            composite: composite, bitsPerChannel: 8, profile: nil)
+        return LayeredImage(width: stack.width, height: stack.height, nodes: tree, composite: composite,
+                            bitsPerChannel: bitsPerChannel(entries, sources), profile: try profile(entries))
     }
 
     /// The pixel count of the PNG's IHDR, within `maxSide` and
@@ -141,7 +143,8 @@ public enum OpenRaster {
     /// (for example `photo/document.json`); one that collides with a standard
     /// entry throws `unsupported`. Throws a `CodecError`, before encoding
     /// anything, for an image the format cannot hold (see OpenRasterWrite.swift):
-    /// a profile, a missing composite, a mask or clipping. A group's `isOpen`
+    /// a depth other than 8 or 16, a profile it cannot write, a missing
+    /// composite, a mask or clipping. A group's `isOpen`
     /// is not kept; it reopens open.
     public static func write(_ image: LayeredImage, pixels: any PixelCodec,
                              extra: [String: Data] = [:]) throws -> Data {

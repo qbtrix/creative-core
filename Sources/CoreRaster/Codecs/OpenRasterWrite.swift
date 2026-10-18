@@ -7,8 +7,7 @@
 // `extra` entries.
 // Invariants a writer must keep:
 // - Nothing is encoded until the whole image is validated: bits per channel
-//   8 (16 is `unsupported` until colour-profiles), no embedded profile (ORA
-//   carries none), a composite the canvas size (the spec requires
+//   8 or 16 and a profile `iccData()` can write (OpenRasterDeep.swift), a composite the canvas size (the spec requires
 //   `mergedimage.png`), no mask or clipping (ORA has neither), every opacity
 //   finite in 0...1, the canvas and every layer within `OpenRaster.maxSide`
 //   and `PixelBuffer.maxPixels`, offsets within `StackXML.maxOffset`, at most
@@ -33,12 +32,7 @@ extension OpenRaster {
 
     /// The bytes `write` returns: validates first, then encodes.
     static func encode(_ image: LayeredImage, pixels: any PixelCodec, extra: [String: Data]) throws -> Data {
-        switch image.bitsPerChannel {
-        case 8: break
-        case 16: throw CodecError.unsupported("16-bit channels")
-        case let bits: throw CodecError.unsupported("\(bits) bits per channel")
-        }
-        guard image.profile == nil else { throw CodecError.unsupported("an embedded colour profile") }
+        let deep = try depthAndProfile(image, extra: extra)
         try checkSize(image.width, image.height, "canvas")
         guard let composite = image.composite else { throw CodecError.unsupported("an image without a composite") }
         guard composite.width == image.width, composite.height == image.height else {
@@ -64,8 +58,9 @@ extension OpenRaster {
         var files = extra
         files["mimetype"] = Data("image/openraster".utf8)
         files["stack.xml"] = Data(xml.utf8)
+        files[profilePath] = deep.icc
         for (path, buffer) in zip(layerPaths, stack.layers) + [("mergedimage.png", composite), ("Thumbnails/thumbnail.png", thumbnail)] {
-            files[path] = try codec(path) { try pixels.encodePNG(buffer, bitsPerChannel: 8) }
+            files[path] = try codec(path) { try pixels.encodePNG(buffer, bitsPerChannel: deep.bits) }
         }
         return try ZipStore.archive(files, first: "mimetype")
     }
