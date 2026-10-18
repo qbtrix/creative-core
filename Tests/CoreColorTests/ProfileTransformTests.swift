@@ -60,6 +60,25 @@ struct ProfileTransformTests {
         #expect(throws: ColorError.self) { try ProfileTransform(from: .sRGB, to: backwards) }
         #expect(throws: ColorError.self) { try ProfileTransform(from: .sRGB, to: ColorProfile(name: "Short", isGray: false,
                                                                                            toXYZD50: [1, 0, 0], curves: [])) }
+        // A zero gamma, and a para function type 3 whose linear segment falls (c < 0), cannot be inverted.
+        let para = ProfileCurve.parametric(type: 3, params: [2.4, 1, 0, -0.5, 0.04])
+        for curve in [ProfileCurve.gamma(0), para] {
+            let target = ColorProfile(name: "\(curve)", isGray: false, toXYZD50: ColorProfile.sRGB.toXYZD50,
+                                      curves: [curve, curve, curve])
+            #expect(throws: ColorError.self, "\(curve)") { try ProfileTransform(from: .sRGB, to: target) }
+        }
+    }
+
+    @Test func differentWhitesAdapt() throws {
+        // sRGB's colourants left at their D65 white, not adapted to D50: Bradford must carry D65 to sRGB's D50.
+        let c = try [Color3(1, 0, 0), Color3(0, 1, 0), Color3(0, 0, 1)].map { try $0.converted(from: .linearSRGB, to: .xyzD65) }
+        let d65 = ColorProfile(name: "D65 sRGB", isGray: false,
+                               toXYZD50: [c[0].c0, c[1].c0, c[2].c0, c[0].c1, c[1].c1, c[2].c1, c[0].c2, c[1].c2, c[2].c2],
+                               curves: ColorProfile.sRGB.curves)
+        let transform = try ProfileTransform(from: d65, to: .sRGB)
+        let white = transform.apply(Color3(1, 1, 1)), grey = transform.apply(Color3(0.5, 0.5, 0.5))
+        #expect(Self.near(white, Color3(1, 1, 1), 1e-4), "\(white)")
+        #expect(Self.near(grey, Color3(0.5, 0.5, 0.5), 1e-4), "\(grey)")
     }
 
     @Test func tableInverts() throws {
