@@ -23,3 +23,4 @@ utc	stage	event	ref	note
 2026-10-18T10:25Z	3	ci-run	39118832683	Linux green, macOS red (ICCBytes.swift:59 type-check); Belt-Slice-Done posted
 2026-10-18T10:29Z	-	heartbeat	-	waiting
 2026-10-18T10:31Z	3	pr-opened	#466	macOS type-check fix for ICCBytes.swift (dev-red #453), head 3c3efc4
+2026-10-18T10:31Z	3	pr-merged	#466	macOS type-check fix merged 7dc55d8; next dev CI macOS job verifies
