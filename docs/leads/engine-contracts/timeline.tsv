@@ -67,3 +67,4 @@ utc	stage	event	ref	note
 2026-10-18T14:40Z	4	round4-start	0a3c7f3 #508	r3-b merged; round 4 gate on 0a3c7f3
 2026-10-18T14:52Z	anatomy	ci	39137019273	dev CI: Linux green, macOS red (Metal resample SIGBUS, EngineStress 5.007s); #507 metal fix merged, run 39137820117 next; noted on #453
 2026-10-18T14:55Z	-	heartbeat	-	waiting
+2026-10-18T14:58Z	anatomy	round4-critics	0a3c7f3	round 4 gate CI: PASS try 1; mutation 49/49 (FlareW1Model 25/25, W1Values 5/5, W1Contract 2/2, Fake 13/13, DispatcherW1 4/4); critic panel wf_531eacc8-2de running
