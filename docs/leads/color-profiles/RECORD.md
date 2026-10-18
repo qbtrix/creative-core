@@ -4,14 +4,14 @@ Issue: #441 · Packet: docs/blueprints/core/features/color-profiles.md
 Run: act-1a14ddaebc8-nwqn · Session: line lead (engine-contracts, animate-properties, color-profiles) · Started: 2026-10-18T07:15Z
 Stage: 3 CP-a, CP-icc, CP-convert merged; CP-deep waits
 Base: 9d01972365f04da4fe6074e9bdd56ceab5b616a8
-Next: Belt-Slice-Done CP-icc once dev CI 39121455101 shows Linux green; CP-convert on a later run that contains 73a3ac9. Fix batch cp-r1 for routed findings #9, #12, #13. CP-7/CP-8 wait on layered-codecs LC-write.
+Next: Belt-Slice-Done CP-icc posted (run 39121455101, Linux green on 33d046a); CP-convert on a later run that contains 73a3ac9. Fix batch cp-r1 for routed findings #9, #12, #13. CP-7/CP-8 wait on layered-codecs LC-write.
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
 |---|---|---|---|---|---|
-| CP-a | CP-1, CP-2 | layered-codecs:LC-a (merged #446) | building | | |
-| CP-icc | CP-3, CP-4 | CP-a | open | | |
-| CP-convert | CP-5, CP-6 | CP-icc | open | | |
+| CP-a | CP-1, CP-2 | layered-codecs:LC-a (merged #446) | merged-done | 39118832683 | |
+| CP-icc | CP-3, CP-4 | CP-a | merged-done | 39121455101 | |
+| CP-convert | CP-5, CP-6 | CP-icc | merged; waits a dev run with 73a3ac9 | | |
 | CP-deep | CP-7, CP-8 | CP-icc; layered-codecs:LC-write | blocked | | |
 | CP-z | CP-9, CP-10 | CP-convert, CP-deep | open | | wanted (budgets) |
 
