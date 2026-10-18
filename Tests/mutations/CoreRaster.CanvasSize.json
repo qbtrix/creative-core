@@ -1,0 +1,16 @@
+[
+  {
+    "note": "the centre anchor's offset rounds up instead of down, caught by CanvasSizeTests.centreRoundsDown",
+    "file": "Sources/CoreRaster/Affine/CanvasSize.swift",
+    "anchor": "(Double(change) * place).rounded(.down)",
+    "replacement": "(Double(change) * place).rounded(.up)",
+    "filter": "CanvasSizeTests"
+  },
+  {
+    "note": "the right anchor's offset uses the old width minus the new instead of new minus old, caught by CanvasSizeTests.rightAnchorKeepsRightEdge",
+    "file": "Sources/CoreRaster/Affine/CanvasSize.swift",
+    "anchor": "change: newW - width,",
+    "replacement": "change: width - newW,",
+    "filter": "CanvasSizeTests"
+  }
+]
