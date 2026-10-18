@@ -102,7 +102,9 @@ public enum ZipStore { public static func archive(_ files: [String: Data], first
   read (no unchecked index, no Int overflow: lengths are checked against the
   remaining bytes first). Header: signature `8BPS`, version 1 (2 → 
   `unsupported("large document format")`), channels 1...56, height and
-  width 1...`maxSide`, depth 8 (16 → `unsupported` until `color-profiles`),
+  width 1...`maxSide`, depth 8 (16 → `unsupported` until `color-profiles`,
+  through one `bitsPerChannel` switch in each of `PSDRead`, `PSDWrite`,
+  `OpenRaster` and `OpenRasterWrite` that it replaces),
   colour mode RGB or Grayscale (others → `unsupported`). Colour-mode data
   and image resources are skipped by length (the ICC resource is read in
   `color-profiles`). Layer and mask section: layer count (negative means the
