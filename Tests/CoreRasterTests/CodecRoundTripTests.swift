@@ -22,10 +22,10 @@ import Testing
     }
     @Test(.disabled("waits on LC-8")) func extraEntriesKept() throws {
         let json = Data("{\"layers\":2}".utf8)
-        #expect(StoredZip.entry("photo/document.json", in: try written(extra: ["photo/document.json": json])) == json)
+        #expect(try ZipStore.entries(written(extra: ["photo/document.json": json]))["photo/document.json"] == json)
     }
     @Test(.disabled("waits on LC-8")) func thumbnailLongestSide() throws {
-        let thumbnail = try RawPixelCodec().decodePNG(try #require(StoredZip.entry("Thumbnails/thumbnail.png", in: try written())))
+        let thumbnail = try RawPixelCodec().decodePNG(try #require(ZipStore.entries(written())["Thumbnails/thumbnail.png"]))
         #expect(thumbnail.height == 256 && thumbnail.width == 77, "300 x 1000 scaled by its longest side, the height")
     }
 }

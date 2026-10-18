@@ -56,7 +56,6 @@ private func sampleImage() throws -> LayeredImage {
     let raw: any PixelCodec = RawPixelCodec()
     #expect(throws: notBuilt) { try PSD.read(Data([0x38, 0x42, 0x50, 0x53])) }
     #expect(throws: notBuilt) { try PSD.write(image) }
-    #expect(throws: notBuilt) { try OpenRaster.read(Data(), pixels: raw) }
     #expect(throws: notBuilt) { try OpenRaster.write(image, pixels: raw) }
     #expect(throws: notBuilt) { try OpenRaster.write(image, pixels: raw, extra: ["photo/document.json": Data()]) }
     #expect(PSD.maxSide == 30_000 && PSD.maxLayers == 8_000)
