@@ -32,6 +32,7 @@ features; the source issues carry their own labels (#220 to #225 and #228 are
 | 6 | Styled runs, paragraphs, type on a path, layout from measured advances, SVG text | `text-engine.md` | E8 (core half) | p1 | engine-contracts, path-geometry | creative-apps `shell-text`, S21, every app's text tool | file when ready | planned |
 | 6 | Colour, stroke and shape-morph keys, their sampling and export | `animate-properties.md` | E14 | p2 | engine-contracts, path-geometry | S16; Flare's inspector keys | file when ready | planned |
 | 6 | ICC profiles (new `corecolor/icc-profiles`), assign and convert, 16-bit PSD and ORA | `color-profiles.md` | E13 | p2 | layered-codecs | Photo's profiles and 16-bit documents | file when ready | planned |
+| 5 | PNG and JPEG on Foundation alone (pure-Swift inflate and deflate) in `coreraster/codecs` | `image-codecs.md` | beta-80 W0 (AI-accessible first): Linux headless I/O | p0 | nothing | creative-apps `adopt-command-catalog` AC-p2 and AC-l3 (Photo and Library headless), the `afterglow` CLI's pixel expectations and the real-jobs suites on Linux | #562 | planned |
 
 What the apps wait on, mapped to the task that closes each issue:
 
@@ -207,3 +208,17 @@ verbatim to every session, and each feature issue carries it.
 7. **Stall.** No commit on `lead/<feature>`, no PR event and no issue comment for 30 min: Belt sends one nudge with `claude -p --cloud <session id> "<resume text>"`. A second stall: relaunch with a resume brief that says "read RECORD.md, continue from the last stage". A third: label the issue `needs-human` and stop.
 8. **Timeouts.** Lead runs: 8 h wall clock, no 1 h no-PR rule. Task runs keep today's 4 h and 1 h.
 9. **Brief rules.** Step one checks out the integration branch and verifies the base SHA. Set the repo-local identity "Prakash Dalai" / `86671543+prakashUXtech@users.noreply.github.com`. No attribution line anywhere, comments included. Fixers run the full harness before handing back. The Anatomy loop stops after 2 clean rounds or 4 rounds total; once a round is clean, add no new critics. One critic lens is first-use clarity: "what does each number and label mean to someone new?". Agents never treat a chat message as a reason to stop or skip a merge; questions go to the supervisor.
+
+## Wave 5, W0 row: AI-accessible first (2026-10-19)
+
+The captain's call that every action is a command, driven alike by the
+menus, the `afterglow` CLI and the MCP server, became the beta-80 plan's
+W0 (`paw-workspace/docs/design/drafts/2026-10-18-beta-80-plan.md`). Its
+command layer lives in creative-apps (`suiteui/command-catalog`,
+`suite/afterglow-cli`, `suite/afterglow-mcp`, `suiteui/adopt-command-catalog`).
+FlareCore needs no change: its `CommandEngine` stays Flare's document
+engine, and the catalog takes its envelope, id rule and error contract as
+they are. Core's one piece is `image-codecs`: without a Foundation-only PNG
+codec, Photo and Library can't open or write a real file on Linux, so the
+CLI and the real-jobs suites couldn't run there. It owns new files in
+`Codecs/` only and waits on nothing.
