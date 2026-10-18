@@ -83,9 +83,9 @@ import Testing
     @Test(.enabled(if: MetalBackend.defaultDevice != nil)) func everyFamilyIsOn() throws {
         let metal = try MetalBackend.onDefaultDevice()
         let inPlace: Set<RenderOp> = [.composite, .blendSeparable, .blendNonSeparable]
-        let all = Set(RenderOp.allCases)
+        let all = Set(RenderOp.allCases).subtracting(RenderOp.notOnMetalYet)
         let expected = metal.device.readWriteTextureSupport == .tier2 ? all : all.subtracting(inPlace)
-        #expect(metal.supports == expected, "tier 2: every family; elsewhere all but the in-place composites")
+        #expect(metal.supports == expected, "tier 2: every family but notOnMetalYet; elsewhere also less the in-place composites")
     }
 }
 #endif

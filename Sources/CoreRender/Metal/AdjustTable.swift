@@ -59,6 +59,9 @@ public struct AdjustTable: Equatable, Sendable {
         case .exposure, .whiteBalance: kind = .gains
         case .levels, .curves, .contrast: kind = .channel
         case .highlightsShadows: kind = .luma
+        case .vibrance, .hueSaturation, .hsl, .blackAndWhite, .channelMixer, .colorBalance,
+             .gradientMap, .lut, .posterize, .threshold, .invert:
+            throw RenderError.unsupported(.color)  // not on Metal yet (`RenderOp.notOnMetalYet`)
         }
         let steps = Self.steps
         let xs = (0...steps).map { (i: Int) -> Float in

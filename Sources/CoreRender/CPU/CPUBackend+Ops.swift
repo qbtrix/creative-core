@@ -45,6 +45,9 @@ extension CPUBackend {
                 try buffer.contrast(amount)
             case let .highlightsShadows(highlights, shadows):
                 try buffer.highlightsShadows(highlights: highlights, shadows: shadows)
+            case .vibrance, .hueSaturation, .hsl, .blackAndWhite, .channelMixer, .colorBalance,
+                 .gradientMap, .lut, .posterize, .threshold, .invert:
+                throw RenderError.unsupported(.color)  // the `.color` family has no CPU op yet
             }
         }
     }

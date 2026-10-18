@@ -51,9 +51,34 @@ public protocol RenderBackend: Sendable {
     /// that difference exceeds `threshold`, as a new surface. Gated by `.blur`.
     func unsharpMask(_ s: RenderSurface, amount: Double, sigma: Double, threshold: Double) throws -> RenderSurface
     /// `s` with `adjustment` applied to every pixel, as a new surface. Gated
-    /// by `.adjust`.
+    /// by `adjustment.family`: `.adjust`, or `.color` for a W1 colour case.
     func adjusted(_ s: RenderSurface, _ adjustment: ToneAdjustment) throws -> RenderSurface
     /// `s` with the pixels under `mask` replaced by the pixels `offset` away,
     /// weighted by the mask's coverage, as a new surface. Gated by `.retouch`.
     func cloned(_ s: RenderSurface, offset: (dx: Int, dy: Int), through mask: Mask) throws -> RenderSurface
+
+    // The W1 families, CPU first. Each has a default that throws
+    // `unsupported(<its family>)` (RenderBackend+NotOnThisBackend.swift), so a
+    // backend without the family compiles unchanged.
+    /// Blends `s` onto `b` in place as `composite(_:onto:x:y:mode:opacity:)`
+    /// does, with each pixel's coverage scaled by `mask`, whose top-left
+    /// pixel sits at (`maskX`, `maskY`) in `b`; outside the mask nothing
+    /// changes. Gated by `.maskedComposite`.
+    func composite(_ s: RenderSurface, onto b: inout RenderSurface, x: Int, y: Int, mode: BlendMode, opacity: Float,
+                   mask: Mask, maskX: Int, maskY: Int) throws
+    /// `s` mapped through `m` (source to output pixels) into a new
+    /// `width` x `height` surface, sampled with `filter`; output pixels with
+    /// no source are clear. Gated by `.affine`.
+    func transformed(_ s: RenderSurface, _ m: AffineMatrix, width: Int, height: Int, filter: ResampleFilter) throws
+        -> RenderSurface
+    /// `s` mirrored across `axis`, as a new surface. Gated by `.affine`.
+    func flipped(_ s: RenderSurface, _ axis: FlipAxis) throws -> RenderSurface
+    /// Blends `s` onto `b` in place through `m` (`s`'s pixels to `b`'s),
+    /// sampled with `filter`, with `mode` at `opacity`; `b` keeps its id and
+    /// size. Gated by `.affine`.
+    func composite(_ s: RenderSurface, onto b: inout RenderSurface, through m: AffineMatrix, mode: BlendMode,
+                   opacity: Float, filter: ResampleFilter) throws
+    /// `s` with `effect` applied, as a new surface of the same size. Gated
+    /// by `.effect`.
+    func applying(_ s: RenderSurface, _ effect: LayerEffect) throws -> RenderSurface
 }
