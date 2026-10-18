@@ -77,3 +77,4 @@ utc	stage	event	ref	note
 2026-10-18T16:12Z	fix	ec4-a	#524	R4 fixes: 5/5 minor fixed, head 9c53f62, gate PASS, mutation FlareTrackCommands 10/10 FlareW1Model 27/27 CoreRenderFake 14/14 CoreRenderDispatcherW1 5/5. Follow-up: TextCommands missing text still shapeNotFound.
 2026-10-18T16:14Z	fix	ec-10-dispatched	wzkhntsvo	#524 merged 4c9ded2. EC-10 (status built, engineering.md seam list, affine pixel-centre doc, parity seam owners) dispatched with feature-done on base 4c9ded2.
 2026-10-18T16:25Z	fix	ec-10	#527	EC-10 PR #527 open: head 9f4cb47, gate PASS, +62/-7 8 files, labels fast-lane+feature-done, Mutate: none (docs only). Status built; engineering.md W1 seams section names 24 seam files once. Awaiting lane merge and the feature-done CI run.
+2026-10-18T16:26Z	-	heartbeat	-	waiting
