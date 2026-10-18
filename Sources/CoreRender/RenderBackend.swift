@@ -60,6 +60,18 @@ public protocol RenderBackend: Sendable {
     /// weighted by the mask's coverage, as a new surface. Gated by `.retouch`.
     func cloned(_ s: RenderSurface, offset: (dx: Int, dy: Int), through mask: Mask) throws -> RenderSurface
 
+    // Resident rendering (RenderBackend+Resident.swift): each has a default built
+    // from the methods above, so the CPU backend and the test doubles get it as is.
+    /// A new `width` x `height` surface, every pixel clear. Not gated. The
+    /// default uploads a clear `PixelBuffer`; a GPU backend clears on the device.
+    func blank(width: Int, height: Int) throws -> RenderSurface
+    /// Blends each step's surface onto `b` in place, in order, as one
+    /// `composite(_:onto:x:y:mode:opacity:)` per step does, gated by each
+    /// step's family. The default makes exactly those calls; a GPU backend
+    /// encodes them in one command buffer. Nothing changes when a step's
+    /// family is unsupported.
+    func composite(_ steps: [CompositeStep], onto b: inout RenderSurface) throws
+
     // The W1 families, CPU first. Each has a default that throws
     // `unsupported(<its family>)` (RenderBackend+NotOnThisBackend.swift), so a
     // backend without the family compiles unchanged.

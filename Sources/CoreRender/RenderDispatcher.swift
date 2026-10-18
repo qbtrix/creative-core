@@ -22,7 +22,8 @@
 // composite by `.maskedComposite` (not by its blend mode), `transformed`,
 // `flipped` and the composite through a matrix by `.affine`, `applying` by
 // `.effect`, and `adjusted` by `adjustment.family` (`.adjust` or `.color`).
-// The two W1 composites share `composite`'s backdrop path.
+// The two W1 composites share `composite`'s backdrop path. The batched
+// composite runs on one backend: the CPU when any step's family falls back.
 import CoreColor
 import CoreRaster
 
@@ -125,6 +126,39 @@ public struct RenderDispatcher: Sendable {
         try onBackdrop(.affine, s, &b) {
             try $0.composite($1, onto: &$2, through: m, mode: mode, opacity: opacity, filter: filter)
         }
+    }
+
+    /// A clear surface where `surface` would place one: the preferred backend while healthy, else the CPU.
+    public func blank(width: Int, height: Int) throws -> RenderSurface {
+        if let preferred, preferred.isHealthy { return try preferred.blank(width: width, height: height) }
+        return try fallback.blank(width: width, height: height)
+    }
+
+    /// A batched composite on one backend: the preferred one when it is routed for every step's family,
+    /// else the CPU. Each step's surface and `b` are uploaded there if needed and `b` moves as `composite`
+    /// moves it, the old copy released unless a step also composites it.
+    public func composite(_ steps: [CompositeStep], onto b: inout RenderSurface) throws {
+        let families = Set(steps.map(\.family)).sorted { $0.rawValue < $1.rawValue }
+        let routed = families.map { backend(for: $0) }
+        let target = routed.contains { $0.name == fallback.name } ? fallback : (routed.first ?? backend(for: .composite))
+        let original = b
+        let (backdrop, moved) = try local(b, on: target)
+        var uploaded: [RenderSurface] = []
+        defer { uploaded.forEach { target.release($0) } }
+        var result = backdrop
+        do {
+            let placed = try steps.map { step -> CompositeStep in
+                let (surface, up) = try local(step.surface, on: target)
+                if up { uploaded.append(surface) }
+                return CompositeStep(surface, x: step.x, y: step.y, mode: step.mode, opacity: step.opacity)
+            }
+            try target.composite(placed, onto: &result)
+        } catch {
+            if moved { target.release(result) }
+            throw error
+        }
+        b = result
+        if moved, !steps.contains(where: { $0.surface == original }) { release(original) }
     }
 
     /// A crop on the backend routed for `.transform`.

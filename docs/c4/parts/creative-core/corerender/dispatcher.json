@@ -1,7 +1,7 @@
 {
   "id": "dispatcher",
   "name": "Render Dispatcher",
-  "description": "RenderDispatcher, the routing between backends: each op goes to the preferred backend when it supports the op's family and is healthy, else to the CPU backend, recording the last fallback (op family and reason, unsupported or unhealthy). A surface made by the other backend is read and re-uploaded to the routed backend first, so a fallback never changes a pixel. Each W1 method routes by its own family: the masked composite by maskedComposite whatever its blend mode, transformed, flipped and the composite through a matrix by affine, applying by effect, and each tone adjustment by ToneAdjustment.family (adjust or color); the two W1 composites move a backdrop the way composite does.",
+  "description": "RenderDispatcher, the routing between backends: each op goes to the preferred backend when it supports the op's family and is healthy, else to the CPU backend, recording the last fallback (op family and reason, unsupported or unhealthy). A surface made by the other backend is read and re-uploaded to the routed backend first, so a fallback never changes a pixel. Each W1 method routes by its own family: the masked composite by maskedComposite whatever its blend mode, transformed, flipped and the composite through a matrix by affine, applying by effect, and each tone adjustment by ToneAdjustment.family (adjust or color); the two W1 composites move a backdrop the way composite does. The batched composite runs on one backend: the preferred one when every step's family routes there, else the CPU.",
   "technology": "Swift 6, Foundation",
   "paths": [
     "Sources/CoreRender/RenderDispatcher.swift"

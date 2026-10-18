@@ -1,0 +1,17 @@
+[
+  {"note": "resident tiles skip the dirty check, so every render uploads every tile again", "filter": "ResidentSurfacesTests", "file": "Sources/CoreRender/ResidentSurfaces.swift",
+   "anchor": "if let held, held.pixels == pixels { return held.surface }",
+   "replacement": "if let held, held.pixels != held.pixels { return held.surface }"},
+  {"note": "resident tiles upload a clear tile instead of keeping no surface", "filter": "ResidentSurfacesTests", "file": "Sources/CoreRender/ResidentSurfaces.swift",
+   "anchor": "pixels.components.allSatisfy { $0 == 0 } ? nil :",
+   "replacement": "false ? nil :"},
+  {"note": "resident tiles keep the old surface of a re-uploaded tile instead of releasing it", "filter": "ResidentSurfacesTests", "file": "Sources/CoreRender/ResidentSurfaces.swift",
+   "anchor": "if let old = state.entries[key]?.surface { state.backend.release(old) }",
+   "replacement": "_ = state.entries[key]"},
+  {"note": "the batched composite default blends before checking every step's family", "filter": "ResidentSurfacesTests", "file": "Sources/CoreRender/RenderBackend+Resident.swift",
+   "anchor": "if let missing = steps.first(where: { !supports.contains($0.family) }) {",
+   "replacement": "if let missing = steps.first(where: { _ in false }) {"},
+  {"note": "the dispatcher runs a batch on the preferred backend although one step's family falls back", "filter": "ResidentSurfacesTests", "file": "Sources/CoreRender/RenderDispatcher.swift",
+   "anchor": "routed.contains { $0.name == fallback.name } ? fallback :",
+   "replacement": "false ? fallback :"}
+]

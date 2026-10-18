@@ -101,8 +101,8 @@ public struct PixelBuffer: Equatable, Sendable {
         self.storage = storage
     }
 
-    /// Row-major premultiplied components, for this module's image operations.
-    var components: [Float] { storage }
+    /// Row-major premultiplied components, for this package's image operations (CoreRenderMetal uploads from it).
+    package var components: [Float] { storage }
 
     /// Copies all of `source` into this buffer with its top left at (`x`, `y`),
     /// whole rows at a time. For this module's image operations: the caller
