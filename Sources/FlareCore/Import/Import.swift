@@ -39,11 +39,20 @@ public enum ImportError: Error, Equatable, Sendable {
 
 /// Reads an SVG document into one scene.
 public enum SVGImport {
-    /// The largest SVG accepted, in bytes.
+    /// The largest SVG accepted: `data.count`, in bytes (32 MiB). Checked
+    /// first, before any byte is read: exactly `maxBytes` bytes are read, and
+    /// `maxBytes + 1` throws `ImportError.tooLarge` at once.
     public static let maxBytes = 32 << 20
-    /// The most elements read from one document.
+    /// The most elements in one document: every start tag counts (a
+    /// self-closing tag is one, and skipped kinds such as `filter` count too;
+    /// end tags, text and comments do not). The 200,000th element is read;
+    /// the 200,001st throws `ImportError.tooLarge`.
     public static let maxElements = 200_000
-    /// The deepest element nesting read.
+    /// The deepest element nesting: the root `<svg>` is depth 1 and each open
+    /// child adds one. An element at depth 256 is read; one at depth 257
+    /// throws `ImportError.tooLarge`. It also bounds a gradient `href` or
+    /// `clip-path` reference chain: past 256 links the reference is dropped
+    /// and counted in the report as a cycle, never thrown.
     public static let maxDepth = 256
 
     /// One scene named `name` from the SVG in `data`, with what was skipped.
@@ -54,9 +63,13 @@ public enum SVGImport {
 
 /// Reads a Lottie JSON document into a document.
 public enum LottieImport {
-    /// The largest Lottie file accepted, in bytes.
+    /// The largest Lottie file accepted: `data.count`, in bytes (64 MiB).
+    /// Checked first, before the JSON is decoded: exactly `maxBytes` bytes are
+    /// read, and `maxBytes + 1` throws `ImportError.tooLarge` at once.
     public static let maxBytes = 64 << 20
-    /// The most layers read from one file.
+    /// The most layers in one file: every entry of the top-level `layers`
+    /// array counts, skipped kinds (precomps, images, text) included. The
+    /// 5,000th layer is read; the 5,001st throws `ImportError.tooLarge`.
     public static let maxLayers = 5_000
 
     /// The document in the Lottie JSON `data`, with what was skipped.
