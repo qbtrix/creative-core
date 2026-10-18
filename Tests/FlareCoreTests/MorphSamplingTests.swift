@@ -66,6 +66,14 @@ struct MorphSamplingTests {
         #expect(Self.near(c1, Self.p(2, 4)) && Self.near(c2, Self.p(4, 4)) && Self.near(to, Self.p(6, 0)))
     }
 
+    @Test func quadsLerpAsQuads() {
+        // Two quads stay a quad: the control and the end both move by t, so the midpoint control is (5, 5).
+        let a = Path(elements: [.move(to: Self.p(0, 0)), .quad(control: Self.p(0, 10), to: Self.p(10, 0))])
+        let b = Path(elements: [.move(to: Self.p(0, 0)), .quad(control: Self.p(10, 0), to: Self.p(10, 0))])
+        let layer = Self.layer([PathKeyframe(frame: 0, path: a), PathKeyframe(frame: 10, path: b)])
+        #expect(layer.sampledPath(shape: 0, at: 5)?.elements.last == .quad(control: Self.p(5, 5), to: Self.p(10, 0)))
+    }
+
     @Test func unpairedKeysHoldTheLeftKey() {
         // A file can hold keys AP-4 never made compatible: a different count, or a close against a line.
         let tri = Path(polyline: [Self.p(0, 0), Self.p(4, 0), Self.p(0, 4)], closed: true)
