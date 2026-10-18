@@ -75,3 +75,4 @@ utc	stage	event	ref	note
 2026-10-18T15:50Z	-	heartbeat	-	waiting
 2026-10-18T16:08Z	-	heartbeat	-	waiting
 2026-10-18T16:12Z	fix	ec4-a	#524	R4 fixes: 5/5 minor fixed, head 9c53f62, gate PASS, mutation FlareTrackCommands 10/10 FlareW1Model 27/27 CoreRenderFake 14/14 CoreRenderDispatcherW1 5/5. Follow-up: TextCommands missing text still shapeNotFound.
+2026-10-18T16:14Z	fix	ec-10-dispatched	wzkhntsvo	#524 merged 4c9ded2. EC-10 (status built, engineering.md seam list, affine pixel-centre doc, parity seam owners) dispatched with feature-done on base 4c9ded2.
