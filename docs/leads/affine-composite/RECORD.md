@@ -14,7 +14,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 |---|---|---|---|---|---|---|---|---|
 | AC-0 | 1 | AC-a | Stubs for the contract slice's signatures (rule 18): `transformed`, `flipped`, `padded`, `composite(through:)`, `AffineMatrix.bounds`; throwing ones throw `RasterError.invalid("not built")`, `flipped` returns self | `Sources/CoreRaster/Affine/AffineTransform.swift`, `Sources/CoreRaster/Affine/CanvasSize.swift`, `Sources/CoreRaster/Compositing/CompositeAffine.swift`, `Tests/CoreRasterTests/AffineStubTests.swift` | `AffineStubTests` | none (no invariant) | #563 | merged |
 | AC-2 | 1 | AC-a | Seeded layers (transparent borders, hard edges) and matrices (identity, translations, 90° multiples, skews, near-singular) | `Tests/CoreRasterTests/AffineFixtures.swift` | fixtures build | none | #571 | merged |
-| AC-1 | 2 | AC-a | Checks first: `AffineOpsTests`, `CompositeAffineTests`, `CPUAffineTests` disabled by name (`waits on AC-3/5/6`) | the three test files | suites compile, disabled | none | | building |
+| AC-1 | 2 | AC-a | Checks first: `AffineOpsTests`, `CompositeAffineTests`, `CPUAffineTests` disabled by name (`waits on AC-3/5/6`) | the three test files | suites compile, disabled | none | #574 | open |
 | AC-3 | 3 | AC-geo | `transformed` with fast paths, `flipped`; turns on those cases | `Sources/CoreRaster/Affine/AffineTransform.swift`, `Tests/CoreRasterTests/AffineOpsTests.swift`, `Tests/mutations/CoreRaster.AffineTransform.json` | `AffineOpsTests` | 4 (packet) | | planned |
 | AC-4 | 3 | AC-geo | `padded` around nine anchors; its cases in `CanvasSizeTests` | `Sources/CoreRaster/Affine/CanvasSize.swift`, `Tests/CoreRasterTests/CanvasSizeTests.swift`, `Tests/mutations/CoreRaster.CanvasSize.json` | `CanvasSizeTests` | 2 (packet) | | planned |
 | AC-5 | 4 | AC-comp | `composite(through:)`, `AffineMatrix.bounds`; turns on `CompositeAffineTests` | `Sources/CoreRaster/Compositing/CompositeAffine.swift`, `Tests/CoreRasterTests/CompositeAffineTests.swift`, `Tests/mutations/CoreRaster.CompositeAffine.json` | `CompositeAffineTests` | 2 (packet) | | planned |
@@ -59,4 +59,5 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 - Combined wave plan (line lead): W1 AC-0, AC-2, FX-0, FX-2, TP-0, TP-2 · W2 AC-1, FX-1, TP-1 · W3 AC-3, AC-4, FX-3, FX-4, FX-5, TP-3, TP-4, TP-5, TP-6 · W4 AC-5, FX-6 · W5 AC-6, FX-7, TP-7 · W6 AC-7, FX-8, TP-8 · W7 AC-8, FX-9, TP-9 · W8 AC-9, FX-10, TP-10.
 
 ## Open
+- AC-5 must add the composite bad-input test (throws, backdrop unchanged); AC-1 (#574) dropped it to fit the 400-line cap.
 - none
