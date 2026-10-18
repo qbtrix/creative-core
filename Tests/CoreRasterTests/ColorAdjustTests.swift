@@ -1,6 +1,6 @@
 // ColorAdjustTests.swift: tone-pack TP-3's acceptance, written first (TP-1 of
 // docs/blueprints/core/features/tone-pack.md): vibrance, hueSaturation and hsl.
-// Disabled until TP-3 lands. `ToneCheck` holds the helpers the tone suites
+// `ToneCheck` holds the helpers the tone suites
 // share: values are stated as straight sRGB-encoded rgb, as ToneFixtures does.
 import CoreColor
 import CoreRaster
@@ -93,14 +93,14 @@ enum ToneCheck {
         return ToneCheck.pixel(ToneCheck.rgb(h: h, s: s, l: l), a: p.a)
     }
 
-    @Test(.disabled("waits on TP-3")) func neutralIsIdentity() throws {
+    @Test func neutralIsIdentity() throws {
         let b = try ToneCheck.seeded(width: 16, height: 8, seed: 0xA1)
         #expect(try b.vibrance(0) == b)
         #expect(try b.hueSaturation(hue: 0, saturation: 0, lightness: 0) == b)
         #expect(try b.hsl(HSLAdjustment()) == b)
     }
 
-    @Test(.disabled("waits on TP-3")) func lowSaturationMovesMost() throws {
+    @Test func lowSaturationMovesMost() throws {
         func gain(_ c: ToneFixtures.Reference) throws -> Double {
             let out = try ToneCheck.pixels(ToneCheck.row([c.pixel]).vibrance(100))
             return ToneCheck.hsl(ToneCheck.encoded(out[0])).s - Double(c.saturation)
@@ -112,7 +112,7 @@ enum ToneCheck {
 
     /// The skin tone (hue 20°) against a colour of the same HSL saturation and
     /// lightness at hue 200°: its linear chroma grows half as much.
-    @Test(.disabled("waits on TP-3")) func skinMovesHalf() throws {
+    @Test func skinMovesHalf() throws {
         let skin = ToneFixtures.skinTone.pixel, other = ToneCheck.pixel([0.5, 0.7, 0.8])
         let out = try ToneCheck.pixels(ToneCheck.row([skin, other]).vibrance(50))
         func chroma(_ p: RGBA) -> Float {
@@ -124,7 +124,7 @@ enum ToneCheck {
         #expect(abs(boostSkin / boostOther - 0.5) <= 0.05)
     }
 
-    @Test(.disabled("waits on TP-3")) func hueSaturationMatchesReference() throws {
+    @Test func hueSaturationMatchesReference() throws {
         let b = try ToneCheck.seeded(width: 40, height: 25, seed: 0xA2)
         let input = try ToneCheck.pixels(b)
         for (h, s, l) in [(30.0, 25.0, -10.0), (-120, -60, 40), (170, 100, 0)] {
@@ -136,7 +136,7 @@ enum ToneCheck {
         }
     }
 
-    @Test(.disabled("waits on TP-3")) func blueRangeGreysBlueOnly() throws {
+    @Test func blueRangeGreysBlueOnly() throws {
         let green = ToneCheck.pixel([0, 1, 0])
         let input = [ToneFixtures.pureBlue.pixel, ToneFixtures.pureRed.pixel, green]
         let out = try ToneCheck.pixels(ToneCheck.row(input).hsl(HSLAdjustment(blues: HSLShift(saturation: -100))))
@@ -147,7 +147,7 @@ enum ToneCheck {
     }
 
     /// Every range at -100 saturation greys every hue: the weights sum to 1.
-    @Test(.disabled("waits on TP-3")) func rangeWeightsSumToOne() throws {
+    @Test func rangeWeightsSumToOne() throws {
         let grey = HSLShift(saturation: -100)
         let all = HSLAdjustment(reds: grey, oranges: grey, yellows: grey, greens: grey, aquas: grey, blues: grey,
                                 purples: grey, magentas: grey)
@@ -156,13 +156,13 @@ enum ToneCheck {
         }
     }
 
-    @Test(.disabled("waits on TP-3")) func alphaKept() throws {
+    @Test func alphaKept() throws {
         try ToneCheck.expectAlphaKept("vibrance") { try $0.vibrance(60) }
         try ToneCheck.expectAlphaKept("hueSaturation") { try $0.hueSaturation(hue: 40, saturation: 30, lightness: 10) }
         try ToneCheck.expectAlphaKept("hsl") { try $0.hsl(HSLAdjustment(reds: HSLShift(hue: 20, saturation: 30, lightness: 10))) }
     }
 
-    @Test(.disabled("waits on TP-3")) func nanThrows() throws {
+    @Test func nanThrows() throws {
         let b = try ToneCheck.seeded(width: 2, height: 2, seed: 0xA4)
         #expect(throws: RasterError.self) { try b.vibrance(.nan) }
         #expect(throws: RasterError.self) { try b.hueSaturation(hue: .nan, saturation: 0, lightness: 0) }

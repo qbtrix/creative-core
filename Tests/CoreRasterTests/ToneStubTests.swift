@@ -12,13 +12,6 @@ private func sample() throws -> PixelBuffer {
     try PixelBuffer(width: 2, height: 2, fill: RGBA(r: 0.2, g: 0.4, b: 0.6, a: 1))
 }
 
-@Test func adjustStubsThrowNotBuilt() throws {
-    let buffer = try sample()
-    #expect(throws: notBuilt) { try buffer.vibrance(30) }
-    #expect(throws: notBuilt) { try buffer.hueSaturation(hue: 10, saturation: 0, lightness: 0) }
-    #expect(throws: notBuilt) { try buffer.hsl(HSLAdjustment()) }
-}
-
 @Test func mixStubsThrowNotBuilt() throws {
     let buffer = try sample()
     let identity = ChannelMatrix(red: [1, 0, 0, 0], green: [0, 1, 0, 0], blue: [0, 0, 1, 0], monochrome: false)
