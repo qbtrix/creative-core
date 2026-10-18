@@ -1,0 +1,16 @@
+[
+  {
+    "note": "lottie path key tangents written absolute",
+    "file": "Sources/FlareCore/Export/LottieExporter.swift",
+    "anchor": "current.i.append([try finite(inTangent.x - p.x), try finite(inTangent.y - p.y)])",
+    "replacement": "current.i.append([try finite(inTangent.x), try finite(inTangent.y)])",
+    "filter": "LottieTrackExportTests.tangentsRelative"
+  },
+  {
+    "note": "lottie track colour written 0...255",
+    "file": "Sources/FlareCore/Export/LottieExporter+Tracks.swift",
+    "anchor": "[try unit(color.r), try unit(color.g), try unit(color.b), try unit(color.a)]",
+    "replacement": "[try unit(color.r), try unit(color.g), try unit(color.b), try unit(color.a)].map { $0 * 255 }",
+    "filter": "LottieTrackExportTests.colourUnitRange"
+  }
+]
