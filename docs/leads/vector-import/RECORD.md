@@ -58,3 +58,4 @@ Next: VI-5 building, VI-7 building; Anatomy round 2 verdicts pending; Slice-Done
 - 2026-10-18T15:40Z heartbeat: checking merges, dev CI and agents.
 - 2026-10-18T15:43Z incident: the disk filled up at about 15:39Z. I deleted the .build caches of finished worktrees and told the running agents to rerun any gate that failed. No dev CI run newer than 364 yet. #518 (LC R2-2) needs a rebase onto 168c73d.
 - 2026-10-18T16:05Z heartbeat.
+- 2026-10-18T16:05Z Another session's PRs fix the macOS stack-depth SIGBUS: #520 (ORA read, write and ==), #521 (Lottie JSON), #522 (SVG groups). They are open and checked together on ci/macos-reds-combined. My R2-3 fixer is stood down so it doesn't duplicate them. VI-svg, VI-lottie and LC-ora merged-done still need a green Linux job on a dev run that holds their PRs.

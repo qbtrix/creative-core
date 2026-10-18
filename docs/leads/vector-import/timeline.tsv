@@ -47,3 +47,4 @@ utc	stage	event	ref	note
 2026-10-18T15:40Z	heartbeat	checking merges, dev CI, agents
 2026-10-18T15:43Z	incident	disk full (ENOSPC) at about 15:39Z; deleted .build caches of finished worktrees; told running agents to rerun failed gates
 2026-10-18T16:05Z	heartbeat	checking merges, dev CI, agents
+2026-10-18T16:05Z	note	stack-depth SIGBUS fixed by Mac-side PRs #520 #521 #522 (not this lead); own fixer R2-3 stood down to avoid duplicates
