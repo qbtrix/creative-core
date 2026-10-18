@@ -3,10 +3,13 @@
 // blend mode, visibility, clipping and an optional placed mask) and nested
 // groups, bottom to top, plus the optional merged composite. Any app maps its
 // own layers to and from this; PSD and OpenRaster translate it to bytes.
+// The ICC profile the file embeds rides along; nil when it has none.
 // CodecError is the one error the codecs throw.
+import CoreColor
 
 /// A layered image: canvas size, the layer tree bottom to top, the merged
-/// composite when the file carries one, and the channel depth it was read at.
+/// composite when the file carries one, the channel depth it was read at and
+/// the colour profile it embeds.
 public struct LayeredImage: Equatable, Sendable {
     public var width: Int, height: Int
     /// Bottom to top.
@@ -15,14 +18,17 @@ public struct LayeredImage: Equatable, Sendable {
     public var composite: PixelBuffer?
     /// Bits per channel in the file: 8 for now.
     public var bitsPerChannel: Int
+    /// The embedded colour profile; nil when the file has none.
+    public var profile: ColorProfile?
 
     public init(width: Int, height: Int, nodes: [LayerNode] = [],
-                composite: PixelBuffer? = nil, bitsPerChannel: Int = 8) {
+                composite: PixelBuffer? = nil, bitsPerChannel: Int = 8, profile: ColorProfile? = nil) {
         self.width = width
         self.height = height
         self.nodes = nodes
         self.composite = composite
         self.bitsPerChannel = bitsPerChannel
+        self.profile = profile
     }
 }
 
