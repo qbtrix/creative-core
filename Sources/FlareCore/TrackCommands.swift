@@ -188,8 +188,9 @@ public struct RemoveColorKeyframe: LayerParamsCommand {
 
 /// Shifts the colour keys at `frames` on `target`'s track of `owner`'s layer
 /// by `by` frames, all or nothing: throws keyframeNotFound if a frame has no
-/// key, invalidFrame if a key would leave 0...the owner's duration, and
-/// frameOccupied if one would land on a key that is not moving.
+/// key, invalidFrame(the key's frame) if a key would leave 0...the owner's
+/// duration (the number names the key that could not move, not where it
+/// would land), and frameOccupied if one would land on a key that is not moving.
 public struct MoveColorKeyframes: LayerParamsCommand {
     public static let id = "colorKey.move"
     public var label: String { "Move Color Keyframes" }
@@ -223,7 +224,7 @@ public struct MoveColorKeyframes: LayerParamsCommand {
             for var k in track {
                 guard picked.contains(k.frame) else { kept.append(k); continue }
                 let (to, overflow) = k.frame.addingReportingOverflow(by)
-                guard !overflow, to >= 0, to <= duration else { throw CommandError.invalidFrame(overflow ? k.frame : to) }
+                guard !overflow, to >= 0, to <= duration else { throw CommandError.invalidFrame(k.frame) }
                 k.frame = to
                 moved.append(k)
             }
