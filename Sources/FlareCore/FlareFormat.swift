@@ -289,7 +289,8 @@ public enum FlareFormat {
             }
             if let on = text.onPath {
                 try check(finite(on.path), "text \(t): onPath path has a non-finite point")
-                try check(on.startOffset.isFinite, "text \(t): onPath startOffset must be finite")
+                try check((0...1).contains(on.startOffset), // NaN fails too
+                          "text \(t): onPath startOffset \(on.startOffset) is a fraction of the path length, 0...1")
             }
         }
         let tracks = layer.colorTracks.count + layer.shapeTracks.count

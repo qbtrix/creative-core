@@ -6,7 +6,8 @@
 // finite; feather >= 0, opacity in 0...1, at most `maxMasksPerLayer` masks; a
 // matte names another layer of the same list, with no cycle; text runs are
 // non-empty, inside the graphemes, sorted, not overlapping, fontSize > 0,
-// weight in 100...900; lineHeight in 0.5...4, boxWidth > 0; colour key
+// weight in 100...900; lineHeight in 0.5...4, boxWidth > 0; onPath
+// startOffset in 0...1; colour key
 // channels in 0...1; tracks hold 1...`maxKeysPerTrack` keys, sorted, unique
 // frames in 0...duration; at most `maxTracksPerLayer` tracks; a
 // shape track's shapeIndex is a distinct index into `shapes`; a colour track key
@@ -79,12 +80,14 @@ public struct TextRun: Codable, Sendable, Hashable {
     }
 }
 
-/// Line layout of a text shape. `lineHeight` is a multiple of the font size;
+/// Line layout of a text shape. `lineHeight` is the baseline-to-baseline
+/// distance as a multiple of the font size;
 /// a nil `boxWidth` means one line per paragraph, with no wrapping.
 public struct ParagraphStyle: Codable, Sendable, Hashable {
     /// How each line sits in the box.
     public var alignment: TextAlignment
-    /// Line gap as a multiple of the font size, 0.5...4.
+    /// Baseline-to-baseline distance as a multiple of the font size, 0.5...4;
+    /// 1 sets lines one font size apart.
     public var lineHeight: Double
     /// Extra space after each grapheme, in points, for the whole shape.
     public var tracking: Double
@@ -107,7 +110,7 @@ public enum TextAlignment: String, Codable, Sendable, Hashable { case leading, c
 public struct TextOnPath: Codable, Sendable, Hashable {
     /// The path the baseline follows.
     public var path: Path
-    /// Where the text starts, as a fraction of the path's length: 0 is its start, 0.5 its middle.
+    /// Where the text starts, as a fraction of the path's length, 0...1: 0 is its start, 0.5 its middle.
     public var startOffset: Double
     /// Reverses the path, so the text reads the other way and sits on its other side.
     public var flipped: Bool

@@ -15,7 +15,7 @@ import Testing
         text.runs = [TextRun(start: 0, length: 2, fontSize: 14, weight: 700, italic: true, fill: .solid(.white)),
                      TextRun(start: 2, length: 3, tracking: 0.5, baselineShift: -1)]
         text.paragraph = ParagraphStyle(alignment: .center, lineHeight: 1.5, boxWidth: 200)
-        text.onPath = TextOnPath(path: square, startOffset: 3, flipped: true)
+        text.onPath = TextOnPath(path: square, startOffset: 0.25, flipped: true)
         var ball = doc.scenes[0].layers[1]
         ball.texts = [text]
         ball.masks = [LayerMask(path: square, mode: .subtract, feather: 2, opacity: 0.5, inverted: true)]
@@ -160,6 +160,9 @@ import Testing
         Self.refuses({ $0.texts[0].runs[0].fontSize = 0 }, "run font size 0")
         Self.refuses({ $0.texts[0].paragraph?.lineHeight = 5 }, "lineHeight 5")
         Self.refuses({ $0.texts[0].onPath?.startOffset = .infinity }, "infinite path offset")
+        Self.refuses({ $0.texts[0].onPath?.startOffset = 40 }, "path offset 40, points not a fraction")
+        Self.refuses({ $0.texts[0].onPath?.startOffset = -0.1 }, "negative path offset")
+        Self.refuses({ $0.colorTracks["fill.0"]?[1].frame = 0 }, "two keys on one frame")
         Self.refuses({ $0.colorTracks["fill.0"]?.reverse() }, "unsorted colour track")
         Self.refuses({ $0.colorTracks["fill.0"]?[1].frame = 49 }, "key past the duration")
         Self.refuses({ $0.colorTracks["fill.0"] = [] }, "empty colour track")
@@ -187,6 +190,20 @@ import Testing
         }, "too many tracks")
     }
 
+    /// Values exactly at each limit validate, so an off-by-one in a guard fails here.
+    @Test func acceptsBoundaries() throws {
+        var doc = Self.w1Document()
+        let ball = doc.scenes[0].layers[1]
+        #expect(ball.texts[0].runs.last.map { $0.start + $0.length } == ball.texts[0].string.count) // last run ends at the end
+        try FlareFormat.validate(doc)
+        doc.scenes[0].layers[1].masks = Array(repeating: ball.masks[0], count: FlareFormat.maxMasksPerLayer)
+        try FlareFormat.validate(doc)
+        for offset in [0.0, 1.0] {
+            doc.scenes[0].layers[1].texts[0].onPath?.startOffset = offset
+            try FlareFormat.validate(doc)
+        }
+    }
+
     @Test func messagesNameTheItemAndValue() {
         let mask = Self.message { $0.masks.append($0.masks[0]); $0.masks[1].opacity = 1.5 }
         #expect(mask.contains("mask 1") && mask.contains("1.5"), "\(mask)")
@@ -196,6 +213,8 @@ import Testing
         #expect(font.contains("fontSize") && font.contains("text 0 run 0"), "\(font)")
         let key = Self.message { $0.colorTracks["fil.0"] = $0.colorTracks["fill.0"] }
         #expect(key.contains("fil.0") && key.contains("fill.<i>") && key.contains("text.<i>"), "\(key)")
+        let offset = Self.message { $0.texts[0].onPath?.startOffset = 40 }
+        #expect(offset == "layer ball: text 0: onPath startOffset 40.0 is a fraction of the path length, 0...1", "\(offset)")
     }
 
     @Test func w1GeometryCountsTowardThePointLimit() {
