@@ -50,7 +50,7 @@ import Testing
     /// Random picks, some invalid: a missing layer, frames past 0...48, NaN or 1.5 colours, two-part paths.
     static func any<T>(_ items: [T], _ rng: inout SplitMix64) -> T { items[Int.random(in: 0..<items.count, using: &rng)] }
     static func anyOwner(_ rng: inout SplitMix64) -> (LayerOwner, String) { any([(owner, "ball"), (owner, "bg"), (owner, "ghost"), (.symbol("sym"), "wing")], &rng) }
-    static func anyTarget(_ rng: inout SplitMix64) -> TrackTarget { any([.fill(shape: 0), .stroke(shape: 0), .fill(shape: 1), .text(index: 0)], &rng) }
+    static func anyTarget(_ rng: inout SplitMix64) -> TrackTarget { any([.fill(shape: 0), .stroke(shape: 0), .fill(shape: 1), .text(index: 0), .text(index: 3)], &rng) }
     static func anyFrame(_ rng: inout SplitMix64) -> Int { any([0, 12, 24, 36, 48, -1, 49], &rng) }
     static func anyColor(_ rng: inout SplitMix64) -> Color {
         any([Color(r: .nan, g: 0, b: 0), Color(r: 0, g: 1.5, b: 0), Color(r: .random(in: 0...1, using: &rng), g: 0.5, b: .random(in: 0...1, using: &rng))], &rng)
@@ -204,6 +204,20 @@ import Testing
         var engine = CommandEngine(document: Fixtures.document())
         #expect(throws: CommandError.shapeNotFound(5)) { try engine.perform(key(0, Self.red, .linear, .fill(shape: 5))) }
         #expect(engine.document == Fixtures.document())
+    }
+
+    /// A text target past the layer's texts is a bad index, not a missing shape.
+    @Test
+    func missingTextIsInvalidIndex() throws {
+        var start = Fixtures.document()
+        let ball = try #require(start.scenes[0].layers.firstIndex { $0.id == "ball" })
+        start.scenes[0].layers[ball].texts = [TextShape(string: "Hi", fontFamily: "Sans", fontSize: 12, position: Point(x: 1, y: 2))]
+        var engine = CommandEngine(document: start)
+        #expect(throws: CommandError.invalidIndex(3)) { try engine.perform(key(0, Self.red, .linear, .text(index: 3))) }
+        #expect(throws: CommandError.invalidIndex(3)) {
+            try engine.perform(RemoveColorKeyframe(owner: Self.owner, layerID: "ball", target: .text(index: 3), frame: 0))
+        }
+        #expect(engine.document == start)
     }
 
     /// Moving no keys on a target with no track changes nothing and still undoes.

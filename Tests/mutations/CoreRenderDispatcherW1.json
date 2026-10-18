@@ -10,5 +10,8 @@
    "replacement": "try run(.transform, s) { try $0.flipped($1, axis) }"},
   {"note": "dispatcher routes applying by .affine instead of .effect", "filter": "RenderDispatcherW1Tests.eachNewMethodReachesTheCPU", "file": "Sources/CoreRender/RenderDispatcher.swift",
    "anchor": "try run(.effect, s) { try $0.applying($1, effect) }",
-   "replacement": "try run(.affine, s) { try $0.applying($1, effect) }"}
+   "replacement": "try run(.affine, s) { try $0.applying($1, effect) }"},
+  {"note": "cpu masked composite stub skips the backdrop read, so a foreign backdrop throws unsupported", "filter": "CPUBackendW1StubTests.stubsCheckSurfacesFirst", "file": "Sources/CoreRender/CPU/CPUBackend+MaskedComposite.swift",
+   "anchor": "        _ = try read(b)\n        _ = try notBuilt(s, .maskedComposite)",
+   "replacement": "        _ = try notBuilt(s, .maskedComposite)"}
 ]

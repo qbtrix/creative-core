@@ -23,5 +23,11 @@
   {"note": "a text run may not end at the string's last grapheme", "file": "Sources/FlareCore/FlareFormat.swift", "anchor": "try check(run.start <= count - run.length,", "replacement": "try check(run.start < count - run.length,", "filter": "W1ModelTests"},
   {"note": "the mask cap refuses exactly 32 masks", "file": "Sources/FlareCore/FlareFormat.swift", "anchor": "try check(layer.masks.count <= maxMasksPerLayer,", "replacement": "try check(layer.masks.count < maxMasksPerLayer,", "filter": "W1ModelTests"},
   {"note": "two track keys may share a frame", "file": "Sources/FlareCore/FlareFormat.swift", "anchor": "try check(k == 0 || frames[k - 1] < frame,", "replacement": "try check(k == 0 || frames[k - 1] <= frame,", "filter": "W1ModelTests"},
-  {"note": "two shape tracks may animate one shape", "file": "Sources/FlareCore/FlareFormat.swift", "anchor": "try check(animated.insert(track.shapeIndex).inserted,", "replacement": "try check(true,", "filter": "W1ModelTests"}
+  {"note": "two shape tracks may animate one shape", "file": "Sources/FlareCore/FlareFormat.swift", "anchor": "try check(animated.insert(track.shapeIndex).inserted,", "replacement": "try check(true,", "filter": "W1ModelTests"},
+  {"note": "colour track key check drops the plain-decimal test, so fill.00 or fill.+0 validates next to fill.0", "filter": "W1ModelTests.refusesBadValues", "file": "Sources/FlareCore/FlareFormat.swift",
+   "anchor": "guard parts.count == 2, let i = Int(parts[1]), String(i) == parts[1] else",
+   "replacement": "guard parts.count == 2, let i = Int(parts[1]) else"},
+  {"note": "text run check seeds last below -1, so a negative run start validates", "filter": "W1ModelTests.refusesBadValues", "file": "Sources/FlareCore/FlareFormat.swift",
+   "anchor": "var last = -1",
+   "replacement": "var last = Int.min"}
 ]

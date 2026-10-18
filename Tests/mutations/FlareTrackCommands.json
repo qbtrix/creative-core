@@ -58,8 +58,15 @@
   {
     "note": "a colour command skips its shapeNotFound check on a missing shape",
     "file": "Sources/FlareCore/TrackCommands.swift",
-    "anchor": "guard target.exists(in: layer) else { throw CommandError.shapeNotFound(target.index) }",
-    "replacement": "",
+    "anchor": "guard target.exists(in: layer) else {",
+    "replacement": "guard true else {",
     "filter": "TrackCommandsTests.missingShapeRefused"
+  },
+  {
+    "note": "a colour command reports a missing text target as a missing shape",
+    "file": "Sources/FlareCore/TrackCommands.swift",
+    "anchor": "if case .text(let index) = target { throw CommandError.invalidIndex(index) }",
+    "replacement": "",
+    "filter": "TrackCommandsTests.missingTextIsInvalidIndex"
   }
 ]
