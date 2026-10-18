@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="150">
+  <defs><filter id="a"/><filter id="b"/><pattern id="p" width="4" height="4"/></defs>
+  <filter id="c"/>
+  <use href="#r"/>
+  <rect id="r" width="10" height="10"/>
+</svg>
