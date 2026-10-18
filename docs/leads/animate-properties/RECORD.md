@@ -2,7 +2,7 @@
 
 Issue: #442 · Packet: docs/blueprints/core/features/animate-properties.md
 Run: act-1a14ddaebc8-nwqn · Session: line lead (engine-contracts, animate-properties, color-profiles) · Started: 2026-10-18T07:15Z
-Stage: 4 Anatomy round 4 (the last) on f6d1492: gate and 6 mutation plans running (round-gate ap-r4), then the critic panel
+Stage: 4 Anatomy round 4 (the last) on f6d1492: gate CI: PASS try 1, mutation 41/41; critic panel wf_23eb0eca-072 running
 Base: 9d01972365f04da4fe6074e9bdd56ceab5b616a8
 Next: round 4 critic panel; findings left open after round 4 become gap issues. AP-4 waits on path-geometry PG-edit (#430); AP-9, AP-10 (AP-z) after it, so the feature stays open beyond this run.
 
