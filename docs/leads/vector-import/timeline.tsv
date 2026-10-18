@@ -9,3 +9,6 @@ utc	stage	event	ref	note
 2026-10-18T11:52Z	3	pr-merged	#478	VI-2 a59c5c2
 2026-10-18T11:52Z	3	slice-merged	VI-a	VI-1 VI-2
 2026-10-18T11:52Z	3	stage-start	wave3	VI-3 VI-4 VI-6 at b80c087
+2026-10-18T11:56:24Z	3	builder-start	VI-3	under flock gate
+2026-10-18T11:56:24Z	3	builder-start	VI-4	under flock gate
+2026-10-18T11:56:24Z	3	builder-start	VI-6	under flock gate
