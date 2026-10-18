@@ -19,3 +19,6 @@ utc	stage	event	ref	note
 2026-10-18T23:39Z	3	gate-wait	AC-3	head 352eb29 pushed, mutate 4/4; gate blocked only by the CoreAsset 1 s budget flake under load; lead regating when load < 3
 2026-10-18T23:49Z	3	pr-opened	#583	task AC-3 head 352eb29a, mutate 4/4, lead gate PASS
 2026-10-18T23:49Z	3	task-start	AC-4	builder launched (rebases after #583)
+2026-10-18T23:57:38Z	3	merged	#583	AC-3 squash 6a87576
+2026-10-18T23:57:38Z	3	merged	#584	AC-4 squash 5ea5ae5; AC-geo all merged
+2026-10-18T23:57:38Z	4	slice-done	AC-a	Belt-Slice-Done on #434, run 39174242588

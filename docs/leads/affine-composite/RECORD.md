@@ -15,8 +15,8 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 | AC-0 | 1 | AC-a | Stubs for the contract slice's signatures (rule 18): `transformed`, `flipped`, `padded`, `composite(through:)`, `AffineMatrix.bounds`; throwing ones throw `RasterError.invalid("not built")`, `flipped` returns self | `Sources/CoreRaster/Affine/AffineTransform.swift`, `Sources/CoreRaster/Affine/CanvasSize.swift`, `Sources/CoreRaster/Compositing/CompositeAffine.swift`, `Tests/CoreRasterTests/AffineStubTests.swift` | `AffineStubTests` | none (no invariant) | #563 | merged |
 | AC-2 | 1 | AC-a | Seeded layers (transparent borders, hard edges) and matrices (identity, translations, 90° multiples, skews, near-singular) | `Tests/CoreRasterTests/AffineFixtures.swift` | fixtures build | none | #571 | merged |
 | AC-1 | 2 | AC-a | Checks first: `AffineOpsTests`, `CompositeAffineTests`, `CPUAffineTests` disabled by name (`waits on AC-3/5/6`) | the three test files | suites compile, disabled | none | #574 | merged |
-| AC-3 | 3 | AC-geo | `transformed` with fast paths, `flipped`; turns on those cases | `Sources/CoreRaster/Affine/AffineTransform.swift`, `Tests/CoreRasterTests/AffineOpsTests.swift`, `Tests/mutations/CoreRaster.AffineTransform.json` | `AffineOpsTests` | 4 (packet) | #583 | open |
-| AC-4 | 3 | AC-geo | `padded` around nine anchors; its cases in `CanvasSizeTests` | `Sources/CoreRaster/Affine/CanvasSize.swift`, `Tests/CoreRasterTests/CanvasSizeTests.swift`, `Tests/mutations/CoreRaster.CanvasSize.json` | `CanvasSizeTests` | 2 (packet) | | building |
+| AC-3 | 3 | AC-geo | `transformed` with fast paths, `flipped`; turns on those cases | `Sources/CoreRaster/Affine/AffineTransform.swift`, `Tests/CoreRasterTests/AffineOpsTests.swift`, `Tests/mutations/CoreRaster.AffineTransform.json` | `AffineOpsTests` | 4 (packet) | #583 | merged |
+| AC-4 | 3 | AC-geo | `padded` around nine anchors; its cases in `CanvasSizeTests` | `Sources/CoreRaster/Affine/CanvasSize.swift`, `Tests/CoreRasterTests/CanvasSizeTests.swift`, `Tests/mutations/CoreRaster.CanvasSize.json` | `CanvasSizeTests` | 2 (packet) | #584 | merged |
 | AC-5 | 4 | AC-comp | `composite(through:)`, `AffineMatrix.bounds`; turns on `CompositeAffineTests` | `Sources/CoreRaster/Compositing/CompositeAffine.swift`, `Tests/CoreRasterTests/CompositeAffineTests.swift`, `Tests/mutations/CoreRaster.CompositeAffine.json` | `CompositeAffineTests` | 2 (packet) | | planned |
 | AC-6 | 5 | AC-comp | CPU bodies for the three `affine` calls; turns on `CPUAffineTests` | `Sources/CoreRender/CPU/CPUBackend+Affine.swift`, `Tests/CoreRenderTests/CPUAffineTests.swift`, `Tests/mutations/CoreRenderCPUAffine.json` | `CPUAffineTests` | 2 (packet) | | planned |
 | AC-7 | 6 | AC-z | `Samples+Affine.swift` and CPU goldens | `Sources/CoreRender/Parity/Samples+Affine.swift`, `Tests/CoreRenderTests/Golden/affine/` | `CPUGoldenTests` | none: goldens | | planned |
@@ -42,8 +42,8 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
 |---|---|---|---|---|---|
-| AC-a | AC-0, AC-1, AC-2 | engine-contracts:EC-a (merged on base) | open | | |
-| AC-geo | AC-3, AC-4 | AC-a | open | | |
+| AC-a | AC-0, AC-1, AC-2 | engine-contracts:EC-a (merged on base) | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39174242588 | |
+| AC-geo | AC-3, AC-4 | AC-a | merged (waits on green dev CI) | | |
 | AC-comp | AC-5, AC-6 | AC-geo; engine-contracts:EC-b (merged on base) | open | | |
 | AC-z | AC-7, AC-8, AC-9 | AC-comp | open | | wanted (budgets) |
 
@@ -52,6 +52,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 |---|---|---|---|---|---|---|---|---|---|
 
 ## Decisions
+- AC-4 (#584): `padded` places the source with whole-pixel `transformed` at floor offsets per anchor; `CanvasSizeTests.swift` was created (packet lists it, file did not exist).
 - AC-3 (head 352eb29): no scale-only resampled fast path (resized edge-extends, which would break outside-is-transparent); downscale widens the kernel per axis for any shrink below 1 by the source step, capped at source size, so pure rotation is not blurred. Fast paths: identity, whole-pixel translation, quarter turns and mirrors. AC-3 removed its rows from AffineStubTests.
 - engine-contracts is satisfied on the base: `AffineMatrix`, `FlipAxis`, `CanvasAnchor`, the `affine` family, `CPUBackend+Affine.swift` and `Samples+Affine.swift` are in code at a8a08d25.
 - Added AC-0 (rule 18): the packet's contract slice names signatures that don't exist yet, so the checks-first suites couldn't compile; AC-0 declares them as stubs and AC-3/4/5 fill the bodies without changing signatures.
