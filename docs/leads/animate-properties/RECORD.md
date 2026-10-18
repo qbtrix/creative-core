@@ -2,9 +2,9 @@
 
 Issue: #442 · Packet: docs/blueprints/core/features/animate-properties.md
 Run: act-1a14ddaebc8-nwqn · Session: line lead (engine-contracts, animate-properties, color-profiles) · Started: 2026-10-18T07:15Z
-Stage: 2 plan
+Stage: 3 line wave 3
 Base: 9d01972365f04da4fe6074e9bdd56ceab5b616a8
-Next: wait for engine-contracts:EC-f (EC-6, EC-7, EC-8) to merge, then build AP-1
+Next: AP-1 PR merges, then AP-2 (checks first)
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -18,7 +18,7 @@ Next: wait for engine-contracts:EC-f (EC-6, EC-7, EC-8) to merge, then build AP-
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
 |---|---|---|---|---|---|---|---|
-| AP-1 | line 3 | command and sampler stubs | TrackCommands(+Shape), Sampling+Tracks | TrackShapeTests | none | | waits EC-f |
+| AP-1 | line 3 | command and sampler stubs | TrackCommands(+Shape), Sampling+Tracks | TrackShapeTests | none | | building on 83b20aa |
 | AP-2 | line 4 | checks first, disabled; fixture | six test suites, Fixtures/tracks.flare | compile | – | | waits AP-1 |
 | AP-3 | line 5 | colour key commands | TrackCommands.swift | TrackCommandsTests | FlareTrackCommands (3) | | waits AP-2 |
 | AP-4 | – | shape key commands + compatibility | TrackCommands+Shape.swift | ShapeKeyCompatTests | FlareShapeKeys (3) | | waits AP-2, path-geometry:PG-edit |
