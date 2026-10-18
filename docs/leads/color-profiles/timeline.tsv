@@ -57,3 +57,4 @@ utc	stage	event	ref	note
 2026-10-18T14:49Z	anatomy	gate	cp1-c	rebased on dev after #509, regating
 2026-10-18T14:55Z	-	heartbeat	-	waiting
 2026-10-18T15:01Z	anatomy	fix-dispatch	cp1-e	cp1-c rebased on #509 fails keepsOutOfGamut (2e-6 drift through rounded sRGB curve). Lead decision: curves == ColorProfile.sRGB.curves count as buffer encoding, built-in to built-in stays exact matrix. cp1-c pushed (ce6495b), fixer cp1-e (wf_74669e0d-d02) cherry-picks it + fix in one PR
+2026-10-18T15:04Z	status	dev-ci	39137820117	Dev CI on c294adb: Linux green, macOS SIGBUS again in Metal ParityTests.resample (not ours; #507 did not fix it). Noted on #453.
