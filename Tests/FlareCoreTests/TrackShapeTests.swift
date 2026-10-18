@@ -1,7 +1,7 @@
 // TrackShapeTests.swift: the animate-properties contract (AP-1). The colour and
 // shape key commands are registered under their ids and round-trip through the
 // registry; `TrackTarget.key` names the `Layer.colorTracks` key; the stubs
-// throw "not built: <task>" instead of trapping; and a layer without tracks
+// throw `CommandError.notBuilt` naming the command id instead of trapping; and a layer without tracks
 // samples as static (nil), including one decoded from a file that lacks them.
 @testable import FlareCore
 import Foundation
@@ -53,7 +53,7 @@ import Testing
 
     @Test func stubsThrowNotBuilt() throws {
         for command in Self.stubs() {
-            let notBuilt = CommandError.invalidDocument("not built: AP-4")
+            let notBuilt = CommandError.notBuilt("\(type(of: command).id) is not built yet (animate-properties)")
             var cmd = command
             var doc = Fixtures.document()
             #expect(throws: notBuilt) { try cmd.execute(&doc) }

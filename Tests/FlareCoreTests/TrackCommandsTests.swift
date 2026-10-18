@@ -83,6 +83,24 @@ import Testing
         #expect(TrackCommands.all.map { $0.id } == Self.expectedIDs)
     }
 
+    /// A stub says it is not built and names its id; it never blames the document.
+    @Test func stubsSayNotBuiltNotInvalidDocument() {
+        let stubs = TrackShapeTests.stubs()
+        #expect(Set(stubs.map { type(of: $0).id }) == Self.notBuiltIDs)
+        for command in stubs {
+            let id = type(of: command).id
+            var engine = CommandEngine(document: Fixtures.document())
+            do {
+                try engine.perform(command)
+                Issue.record("\(id) did not throw")
+            } catch CommandError.notBuilt(let message) {
+                #expect(message.contains(id) && !message.contains("AP-"), "\(message)")
+            } catch {
+                Issue.record("\(id) threw \(error), not notBuilt")
+            }
+        }
+    }
+
     @Test func samplesListExactlyItsIDs() {
         #expect(Self.registrySamples().map { type(of: $0).id } == Self.expectedIDs.filter { !Self.notBuiltIDs.contains($0) })
     }

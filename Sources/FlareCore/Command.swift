@@ -134,6 +134,9 @@ public enum CommandError: Error, Equatable, Sendable {
     case malformedCommand(String)
     /// The command would leave a document that fails `FlareFormat.validate`.
     case invalidDocument(String)
+    /// The command is registered but has no body yet; the message names the
+    /// command id and the feature that will build it. The document is untouched.
+    case notBuilt(String)
 }
 
 extension CommandError {

@@ -39,6 +39,33 @@ struct MorphSamplingTests {
         #expect(Self.near(c1, Self.p(0, 5)) && Self.near(c2, Self.p(10, 5)) && Self.near(to, Self.p(10, 0)))
     }
 
+    @Test func easingShapesTheMorph() throws {
+        let a = Path(polyline: [Self.p(0, 0), Self.p(10, 0), Self.p(10, 10)], closed: true)
+        let b = Path(polyline: [Self.p(4, 8), Self.p(30, 2), Self.p(20, 40)], closed: true)
+        let layer = Self.layer([PathKeyframe(frame: 0, path: a, easing: .easeInOut), PathKeyframe(frame: 24, path: b)])
+        let t = Easing.easeInOut.value(at: 0.25)
+        let mid = try #require(layer.sampledPath(shape: 0, at: 6))
+        #expect(t != 0.25 && mid.elements.count == a.elements.count)
+        for (m, (ea, eb)) in zip(mid.elements, zip(a.elements, b.elements)) {
+            switch (m, ea, eb) {
+            case (.move(let q), .move(let pa), .move(let pb)), (.line(let q), .line(let pa), .line(let pb)):
+                #expect(Self.near(q, Self.p(pa.x + (pb.x - pa.x) * t, pa.y + (pb.y - pa.y) * t)), "\(q)")
+            case (.close, .close, .close): break
+            default: Issue.record("unpaired \(m)")
+            }
+        }
+    }
+
+    @Test func quadElevatesToCubic() {
+        // Two quads morph as quads, so pair the quad with the cubic that draws it: the quad is elevated to
+        // handles p + 2/3(c - p) and to + 2/3(c - to), (2, 4) and (4, 4), so every frame between draws those.
+        let quad = Path(elements: [.move(to: Self.p(0, 0)), .quad(control: Self.p(3, 6), to: Self.p(6, 0))])
+        let cubic = Path(elements: [.move(to: Self.p(0, 0)), .cubic(control1: Self.p(2, 4), control2: Self.p(4, 4), to: Self.p(6, 0))])
+        let mid = Self.layer([PathKeyframe(frame: 0, path: quad), PathKeyframe(frame: 10, path: cubic)]).sampledPath(shape: 0, at: 5)
+        guard case .cubic(let c1, let c2, let to) = mid?.elements.last else { Issue.record("not a cubic: \(String(describing: mid))"); return }
+        #expect(Self.near(c1, Self.p(2, 4)) && Self.near(c2, Self.p(4, 4)) && Self.near(to, Self.p(6, 0)))
+    }
+
     @Test func unpairedKeysHoldTheLeftKey() {
         // A file can hold keys AP-4 never made compatible: a different count, or a close against a line.
         let tri = Path(polyline: [Self.p(0, 0), Self.p(4, 0), Self.p(0, 4)], closed: true)
