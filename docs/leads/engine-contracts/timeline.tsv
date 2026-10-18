@@ -33,3 +33,4 @@ utc	stage	event	ref	note
 2026-10-18T09:31Z	3	pr-opened	#460	EC-4 PR 90a94c3, Mutate 2/2 CoreRenderDispatcherW1; gets Metal (macOS) check? no (CoreRender only)
 2026-10-18T09:32Z	3	pr-merged	#460	EC-4 merged 8839b71; EC-b tasks all merged; wave 3 done
 2026-10-18T09:35Z	-	heartbeat	-	waiting
+2026-10-18T09:49Z	4	gate-run	8839b71	round 2 gate: CI: PASS on rerun (first run: EngineStress 6.7s under load 5, 2.86s alone); mutate FlareW1Model 17/17, W1Values 3/3, W1Contract 2/2, Fake 13/13, DispatcherW1 2/2
