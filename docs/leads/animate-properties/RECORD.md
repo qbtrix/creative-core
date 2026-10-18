@@ -1,0 +1,40 @@
+# animate-properties lead record
+
+Issue: #442 · Packet: docs/blueprints/core/features/animate-properties.md
+Run: act-1a14ddaebc8-nwqn · Session: line lead (engine-contracts, animate-properties, color-profiles) · Started: 2026-10-18T07:15Z
+Stage: 2 plan
+Base: 9d01972365f04da4fe6074e9bdd56ceab5b616a8
+Next: wait for engine-contracts:EC-f (EC-6, EC-7, EC-8) to merge, then build AP-1
+
+## Slices
+| slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
+|---|---|---|---|---|---|
+| AP-a | AP-1, AP-2 | engine-contracts:EC-f | open | | |
+| AP-cmd | AP-3, AP-4 | AP-a; path-geometry:PG-edit (AP-4) | open | | |
+| AP-sample | AP-5, AP-6 | AP-a | open | | |
+| AP-export | AP-7, AP-8 | AP-sample | open | | |
+| AP-z | AP-9, AP-10 | AP-cmd, AP-export | open | | |
+
+## Tasks
+| id | wave | behavior | files | test | mutation | PR | state |
+|---|---|---|---|---|---|---|---|
+| AP-1 | line 3 | command and sampler stubs | TrackCommands(+Shape), Sampling+Tracks | TrackShapeTests | none | | waits EC-f |
+| AP-2 | line 4 | checks first, disabled; fixture | six test suites, Fixtures/tracks.flare | compile | – | | waits AP-1 |
+| AP-3 | line 5 | colour key commands | TrackCommands.swift | TrackCommandsTests | FlareTrackCommands (3) | | waits AP-2 |
+| AP-4 | – | shape key commands + compatibility | TrackCommands+Shape.swift | ShapeKeyCompatTests | FlareShapeKeys (3) | | waits AP-2, path-geometry:PG-edit |
+| AP-5 | line 5 | sampledColor | Sampling+Tracks.swift | ColorSamplingTests | FlareColorSampling (3) | | waits AP-2 |
+| AP-6 | line 5 | sampledPath | Sampling+TracksMorph.swift | MorphSamplingTests | FlareMorphSampling (2) | | waits AP-2 |
+| AP-7 | line 6 | Lottie animated keys | LottieExporter+Tracks.swift | LottieTrackExportTests | FlareLottieTrackExport (2) | | waits AP-5, AP-6 |
+| AP-8 | line 6 | SVG values at frame | SVGExporter+Style.swift | SVGStyleAtFrameTests | FlareSVGStyleAtFrame (2) | | waits AP-5, AP-6 |
+| AP-9 | – | KJ-AP walk, budgets | TrackWalkTests, TrackBudgetTests | walk | none | | waits AP-3,4,7,8 |
+| AP-10 | – | status line, feature-done | packet | – | – | | waits AP-9 |
+
+## Rounds
+| round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
+|---|---|---|---|---|---|---|---|---|
+
+## Decisions
+- "line N" in the wave column is the line lead's shared wave number (engine-contracts wave N runs beside it).
+
+## Open
+- AP-4 waits on path-geometry:PG-edit (#430: no PR yet). AP-cmd and AP-z wait with it.
