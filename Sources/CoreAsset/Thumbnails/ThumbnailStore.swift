@@ -7,7 +7,8 @@
 // Invariants: every failure is an `AssetError`; writes and removes reload the
 // index under the folder lock (PreviewFiles.swift) and leave `usedBytes <=
 // budgetBytes`, counting payloads only; a read checks its file's header names
-// its key. PC-4 adds recovery and the read flush, PC-5 volumes.
+// its key; reads flush the index at most every 2 s and on deinit, merged with
+// the index on disk (PreviewIndex.swift recovers a damaged one). PC-5 volumes.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -81,13 +82,16 @@ public final class ThumbnailStore: @unchecked Sendable {
     private let queue = DispatchQueue(label: "CoreAsset.ThumbnailStore")
     private var entries: [PreviewKey: PreviewEntry]
     private var clock = Date.distantPast
+    private var lastFlush = Date()
+    private var unflushed = false
+    private static let flushInterval: TimeInterval = 2
 
     /// Opens (or, from PC-3, creates) the store in `folder`.
     public init(folder: URL, budgetBytes: Int) throws(AssetError) {
         guard budgetBytes >= 0 else { throw .invalid("a preview budget cannot be negative") }
         let files = PreviewFiles(folder: folder)
         try files.createFolders()
-        entries = try files.withLock { () throws(AssetError) in try files.loadIndex() }
+        entries = try files.withLock { () throws(AssetError) in try files.openIndex(budgetBytes: budgetBytes) }
         self.folder = folder
         self.budgetBytes = budgetBytes
         self.files = files
@@ -117,6 +121,8 @@ public final class ThumbnailStore: @unchecked Sendable {
             let (header, payload) = try PreviewFiles.decode(data)
             guard header.key == key else { throw .invalid("preview file \(file.lastPathComponent) is another key's") }
             entries[key]?.lastRead = tick()
+            unflushed = true
+            if Date().timeIntervalSince(lastFlush) >= Self.flushInterval { try? syncFolder { _ in } }
             return payload
         }
     }
@@ -156,17 +162,28 @@ public final class ThumbnailStore: @unchecked Sendable {
     /// Under the queue and the folder lock: reloads the index (keeping this
     /// store's newer reads), lets `body` change it and its files, then writes it.
     private func changeFolder(_ body: (inout [PreviewKey: PreviewEntry]) throws(AssetError) -> Void) throws(AssetError) {
-        try locked { () throws(AssetError) in
-            try files.withLock { () throws(AssetError) in
-                var current = try files.loadIndex()
-                for (key, mine) in entries where current[key].map({ $0.lastRead < mine.lastRead }) == true {
-                    current[key]?.lastRead = mine.lastRead
-                }
-                try body(&current)
-                try files.saveIndex(current, budgetBytes: budgetBytes)
-                entries = current
+        try locked { () throws(AssetError) in try syncFolder(body) }
+    }
+
+    /// `changeFolder`'s work, for a caller already on the queue; it also
+    /// flushes this store's reads.
+    private func syncFolder(_ body: (inout [PreviewKey: PreviewEntry]) throws(AssetError) -> Void) throws(AssetError) {
+        try files.withLock { () throws(AssetError) in
+            var current = try files.loadIndex().entries
+            for (key, mine) in entries where current[key].map({ $0.lastRead < mine.lastRead }) == true {
+                current[key]?.lastRead = mine.lastRead
             }
+            try body(&current)
+            try files.saveIndex(current, budgetBytes: budgetBytes)
+            entries = current
+            lastFlush = Date()
+            unflushed = false
         }
+    }
+
+    /// Flushes reads not yet in the index.
+    deinit {
+        if unflushed { try? changeFolder { _ in } }
     }
 
     /// While over budget, drops the entry read longest ago and its file.
