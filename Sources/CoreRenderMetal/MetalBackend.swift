@@ -280,7 +280,7 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
         try withLock {
             let stored = try lookup(surface)
             stored.touch(tick())
-            return try stored.read()
+            return try stored.read(queue: commandQueue)
         }
     }
 

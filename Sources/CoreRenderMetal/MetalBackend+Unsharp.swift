@@ -21,7 +21,7 @@ extension MetalBackend {
             guard state.effectiveSupports.contains(.blur) else { throw RenderError.unsupported(.blur) }
             let found = (surface: try lookup(s), now: tick())
             found.surface.touch(found.now)
-            return (try found.surface.read(), found.now, commandQueue)
+            return (try found.surface.read(queue: commandQueue), found.now, commandQueue)
         }
         let rule = try UnsharpRule(amount: amount, threshold: threshold)
         let (w, h) = (image.width, image.height)

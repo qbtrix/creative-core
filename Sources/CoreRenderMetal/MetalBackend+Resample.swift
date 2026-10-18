@@ -23,7 +23,7 @@ extension MetalBackend {
             _ = try RenderError.mapping { try PixelBuffer.validatedSize(width: width, height: height) }
             let clock = tick()
             stored.touch(clock)
-            return (try stored.read(), clock, commandQueue,
+            return (try stored.read(queue: commandQueue), clock, commandQueue,
                     try pipelines.pipeline(for: ResampleShader.pass, source: ResampleShader.source),
                     try pipelines.pipeline(for: ResampleShader.scatter, source: ResampleShader.source))
         }

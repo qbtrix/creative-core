@@ -21,7 +21,7 @@ extension MetalBackend {
             let stored = try lookup(s)
             let clock = tick()
             stored.touch(clock)
-            return (try stored.read(), clock, commandQueue)
+            return (try stored.read(queue: commandQueue), clock, commandQueue)
         }
         let (w, h) = (image.width, image.height)
         let table = try BlurTable(sigma: sigma, width: w, height: h)

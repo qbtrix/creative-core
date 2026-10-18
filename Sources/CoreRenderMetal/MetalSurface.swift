@@ -79,13 +79,19 @@ final class MetalSurface {
     /// evicted one copied from its shadow. Throws `RenderError.raster` when the buffer rejects the
     /// size or a decoded component is not finite: upload clamps, so only a value a GPU kernel wrote
     /// can be, and buffers hold finite values only.
-    func read() throws -> PixelBuffer {
+    func read(queue: any MTLCommandQueue) throws -> PixelBuffer {
         var buffer = try RenderError.mapping { try PixelBuffer(width: tiling.width, height: tiling.height) }
         // `rect` throws for an index outside the tiling and both arrays have `tileCount` entries,
         // so the subscripts are in range.
+        let rects = try (0..<tiling.tileCount).map { try tiling.rect($0) }
+        let resident = tiles.indices.compactMap { index in tiles[index].map { (index: index, texture: $0) } }
+        let halves = try Self.readback(resident.map { ($0.texture, rects[$0.index]) }, queue: queue)
+        var downloaded: [Int: PixelBuffer] = [:]
+        for (tile, values) in zip(resident, halves) {
+            downloaded[tile.index] = try Self.decode(values, rect: rects[tile.index])
+        }
         for index in 0..<tiling.tileCount {
-            let rect = try tiling.rect(index)
-            guard let tile = try tiles[index].map({ try Self.download($0, rect: rect, index: index) }) ?? shadows[index] else {
+            guard let tile = downloaded[index] ?? shadows[index] else {
                 throw RenderError.raster("tile \(index) has neither a texture nor a shadow")
             }
             try RenderError.mapping {
@@ -98,16 +104,36 @@ final class MetalSurface {
     /// The texture bytes of a tile of `rect`'s size.
     static func bytes(of rect: TileRect) -> Int { rect.width * rect.height * bytesPerPixel }
 
-    /// `texture` (a tile of `rect`'s size) as a new `rect.width` x `rect.height` `PixelBuffer`.
-    /// Throws `RenderError.raster` when a decoded component is not finite (see `read`).
-    static func download(_ texture: any MTLTexture, rect: TileRect, index: Int) throws -> PixelBuffer {
-        var halves = [UInt16](repeating: 0, count: rect.width * rect.height * channels)
-        try halves.withUnsafeMutableBytes { raw in
-            guard let base = raw.baseAddress else {
-                throw RenderError.raster("empty download for tile \(index), \(rect.width)x\(rect.height)")
+    /// `texture` (a tile of `rect`'s size) as a new `rect.width` x `rect.height` `PixelBuffer`, read on `queue`.
+    /// Throws `RenderError.raster` when a decoded component is not finite (see `read`) or the readback fails.
+    static func download(_ texture: any MTLTexture, rect: TileRect, index: Int,
+                         queue: any MTLCommandQueue) throws -> PixelBuffer {
+        guard let halves = try readback([(texture, rect)], queue: queue).first else {
+            throw RenderError.raster("empty download for tile \(index), \(rect.width)x\(rect.height)")
+        }
+        return try decode(halves, rect: rect)
+    }
+
+    /// Each tile's pixels (a texture and its tile's rect) as row-major RGBA binary16, `rect.width *
+    /// rect.height * channels` values per tile.
+    static func readback(_ tiles: [(texture: any MTLTexture, rect: TileRect)],
+                         queue: any MTLCommandQueue) throws -> [[UInt16]] {
+        try tiles.map { tile in
+            var halves = [UInt16](repeating: 0, count: tile.rect.width * tile.rect.height * channels)
+            try halves.withUnsafeMutableBytes { raw in
+                guard let base = raw.baseAddress else { throw RenderError.raster("empty tile readback") }
+                tile.texture.getBytes(base, bytesPerRow: tile.rect.width * bytesPerPixel,
+                                      from: MTLRegionMake2D(0, 0, tile.rect.width, tile.rect.height), mipmapLevel: 0)
             }
-            texture.getBytes(base, bytesPerRow: rect.width * bytesPerPixel,
-                             from: MTLRegionMake2D(0, 0, rect.width, rect.height), mipmapLevel: 0)
+            return halves
+        }
+    }
+
+    /// `halves` (a tile of `rect`'s size, as `readback` returns it) decoded into a new `PixelBuffer`.
+    /// Throws `RenderError.raster` for a short array or a component that is not finite (see `read`).
+    static func decode(_ halves: [UInt16], rect: TileRect) throws -> PixelBuffer {
+        guard halves.count == rect.width * rect.height * channels else {
+            throw RenderError.raster("tile readback of \(halves.count) values for \(rect.width)x\(rect.height)")
         }
         var tile = try RenderError.mapping { try PixelBuffer(width: rect.width, height: rect.height) }
         // `halves` holds exactly `channels` values per pixel of `rect`, so `offset` stays inside it.

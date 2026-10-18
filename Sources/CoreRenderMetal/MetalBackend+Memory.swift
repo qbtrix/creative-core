@@ -18,7 +18,7 @@ extension MetalBackend {
         let failure: String? = withLock {
             while residentBytesLocked > budget {
                 guard let victim = leastRecentlyUsedTile() else { return nil }
-                do { try victim.surface.evict(tile: victim.index) } catch { return "eviction: \(error)" }
+                do { try victim.surface.evict(tile: victim.index, queue: commandQueue) } catch { return "eviction: \(error)" }
             }
             return nil
         }

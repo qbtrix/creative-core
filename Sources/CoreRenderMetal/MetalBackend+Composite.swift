@@ -37,7 +37,7 @@ extension MetalBackend {
                 if let tile = source.tiles[index], source !== backdrop {
                     resident[index] = tile
                 } else if let tile = source.tiles[index] {  // one surface: read a snapshot, never the tile being written
-                    staged[index] = try MetalSurface.download(tile, rect: source.tiling.rect(index), index: index)
+                    staged[index] = try MetalSurface.download(tile, rect: source.tiling.rect(index), index: index, queue: commandQueue)
                 } else {
                     staged[index] = source.shadows[index]
                 }
@@ -86,7 +86,8 @@ extension MetalBackend {
             try withLock {
                 for (index, texture) in targets {
                     guard let current = plan.backdrop.tiles[index] else {
-                        plan.backdrop.shadows[index] = try MetalSurface.download(texture, rect: plan.backdrop.tiling.rect(index), index: index)
+                        plan.backdrop.shadows[index] = try MetalSurface.download(texture, rect: plan.backdrop.tiling.rect(index), index: index,
+                                                                                 queue: commandQueue)
                         continue
                     }
                     if current !== texture { plan.backdrop.tiles[index] = texture }  // same rect, so residentBytes holds
