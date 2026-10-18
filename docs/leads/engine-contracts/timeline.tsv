@@ -21,3 +21,4 @@ utc	stage	event	ref	note
 2026-10-18T08:46Z	4	ci-run	39111859890	dev c614b52 Linux red: EngineStressTests 5.75s > 5s budget; fixer launched
 2026-10-18T08:47Z	-	heartbeat	-	waiting
 2026-10-18T08:53Z	3	pr-merged	#454	EC-5 merged 11ed4cc
+2026-10-18T08:54Z	4	pr-opened	#455	r1-a (10 findings, FlareW1Model 15/15)
