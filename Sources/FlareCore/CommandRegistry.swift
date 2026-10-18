@@ -36,6 +36,9 @@ public struct CommandRegistry: Sendable {
         SwatchCommands.all,
         InstanceCommands.all,
         StateMachineCommands.all,
+        MaskCommands.all,
+        TextStyleCommands.all,
+        TrackCommands.all,
     ]
 
     /// Every built-in command.
