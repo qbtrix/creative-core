@@ -88,3 +88,4 @@ utc	stage	event	ref	note
 2026-10-18T17:57Z	-	heartbeat	-	waiting
 2026-10-18T17:59Z	anatomy	heartbeat	61b4f10	round 3 fixes #537 #538 merged; cp3-c (convert24MP perf) running
 2026-10-18T18:15Z	-	heartbeat	-	waiting
+2026-10-18T18:21Z	slice-done	CP-deep	66bd163	dev CI 39150176925 green (Linux) with CP-7/CP-8/CP-9

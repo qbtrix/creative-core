@@ -2,9 +2,9 @@
 
 Issue: #441 · Packet: docs/blueprints/core/features/color-profiles.md
 Run: act-1a14ddaebc8-nwqn · Session: line lead (engine-contracts, animate-properties, color-profiles) · Started: 2026-10-18T07:15Z
-Stage: 4 Anatomy round 3 fixes: cp3-a, cp3-b (wf_ce181f33-fd6, base ee1bd83) and cp3-c convert24MP speed (wf_d02bdd3b-f68, base 4ece840) running; CP-9 merged #536
+Stage: 4 Anatomy round 3 fixes: cp3-a #537, cp3-b #538 merged; cp3-c convert24MP speed (wf_d02bdd3b-f68) running
 Base: 9d01972365f04da4fe6074e9bdd56ceab5b616a8
-Next: round 3 critic panel on c3e0225; CP-deep Slice-Done once a dev Linux job including 40249d5 is green; then CP-9/CP-10 (CP-z, feature-done, Mac-Finish-Wanted).
+Next: cp3-c merges (or a gap if the budget is out of reach); round 4 (last) gate + panel; CP-10 (feature-done, Closes #441); Mac-Finish-Wanted CP-z; contact sheet.
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -12,7 +12,7 @@ Next: round 3 critic panel on c3e0225; CP-deep Slice-Done once a dev Linux job i
 | CP-a | CP-1, CP-2 | layered-codecs:LC-a (merged #446) | merged-done | 39118832683 | |
 | CP-icc | CP-3, CP-4 | CP-a | merged-done | 39121455101 | |
 | CP-convert | CP-5, CP-6 | CP-icc | merged-done (run 39126063033, Linux green on d51ef90) | | |
-| CP-deep | CP-7, CP-8 | CP-icc; layered-codecs:LC-write | blocked | | |
+| CP-deep | CP-7, CP-8 | CP-icc; layered-codecs:LC-write | merged-done | 39150176925 (CI on 66bd163, Linux green) | |
 | CP-z | CP-9, CP-10 | CP-convert, CP-deep | open | | wanted (budgets) |
 
 ## Tasks
