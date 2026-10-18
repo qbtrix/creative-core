@@ -43,3 +43,4 @@ utc	stage	event	ref	note
 2026-10-18T12:13Z	slice-done	belt-slice-done	#441	CP-convert done, run 39126063033
 2026-10-18T12:19Z	anatomy	round-start	r1	critic panel wf_a9c46eec-b45 on ca537c1, mutate 12/12
 2026-10-18T12:24Z	anatomy	round-done	r1	13 confirmed, not clean; fixes cp1-a/b/c
+2026-10-18T12:30Z	-	heartbeat	-	waiting
