@@ -20,3 +20,4 @@ utc	stage	event	ref	note
 2026-10-18T10:20Z	3	pr-merged	#464	AP-6 merged 0660756
 2026-10-18T10:21Z	3	ci-run	39118832683	dev CI started on 0660756
 2026-10-18T10:25Z	3	ci-run	39118832683	Linux green, macOS red (ICCBytes.swift:59 type-check); Belt-Slice-Done posted
+2026-10-18T10:29Z	-	heartbeat	-	waiting
