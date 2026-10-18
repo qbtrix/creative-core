@@ -113,21 +113,31 @@ struct ProfileTransformTests {
     @Test func everyParametricTypeRoundTrips() throws {
         // ICC.1 10.18's five function types, each with the linear value it gives encoded 0.5. sRGB's colourants
         // make the matrix part identity, and 0.1 and up is past every knee, where each curve is invertible.
-        let cases: [(Int, [Double], Double)] = [
-            (0, [2.2], pow(0.5, 2.2)),
-            (1, [2.2, 1.1, -0.1], pow(1.1 * 0.5 - 0.1, 2.2)),
-            (2, [2.2, 1.1, -0.1, 0.05], pow(1.1 * 0.5 - 0.1, 2.2) + 0.05),
-            (3, [2.4, 1 / 1.055, 0.055 / 1.055, 1 / 12.92, 0.04045], pow((0.5 + 0.055) / 1.055, 2.4)),
-            (4, [2.4, 0.947, 0.052, 0.077, 0.04, 0.01, 0.02], pow(0.947 * 0.5 + 0.052, 2.4) + 0.01),
+        // Encoded 0.02 is below the knee d of types 1 to 4, so it gives the linear segment: 0 for type 1, f for
+        // type 2, cX for type 3 and cX + f for type 4. `back` is what encoding that value gives: 0.02 where the
+        // segment rises, and d where it is flat (types 1 and 2), the lowest input that reaches it.
+        let low = 0.02, d = 0.1 / 1.1
+        let cases: [(type: Int, params: [Double], half: Double, linear: Double, back: Double)] = [
+            (0, [2.2], pow(0.5, 2.2), pow(low, 2.2), low),
+            (1, [2.2, 1.1, -0.1], pow(1.1 * 0.5 - 0.1, 2.2), 0, d),
+            (2, [2.2, 1.1, -0.1, 0.05], pow(1.1 * 0.5 - 0.1, 2.2) + 0.05, 0.05, d),
+            (3, [2.4, 1 / 1.055, 0.055 / 1.055, 1 / 12.92, 0.04045], pow((0.5 + 0.055) / 1.055, 2.4), low / 12.92, low),
+            // f below the knee's value, about 0.0131, so the linear segment stays under the curve and inverts.
+            (4, [2.4, 0.947, 0.052, 0.077, 0.04, 0.01, 0.005], pow(0.947 * 0.5 + 0.052, 2.4) + 0.01, 0.077 * low + 0.005, low),
         ]
-        for (type, params, half) in cases {
+        for (type, params, half, linear, back) in cases {
             let curve = ProfileCurve.parametric(type: type, params: params)
             let profile = ColorProfile(name: "Type \(type)", isGray: false, toXYZD50: ColorProfile.sRGB.toXYZD50,
                                        curves: [curve, curve, curve])
             let decode = try ProfileTransform(from: profile, to: .linearSRGB)
             let encode = try ProfileTransform(from: .linearSRGB, to: profile)
-            let linear = decode.apply(Color3(0.5, 0.5, 0.5))
-            #expect(Self.near(linear, Color3(half, half, half), 1e-9), "type \(type): \(linear) vs \(half)")
+            let mid = decode.apply(Color3(0.5, 0.5, 0.5))
+            #expect(Self.near(mid, Color3(half, half, half), 1e-9), "type \(type): \(mid) vs \(half)")
+            let below = decode.apply(Color3(low, low, low))
+            #expect(Self.near(below, Color3(linear, linear, linear), 1e-9), "type \(type): \(below) vs \(linear)")
+            let again = encode.apply(Color3(linear, linear, linear))
+            // 1e-6, as below: at a flat segment's d the 1/g root magnifies the matrix part's grid-sized rounding.
+            #expect(Self.near(again, Color3(back, back, back), 1e-6), "type \(type): \(again) vs \(back)")
             for c in Self.colours(6, 0.1, 1.25) {
                 #expect(Self.near(encode.apply(decode.apply(c)), c, 1e-6), "type \(type): \(c)")
             }

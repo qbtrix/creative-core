@@ -83,6 +83,9 @@ struct ICCWriteTests {
             ColorProfile(name: "negative gamma", isGray: false, toXYZD50: m, curves: [.gamma(-1), g, g]),
             ColorProfile(name: "one-entry table", isGray: false, toXYZD50: m, curves: [.table([0.5]), g, g]),
             ColorProfile(name: "table above 1", isGray: false, toXYZD50: m, curves: [.table([0, 1.5]), g, g]),
+            // Just outside 0...1: these round onto the UInt16 grid's ends, so only the range check rejects them.
+            ColorProfile(name: "table just above 1", isGray: false, toXYZD50: m, curves: [.table([0, 1.000001]), g, g]),
+            ColorProfile(name: "table just below 0", isGray: false, toXYZD50: m, curves: [.table([-0.000001, 1]), g, g]),
             ColorProfile(name: "para type 5", isGray: false, toXYZD50: m, curves: [.parametric(type: 5, params: [1]), g, g]),
             ColorProfile(name: "para type -1", isGray: false, toXYZD50: m, curves: [.parametric(type: -1, params: [1]), g, g]),
             ColorProfile(name: "para short", isGray: false, toXYZD50: m, curves: [.parametric(type: 3, params: [2.4]), g, g]),

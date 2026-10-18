@@ -26,5 +26,12 @@
     "anchor": "(v * 65536).rounded() / 65536",
     "replacement": "v",
     "filter": "ICCWriteTests/roundTripsBuiltIns"
+  },
+  {
+    "note": "icc write table entries outside 0...1 accepted when they round onto the grid",
+    "file": "Sources/CoreColor/ICC/ICCWrite.swift",
+    "anchor": "guard e >= 0, e <= 1, let v =",
+    "replacement": "guard let v =",
+    "filter": "ICCWriteTests/valuesThatDoNotFitThrow"
   }
 ]
