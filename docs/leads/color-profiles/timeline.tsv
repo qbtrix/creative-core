@@ -28,3 +28,4 @@ utc	stage	event	ref	note
 2026-10-18T10:40Z	3	stage-start	wave-4	CP-4, CP-5 launched (wf_92d29b5f-79b) on 9021b2e
 2026-10-18T10:47Z	-	heartbeat	-	waiting
 2026-10-18T10:50Z	4	pr-merged	#469	CP-5 merged aac58b4
+2026-10-18T10:50Z	5	stage-start	CP-6	CP-6 launched (wf_7f23e743-ee3) on aac58b4; CP-7/CP-8 wait layered-codecs:LC-write
