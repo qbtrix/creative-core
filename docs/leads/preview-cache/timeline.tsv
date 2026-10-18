@@ -26,3 +26,5 @@ utc	stage	event	ref	note
 2026-10-18T13:25:39Z	heartbeat	dev CI run 360 (72fbef6) Linux success, macOS failure; holds all merged slices
 2026-10-18T13:44:23Z	anatomy-r2-routed	round 2: dev 8e258c5, gate PASS (EngineStress flake rerun), mutants 37/37, lenses 5, clean=no; majors n2/11/16 recovery header (PC-3 builder), n7 DuplicateGroups quadratic (fixer lead/preview-cache-R2-1)
 2026-10-18T13:46:38Z	heartbeat	no new lead PRs; builders PC-3 LC-7 VI-5 VI-7 + R2 fixers running; Slice-Done held (open confirmed majors); no attribution footers
+2026-10-18T13:54:53Z	merged	PC-3 #498
+2026-10-18T13:54:53Z	launch	PC-4 builder, PC-5 builder
