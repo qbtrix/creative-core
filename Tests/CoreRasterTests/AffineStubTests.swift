@@ -1,0 +1,51 @@
+// AffineStubTests.swift: the affine-composite contract stubs (AC-0) as they
+// stand before their bodies land: `transformed`, `padded` and
+// `composite(_:through:...)` throw "not built", `flipped` returns its input
+// and `AffineMatrix.bounds` is nil. AC-3, AC-4 and AC-5 replace this suite
+// with the real checks as each body arrives.
+import CoreRaster
+import Testing
+
+@Suite struct AffineStubTests {
+    private static let notBuilt = RasterError.invalid("not built")
+
+    private func layer() throws -> PixelBuffer {
+        var buffer = try PixelBuffer(width: 3, height: 2)
+        try buffer.setPixel(x: 0, y: 0, RGBA(r: 0.5, g: 0.25, b: 0, a: 1))
+        return buffer
+    }
+
+    @Test func transformedThrowsNotBuilt() throws {
+        let buffer = try layer()
+        #expect(throws: Self.notBuilt) {
+            try buffer.transformed(.identity, width: 3, height: 2, filter: .bilinear)
+        }
+    }
+
+    @Test func flippedReturnsInput() throws {
+        let buffer = try layer()
+        #expect(buffer.flipped(.horizontal) == buffer)
+        #expect(buffer.flipped(.vertical) == buffer)
+    }
+
+    @Test func paddedThrowsNotBuilt() throws {
+        let buffer = try layer()
+        #expect(throws: Self.notBuilt) {
+            try buffer.padded(width: 6, height: 4, anchor: .center)
+        }
+    }
+
+    @Test func compositeThroughThrowsNotBuiltAndLeavesBackdrop() throws {
+        let source = try layer()
+        let before = try PixelBuffer(width: 4, height: 4, fill: RGBA(r: 1, g: 1, b: 1, a: 1))
+        var backdrop = before
+        #expect(throws: Self.notBuilt) {
+            try backdrop.composite(source, through: .identity, mode: .normal, opacity: 1, filter: .bilinear)
+        }
+        #expect(backdrop == before)
+    }
+
+    @Test func boundsIsNil() {
+        #expect(AffineMatrix.identity.bounds(of: 3, 2) == nil)
+    }
+}
