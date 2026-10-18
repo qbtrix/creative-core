@@ -56,3 +56,4 @@ utc	stage	event	ref	note
 2026-10-18T14:55Z	-	heartbeat	-	waiting
 2026-10-18T15:04Z	status	dev-ci	39137820117	Dev CI on c294adb: Linux green, macOS SIGBUS again in Metal ParityTests.resample (not ours; #507 did not fix it). Noted on #453.
 2026-10-18T15:10Z	anatomy-r2	gate-restart	bxf66xlcg	AP r2 gate job had stalled (its pgrep matched its own command line); restarted via bin/round-gate.sh on c294adb.
+2026-10-18T15:13Z	-	heartbeat	-	waiting
