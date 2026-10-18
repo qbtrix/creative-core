@@ -84,3 +84,4 @@ utc	stage	event	ref	note
 2026-10-18T17:38Z	-	heartbeat	-	waiting
 2026-10-18T17:45Z	fix	cp3-a-merged	e39537c	#537 merged
 2026-10-18T17:46Z	fix	cp3-b-opened	12164b8	#538 open, mergeable, waiting on lane
+2026-10-18T17:46Z	fix	cp3-b-merged	61b4f10	#538 merged; waiting cp3-c before round 4
