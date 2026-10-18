@@ -46,7 +46,10 @@ Next: round 1 fix PRs merge, then Anatomy round 2. AP-4 waits on path-geometry P
 ## Open
 - AP-4 waits on path-geometry:PG-edit (#430: no PR yet). AP-cmd and AP-z wait with it.
 
+- Round 2 fixes: ap2-a (SVG paints a keyed fill solid over a gradient, as Lottie does; st.w/sh.ks easing pinned; part-count guard mutation) dispatched on 168c73d. ap2-b (colour command docs and errors, coalesceKey wording, TrackTarget doc, last-key-removes-track and keyframeNotFound tests) waits for engine-contracts ec4-a, which edits TrackCommands.swift and Command.swift and changes `.text` to `invalidIndex`.
+
 ## Anatomy
 | round | dev sha | gate | mutation | critics | confirmed | fixes |
 |---|---|---|---|---|---|---|
 | 1 | ca537c1 | CI: PASS | 16/16 (6 plans) | clarity, contract, undo, robustness, compat, tests | 10 (5 major; 2 are planned AP-4/AP-z) | ap1-a (strokeWidth key helper, Lottie alpha as animated o, export mutation entries), ap1-b (colour command errors pinned, frame bound), ap1-c (RemoveShape/RemoveTextShape drop and renumber index tracks), ap1-d (index docs, quad morph test, sampler mutations) |
+| 2 | c294adb | CI: PASS | 32/32 (6 plans) | clarity, contract, compat, robustness, tests | 8 (1 major), 0 refuted | ap2-a (3 findings), ap2-b (5 findings, after ec4-a) |
