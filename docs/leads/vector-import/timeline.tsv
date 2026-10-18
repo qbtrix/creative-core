@@ -6,3 +6,6 @@ utc	stage	event	ref	note
 2026-10-18T10:01Z	3	pr-merged	#449	VI-1 83b20aa
 2026-10-18T10:01Z	3	dep-met	EC-f	#444 #447 #448
 2026-10-18T10:01Z	3	stage-start	wave2	VI-2 at 9e826ac
+2026-10-18T11:52Z	3	pr-merged	#478	VI-2 a59c5c2
+2026-10-18T11:52Z	3	slice-merged	VI-a	VI-1 VI-2
+2026-10-18T11:52Z	3	stage-start	wave3	VI-3 VI-4 VI-6 at b80c087
