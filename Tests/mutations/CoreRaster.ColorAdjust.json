@@ -1,0 +1,23 @@
+[
+  {
+    "note": "vibrance weights its boost by s instead of 1 - s, so saturated pixels move most, caught by ColorAdjustTests.lowSaturationMovesMost",
+    "file": "Sources/CoreRaster/Tone/ColorAdjust.swift",
+    "anchor": "scale = 1 + a * (1 - s) * skin",
+    "replacement": "scale = 1 + a * s * skin",
+    "filter": "ColorAdjustTests"
+  },
+  {
+    "note": "vibrance drops the skin damping, so skin hues move as much as others, caught by ColorAdjustTests.skinMovesHalf",
+    "file": "Sources/CoreRaster/Tone/ColorAdjust.swift",
+    "anchor": "let skin: Double = (15...50).contains(h) ? 0.5 : 1",
+    "replacement": "let skin: Double = 1",
+    "filter": "ColorAdjustTests"
+  },
+  {
+    "note": "hsl range weights take the cosine over one neighbour's span on both sides, so they no longer sum to 1, caught by ColorAdjustTests.rangeWeightsSumToOne",
+    "file": "Sources/CoreRaster/Tone/ColorAdjust.swift",
+    "anchor": "let span = d < 0 ? lower[i] : upper[i]",
+    "replacement": "let span = upper[i]",
+    "filter": "ColorAdjustTests"
+  }
+]
