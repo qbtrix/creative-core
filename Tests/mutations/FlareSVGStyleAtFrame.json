@@ -33,5 +33,12 @@
     "anchor": "if let color = layer.sampledColor(.fill(shape: index), at: frame) { out.fill = .solid(color) }",
     "replacement": "if case .solid = shape.fill, let color = layer.sampledColor(.fill(shape: index), at: frame) { out.fill = .solid(color) }",
     "filter": "SVGStyleAtFrameTests.keyedFillReplacesAGradientAndStrokeTracksNeedAStroke"
+  },
+  {
+    "note": "SVG stroke ignores its sampled colour",
+    "file": "Sources/FlareCore/Export/SVGExporter+Style.swift",
+    "anchor": "stroke.color = color",
+    "replacement": "_ = color",
+    "filter": "SVGStyleAtFrameTests.usesSampledColour"
   }
 ]

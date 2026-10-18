@@ -1,4 +1,4 @@
-// ColorSamplingTests.swift: colour tracks sample (AP-5) in encoded sRGB with the left key's easing; hold
+// ColorSamplingTests.swift: colour tracks sample (AP-5) every component, alpha too, in encoded sRGB with the left key's easing; hold
 // keeps the left key; the ends hold outside the keys; an empty or missing track is nil.
 import FlareCore
 import Testing
@@ -37,6 +37,13 @@ struct ColorSamplingTests {
     @Test func endsHold() {
         #expect([-3.0, 0, 6].allSatisfy { Self.sample(.linear, at: $0, from: 6, to: 18) == Self.red })
         #expect([18.0, 24, 1000].allSatisfy { Self.sample(.linear, at: $0, from: 6, to: 18) == Self.blue })
+    }
+
+    @Test func alphaInterpolates() {
+        let keys = [ColorKeyframe(frame: 0, value: Color(r: 1, g: 0, b: 0, a: 1)), ColorKeyframe(frame: 24, value: Color(r: 1, g: 0, b: 0, a: 0))]
+        let layer = Layer(id: "l", name: "L", colorTracks: ["fill.0": keys])
+        #expect(Self.close(layer.sampledColor(.fill(shape: 0), at: 12), Color(r: 1, g: 0, b: 0, a: 0.5)))
+        #expect(Self.close(layer.sampledColor(.fill(shape: 0), at: 6), Color(r: 1, g: 0, b: 0, a: 0.75)))
     }
 
     @Test func emptyIsNil() throws {
