@@ -28,3 +28,4 @@ utc	stage	event	ref	note
 2026-10-18T13:07:21Z	3	merge	VI-6	#494 merged 13:06Z
 2026-10-18T13:07:21Z	4	launch	VI-7	builder launched (animation, masks, mattes)
 2026-10-18T13:09:50Z	-	anatomy	round-2	dev 8e258c5: gate+mutate running; critic panel launched (clarity, contract, undo, robustness, tests) on PC-a,PC-hash (r1), VI-a (r2), LC-a (r2), LC-psd, LC-ora (r1)
+2026-10-18T13:11:04Z	3	pr	VI-3	#491 rebased onto #490 then #494 (import.json conflicts), head 6eeab52, CI PASS, validate 480; attribution footer removed

@@ -20,7 +20,7 @@ Next: VI-3 #491 rebasing; VI-7 building; VI-5 after #491; Anatomy round 2 on VI-
 |---|---|---|---|---|---|---|---|
 | VI-1 | 1 | values, errors, two stubs, `import` part | Sources/FlareCore/Import/Import.swift, Tests/FlareCoreTests/ImportShapeTests.swift, docs/c4/parts/creative-core/flarecore/import.json | ImportShapeTests | none | #449 (83b20aa) | merged |
 | VI-2 | 2 | fixtures and every suite disabled | Tests/FlareCoreTests/Fixtures/import/, six suite files | suites compile | – | #478 (a59c5c2) | merged |
-| VI-3 | 3 | XMLTokens | Import/XMLTokens.swift, XMLTokensTests | XMLTokensTests | FlareXMLTokens (3, 3/3 caught) | #491 | PR open (ddd35d9) |
+| VI-3 | 3 | XMLTokens | Import/XMLTokens.swift, XMLTokensTests | XMLTokensTests | FlareXMLTokens (3, 3/3 caught) | #491 | PR open (6eeab52, rebased twice) |
 | VI-4 | 3 | SVGPathData with arcs | Import/SVGPathData.swift, SVGPathDataTests | SVGPathDataTests | FlareSVGPathData (5, 5/5 caught) | #490 (d060a8a) | merged |
 | VI-5 | after VI-3,4, EC-f | SVGImport.scene | Import/SVGImport.swift, SVGStyle.swift, SVGImportTests, SVGImportFuzzTests | both | FlareSVGImport (3) | | open |
 | VI-6 | after VI-2, EC-f | Lottie shapes, static transform | Import/LottieImport.swift, LottieImportTests | LottieImportTests | FlareLottieImport (7, 7/7 caught) | #494 (71c00e8) | merged |
