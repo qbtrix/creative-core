@@ -1,0 +1,18 @@
+{
+  "id": "import",
+  "name": "Import",
+  "description": "Importers that read the vector formats export writes, its inverse: the contract for an SVG document read into one scene and a Lottie JSON document read into a document, with byte, element, layer and depth caps, a typed ImportError and an ImportReport listing what was skipped. The readers are stubs that throw unsupported until they are built.",
+  "technology": "Swift 6, Foundation",
+  "paths": [
+    "Sources/FlareCore/Import/"
+  ],
+  "order": 45,
+  "relationships": [
+    {
+      "source": "import",
+      "target": "document-commands",
+      "description": "builds scenes, layers, shapes and fills",
+      "style": "sync"
+    }
+  ]
+}
