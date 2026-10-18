@@ -93,7 +93,11 @@ extension ParityHarness {
                 return each(.cloned(dx: 1, dy: 1, mask: mask)) + edges.map {
                     ParitySample(name: $0.0, call: .cloned(dx: $0.1, dy: $0.2, mask: mask), source: random, backdrop: nil)
                 }
-            case .maskedComposite, .affine, .effect, .color: return []  // no samples until their features add them
+            // One file per W1 family (Samples+<Family>.swift), empty until its feature fills it.
+            case .maskedComposite: return try MaskedCompositeSamples.all
+            case .affine: return try AffineSamples.all
+            case .effect: return try EffectSamples.all
+            case .color: return try ColorSamples.all
             }
         }
     }

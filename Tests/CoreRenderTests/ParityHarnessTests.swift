@@ -195,6 +195,41 @@ private func fill(_ w: Int, _ h: Int, _ r: Float, _ g: Float, _ b: Float, _ a: F
         #expect(hue.contains("mode-hue") && hue.contains("mode-luminosity") && !hue.contains("mode-multiply"))
     }
 
+    @Test func w1FamiliesHaveEmptySetsAndOldFamiliesAreUnchanged() throws {
+        for op in RenderOp.notOnMetalYet.sorted(by: { $0.rawValue < $1.rawValue }) {
+            #expect(try ParityHarness.sampleSet(for: op).isEmpty, "\(op) has no samples until its feature adds them")
+            #expect(try ParityHarness.sampleSet(for: op) == ParityHarness.sampleSet(for: op), "\(op)")
+        }
+        #expect(ParityPack.all.count == 5 && ParityPack.all.map(\.name) == ["display-blur-adjust-retouch", "composite-blendSeparable",
+                                               "blendNonSeparable", "transform", "resample"])
+        // FNV-1a over each old family's names, calls and input Float bits: the goldens were cut from these.
+        var counts: [String: Int] = [:], prints: [String: UInt64] = [:]
+        for op in RenderOp.allCases where !RenderOp.notOnMetalYet.contains(op) {
+            let samples = try ParityHarness.sampleSet(for: op)
+            var hash: UInt64 = 0xCBF2_9CE4_8422_2325
+            let mix = { (word: UInt64) in hash = (hash ^ word) &* 0x100_0000_01B3 }
+            for sample in samples {
+                "\(sample.name)|\(sample.call)".utf8.forEach { mix(UInt64($0)) }
+                for buffer in [sample.source] + (sample.backdrop.map { [$0] } ?? []) {
+                    for y in 0..<buffer.height {
+                        for x in 0..<buffer.width {
+                            let p = try buffer.pixel(x: x, y: y)
+                            [p.r, p.g, p.b, p.a].forEach { mix(UInt64($0.bitPattern)) }
+                        }
+                    }
+                }
+            }
+            (counts[op.rawValue], prints[op.rawValue]) = (samples.count, hash)
+        }
+        #expect(counts == ["display": 4, "composite": 8, "blendSeparable": 19, "blendNonSeparable": 12,
+                           "transform": 4, "resample": 4, "blur": 4, "adjust": 4, "retouch": 8])
+        #expect(prints == ["display": 0x880E_5D17_D8B7_2D19, "composite": 0xACF4_5786_E9D7_8CAE,
+                           "blendSeparable": 0xD436_907E_83CE_792E, "blendNonSeparable": 0x67A2_3BE4_662C_04B8,
+                           "transform": 0x020E_1289_31E3_A7E3, "resample": 0x0F53_4C7E_75E6_A1C9,
+                           "blur": 0x1DA2_79A0_D5EE_C08D, "adjust": 0x0B81_CE5F_0F57_7E6D,
+                           "retouch": 0xB5BB_BC99_07B5_9AB4], "\(prints)")
+    }
+
     @Test func fuzzedGoldensThrowAndNeverTrap() throws {
         var rng = ParityRandom(seed: 0x601D)
         let fields = ["-1", "0", "3", "2", "9223372036854775807", "4611686018427387904", "1e999", "\"x\""]
