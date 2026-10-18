@@ -71,3 +71,4 @@ utc	stage	event	ref	note
 2026-10-18T15:03Z	anatomy-r4	panel-clean	wf_531eacc8-2de	Round 4 (last) panel on 0a3c7f3 clean: 8 minor confirmed, 0 refuted. Split by 15-file cap: ec4-a (track text-target error, test pins for checkBackdrop/CPU stub read/plain-decimal key/negative run start) now; EC-10 (status built, engineering.md seam list, affine pixel-centre convention, Samples+ packet names) with feature-done after ec4-a merges.
 2026-10-18T15:04Z	status	dev-ci	39137820117	Dev CI on c294adb: Linux green, macOS SIGBUS again in Metal ParityTests.resample (not ours; #507 did not fix it). Noted on #453.
 2026-10-18T15:13Z	-	heartbeat	-	waiting
+2026-10-18T15:32Z	-	heartbeat	-	waiting
