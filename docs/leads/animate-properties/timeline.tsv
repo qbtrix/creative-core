@@ -75,3 +75,4 @@ utc	stage	event	ref	note
 2026-10-18T17:08Z	fix	ap3-a-merged	ee1bd83	ap3-a merged as #534 (one missing-text error, redo-checked colour key drag); ap3-b still running
 2026-10-18T17:20Z	-	heartbeat	-	waiting
 2026-10-18T17:38Z	-	heartbeat	-	waiting
+2026-10-18T17:49Z	anatomy	round4-start	f6d1492	ap3-a #534, ap3-b #539 merged; round 4 gate running

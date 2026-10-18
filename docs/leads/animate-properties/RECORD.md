@@ -2,9 +2,9 @@
 
 Issue: #442 · Packet: docs/blueprints/core/features/animate-properties.md
 Run: act-1a14ddaebc8-nwqn · Session: line lead (engine-contracts, animate-properties, color-profiles) · Started: 2026-10-18T07:15Z
-Stage: 4 Anatomy round 1 fixes: ap1-c merged (#501 a987c26). ap1-a (#496 cf0d19c), ap1-b (#500 bab6ca6) and ap1-d (1892abf, no PR yet) wait on the gate: scripts/ci fails only on wall-clock budget tests (EngineStressTests.thousandCommandsNearTheLayerLimitStayInBudget, StageBudgetTests.hitWithinBudget) while the shared 4-core machine runs at load 10 to 26; both pass alone. The lead reruns the gate serially at load < 5 and adds Fast-Check only on CI: PASS.
+Stage: 4 Anatomy round 4 (the last) on f6d1492: gate and 6 mutation plans running (round-gate ap-r4), then the critic panel
 Base: 9d01972365f04da4fe6074e9bdd56ceab5b616a8
-Next: round 1 fix PRs merge, then Anatomy round 2. AP-4 waits on path-geometry PG-edit (#430); AP-9, AP-10 (AP-z) after it. Critic findings "AP-4 not built" and "AP-z missing" are that planned work, not fixes.
+Next: round 4 critic panel; findings left open after round 4 become gap issues. AP-4 waits on path-geometry PG-edit (#430); AP-9, AP-10 (AP-z) after it, so the feature stays open beyond this run.
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -53,3 +53,5 @@ Next: round 1 fix PRs merge, then Anatomy round 2. AP-4 waits on path-geometry P
 |---|---|---|---|---|---|---|
 | 1 | ca537c1 | CI: PASS | 16/16 (6 plans) | clarity, contract, undo, robustness, compat, tests | 10 (5 major; 2 are planned AP-4/AP-z) | ap1-a (strokeWidth key helper, Lottie alpha as animated o, export mutation entries), ap1-b (colour command errors pinned, frame bound), ap1-c (RemoveShape/RemoveTextShape drop and renumber index tracks), ap1-d (index docs, quad morph test, sampler mutations) |
 | 2 | c294adb | CI: PASS | 32/32 (6 plans) | clarity, contract, compat, robustness, tests | 8 (1 major), 0 refuted | ap2-a (3 findings), ap2-b (5 findings, after ec4-a) |
+
+| 3 | f1f2d7f | CI: PASS (1404 tests) | 38/38 (6 plans) | clarity, contract, compat, robustness, tests | 5 (1 major) | ap3-a #534 (ee1bd83: one missing-text error, redo-checked colour key drag), ap3-b #539 (f6d1492: Lottie golden bytes, alpha interpolation test, 2 mutations) |
