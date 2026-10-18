@@ -45,3 +45,4 @@ utc	stage	event	ref	note
 2026-10-18T10:29Z	-	heartbeat	-	waiting
 2026-10-18T10:34Z	4	pr-merged	#467	r2-c merged 2e76b26
 2026-10-18T10:47Z	-	heartbeat	-	waiting
+2026-10-18T10:52Z	4	pr-opened	#471	r2-b fix PR opened, head 32e7005, CI: PASS, FlareW1Model 19/19
