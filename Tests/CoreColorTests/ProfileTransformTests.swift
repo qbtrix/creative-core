@@ -61,8 +61,9 @@ struct ProfileTransformTests {
         #expect(throws: ColorError.self) { try ProfileTransform(from: .sRGB, to: ColorProfile(name: "Short", isGray: false,
                                                                                            toXYZD50: [1, 0, 0], curves: [])) }
         // A zero gamma, and a para function type 3 whose linear segment falls (c < 0), cannot be inverted.
+        // A para function type 1 with a zero slope a has no inverse either.
         let para = ProfileCurve.parametric(type: 3, params: [2.4, 1, 0, -0.5, 0.04])
-        for curve in [ProfileCurve.gamma(0), para] {
+        for curve in [ProfileCurve.gamma(0), para, .parametric(type: 1, params: [2.2, 0, 0.1])] {
             let target = ColorProfile(name: "\(curve)", isGray: false, toXYZD50: ColorProfile.sRGB.toXYZD50,
                                       curves: [curve, curve, curve])
             #expect(throws: ColorError.self, "\(curve)") { try ProfileTransform(from: .sRGB, to: target) }
@@ -89,6 +90,24 @@ struct ProfileTransformTests {
         let encode = try ProfileTransform(from: .linearSRGB, to: table), decode = try ProfileTransform(from: table, to: .linearSRGB)
         #expect(Self.near(encode.apply(Color3(0.25, 0.25, 0.25)), Color3(0.5, 0.5, 0.5), 1e-6))
         for c in Self.colours(4, -0.25, 1.25) { #expect(Self.near(decode.apply(encode.apply(c)), c, 1e-5), "\(c)") }
+    }
+
+    @Test func sRGBToGrayIsLuminance() throws {
+        // Gray target: Y over the white's Y, written to all three channels, then the gamma-2 curve inverted.
+        let gray = ColorProfile(name: "Gray 2", isGray: true, toXYZD50: [0.9642, 1.0, 0.8249], curves: [.gamma(2)])
+        let transform = try ProfileTransform(from: .sRGB, to: gray)
+        let toLinear = try ProfileTransform(from: .sRGB, to: .linearSRGB), row = ColorProfile.linearSRGB.toXYZD50
+        for c in Self.colours(5, 0, 1) {
+            let linear = toLinear.apply(c), y = row[3] * linear.c0 + row[4] * linear.c1 + row[5] * linear.c2
+            let out = transform.apply(c)
+            #expect(out.c0 == out.c1 && out.c1 == out.c2, "\(c): \(out)")
+            #expect(abs(out.c1 - y.squareRoot()) < 1e-6, "\(c): \(out) vs \(y)")
+        }
+        // A gray white with Y <= 0 throws; a negative Y would otherwise build a finite, inverted transform.
+        for y in [0.0, -1] {
+            let dark = ColorProfile(name: "Y \(y)", isGray: true, toXYZD50: [0.9642, y, 0.8249], curves: [.gamma(2)])
+            #expect(throws: ColorError.self, "Y \(y)") { try ProfileTransform(from: .sRGB, to: dark) }
+        }
     }
 
     @Test func grayToSRGBIsNeutral() throws {
