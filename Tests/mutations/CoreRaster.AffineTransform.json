@@ -1,0 +1,30 @@
+[
+  {
+    "note": "a pixel is sampled at (x, y) instead of its centre (x + 0.5, y + 0.5), caught by AffineOpsTests.ninetyEqualsRotated",
+    "file": "Sources/CoreRaster/Affine/AffineTransform.swift",
+    "anchor": "let px = Double(x) + 0.5, py = Double(y) + 0.5",
+    "replacement": "let px = Double(x), py = Double(y)",
+    "filter": "AffineOpsTests"
+  },
+  {
+    "note": "the sampler maps output points through the forward matrix instead of its inverse, caught by AffineOpsTests.scaleKeepsEdges",
+    "file": "Sources/CoreRaster/Affine/AffineTransform.swift",
+    "anchor": "let output = sampled(inv, width: outW, height: outH, filter: filter)",
+    "replacement": "let output = sampled(m, width: outW, height: outH, filter: filter)",
+    "filter": "AffineOpsTests"
+  },
+  {
+    "note": "the whole-pixel translation fast path shifts one column too far, caught by AffineOpsTests.translationIsExact",
+    "file": "Sources/CoreRaster/Affine/AffineTransform.swift",
+    "anchor": "let dx = Int(m.tx), dy = Int(m.ty)",
+    "replacement": "let dx = Int(m.tx) + 1, dy = Int(m.ty)",
+    "filter": "AffineOpsTests"
+  },
+  {
+    "note": "the vertical flip reverses columns instead of rows, caught by AffineOpsTests.flipMirrorsRows",
+    "file": "Sources/CoreRaster/Affine/AffineTransform.swift",
+    "anchor": "(width - 1 - x, y) : (x, height - 1 - y)",
+    "replacement": "(width - 1 - x, y) : (width - 1 - x, y)",
+    "filter": "AffineOpsTests"
+  }
+]

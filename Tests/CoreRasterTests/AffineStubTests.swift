@@ -1,8 +1,8 @@
 // AffineStubTests.swift: the affine-composite contract stubs (AC-0) as they
-// stand before their bodies land: `transformed`, `padded` and
-// `composite(_:through:...)` throw "not built", `flipped` returns its input
-// and `AffineMatrix.bounds` is nil. AC-3, AC-4 and AC-5 replace this suite
-// with the real checks as each body arrives.
+// stand before their bodies land: `padded` and `composite(_:through:...)`
+// throw "not built" and `AffineMatrix.bounds` is nil. AC-4 and AC-5 replace
+// this suite with the real checks as each body arrives (AC-3's are in
+// AffineOpsTests).
 import CoreRaster
 import Testing
 
@@ -13,19 +13,6 @@ import Testing
         var buffer = try PixelBuffer(width: 3, height: 2)
         try buffer.setPixel(x: 0, y: 0, RGBA(r: 0.5, g: 0.25, b: 0, a: 1))
         return buffer
-    }
-
-    @Test func transformedThrowsNotBuilt() throws {
-        let buffer = try layer()
-        #expect(throws: Self.notBuilt) {
-            try buffer.transformed(.identity, width: 3, height: 2, filter: .bilinear)
-        }
-    }
-
-    @Test func flippedReturnsInput() throws {
-        let buffer = try layer()
-        #expect(buffer.flipped(.horizontal) == buffer)
-        #expect(buffer.flipped(.vertical) == buffer)
     }
 
     @Test func paddedThrowsNotBuilt() throws {

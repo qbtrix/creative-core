@@ -1,5 +1,5 @@
-// AffineOpsTests.swift: affine-composite AC-3's acceptance, written first
-// (AC-1), disabled by name until AC-3 lands `transformed` and `flipped`:
+// AffineOpsTests.swift: affine-composite AC-3's acceptance for `transformed`
+// and `flipped`, written first (AC-1) and turned on by AC-3:
 // identity and whole-pixel translations are `==` copies, a quarter turn
 // equals `rotated(.degrees90)`, a 2x scale keeps edges within 0.5 px, outside
 // is exactly clear, bad matrices and sizes throw, and flips mirror exactly.
@@ -26,7 +26,7 @@ func affineMaxDelta(_ lhs: PixelBuffer, _ rhs: PixelBuffer) throws -> Float {
 @Suite struct AffineOpsTests {
     static let filters: [ResampleFilter] = [.bilinear, .lanczos3]
 
-    @Test(.disabled("waits on AC-3"))
+    @Test
     func translationIsExact() throws {
         // The identity and (0, 0) are plain copies; the rest shift, clear where nothing maps.
         for layer in try AffineFixtures.layers(count: 4, seed: 302) {
@@ -46,7 +46,7 @@ func affineMaxDelta(_ lhs: PixelBuffer, _ rhs: PixelBuffer) throws -> Float {
         }
     }
 
-    @Test(.disabled("waits on AC-3"))
+    @Test
     func ninetyEqualsRotated() throws {
         for (w, h) in [(9, 6), (12, 12), (7, 11)] {
             let layer = try AffineFixtures.layer(seed: UInt64(303 + w), width: w, height: h, border: 1, block: 3)
@@ -70,7 +70,7 @@ func affineMaxDelta(_ lhs: PixelBuffer, _ rhs: PixelBuffer) throws -> Float {
         return found
     }
 
-    @Test(.disabled("waits on AC-3"))
+    @Test
     func scaleKeepsEdges() throws {
         let board = try AffineFixtures.checkerboard(width: 16, height: 16, cell: 4)
         for filter in Self.filters {
@@ -86,7 +86,7 @@ func affineMaxDelta(_ lhs: PixelBuffer, _ rhs: PixelBuffer) throws -> Float {
         }
     }
 
-    @Test(.disabled("waits on AC-3"))
+    @Test
     func outsideIsExactlyClear() throws {
         let layer = try AffineFixtures.layer(seed: 304, width: 20, height: 12, border: 0)
         // Moved wholly off the output: every pixel is clear.
@@ -120,7 +120,7 @@ func affineMaxDelta(_ lhs: PixelBuffer, _ rhs: PixelBuffer) throws -> Float {
     /// throw; then seeded matrices with NaN, infinite, huge and tiny entries
     /// and sizes from below 1 to past the cap throw `RasterError` or return a
     /// buffer of the asked size, never crash.
-    @Test(.disabled("waits on AC-3"))
+    @Test
     func fuzz() throws {
         var rng = SplitMix64(seed: 306)
         let layer = try AffineFixtures.layer(seed: 307, width: 9, height: 7)
@@ -153,7 +153,7 @@ func affineMaxDelta(_ lhs: PixelBuffer, _ rhs: PixelBuffer) throws -> Float {
         }
     }
 
-    @Test(.disabled("waits on AC-3"))
+    @Test
     func flipMirrorsRows() throws {
         let layer = try AffineFixtures.layer(seed: 309, width: 11, height: 7, border: 0, block: 2)
         let h = layer.flipped(.horizontal), v = layer.flipped(.vertical)
