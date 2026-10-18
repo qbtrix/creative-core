@@ -30,8 +30,11 @@ that name `engine-contracts:<slice>`.
 `corerender/cpu-backend`, `corerender/dispatcher`, `corerender/parity`,
 `corerender/metal-support`, `coreraster/image-ops`, `coreraster/compositing`,
 `flarecore/document-commands`, `flarecore/timeline` and `flarecore/export`:
-new folder paths (so W1 files need no further part edit) and a "Planned (W1):"
-sentence each, which the owning feature's final task rewrites as built.
+new folder paths (so W1 files need no further part edit) and one sentence
+each naming what its W1 folder or seam file holds. W1 features never edit
+these shared parts, so nine of them never chain through one JSON file; a
+feature whose result differs from its sentence files a `gap` for EC's
+owner to fix.
 `flarecore/geometry` is `path-geometry`'s; `coreraster/codecs`,
 `corecolor/icc-profiles`, `coreasset/thumbnail-store` and `flarecore/import`
 are new parts their features add.
@@ -184,7 +187,7 @@ and track writing into `SVGExporter+Masks.swift`, `SVGExporter+Text.swift`,
 
 | id | issue | what | owned files | depends on | size |
 |---|---|---|---|---|---|
-| EC-1 | feature issue | CoreRaster W1 value types with doc comments and their checked inits; `image-ops` and `compositing` parts gain the folders `Sources/CoreRaster/{Masks,Tone,Effects,Affine,Fill,Heal,Hash}/` and `Sources/CoreRaster/Compositing/` and a "Planned (W1):" sentence | `Sources/CoreRaster/W1/W1Values.swift`, `Tests/CoreRasterTests/W1ValuesTests.swift`, `Tests/mutations/CoreRaster.W1Values.json`, `docs/c4/parts/creative-core/coreraster/image-ops.json`, `docs/c4/parts/creative-core/coreraster/compositing.json` | – | ~260, 5 |
+| EC-1 | feature issue | CoreRaster W1 value types with doc comments and their checked inits; `image-ops` and `compositing` parts gain the folders `Sources/CoreRaster/{W1,Masks,Tone,Effects,Affine,Fill,Heal,Hash}/` and `Sources/CoreRaster/Compositing/` and one sentence per folder | `Sources/CoreRaster/W1/W1Values.swift`, `Tests/CoreRasterTests/W1ValuesTests.swift`, `Tests/mutations/CoreRaster.W1Values.json`, `docs/c4/parts/creative-core/coreraster/image-ops.json`, `docs/c4/parts/creative-core/coreraster/compositing.json` | – | ~260, 5 |
 | EC-2 | – | `RenderOp`'s four families and `notOnMetalYet`; the W1 `ToneAdjustment` cases and `family`; the new `RenderBackend` requirements and their throwing defaults; `RenderContractTests` counts 13 families; `W1ContractTests` written | `Sources/CoreRender/RenderOp.swift`, `Sources/CoreRender/ToneAdjustment.swift`, `Sources/CoreRender/RenderBackend.swift`, `Sources/CoreRender/RenderBackend+NotOnThisBackend.swift`, `Tests/CoreRenderTests/RenderContractTests.swift`, `Tests/CoreRenderTests/W1ContractTests.swift`, `Tests/mutations/CoreRender.W1Contract.json`, `docs/c4/parts/creative-core/corerender/contract.json` | EC-1 | ~320, 8 |
 | EC-3 | – | `FakeBackend` records the five new calls and honours its `supports` for them; the Metal holdout (`AdjustTable`, `MetalCapabilities`, `MetalBackend+Warmup`, `everyFamilyIsOn`); `Unverified on Linux:` the two Metal files, `Mac-Finish-Wanted` | `Sources/CoreRender/FakeBackend.swift`, `Sources/CoreRender/Metal/AdjustTable.swift`, `Sources/CoreRender/Metal/MetalCapabilities.swift`, `Sources/CoreRenderMetal/MetalBackend+Warmup.swift`, `Tests/CoreRenderTests/RenderBackendFakeTests.swift`, `Tests/CoreRenderTests/AdjustTableTests.swift`, `Tests/CoreRenderMetalTests/ParityTests.swift`, `Tests/mutations/CoreRenderFake.json`, `docs/c4/parts/creative-core/corerender/metal-support.json` | EC-2 | ~240, 9 |
 | EC-4 | – | `RenderDispatcher` forwarders for the five methods and `adjusted` by `family`; the CPU stubs, one file per family (`CPUBackend+MaskedComposite.swift`, `+Affine`, `+Effect`, `+Color`), and the `.color` arm in `CPUBackend+Ops`'s `switch` calling `+Color` | `Sources/CoreRender/RenderDispatcher.swift`, `Sources/CoreRender/CPU/CPUBackend+Ops.swift`, `Sources/CoreRender/CPU/CPUBackend+MaskedComposite.swift`, `Sources/CoreRender/CPU/CPUBackend+Affine.swift`, `Sources/CoreRender/CPU/CPUBackend+Effect.swift`, `Sources/CoreRender/CPU/CPUBackend+Color.swift`, `Tests/CoreRenderTests/RenderDispatcherW1Tests.swift`, `Tests/mutations/CoreRenderDispatcherW1.json`, `docs/c4/parts/creative-core/corerender/dispatcher.json`, `docs/c4/parts/creative-core/corerender/cpu-backend.json` | EC-2 | ~300, 10 |
