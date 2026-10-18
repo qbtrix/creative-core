@@ -89,3 +89,4 @@ utc	stage	event	ref	note
 2026-10-18T20:03Z	-	heartbeat	-	waiting
 2026-10-18T20:08Z	5	heartbeat	-	no change; waits #430
 2026-10-18T20:21Z	-	heartbeat	-	waiting
+2026-10-18T20:35Z	5	heartbeat	-	finished for this run; AP-cmd/AP-z wait #430
