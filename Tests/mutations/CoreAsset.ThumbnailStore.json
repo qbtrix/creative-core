@@ -1,0 +1,37 @@
+[
+  {
+    "note": "the preview store evicts the newest read first instead of the least recently read, caught by evictsLeastRecentlyRead",
+    "file": "Sources/CoreAsset/Thumbnails/ThumbnailStore.swift",
+    "anchor": "a.lastRead != b.lastRead ? a.lastRead < b.lastRead",
+    "replacement": "a.lastRead != b.lastRead ? a.lastRead > b.lastRead",
+    "filter": "ThumbnailStoreTests"
+  },
+  {
+    "note": "a preview read doesn't bump its recency, caught by readBumpsRecency",
+    "file": "Sources/CoreAsset/Thumbnails/ThumbnailStore.swift",
+    "anchor": "entries[key]?.lastRead = tick()",
+    "replacement": "_ = tick()",
+    "filter": "ThumbnailStoreTests"
+  },
+  {
+    "note": "the preview temp file is the target itself, so it is renamed before it is complete and readers see part-written bytes, caught by interruptedWriteKeepsOld",
+    "file": "Sources/CoreAsset/Thumbnails/PreviewFiles.swift",
+    "anchor": "let temp = URL(fileURLWithPath: file.path + \".tmp\")",
+    "replacement": "let temp = file",
+    "filter": "ThumbnailStoreTests"
+  },
+  {
+    "note": "the preview budget evicts at exactly the budget instead of only over it, caught by evictsLeastRecentlyRead",
+    "file": "Sources/CoreAsset/Thumbnails/ThumbnailStore.swift",
+    "anchor": "where used > budgetBytes",
+    "replacement": "where used >= budgetBytes",
+    "filter": "ThumbnailStoreTests"
+  },
+  {
+    "note": "the preview folder lock is shared instead of exclusive, so two stores lose entries, caught by twoStoresUnderTheLockLoseNothing",
+    "file": "Sources/CoreAsset/Thumbnails/PreviewFiles.swift",
+    "anchor": "while flock(descriptor, LOCK_EX) != 0 {",
+    "replacement": "while flock(descriptor, LOCK_SH) != 0 {",
+    "filter": "ThumbnailStoreTests"
+  }
+]

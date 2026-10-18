@@ -1,7 +1,7 @@
 // ThumbnailStoreShapeTests.swift: the preview store's public shape (PC-1).
 // The value types round-trip through JSON, the size classes keep their pixel
-// edges, and every store member exists: the throwing ones throw `AssetError`
-// until PC-3 builds them, the others answer empty.
+// edges, and a new store answers empty while a bad folder or budget throws
+// `AssetError`.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -40,17 +40,16 @@ private func roundTrip<T: Codable & Equatable>(_ value: T) throws -> T {
         #expect(Availability.offline(card) == .offline(VolumeRef(id: "vol-1", name: "Card A")))
     }
 
-    @Test func storeStubsThrowAssetError() throws {
-        let folder = URL(fileURLWithPath: "/nonexistent/previews", isDirectory: true)
-        let store = try ThumbnailStore(folder: folder, budgetBytes: 1 << 20)
-        let notBuilt = AssetError.invalid("not built")
-        #expect(throws: notBuilt) {
-            try store.write(Data([1, 2, 3]), for: key, volume: card, relativePath: "a.jpg")
-        }
-        #expect(throws: notBuilt) { _ = try store.read(key) }
-        #expect(throws: notBuilt) { try store.remove(asset: "IMG_0001") }
+    @Test func newStoreIsEmptyAndBadOpensThrowAssetError() throws {
+        let scratch = try PreviewScratch()
+        let store = try ThumbnailStore(folder: scratch.folder, budgetBytes: 1 << 20)
+        #expect(try store.read(key) == nil)
         #expect(store.entries(on: card).isEmpty)
         #expect(store.availability(of: key, mounted: ["vol-1"]) == nil)
         #expect(store.usedBytes == 0)
+        let plainFile = scratch.folder.appendingPathComponent("plain")
+        try Data([1]).write(to: plainFile)
+        #expect(throws: AssetError.self) { try ThumbnailStore(folder: plainFile, budgetBytes: 1 << 20) }
+        #expect(throws: AssetError.self) { try ThumbnailStore(folder: scratch.folder, budgetBytes: -1) }
     }
 }
