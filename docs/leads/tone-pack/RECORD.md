@@ -14,7 +14,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 |---|---|---|---|---|---|---|---|---|
 | TP-0 | 1 | TP-a | Stubs for the contract slice's signatures (rule 18): the 13 ops, `CubeLUT.parse`, `AutoTone`; throwing ones throw `RasterError.invalid("not built")`, `inverted()` returns self | `Sources/CoreRaster/Tone/{ColorAdjust,ColorMix,ColorMap,CubeLUT,AutoTone}.swift`, `Tests/CoreRasterTests/ToneStubTests.swift` | `ToneStubTests` | none (no invariant) | #561 | merged |
 | TP-2 | 1 | TP-a | Reference colours, `.cube` fixtures (identity 17³, warm 33³, five damaged) generated as text in code, the cast photo | `Tests/CoreRasterTests/ToneFixtures.swift` | every fixture parses or fails as labelled (checked in TP-5) | none | #569 | merged |
-| TP-1 | 2 | TP-a | Checks first: six suites disabled by name | `Tests/CoreRasterTests/{ColorAdjust,ColorMix,ColorMap,ColorLUT,AutoTone}Tests.swift`, `Tests/CoreRenderTests/CPUColorTests.swift` | suites compile, disabled | none | | building |
+| TP-1 | 2 | TP-a | Checks first: six suites disabled by name | `Tests/CoreRasterTests/{ColorAdjust,ColorMix,ColorMap,ColorLUT,AutoTone}Tests.swift`, `Tests/CoreRenderTests/CPUColorTests.swift` | suites compile, disabled | none | #576 (A); B on lead/tone-pack-tp-1b | open |
 | TP-3 | 3 | TP-mix | `vibrance`, `hueSaturation`, `hsl`; turns on `ColorAdjustTests` | `Sources/CoreRaster/Tone/ColorAdjust.swift`, its tests, `Tests/mutations/CoreRaster.ColorAdjust.json` | `ColorAdjustTests` | 3 (packet) | | planned |
 | TP-4 | 3 | TP-mix | `blackAndWhite`, `channelMixer`, `colorBalance`; turns on `ColorMixTests` | `Sources/CoreRaster/Tone/ColorMix.swift`, its tests, `Tests/mutations/CoreRaster.ColorMix.json` | `ColorMixTests` | 3 (packet) | | planned |
 | TP-5 | 3 | TP-map | `gradientMap`, LUT apply, `CubeLUT.parse` + fuzz, `posterized`, `thresholded`, `inverted`; turns on `ColorMapTests`, `ColorLUTTests` | `Sources/CoreRaster/Tone/ColorMap.swift`, `Sources/CoreRaster/Tone/CubeLUT.swift`, both tests, `Tests/mutations/CoreRaster.ColorMap.json`, `Tests/mutations/CoreRaster.CubeLUT.json` | `ColorMapTests`, `ColorLUTTests` | 5 (packet) | | planned |
@@ -55,6 +55,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 |---|---|---|---|---|---|---|---|---|---|
 
 ## Decisions
+- TP-1 split at the 400-line cap: A (#576, ColorAdjust + ColorMix + ToneCheck helpers, 254 lines), B (ColorMap, ColorLUT, AutoTone, CPUColor, 296 lines) opens after A merges.
 - engine-contracts is satisfied on the base: the `ToneAdjustment` colour cases, `family`, the value types, `CPUBackend+Color.swift` and `Samples+Color.swift` are in code at a8a08d25.
 - Added TP-0 (rule 18): the contract slice's ops don't exist yet, so TP-1's suites couldn't compile; TP-0 declares them as stubs, TP-3..6 fill the bodies.
 - TP-2's `.cube` fixtures are generated as text in `ToneFixtures.swift`, not files under `Fixtures/luts/`: a 33³ table is ~36,000 lines (over the 400-line cap) and test resources would need a `Package.swift` edit (protected).
