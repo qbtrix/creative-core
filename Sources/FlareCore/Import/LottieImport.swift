@@ -10,14 +10,14 @@ import Foundation
 #endif
 
 extension LottieImport {
-    /// The frames `ip`, `op`, `st` and keyframe `t` may name.
+    /// The frames `ip`, `op` and keyframe `t` may name; a layer's `st` may also be as negative.
     static let frames = 0...1_000_000
 
     static func read(_ data: Data) throws -> (Document, ImportReport) {
         guard data.count <= maxBytes else { throw ImportError.tooLarge("file is \(data.count) bytes, limit \(maxBytes)") }
         let space: Set<UInt8> = [0x20, 0x09, 0x0A, 0x0D]
         guard data.first(where: { !space.contains($0) }) == UInt8(ascii: "{") else { throw ImportError.notThisFormat }
-        try checkNesting(data, limit: 2 * maxDepth + 8)
+        try checkNesting(data, limit: 2 * maxDepth + 12)  // 512: the decoder's cap, so this check binds first
         guard let root = try? JSONDecoder().decode(LottieJSON.self, from: data) else { throw ImportError.damaged("not valid JSON") }
         guard let layers = root["layers"] else { throw ImportError.notThisFormat }
         var reader = LottieReader()
@@ -118,7 +118,9 @@ struct LottieReader {
         let fps = try frame(root["fr"], "fr", 30, 1...240)
         let ip = try frame(root["ip"], "ip", 0, LottieImport.frames), op = try frame(root["op"], "op", 60, LottieImport.frames)
         let w = try number(root["w"], "w", 0), h = try number(root["h"], "h", 0)
-        guard w > 0, h > 0, op >= ip else { throw ImportError.damaged("canvas size or frame range \(ip)...\(op) out of order") }
+        guard w > 0 else { throw ImportError.damaged("w \(w) is not positive") }
+        guard h > 0 else { throw ImportError.damaged("h \(h) is not positive") }
+        guard op >= ip else { throw ImportError.damaged("ip/op \(ip)...\(op) out of order") }
         var out: [Layer] = [], built: [Int: Int] = [:]
         clock = LottieClock(ip: ip, duration: op - ip)
         for (index, json) in layers.enumerated().reversed() {
@@ -131,7 +133,7 @@ struct LottieReader {
         let kinds: [Double: String] = [0: "precomp", 2: "image", 3: "null", 5: "text"]
         let ty = try number(json["ty"], "layer ty", -1)
         guard ty == 1 || ty == 4 else { skip(kinds[ty] ?? "layer type"); return nil }
-        clock.start = try frame(json["st"], "st", 0, LottieImport.frames)
+        clock.start = try frame(json["st"], "st", 0, -LottieImport.frames.upperBound...LottieImport.frames.upperBound)
         let (transform, anchor, opacity) = try placement(json["ks"])
         let root = Matrix.translation(x: -anchor.x, y: -anchor.y)
         var shapes = try group(json["shapes"]?.array ?? [], matrix: root, opacity: 1, inherited: LottieStyles(), depth: 0)
@@ -140,7 +142,7 @@ struct LottieReader {
             shapes = [LottieShape(shape: Shape(points: [], fill: .solid(try hexColor(json["sc"])), path: try PathBuilders.rectangle(in: rect).transformed(by: root)))]
         }
         let values = ["x": transform.x, "y": transform.y, "scaleX": transform.scaleX, "scaleY": transform.scaleY,
-                      "rotation": transform.rotation, "opacity": min(max(opacity, 0), 1)]
+                      "rotation": transform.rotation, "opacity": opacity]
         var layer = Layer(id: id, name: json["nm"]?.string ?? "Layer")
         layer.tracks = values.filter { Layer.standardDefaults[$0.key] != $0.value }.mapValues { [Keyframe(frame: 0, value: $0)] }
         layer.tracks.merge(try transformTracks(json["ks"])) { $1 }
@@ -155,7 +157,8 @@ struct LottieReader {
     /// The shapes of one group's items, top first.
     mutating func group(_ items: [LottieJSON], matrix outer: Matrix, opacity outerOpacity: Double,
                         inherited outerStyles: LottieStyles, depth: Int) throws -> [LottieShape] {
-        guard depth < LottieImport.maxDepth else { throw ImportError.tooLarge("groups nest deeper than \(LottieImport.maxDepth)") }
+        // `depth` 0 is the layer's own shapes, so exactly `maxDepth` nested groups read.
+        guard depth <= LottieImport.maxDepth else { throw ImportError.tooLarge("groups nest deeper than \(LottieImport.maxDepth)") }
         var matrix = outer, opacity = outerOpacity, inherited = outerStyles
         if let tr = items.first(where: { $0["ty"]?.string == "tr" }) {
             let (t, anchor, o) = try placement(tr, group: true)
@@ -178,7 +181,8 @@ struct LottieReader {
                 let s = try stroke(item, matrix: matrix, opacity: opacity), scale = abs(matrix.determinant).squareRoot()
                 (own.stroke, own.keys.stroke, own.keys.width) = (s, try colorKeys(item["c"], alpha: s.color.a), try track(item["w"], 0) { max($0, 0) * scale })
             case "gr", "tr", "st": break
-            case let other: skip("shape item \(other ?? "?")")
+            case let other?: skip("shape item \(other)")
+            case nil: skip("shape item without a type")
             }
         }
         let styles = own.over(inherited)
@@ -236,7 +240,7 @@ struct LottieReader {
         guard s.count >= 2 else { throw ImportError.damaged("scale needs two values") }
         if try scalar(json?["sk"], "skew", 0) != 0 { skip("skew") }
         let transform = Transform(x: p.x, y: p.y, scaleX: s[0] / 100, scaleY: s[1] / 100, rotation: try scalar(json?["r"], "rotation", 0))
-        return (transform, anchor, try scalar(json?["o"], "opacity", 100) / 100)
+        return (transform, anchor, min(max(try scalar(json?["o"], "opacity", 100) / 100, 0), 1))
     }
     mutating func color(_ item: LottieJSON, _ opacity: Double) throws -> Color {
         let c = try values(item["c"], "color", [0, 0, 0], tracked: true)  // keys become a colour track
