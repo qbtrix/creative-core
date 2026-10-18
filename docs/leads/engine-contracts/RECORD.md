@@ -4,7 +4,7 @@ Issue: #429 · Packet: docs/blueprints/core/features/engine-contracts.md
 Run: act-1a14ddaebc8-nwqn · Session: line lead (engine-contracts, animate-properties, color-profiles) · Started: 2026-10-18T07:15Z
 Stage: 3 wave 2
 Base: 9d01972365f04da4fe6074e9bdd56ceab5b616a8
-Next: EC-2 #450 merges after its Metal check -> wave 3 (EC-3, EC-4, EC-5). Anatomy round 1 gate on dev 83b20aa running. AP-1 building.
+Next: EC-2 #450 merges after its Metal check -> wave 3 (EC-3, EC-4, EC-5). Round 1 fix batches r1-a/b/c running; round 2 after they merge. AP-1 building.
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -31,6 +31,7 @@ Next: EC-2 #450 merges after its Metal check -> wave 3 (EC-3, EC-4, EC-5). Anato
 ## Rounds
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
 |---|---|---|---|---|---|---|---|---|
+| 1 | 83b20aa | CI: PASS (1083 tests) | FlareW1Model 4/4, CoreRaster.W1Values 3/3 | - | clarity, contract, compat, robustness, tests | 15 (3 major, 12 minor); 1 outside the feature | r1-a, r1-b, r1-c | no |
 
 ## Decisions
 - Line lead over #429, #442, #441 (rule 19); one wave plan across them, files disjoint per wave.
@@ -40,6 +41,7 @@ Next: EC-2 #450 merges after its Metal check -> wave 3 (EC-3, EC-4, EC-5). Anato
 - Wave-1 PR bodies carried a trailing --- after Head: (a server-appended footer, since stripped); builders now PATCH the body so it ends at Head:.
 - EC-2 also touched compile-only switch arms (CPUBackend+Ops, AdjustTable, ParitySamples, MetalBackend+Warmup) and four tests; the lead allowed it in the prompt. W1ContractTests is a suite inside RenderContractTests.swift so the PR stays at 15 files.
 - EC-8 adds no new test: the packet names the existing exporter tests and goldens as the oracle for the move.
+- Round 1 finding on Sources/CoreRaster/Codecs/PixelCodec.swift (RawPixelCodec guards without mutations) belongs to layered-codecs, not this feature: left to that lead.
 
 ## Open
 - none
