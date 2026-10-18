@@ -26,3 +26,4 @@ utc	stage	event	ref	note
 2026-10-18T08:56Z	4	ci-run	39112737255	dev c614b52 Linux red again 6.17s; test 34s vs 24-26s green: real regression, fixer on it
 2026-10-18T08:59Z	3	pr-opened	#456	EC-3 (CoreRenderFake), Metal check pending
 2026-10-18T08:59Z	3	stage-end	wave-3	EC-3 #456 open, EC-5 #454 merged, EC-4 held for dev-red #453
+2026-10-18T09:05Z	-	heartbeat	-	waiting
