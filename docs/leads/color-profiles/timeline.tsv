@@ -11,3 +11,4 @@ utc	stage	event	ref	note
 2026-10-18T09:05Z	-	heartbeat	-	waiting
 2026-10-18T09:22Z	3	pr-opened	#458	CP-1 contract check ok
 2026-10-18T09:22Z	3	pr-merged	#458	CP-1 merged; CP-2 after dev-red #453 clears
+2026-10-18T09:29Z	3	stage-start	CP-2	wave 2 CP-2 (ICC byte builder, checks first) building on b5b782b
