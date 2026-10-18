@@ -1,6 +1,6 @@
 // DenoiseClarityTests.swift: effects-engine FX-4's acceptance, written first
-// (FX-1), disabled until FX-4 builds `denoised` and `clarity`: denoise cuts
-// noise 60% and keeps the edge, clarity moves contrast and not the mean or
+// (FX-1), on since FX-4 built `denoised` and `clarity`: denoise cuts noise
+// 60% and keeps the edge, clarity moves contrast and not the mean or
 // the ends, zero is identity, bad parameters throw.
 import CoreRaster
 import Testing
@@ -22,13 +22,13 @@ import Testing
         return b
     }
 
-    @Test(.disabled("waits on FX-4")) func zeroIsIdentity() throws {
+    @Test func zeroIsIdentity() throws {
         let step = try EffectFixtures.noisyStep()
         for detail in [0.0, 0.5, 1] { #expect(try step.denoised(strength: 0, detail: detail) == step) }
         for radius in [1.0, 30] { #expect(try step.clarity(amount: 0, radius: radius) == step) }
     }
 
-    @Test(.disabled("waits on FX-4")) func noiseDrops() throws {
+    @Test func noiseDrops() throws {
         let step = try EffectFixtures.noisyStep()
         let out = try step.denoised(strength: 1, detail: 0)
         for region in [left, right] {
@@ -38,7 +38,7 @@ import Testing
         }
     }
 
-    @Test(.disabled("waits on FX-4")) func edgeKept() throws {
+    @Test func edgeKept() throws {
         // The clean step rises in 1 px (column 31 to 32); denoised, within 1 px of that.
         let out = try EffectFixtures.noisyStep().denoised(strength: 1, detail: 0)
         for y in 0..<32 {
@@ -47,7 +47,7 @@ import Testing
         }
     }
 
-    @Test(.disabled("waits on FX-4")) func clarityRaisesContrastKeepsMean() throws {
+    @Test func clarityRaisesContrastKeepsMean() throws {
         let grey = try texture(0.4...0.6, seed: 0xC1A_7)
         let before = try EffectFixtures.stats(grey, all)
         let up = try EffectFixtures.stats(grey.clarity(amount: 50, radius: 30), all)
@@ -58,7 +58,7 @@ import Testing
         #expect(abs(down.mean - before.mean) <= 1.0 / 255)
     }
 
-    @Test(.disabled("waits on FX-4")) func highlightsUnclipped() throws {
+    @Test func highlightsUnclipped() throws {
         // Luma at the ends has mid-tone weight 0, so full clarity can't push it past 0...1.
         for levels: ClosedRange<Float> in [0.96...1, 0...0.04] {
             let out = try texture(levels, seed: 0x416_4).clarity(amount: 100, radius: 30)
@@ -66,7 +66,7 @@ import Testing
         }
     }
 
-    @Test(.disabled("waits on FX-4")) func overCapThrows() throws {
+    @Test func overCapThrows() throws {
         let b = try PixelBuffer(width: 8, height: 8, fill: RGBA(r: 0.5, g: 0.5, b: 0.5, a: 1))
         for bad in [1.5, -0.1, .nan, .infinity] {
             #expect(throws: RasterError.self) { try b.denoised(strength: bad, detail: 0.5) }
@@ -76,7 +76,7 @@ import Testing
         for bad in [2_000.0, -1, .nan] { #expect(throws: RasterError.self) { try b.clarity(amount: 30, radius: bad) } }
     }
 
-    @Test(.disabled("waits on FX-4")) func fuzzNeverCrashes() throws {
+    @Test func fuzzNeverCrashes() throws {
         var rng = SplitMix64(seed: 0xDE_401)
         let input = try EffectFixtures.noisyStep(width: 8, height: 8)
         for _ in 0..<200 {
