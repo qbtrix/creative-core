@@ -2,8 +2,7 @@
 //
 // From the public Lottie format docs; docs/blueprints/core/features/vector-import.md
 // gives the rules. Layers and shape items are listed top first, so both are
-// reversed; each group (`gr`) becomes one shape. Not read yet (VI-7): keyframes
-// (the first key is used), masks, mattes and parents, each counted in the report.
+// reversed; each group (`gr`) becomes one shape. Keys, masks, mattes: LottieImport+Animation.swift.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -68,8 +67,10 @@ enum LottieJSON: Decodable, Sendable, Hashable {
 
 /// A fill and stroke that geometry is painted with.
 struct LottieStyles {
-    var fill: Fill?, stroke: Stroke?
-    func over(_ other: LottieStyles) -> LottieStyles { LottieStyles(fill: fill ?? other.fill, stroke: stroke ?? other.stroke) }
+    var fill: Fill?, stroke: Stroke?, keys = LottieStyleKeys()
+    func over(_ other: LottieStyles) -> LottieStyles {
+        LottieStyles(fill: fill ?? other.fill, stroke: stroke ?? other.stroke, keys: keys.over(other.keys, fill: fill != nil, stroke: stroke != nil))
+    }
 
     /// The styles with every alpha times `opacity`.
     func faded(_ opacity: Double) -> LottieStyles {
@@ -83,6 +84,7 @@ struct LottieStyles {
         case nil: break
         }
         if let stroke { result.stroke?.color = fade(stroke.color) }
+        result.keys = keys.faded(opacity)
         return result
     }
 }
@@ -104,7 +106,8 @@ struct LottieKnot {
 struct LottieReader {
     private var counts: [String: Int] = [:]
     /// The report kind a keyframed property counts as.
-    private var animatedKind = "animated property"
+    var animatedKind: String? = "animated property"
+    var clock = LottieClock()
 
     var report: ImportReport { ImportReport(skipped: counts.keys.sorted().map { "\($0) (\(counts[$0] ?? 0))" }) }
     mutating func skip(_ kind: String, _ count: Int = 1) { counts[kind, default: 0] += count }
@@ -116,40 +119,42 @@ struct LottieReader {
         let ip = try frame(root["ip"], "ip", 0, LottieImport.frames), op = try frame(root["op"], "op", 60, LottieImport.frames)
         let w = try number(root["w"], "w", 0), h = try number(root["h"], "h", 0)
         guard w > 0, h > 0, op >= ip else { throw ImportError.damaged("canvas size or frame range \(ip)...\(op) out of order") }
-        var out: [Layer] = []
-        for json in layers.reversed() {
-            if let layer = try layer(json, id: "layer-\(out.count + 1)", range: Double(ip)...Double(op)) { out.append(layer) }
+        var out: [Layer] = [], built: [Int: Int] = [:]
+        clock = LottieClock(ip: ip, duration: op - ip)
+        for (index, json) in layers.enumerated().reversed() {
+            if let layer = try layer(json, id: "layer-\(out.count + 1)", range: Double(ip)...Double(op)) { built[index] = out.count; out.append(layer) }
         }
+        linkMattes(&out, layers, built: built)
         return Scene(id: "scene-1", name: root["nm"]?.string ?? "Scene 1", fps: fps, durationFrames: op - ip, width: w, height: h, layers: out)
     }
     mutating func layer(_ json: LottieJSON, id: String, range: ClosedRange<Double>) throws -> Layer? {
         let kinds: [Double: String] = [0: "precomp", 2: "image", 3: "null", 5: "text"]
         let ty = try number(json["ty"], "layer ty", -1)
         guard ty == 1 || ty == 4 else { skip(kinds[ty] ?? "layer type"); return nil }
+        clock.start = try frame(json["st"], "st", 0, LottieImport.frames)
         let (transform, anchor, opacity) = try placement(json["ks"])
         let root = Matrix.translation(x: -anchor.x, y: -anchor.y)
         var shapes = try group(json["shapes"]?.array ?? [], matrix: root, opacity: 1, inherited: LottieStyles(), depth: 0)
         if ty == 1 {
             let rect = Rect(minX: 0, minY: 0, maxX: try number(json["sw"], "solid width", 0), maxY: try number(json["sh"], "solid height", 0))
-            shapes = [Shape(points: [], fill: .solid(try hexColor(json["sc"])), path: try PathBuilders.rectangle(in: rect).transformed(by: root))]
+            shapes = [LottieShape(shape: Shape(points: [], fill: .solid(try hexColor(json["sc"])), path: try PathBuilders.rectangle(in: rect).transformed(by: root)))]
         }
         let values = ["x": transform.x, "y": transform.y, "scaleX": transform.scaleX, "scaleY": transform.scaleY,
                       "rotation": transform.rotation, "opacity": min(max(opacity, 0), 1)]
-        var layer = Layer(id: id, name: json["nm"]?.string ?? "Layer", shapes: shapes.reversed())
+        var layer = Layer(id: id, name: json["nm"]?.string ?? "Layer")
         layer.tracks = values.filter { Layer.standardDefaults[$0.key] != $0.value }.mapValues { [Keyframe(frame: 0, value: $0)] }
+        layer.tracks.merge(try transformTracks(json["ks"])) { $1 }
+        place(shapes.reversed(), on: &layer)
         layer.isVisible = !(json["hd"]?.isTrue ?? false) && !(json["td"]?.isTrue ?? false)
-        // VI-7: masks become `LayerMask`s, `tt` a `TrackMatte`, in and out points and parents are read.
-        if let masks = json["masksProperties"]?.array, !masks.isEmpty { skip("mask", masks.count) }
-        if json["tt"] != nil { skip("matte") }
+        layer.masks = try masks(json["masksProperties"]?.array ?? [], root: root)
         if json["parent"] != nil { skip("parent") }
         let inPoint = try number(json["ip"], "layer ip", range.lowerBound), outPoint = try number(json["op"], "layer op", range.upperBound)
         if inPoint > range.lowerBound || outPoint < range.upperBound { skip("layer in/out") }
-        _ = try frame(json["st"], "st", 0, LottieImport.frames)
         return layer
     }
     /// The shapes of one group's items, top first.
     mutating func group(_ items: [LottieJSON], matrix outer: Matrix, opacity outerOpacity: Double,
-                        inherited outerStyles: LottieStyles, depth: Int) throws -> [Shape] {
+                        inherited outerStyles: LottieStyles, depth: Int) throws -> [LottieShape] {
         guard depth < LottieImport.maxDepth else { throw ImportError.tooLarge("groups nest deeper than \(LottieImport.maxDepth)") }
         var matrix = outer, opacity = outerOpacity, inherited = outerStyles
         if let tr = items.first(where: { $0["ty"]?.string == "tr" }) {
@@ -159,27 +164,30 @@ struct LottieReader {
         }
         let visible = items.filter { !($0["hd"]?.isTrue ?? false) }
         if visible.count < items.count { skip("hidden item", items.count - visible.count) }
-        var own = LottieStyles(), geometry: [PathElement] = []
+        var own = LottieStyles(), geometry: [PathElement] = [], keyed: [LottieKeyedPart] = []
         for item in visible {
             switch item["ty"]?.string {
-            case "sh": geometry += try bezier(item["ks"]).transformed(by: matrix).elements
+            case "sh": try outline(item["ks"], matrix: matrix, into: &geometry, keyed: &keyed)
             case "rc":
                 let radius = try scalar(item["r"], "rect roundness", 0)
                 geometry += try PathBuilders.rectangle(in: box(item), cornerRadius: radius).transformed(by: matrix).elements
             case "el": geometry += try PathBuilders.ellipse(in: box(item)).transformed(by: matrix).elements
-            case "fl": if own.fill == nil { own.fill = .solid(try color(item, opacity)) }
+            case "fl": if own.fill == nil { let c = try color(item, opacity); own.fill = .solid(c); own.keys.fill = try colorKeys(item["c"], alpha: c.a) }
             case "gf": if own.fill == nil { own.fill = try gradient(item, matrix: matrix, opacity: opacity) }
-            case "st": if own.stroke == nil { own.stroke = try stroke(item, matrix: matrix, opacity: opacity) }
-            case "gr", "tr": break
+            case "st" where own.stroke == nil:  // keyed colour and width become tracks, the width scaled like the stroke
+                let s = try stroke(item, matrix: matrix, opacity: opacity), scale = abs(matrix.determinant).squareRoot()
+                (own.stroke, own.keys.stroke, own.keys.width) = (s, try colorKeys(item["c"], alpha: s.color.a), try track(item["w"], 0) { max($0, 0) * scale })
+            case "gr", "tr", "st": break
             case let other: skip("shape item \(other ?? "?")")
             }
         }
         let styles = own.over(inherited)
-        let shape = Shape(points: [], fill: styles.fill ?? .solid(Color(r: 0, g: 0, b: 0, a: 0)),
-                          path: Path(elements: geometry), stroke: styles.stroke)
+        let shape = LottieShape(shape: Shape(points: [], fill: styles.fill ?? .solid(Color(r: 0, g: 0, b: 0, a: 0)),
+                                             path: Path(elements: geometry), stroke: styles.stroke),
+                                keys: styles.keys, path: pathKeys(geometry, keyed))
         let drawn = !geometry.isEmpty && (styles.fill != nil || styles.stroke != nil)
         if !geometry.isEmpty && !drawn { skip("unstyled path") }
-        var shapes: [Shape] = [], placed = !drawn
+        var shapes: [LottieShape] = [], placed = !drawn
         for item in visible {
             switch item["ty"]?.string {
             case "gr":
@@ -196,14 +204,15 @@ struct LottieReader {
         let c = try point(item["p"], "shape position"), s = try point(item["s"], "shape size")
         return Rect(minX: c.x - s.x / 2, minY: c.y - s.y / 2, maxX: c.x + s.x / 2, maxY: c.y + s.y / 2)
     }
-    /// An `sh` bezier as a path.
-    mutating func bezier(_ property: LottieJSON?) throws -> Path {
+    /// An `sh` bezier as a path: its static `k`, or its first key's.
+    func bezier(_ property: LottieJSON?) throws -> Path {
         var value = property?["k"]
-        if property?["a"]?.isTrue ?? false {
-            skip("animated property")  // VI-7: a `ShapeTrack`
-            value = try firstKey(value)?.array?.first
-        }
+        if property?["a"]?.isTrue ?? false { value = try firstKey(value).map { $0.array?.first ?? $0 } }
         guard let value else { throw ImportError.damaged("path has no value") }
+        return try path(value)
+    }
+    /// One bezier value, `{"c", "v", "i", "o"}`, as a path.
+    func path(_ value: LottieJSON) throws -> Path {
         let v = try points(value["v"], "path vertices"), i = try points(value["i"], "path in tangents")
         let o = try points(value["o"], "path out tangents")
         guard i.count == v.count, o.count == v.count else { throw ImportError.damaged("path tangents do not match its vertices") }
@@ -219,11 +228,10 @@ struct LottieReader {
         defer { animatedKind = "animated property" }
         animatedKind = group ? "group animation" : "anchor animation"
         let anchor = try point(json?["a"], "anchor")
-        if !group { animatedKind = "animated property" }
-        var p = try point(json?["p"], "position")
-        if json?["p"]?["s"]?.isTrue ?? false {
-            p = Point(x: try scalar(json?["p"]?["x"], "position x", 0), y: try scalar(json?["p"]?["y"], "position y", 0))
-        }
+        if !group { animatedKind = nil }  // keyed p, s, r and o become tracks in `transformTracks`
+        let p = json?["p"]?["s"]?.isTrue ?? false
+            ? Point(x: try scalar(json?["p"]?["x"], "position x", 0), y: try scalar(json?["p"]?["y"], "position y", 0))
+            : try point(json?["p"], "position")
         let s = try values(json?["s"], "scale", [100, 100])
         guard s.count >= 2 else { throw ImportError.damaged("scale needs two values") }
         if try scalar(json?["sk"], "skew", 0) != 0 { skip("skew") }
@@ -231,14 +239,12 @@ struct LottieReader {
         return (transform, anchor, try scalar(json?["o"], "opacity", 100) / 100)
     }
     mutating func color(_ item: LottieJSON, _ opacity: Double) throws -> Color {
-        let c = try values(item["c"], "color", [0, 0, 0])
-        guard c.count >= 3 else { throw ImportError.damaged("color needs three channels") }
-        let a = min(max(try scalar(item["o"], "opacity", 100) / 100, 0), 1) * opacity
-        return Color(r: min(max(c[0], 0), 1), g: min(max(c[1], 0), 1), b: min(max(c[2], 0), 1), a: a)
+        let c = try values(item["c"], "color", [0, 0, 0], tracked: true)  // keys become a colour track
+        return try Self.rgb(c, a: min(max(try scalar(item["o"], "opacity", 100) / 100, 0), 1) * opacity)
     }
     mutating func stroke(_ item: LottieJSON, matrix: Matrix, opacity: Double) throws -> Stroke {
         if item["d"] != nil { skip("dash") }
-        let width = max(try scalar(item["w"], "stroke width", 1), 0) * abs(matrix.determinant).squareRoot()
+        let width = max(try scalar(item["w"], "stroke width", 1, tracked: true), 0) * abs(matrix.determinant).squareRoot()
         let caps: [Double: Stroke.Cap] = [2: .round, 3: .square], joins: [Double: Stroke.Join] = [2: .round, 3: .bevel]
         return Stroke(color: try color(item, opacity), width: width,
                       join: joins[try number(item["lj"], "line join", 1)] ?? .miter, cap: caps[try number(item["lc"], "line cap", 1)] ?? .butt)
@@ -284,12 +290,12 @@ struct LottieReader {
         return k?.array?.first?["s"]
     }
     /// A property's numbers: its static `k`, or the first key's value when animated.
-    mutating func values(_ property: LottieJSON?, _ what: String, _ fallback: [Double]) throws -> [Double] {
+    mutating func values(_ property: LottieJSON?, _ what: String, _ fallback: [Double], tracked: Bool = false) throws -> [Double] {
         guard let property else { return fallback }
         if property["x"] != nil { skip("expression") }
         var k = property["k"]
         if property["a"]?.isTrue ?? false {
-            skip(animatedKind)  // VI-7: keyframes become tracks
+            if let animatedKind, !tracked { skip(animatedKind) }
             k = try firstKey(k)
             if k == nil { return fallback }
         }
@@ -299,8 +305,8 @@ struct LottieReader {
         default: throw ImportError.damaged("\(what) has no value")
         }
     }
-    mutating func scalar(_ property: LottieJSON?, _ what: String, _ fallback: Double) throws -> Double {
-        try values(property, what, [fallback]).first ?? fallback
+    mutating func scalar(_ property: LottieJSON?, _ what: String, _ fallback: Double, tracked: Bool = false) throws -> Double {
+        try values(property, what, [fallback], tracked: tracked).first ?? fallback
     }
     mutating func point(_ property: LottieJSON?, _ what: String) throws -> Point {
         let v = try values(property, what, [0, 0])
