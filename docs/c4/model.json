@@ -27,7 +27,7 @@
               {
                 "id": "document-commands",
                 "name": "Document and Command Engine",
-                "description": "The document model (Document > Scene > Layer > Shape, keyframe tracks, fills, text shapes, ruler guides, the swatch palette, metadata, frame labels) and its ModelError; LayerOwner, which addresses a scene's or a symbol's layer list; the Command protocol and CommandEngine with exact undo/redo, groups, coalescing, an undo depth limit and layer-scoped validation for single-layer commands; the CommandRegistry that decodes any command from a JSON envelope; the built-in command families (scene, layer, shape, text, keyframe, label, guide, swatch, metadata), with the stroke, path and duplicate-layer commands, scene canvas, rename and reorder; and the .flare v1 file format with validation. Every document change goes through a Command.",
+                "description": "The document model (Document > Scene > Layer > Shape, keyframe tracks, fills, text shapes, ruler guides, the W1 layer masks and track mattes, text runs with paragraph and path-text styles and their text layout, colour and shape tracks, the swatch palette, metadata, frame labels) and its ModelError; LayerOwner, which addresses a scene's or a symbol's layer list; the Command protocol and CommandEngine with exact undo/redo, groups, coalescing, an undo depth limit and layer-scoped validation for single-layer commands; the CommandRegistry that decodes any command from a JSON envelope; the built-in command families (scene, layer, shape, text, keyframe, label, guide, swatch, metadata), with the stroke, path and duplicate-layer commands, scene canvas, rename and reorder; and the .flare v1 file format with validation. Every document change goes through a Command.",
                 "technology": "Swift 6, Foundation",
                 "paths": [
                   "Sources/FlareCore/Document.swift",
@@ -47,7 +47,12 @@
                   "Sources/FlareCore/LayerCommand.swift",
                   "Sources/FlareCore/GuideCommands.swift",
                   "Sources/FlareCore/SwatchCommands.swift",
-                  "Sources/FlareCore/TextCommands.swift"
+                  "Sources/FlareCore/TextCommands.swift",
+                  "Sources/FlareCore/W1Model.swift",
+                  "Sources/FlareCore/MaskCommands*.swift",
+                  "Sources/FlareCore/TextStyleCommands*.swift",
+                  "Sources/FlareCore/TextLayout*.swift",
+                  "Sources/FlareCore/TrackCommands*.swift"
                 ]
               },
               {
@@ -70,22 +75,32 @@
               {
                 "id": "timeline",
                 "name": "Timeline",
-                "description": "Frame/time conversion, keyframe interpolation with binary-search segment lookup, easing curves (linear, cubic bezier, hold), sampling a layer's property values at a frame for rendering and export, and onion skin frames around the playhead.",
+                "description": "Frame/time conversion, keyframe interpolation with binary-search segment lookup, easing curves (linear, cubic bezier, hold), sampling a layer's property values (and its colour and shape tracks) at a frame for rendering and export, and onion skin frames around the playhead.",
                 "technology": "Swift 6, Foundation",
                 "paths": [
                   "Sources/FlareCore/Timeline.swift",
                   "Sources/FlareCore/Easing.swift",
                   "Sources/FlareCore/Sampling.swift",
-                  "Sources/FlareCore/Onion.swift"
+                  "Sources/FlareCore/Onion.swift",
+                  "Sources/FlareCore/Sampling+Tracks*.swift"
                 ]
               },
               {
                 "id": "export",
                 "name": "Export",
-                "description": "Exporters that turn a scene into other formats: one frame as an SVG document, a scene as a Lottie JSON document with animated position, scale, rotation and opacity, and gradient stop alpha, and the frame plan (numbers, times, pixel sizes, file names) for a numbered PNG sequence. Output is byte-stable and throws on non-finite values.",
+                "description": "Exporters that turn a scene into other formats: one frame as an SVG document, a scene as a Lottie JSON document with animated position, scale, rotation and opacity, and gradient stop alpha, and the frame plan (numbers, times, pixel sizes, file names) for a numbered PNG sequence. Output is byte-stable and throws on non-finite values. W1 writers fill one seam file each: SVGExporter+Style (paint at the frame), SVGExporter+Text (text runs), SVGExporter+Masks and LottieExporter+Masks (layer masks and track mattes), LottieExporter+Tracks (animated properties, including colour, width and shape keys).",
                 "technology": "Swift 6, Foundation",
                 "paths": [
                   "Sources/FlareCore/Export/*.swift"
+                ]
+              },
+              {
+                "id": "import",
+                "name": "Import",
+                "description": "Importers that read the vector formats export writes, its inverse: the contract for an SVG document read into one scene and a Lottie JSON document read into a document, with byte, element, layer and depth caps, a typed ImportError and an ImportReport listing what was skipped. The readers are stubs that throw unsupported until they are built.",
+                "technology": "Swift 6, Foundation",
+                "paths": [
+                  "Sources/FlareCore/Import/"
                 ]
               },
               {
@@ -165,17 +180,18 @@
               {
                 "id": "compositing",
                 "name": "Compositing",
-                "description": "W3C blend modes and source-over compositing with opacity on premultiplied pixels, in place on the backdrop one row at a time (an opaque normal row at full opacity is copied in), with free functions that composite a copy.",
+                "description": "W3C blend modes and source-over compositing with opacity on premultiplied pixels, in place on the backdrop one row at a time (an opaque normal row at full opacity is copied in), with free functions that composite a copy. Compositing/ holds the W1 composites, such as compositing through a mask at its own offset.",
                 "technology": "Swift 6, Foundation",
                 "paths": [
                   "Sources/CoreRaster/BlendMode.swift",
-                  "Sources/CoreRaster/Composite.swift"
+                  "Sources/CoreRaster/Composite.swift",
+                  "Sources/CoreRaster/Compositing/"
                 ]
               },
               {
                 "id": "image-ops",
                 "name": "Image Operations",
-                "description": "Masks, resampling, crop, quarter turns and rotation by any angle with the straighten crop, blur, tone adjustments and histograms (levels, curves and histograms on linear or sRGB-encoded values) and cloning from an offset through a mask over PixelBuffer.",
+                "description": "Masks, resampling, crop, quarter turns and rotation by any angle with the straighten crop, blur, tone adjustments and histograms (levels, curves and histograms on linear or sRGB-encoded values) and cloning from an offset through a mask over PixelBuffer. W1/ declares the values the W1 engines share (AffineMatrix, ColorLUT, LayerEffect and the tone, matte, fill and gradient values), with no operations. Masks/ holds mask feathering, contours and mattes read from a buffer. Tone/ holds the color-family tone ops and the auto-tone suggestion. Effects/ holds the layer effects a PixelBuffer applies. Affine/ holds transforms through an AffineMatrix, flips and canvas padding. Fill/ holds flood fill by tolerance and raster gradient fills. Heal/ holds healing from sampled source pixels. Hash/ holds image hashes for comparing buffers.",
                 "technology": "Swift 6, Foundation",
                 "paths": [
                   "Sources/CoreRaster/Mask.swift",
@@ -185,7 +201,24 @@
                   "Sources/CoreRaster/Adjustments.swift",
                   "Sources/CoreRaster/Blur.swift",
                   "Sources/CoreRaster/Histogram.swift",
-                  "Sources/CoreRaster/Retouch.swift"
+                  "Sources/CoreRaster/Retouch.swift",
+                  "Sources/CoreRaster/W1/",
+                  "Sources/CoreRaster/Masks/",
+                  "Sources/CoreRaster/Tone/",
+                  "Sources/CoreRaster/Effects/",
+                  "Sources/CoreRaster/Affine/",
+                  "Sources/CoreRaster/Fill/",
+                  "Sources/CoreRaster/Heal/",
+                  "Sources/CoreRaster/Hash/"
+                ]
+              },
+              {
+                "id": "codecs",
+                "name": "Layered Codecs",
+                "description": "The neutral LayeredImage (pixel layers with offset, opacity, blend mode, visibility, clipping and a placed mask, nested groups, the merged composite) and CodecError; the PixelCodec protocol apps plug their PNG codec into, with RawPixelCodec as the lossless test stand-in; the PSD and OpenRaster entry points and limits, stubs that throw unsupported until the readers and writers land.",
+                "technology": "Swift 6, Foundation",
+                "paths": [
+                  "Sources/CoreRaster/Codecs/"
                 ]
               }
             ]
@@ -205,7 +238,16 @@
                 "description": "Asset (id, kind, name, tags, version, source app, payload ref), AssetRef (id, version) and the manifest codec with size limits; AssetError.",
                 "technology": "Swift 6, Foundation",
                 "paths": [
-                  "Sources/CoreAsset/"
+                  "Sources/CoreAsset/AssetError.swift"
+                ]
+              },
+              {
+                "id": "thumbnail-store",
+                "name": "Thumbnail Store",
+                "description": "ThumbnailStore, the disk preview store: opaque encoded preview bytes keyed by PreviewKey (asset, content token, SizeClass), PreviewEntry with its VolumeRef and relative path, and Availability (online or offline). Public contract with stub bodies today; the store, budget, index recovery and volumes land in later preview-cache tasks.",
+                "technology": "Swift 6, Foundation",
+                "paths": [
+                  "Sources/CoreAsset/Thumbnails/"
                 ]
               }
             ]
@@ -242,7 +284,7 @@
               {
                 "id": "contract",
                 "name": "Render Contract",
-                "description": "The RenderBackend contract: the op families (RenderOp), the one error type (RenderError), surface handles (RenderSurface), the tone adjustments the adjust op takes (ToneAdjustment), the RenderBackend protocol, the blend-mode-to-family and raster-error mappings every backend shares, the SurfaceStore that holds a backend's PixelBuffers behind one lock and updates one in place, and FakeBackend, the recording test double.",
+                "description": "The RenderBackend contract: the op families (RenderOp), with the four CPU-first W1 families (maskedComposite, affine, effect, color) listed in RenderOp.notOnMetalYet, the one error type (RenderError), surface handles (RenderSurface), the tone adjustments the adjust and color families take (ToneAdjustment, whose family says which gates each case), the RenderBackend protocol with a not-on-this-backend default for each W1 method that throws unsupported with its family, the blend-mode-to-family and raster-error mappings every backend shares, the SurfaceStore that holds a backend's PixelBuffers behind one lock and updates one in place, and FakeBackend, the recording test double.",
                 "technology": "Swift 6, Foundation",
                 "paths": [
                   "Sources/CoreRender/CoreRender.swift",
@@ -250,6 +292,7 @@
                   "Sources/CoreRender/RenderSurface.swift",
                   "Sources/CoreRender/ToneAdjustment.swift",
                   "Sources/CoreRender/RenderBackend.swift",
+                  "Sources/CoreRender/RenderBackend+NotOnThisBackend.swift",
                   "Sources/CoreRender/SurfaceStore.swift",
                   "Sources/CoreRender/FakeBackend.swift"
                 ]
@@ -285,7 +328,7 @@
               {
                 "id": "parity",
                 "name": "Parity Harness",
-                "description": "How one RenderBackend is measured against another (Sources/CoreRender/Parity): ParityTolerance (byte and linear bounds, .standard and .nonSeparable); ParityHarness.compare, which checks two results' sRGB display bytes through CoreRaster's rgba8 and their linear premultiplied Floats over visible pixels and names the worst pixel; ParityHarness.compare(golden:), the bytes-only compare of a result against a golden, encoded in the golden's color space (both compares count only alpha where both alpha bytes are 0); ParityPack, the layout of the packed CPU goldens (ParityPack.all, each sample's band of rows) and ParityGolden.band(from:op:sample:) and rows(_:), which copy one sample's golden out of its pack; the deterministic sample set per RenderOp (seeded buffers plus alpha 0, subnormal alpha, opaque rows and sources off every edge) and rendering a sample on any backend; and golden files (raw rgba8 bytes beside a JSON header), validated as untrusted input.",
+                "description": "How one RenderBackend is measured against another (Sources/CoreRender/Parity): ParityTolerance (byte and linear bounds, .standard and .nonSeparable); ParityHarness.compare, which checks two results' sRGB display bytes through CoreRaster's rgba8 and their linear premultiplied Floats over visible pixels and names the worst pixel; ParityHarness.compare(golden:), the bytes-only compare of a result against a golden, encoded in the golden's color space (both compares count only alpha where both alpha bytes are 0); ParityPack, the layout of the packed CPU goldens (ParityPack.all, each sample's band of rows) and ParityGolden.band(from:op:sample:) and rows(_:), which copy one sample's golden out of its pack; the deterministic sample set per RenderOp (seeded buffers plus alpha 0, subnormal alpha, opaque rows and sources off every edge) and rendering a sample on any backend, with one Samples+<Family>.swift file per W1 family (masked composite, affine, effect, color) giving that family's samples and packs, all empty until its feature fills them; and golden files (raw rgba8 bytes beside a JSON header), validated as untrusted input.",
                 "technology": "Swift 6, Foundation",
                 "paths": [
                   "Sources/CoreRender/Parity/"
@@ -354,6 +397,12 @@
         "source": "export",
         "target": "document-commands",
         "description": "reads scenes, layers, shapes and fills",
+        "style": "sync"
+      },
+      {
+        "source": "import",
+        "target": "document-commands",
+        "description": "builds scenes, layers, shapes and fills",
         "style": "sync"
       },
       {
