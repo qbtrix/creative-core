@@ -52,7 +52,7 @@ import Testing
         var file = PSDFile.layers(width: 120, height: 80)
         #expect(psdError(Data("8BPX".utf8) + file.data.dropFirst(4)) == .notThisFormat)
         file.version = 2; #expect(psdError(file.data) == .unsupported("large document format"))
-        #expect([(4, 8), (3, 16), (9, 8)].allSatisfy { kind(psdError(PSDFile(depth: $0.1, mode: $0.0, records: PSDFile.gray.records).data)) == "unsupported" })
+        #expect([(4, 8), (3, 32), (9, 8)].allSatisfy { kind(psdError(PSDFile(depth: $0.1, mode: $0.0, records: PSDFile.gray.records).data)) == "unsupported" })
         var zipped = PSDFile.gray.records[0]
         for compression in [2, 3] {
             zipped.compression = compression

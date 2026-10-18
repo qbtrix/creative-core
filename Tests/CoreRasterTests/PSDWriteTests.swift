@@ -86,10 +86,10 @@ import Testing
         var edge = layer; edge.x = Int(Int32.max)
         var huge = layer; huge.x = Int.max
         cases += [("x past Int32", image(past)), ("right edge past Int32", image(edge)), ("x Int.max", image(huge)),
-                  ("12 bits", image(layer, bits: 12)), ("16 bits", image(layer, bits: 16)), ("width 0", image(layer, width: 0)),
+                  ("12 bits", image(layer, bits: 12)), ("32 bits", image(layer, bits: 32)), ("width 0", image(layer, width: 0)),
                   ("width over maxSide", image(layer, width: PSD.maxSide + 1)),
                   ("group opacity NaN", LayeredImage(width: 4, height: 4, nodes: [.group(LayerGroup(name: "g", opacity: .nan))])),
-                  ("a profile", LayeredImage(width: 4, height: 4, profile: .displayP3))]
+                  ("a gray profile", LayeredImage(width: 4, height: 4, profile: ColorProfile(name: "g", isGray: true, toXYZD50: [0.9642, 1, 0.8249], curves: [.gamma(2.2)])))]
         var masked = layer; masked.mask = PlacedMask(mask: try Mask(width: 1, height: 1), y: Int(Int32.min) - 1)
         cases.append(("mask y past Int32", image(masked)))
         for (what, bad) in cases { #expect(throws: CodecError.self, "\(what)") { try PSD.write(bad) } }

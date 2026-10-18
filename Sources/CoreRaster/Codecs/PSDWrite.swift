@@ -1,14 +1,13 @@
-// PSDWrite.swift: saves a `LayeredImage` as an 8-bit RGB PSD, from the
+// PSDWrite.swift: saves a `LayeredImage` as an 8- or 16-bit RGB PSD, from the
 // published PSD file format specification, so that `PSD.read` reopens it
-// equal. Sections in file order: header, empty colour mode data and image
-// resources, the layer and mask section (records bottom to top, then each
+// equal. Sections in file order: header, empty colour mode data, image
+// resources (the profile as resource 1039), the layer and mask section (records bottom to top, then each
 // record's channels), and the merged image from `composite` (or, when that is
 // nil, a preview flattened from the visible layers' pixels, opacity and blend
 // mode, without masks, clipping or group blending).
 // Invariants a writer must keep:
 // - Nothing is written until the whole image is validated: bits per channel 8
-//   (16 is `unsupported` until colour-profiles), no embedded profile (the
-//   ICC resource lands with colour-profiles), every opacity and mask default
+//   or 16, a profile the ICC writer takes and that is not gray, every opacity and mask default
 //   finite in 0...1, every layer and mask side within `PSD.maxSide` and its
 //   bounds within Int32, the canvas and every layer and mask within
 //   `PSD.maxTotalPixels`, at most `PSD.maxLayers` records. Each failure
@@ -17,8 +16,8 @@
 //   record carrying its name, opacity, blend key (`pass` for nil), hidden
 //   flag and open or closed state.
 // - Every channel is RLE. Colour is the exact inverse of the reader's: alpha
-//   and mask bytes are fractions of 255 rounded to nearest, and each colour
-//   byte is the one whose decoded sRGB value, times that alpha, is nearest.
+//   and mask samples are fractions of 255 or 65535 rounded to nearest, and each
+//   colour sample is the one whose decoded sRGB value, times that alpha, is nearest.
 import CoreColor
 #if canImport(FoundationEssentials)
 import FoundationEssentials
@@ -29,12 +28,8 @@ import Foundation
 extension PSD {
     /// The bytes `write` returns: validates first, then writes.
     static func encode(_ image: LayeredImage) throws -> Data {
-        switch image.bitsPerChannel {
-        case 8: break
-        case 16: throw CodecError.unsupported("16-bit channels")
-        case let bits: throw CodecError.unsupported("\(bits) bits per channel")
-        }
-        guard image.profile == nil else { throw CodecError.unsupported("an embedded colour profile") }
+        let depth = try PSDDepth(bits: image.bitsPerChannel)
+        let resources = try imageResources(image.profile)
         guard image.width >= 1, image.height >= 1 else { throw CodecError.unsupported("a \(image.width)x\(image.height) canvas") }
         guard image.width <= maxSide, image.height <= maxSide else {
             throw CodecError.tooLarge("canvas \(image.width)x\(image.height) over \(maxSide)")
@@ -59,21 +54,22 @@ extension PSD {
         w.u16(records.isEmpty ? 3 : 4)
         try w.length(image.height)
         try w.length(image.width)
-        w.u16(8)
+        w.u16(UInt16(depth.rawValue))
         w.u16(3) // RGB
         w.u32(0) // colour mode data
-        w.u32(0) // image resources
+        try w.length(resources.count)
+        w.bytes += resources
         try w.sized { section in
             try section.sized(pad: 2) { info in
                 info.i16(Int16(truncatingIfNeeded: -records.count)) // negative: the merged alpha is transparency
-                let channels = try records.map { try $0.channelData() }
+                let channels = try records.map { try $0.channelData(depth) }
                 for (record, data) in zip(records, channels) { try record.write(data, into: &info) }
                 for data in channels { for (_, bytes) in data { info.bytes += bytes } }
             }
             section.u32(0) // global layer mask info
         }
-        let planes = colorPlanes(composite)
-        w.bytes += try rle(Array(planes.prefix(records.isEmpty ? 3 : 4)), width: image.width)
+        let planes = depth.colorPlanes(composite)
+        w.bytes += try rle(Array(planes.prefix(records.isEmpty ? 3 : 4)), width: image.width * depth.bytes)
         return Data(w.bytes)
     }
 
@@ -140,36 +136,11 @@ extension PSD {
         return counts.bytes + rows
     }
 
-    /// Red, green, blue and alpha bytes of premultiplied linear pixels.
-    static func colorPlanes(_ buffer: PixelBuffer) -> [[UInt8]] {
-        let components = buffer.components, count = components.count / 4
-        var planes = [[UInt8]](repeating: [UInt8](repeating: 0, count: count), count: 4)
-        for i in 0..<count {
-            let alpha = fraction(components[i * 4 + 3])
-            planes[3][i] = alpha
-            guard alpha > 0 else { continue }
-            let a = Float(alpha) / 255
-            for c in 0..<3 { planes[c][i] = encoded(components[i * 4 + c] / a) }
-        }
-        return planes
-    }
-
     /// A 0...1 value as a byte of 255ths, rounded to nearest; NaN and below 0 are 0.
     static func fraction(_ value: Float) -> UInt8 {
         let scaled = (value * 255).rounded()
         guard scaled > 0 else { return 0 }
         return scaled >= 255 ? 255 : UInt8(scaled)
-    }
-
-    /// The byte whose decoded linear value is nearest `value`, by binary search of the reader's table.
-    static func encoded(_ value: Float) -> UInt8 {
-        var low = 0, high = linear.count - 1
-        while low < high {
-            let mid = (low + high) / 2
-            if linear[mid] < value { low = mid + 1 } else { high = mid }
-        }
-        if low > 0, value - linear[low - 1] <= linear[low] - value { low -= 1 }
-        return UInt8(truncatingIfNeeded: low)
     }
 
     /// A finite 0...1 attribute as a byte, or `unsupported` naming it.
@@ -260,14 +231,13 @@ private struct PSDOutRecord {
         }
     }
 
-    /// Each channel's id and RLE bytes: transparency, red, green, blue, then the mask.
-    func channelData() throws -> [(id: Int16, bytes: [UInt8])] {
+    /// Each channel's id and RLE bytes at `depth`: transparency, red, green, blue, then the mask.
+    func channelData(_ depth: PSDDepth) throws -> [(id: Int16, bytes: [UInt8])] {
         guard let layer else { return try [-1, 0, 1, 2].map { ($0, try PSD.rle([], width: 0)) } }
-        let planes = PSD.colorPlanes(layer.pixels), width = layer.pixels.width
+        let planes = depth.colorPlanes(layer.pixels), width = layer.pixels.width * depth.bytes
         var channels = try [(-1, 3), (0, 0), (1, 1), (2, 2)].map { (id: Int16($0.0), bytes: try PSD.rle([planes[$0.1]], width: width)) }
         if let m = layer.mask?.mask {
-            let plane = (0..<m.height).flatMap { y in (0..<m.width).map { x in PSD.fraction((try? m.coverage(x: x, y: y)) ?? 0) } }
-            channels.append((-2, try PSD.rle([plane], width: m.width)))
+            channels.append((-2, try PSD.rle([depth.maskPlane(m)], width: m.width * depth.bytes)))
         }
         return channels
     }

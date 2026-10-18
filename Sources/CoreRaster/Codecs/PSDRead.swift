@@ -1,6 +1,6 @@
-// PSDRead.swift: opens 8-bit RGB and grayscale PSD files, from the published
+// PSDRead.swift: opens 8/16-bit RGB and grayscale PSD files, from the published
 // PSD file format specification. Sections in file order: header, colour mode
-// data and image resources (skipped by length; the profile stays nil), the
+// data and image resources (skipped by length; resource 1039 fills `profile`), the
 // layer and mask section (records bottom to top, then each record's channels,
 // raw or RLE), and the merged image, which fills `composite`.
 // Invariants a reader must keep:
@@ -17,8 +17,9 @@
 // - Records run bottom to top: a bounding divider opens a group and the
 //   folder record above it closes it, carrying the group's attributes.
 //   Unbalanced dividers throw `damaged`.
-// - Colour becomes premultiplied linear light through the sRGB curve; mask,
-//   mask default colour and opacity bytes are fractions of 255.
+// - Colour becomes premultiplied linear light through the sRGB curve; alpha
+//   and mask samples are fractions of 255 or 65535, and the mask default
+//   colour and opacity bytes are fractions of 255.
 import CoreColor
 #if canImport(FoundationEssentials)
 import FoundationEssentials
@@ -33,15 +34,18 @@ extension PSD {
         var reader = ByteReader(data)
         let header = try PSDHeader(&reader)
         try reader.skip(try reader.length32()) // colour mode data
-        try reader.skip(try reader.length32()) // image resources
+        var resources = try reader.reader(try reader.length32())
+        let profile = try profile(in: &resources)
         var section = try reader.reader(try reader.length32())
         let (nodes, mergedAlpha) = try readLayers(&section, header)
         let keep = min(header.channels, header.colorChannels + (mergedAlpha ? 1 : 0))
-        let planes = try readPlanes(&reader, count: header.channels, keep: keep, width: header.width, height: header.height)
+        let planes = try readPlanes(&reader, count: header.channels, keep: keep,
+                                    width: header.width * header.depth.bytes, height: header.height)
         let alpha = planes.count > header.colorChannels ? planes[header.colorChannels] : nil
         let composite = try buffer(width: header.width, height: header.height,
-                                   color: Array(planes.prefix(header.colorChannels)), alpha: alpha)
-        return LayeredImage(width: header.width, height: header.height, nodes: nodes, composite: composite)
+                                   color: Array(planes.prefix(header.colorChannels)), alpha: alpha, depth: header.depth)
+        return LayeredImage(width: header.width, height: header.height, nodes: nodes, composite: composite,
+                            bitsPerChannel: header.depth.rawValue, profile: profile)
     }
 
     /// The layer tree, and whether the merged image's first alpha channel is its transparency.
@@ -67,7 +71,8 @@ extension PSD {
                 var data = try info.reader(channel.length)
                 let rect = channel.id == -2 ? record.mask?.rect ?? .empty : record.rect
                 if channel.id >= -2, Int(channel.id) < header.colorChannels {
-                    planes[channel.id] = try readPlanes(&data, count: 1, keep: 1, width: rect.width, height: rect.height).first
+                    planes[channel.id] = try readPlanes(&data, count: 1, keep: 1,
+                                                        width: rect.width * header.depth.bytes, height: rect.height).first
                 }
             }
             if let type = record.section, opens.contains(type) {
@@ -87,7 +92,7 @@ extension PSD {
                                          isHidden: record.isHidden, isOpen: type == 1))
                 current = parent
             } else {
-                node = .pixels(try pixelLayer(record, planes, colorChannels: header.colorChannels))
+                node = .pixels(try pixelLayer(record, planes, colorChannels: header.colorChannels, depth: header.depth))
             }
             current.append(node)
         }
@@ -96,7 +101,7 @@ extension PSD {
     }
 
     private static func pixelLayer(_ record: PSDLayerRecord, _ planes: [Int16: [UInt8]],
-                                   colorChannels: Int) throws -> PixelLayer {
+                                   colorChannels: Int, depth: PSDDepth) throws -> PixelLayer {
         let rect = record.rect
         var pixels = try PixelBuffer(width: 1, height: 1)
         if rect.width > 0, rect.height > 0 {
@@ -104,13 +109,14 @@ extension PSD {
                 guard let plane = planes[Int16(c)] else { throw CodecError.damaged("layer \"\(record.name)\" lacks channel \(c)") }
                 return plane
             }
-            pixels = try buffer(width: rect.width, height: rect.height, color: color, alpha: planes[-1])
+            pixels = try buffer(width: rect.width, height: rect.height, color: color, alpha: planes[-1], depth: depth)
         }
         var mask: PlacedMask?
         if let m = record.mask, m.rect.width > 0, m.rect.height > 0 {
             let count = try pixelCount(m.rect.width, m.rect.height)
-            guard let plane = planes[-2], plane.count == count else { throw CodecError.damaged("layer \"\(record.name)\" lacks its mask") }
-            mask = PlacedMask(mask: Mask(checkedWidth: m.rect.width, height: m.rect.height, storage: plane.map { Float($0) / 255 }),
+            guard let plane = planes[-2], plane.count == count * depth.bytes else { throw CodecError.damaged("layer \"\(record.name)\" lacks its mask") }
+            mask = PlacedMask(mask: Mask(checkedWidth: m.rect.width, height: m.rect.height,
+                                         storage: (0..<count).map { depth.fraction(plane, $0) }),
                               x: m.rect.left, y: m.rect.top, defaultCoverage: Float(m.color) / 255, isDisabled: m.flags & 0x02 != 0)
         }
         return PixelLayer(name: record.name, pixels: pixels, x: rect.left, y: rect.top, opacity: record.opacityFraction,
@@ -152,16 +158,16 @@ extension PSD {
     }
 
     /// Premultiplied linear pixels from encoded colour planes (one plane is grey) and an optional alpha plane.
-    private static func buffer(width: Int, height: Int, color: [[UInt8]], alpha: [UInt8]?) throws -> PixelBuffer {
-        let count = try pixelCount(width, height)
-        guard !color.isEmpty, color.allSatisfy({ $0.count == count }), (alpha?.count ?? count) == count else {
+    private static func buffer(width: Int, height: Int, color: [[UInt8]], alpha: [UInt8]?, depth: PSDDepth) throws -> PixelBuffer {
+        let count = try pixelCount(width, height), size = count * depth.bytes, table = depth.linear
+        guard !color.isEmpty, color.allSatisfy({ $0.count == size }), (alpha?.count ?? size) == size else {
             throw CodecError.damaged("planes do not fill \(width)x\(height)")
         }
         let planes = color.count == 1 ? [color[0], color[0], color[0]] : color
         var storage = [Float](repeating: 0, count: count * 4)
         for i in 0..<count {
-            let a = alpha.map { Float($0[i]) / 255 } ?? 1
-            for c in 0..<3 { storage[i * 4 + c] = linear[Int(planes[c][i])] * a }
+            let a = alpha.map { depth.fraction($0, i) } ?? 1
+            for c in 0..<3 { storage[i * 4 + c] = table[depth.sample(planes[c], i)] * a }
             storage[i * 4 + 3] = a
         }
         return PixelBuffer(checkedWidth: width, height: height, storage: storage)
@@ -187,7 +193,7 @@ extension PSD {
 
 /// The file header: canvas size, channel count and how many of them are colour.
 private struct PSDHeader {
-    let channels: Int, width: Int, height: Int, colorChannels: Int
+    let channels: Int, width: Int, height: Int, colorChannels: Int, depth: PSDDepth
 
     init(_ r: inout ByteReader) throws {
         guard try r.bytes(4) == Array("8BPS".utf8) else { throw CodecError.notThisFormat }
@@ -203,10 +209,7 @@ private struct PSDHeader {
         width = try PSDRect.side(try r.length32())
         guard height > 0, width > 0 else { throw CodecError.damaged("an empty canvas") }
         try Self.checkBudget(width * height)
-        switch try r.u16() {
-        case 8: break
-        case let depth: throw CodecError.unsupported("\(depth)-bit channels")
-        }
+        depth = try PSDDepth(bits: Int(try r.u16()))
         switch try r.u16() {
         case 1: colorChannels = 1
         case 3: colorChannels = 3
