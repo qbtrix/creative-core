@@ -27,6 +27,9 @@ import Testing
         + MachineStateCommandTests.undoSteps
         + TransitionCommandTests.undoSteps
         + MachineInputCommandTests.undoSteps
+        + MaskCommandsTests.undoSteps
+        + TextStyleCommandsTests.undoSteps
+        + TrackCommandsTests.undoSteps
 
     @Test(arguments: 0..<200)
     func undoAllRestoresOriginal(seed: UInt64) throws {

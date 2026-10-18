@@ -1,34 +1,46 @@
 // CommandRegistryTests.swift: every built-in command round-trips through the
 // {"id", "params"} envelope and behaves the same after decoding (the ids are
-// checked against a hand-written list of all 58), and encode only their
-// params, so a command decoded after execute is fresh; unknown ids
+// checked family by family against hand-written lists, 58 in all), and encode
+// only their params, so a command decoded after execute is fresh; unknown ids
 // and malformed envelopes throw a CommandError, never crash (seeded fuzz).
-import FlareCore
+@testable import FlareCore
 import Foundation
 import Testing
 
 @Suite struct CommandRegistryTests {
     static let registry = CommandRegistry.builtIn
 
-    /// Every built-in command id, written out by hand so a command that no
-    /// family lists, or a family missing from the registry, fails the tests.
-    static let expectedIDs: Set<String> = [
-        "document.metadata",
-        "keyframe.move", "keyframe.remove", "keyframe.set", "keyframe.setEasing", "keyframe.shift",
-        "guide.add", "guide.move", "guide.remove",
-        "instance.add", "instance.remove", "instance.setPlayback", "instance.setTransform",
-        "label.remove", "label.set",
-        "machine.add", "machine.remove", "machine.rename", "machine.setInitial",
-        "machine.addState", "machine.removeState", "machine.updateState",
-        "machine.addTransition", "machine.removeTransition", "machine.updateTransition",
-        "machine.addInput", "machine.removeInput", "machine.updateInput",
-        "layer.add", "layer.duplicate", "layer.remove", "layer.rename", "layer.reorder", "layer.setFlags",
-        "scene.add", "scene.remove", "scene.rename", "scene.reorder", "scene.setCanvas", "scene.timing",
-        "shape.add", "shape.remove", "shape.setFill", "shape.setPath", "shape.setStroke", "shape.translate",
-        "swatch.add", "swatch.remove", "swatch.rename", "swatch.setColor",
-        "symbol.add", "symbol.convert", "symbol.remove", "symbol.rename",
-        "text.add", "text.remove", "text.setFont", "text.setString",
+    /// Every built-in family's ids, in `CommandRegistry.builtInFamilies`
+    /// order and each in its family's `all` order, written out by hand so a
+    /// command that no family lists, a family missing from the registry, or an
+    /// id listed under the wrong family fails the tests. A family with its own
+    /// test file keeps its list there, so a new command touches only its
+    /// family's two files; a new family adds one line here.
+    static let familyIDs: [[String]] = [
+        ["layer.add", "layer.remove", "layer.rename",
+         "keyframe.set", "keyframe.move", "keyframe.remove", "shape.add"],
+        ["layer.setFlags", "layer.reorder", "layer.duplicate"],
+        ["shape.remove", "shape.setFill", "shape.setStroke", "shape.setPath", "shape.translate"],
+        ["scene.add", "scene.remove", "scene.timing", "scene.setCanvas", "scene.rename", "scene.reorder"],
+        ["keyframe.setEasing", "keyframe.shift"],
+        ["document.metadata"],
+        ["label.set", "label.remove"],
+        ["guide.add", "guide.move", "guide.remove"],
+        ["symbol.add", "symbol.remove", "symbol.rename", "symbol.convert"],
+        ["text.add", "text.remove", "text.setString", "text.setFont"],
+        ["swatch.add", "swatch.rename", "swatch.setColor", "swatch.remove"],
+        ["instance.add", "instance.remove", "instance.setTransform", "instance.setPlayback"],
+        ["machine.add", "machine.rename", "machine.remove", "machine.setInitial",
+         "machine.addState", "machine.updateState", "machine.removeState",
+         "machine.addTransition", "machine.updateTransition", "machine.removeTransition",
+         "machine.addInput", "machine.updateInput", "machine.removeInput"],
+        MaskCommandsTests.expectedIDs,
+        TextStyleCommandsTests.expectedIDs,
+        TrackCommandsTests.expectedIDs,
     ]
+
+    /// Every built-in command id: the union of the family lists.
+    static let expectedIDs = Set(familyIDs.joined())
 
     /// One sample of every built-in command, each valid on the fixture document.
     /// A new family adds one line here; a new command goes in its family's samples.
@@ -113,6 +125,26 @@ import Testing
     @Test func everyBuiltInCommandIsRegistered() {
         #expect(Self.expectedIDs.count == 58)
         #expect(Set(Self.registry.ids) == Self.expectedIDs)
+    }
+
+    /// Each family registers exactly its own list, and no id is listed twice,
+    /// within a family or across two.
+    @Test func everyFamilyRegistersExactlyItsList() {
+        let families = CommandRegistry.builtInFamilies
+        #expect(families.count == Self.familyIDs.count)
+        for (family, ids) in zip(families, Self.familyIDs) {
+            #expect(family.map { $0.id } == ids)
+        }
+        let listed = Array(Self.familyIDs.joined())
+        #expect(listed.count == Self.expectedIDs.count, "an id is listed twice")
+    }
+
+    /// The W1 seams: mask, text style and track families are registered, last
+    /// and in that order, and hold no command yet.
+    @Test func w1FamiliesAreRegisteredAndEmpty() {
+        let ids = CommandRegistry.builtInFamilies.suffix(3).map { $0.map { $0.id } }
+        #expect(ids == [MaskCommands.all, TextStyleCommands.all, TrackCommands.all].map { $0.map { $0.id } })
+        #expect(ids == [[], [], []])
     }
 
     @Test func samplesCoverEveryBuiltIn() {
