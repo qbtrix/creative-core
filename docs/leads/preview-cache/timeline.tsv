@@ -17,3 +17,6 @@ utc	stage	event	ref	note
 2026-10-18T12:18:42Z	4	heartbeat	-	wave 3 builders running, no wave-3 PR open yet; R1 fixers running
 2026-10-18T12:28:42Z	3	pr	PC-7	#486 opened, head f12484c, CI PASS, mutate 5/5; notes: maxDistance=16 public, negative->no groups, PC-8 2s budget at d=16 may be tight
 2026-10-18T12:31:31Z	3	pr	PC-2	#487 opened, head 41434d1, CI PASS (1 earlier run failed one unnamed test, then 2 passes)
+2026-10-18T12:38:41Z	3	merge	PC-2	#487 merged 12:31Z
+2026-10-18T12:38:41Z	3	merge	PC-7	#486 merged 12:28Z
+2026-10-18T12:38:41Z	4	heartbeat	-	PC-2, PC-7 merged; PC-3 builder starting

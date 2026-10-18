@@ -5,7 +5,7 @@ Run: act-1a14de006be-1kmq · Session: https://claude.ai/code/session_01WN1jNn5SU
 Line lead for: preview-cache (#440), vector-import (#439), layered-codecs (#438)
 Stage: 3 wave 3; Anatomy round 1 on finished slices
 Base: b80c0871a391e1729578b0344c8884c10471c8ca
-Next: finish PC-2 (gate serialized), build PC-7; Anatomy on PC-a once PC-2 merges, PC-hash once PC-7 merges
+Next: PC-3 building (PC-2 merged); PC-a slice-done waits on a green dev Linux run holding #445,#487; Anatomy round on PC-a + PC-hash
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -19,12 +19,12 @@ Next: finish PC-2 (gate serialized), build PC-7; Anatomy on PC-a once PC-2 merge
 | id | wave | behavior | files | test | mutation | PR | state |
 |---|---|---|---|---|---|---|---|
 | PC-1 | 1 | store types and stubs, `thumbnail-store` part | Sources/CoreAsset/Thumbnails/ThumbnailStore.swift, Tests/CoreAssetTests/ThumbnailStoreShapeTests.swift, docs/c4/parts/creative-core/coreasset/thumbnail-store.json | ThumbnailStoreShapeTests | none | #445 (e53d151) | merged |
-| PC-2 | 2 | store, recovery, offline suites written and disabled | Tests/CoreAssetTests/{ThumbnailStoreTests,ThumbnailStoreRecoveryTests,OfflineVolumeTests}.swift | suites compile | – | #487 | PR open (41434d1) |
-| PC-3 | 3 | write/read/remove, budget LRU, lock, atomic replace | ThumbnailStore.swift, PreviewFiles.swift, ThumbnailStoreTests | ThumbnailStoreTests | CoreAsset.ThumbnailStore (3) | | open |
+| PC-2 | 2 | store, recovery, offline suites written and disabled | Tests/CoreAssetTests/{ThumbnailStoreTests,ThumbnailStoreRecoveryTests,OfflineVolumeTests}.swift | suites compile | – | #487 (41434d1) | merged |
+| PC-3 | 3 | write/read/remove, budget LRU, lock, atomic replace | ThumbnailStore.swift, PreviewFiles.swift, ThumbnailStoreTests | ThumbnailStoreTests | CoreAsset.ThumbnailStore (3) | | building |
 | PC-4 | 4 | index codec and recovery | PreviewIndex.swift, ThumbnailStoreRecoveryTests | ThumbnailStoreRecoveryTests | CoreAsset.PreviewIndex (2) | | open |
 | PC-5 | 4 | volumes and availability | OfflineVolumes.swift, OfflineVolumeTests | OfflineVolumeTests | CoreAsset.OfflineVolumes (2) | | open |
 | PC-6 | after EC-a | PerceptualHash | Sources/CoreRaster/Hash/PerceptualHash.swift, PerceptualHashTests | PerceptualHashTests | CoreRaster.PerceptualHash (3) | #473 (cd93e06) | merged |
-| PC-7 | after PC-6 | DuplicateGroups | Sources/CoreRaster/Hash/DuplicateGroups.swift, DuplicateGroupsTests | DuplicateGroupsTests | CoreRaster.DuplicateGroups (5, 5/5 caught) | #486 | PR open (f12484c) |
+| PC-7 | after PC-6 | DuplicateGroups | Sources/CoreRaster/Hash/DuplicateGroups.swift, DuplicateGroupsTests | DuplicateGroupsTests | CoreRaster.DuplicateGroups (5, 5/5 caught) | #486 (f12484c) | merged |
 | PC-8 | after PC-4,5,7 | KJ-PC walk and budgets | PreviewWalkTests, DuplicateWalkTests | walks | none | | open |
 | PC-9 | last | part words, status line, `feature-done` | thumbnail-store.json, packet | – | – | | open |
 
