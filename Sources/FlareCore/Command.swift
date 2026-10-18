@@ -64,6 +64,10 @@ public enum CommandError: Error, Equatable, Sendable {
     case duplicateID(String)
     case keyframeNotFound(property: String, frame: Int)
     case frameOccupied(property: String, frame: Int)
+    /// A frame outside the range the command allows (below 0, or past the
+    /// owner's duration). Each command's doc says which frame it names: a set
+    /// names the frame it was asked to key, MoveColorKeyframes names the frame
+    /// of the key that could not move.
     case invalidFrame(Int)
     /// The scene has no frame label with this name.
     case labelNotFound(String)

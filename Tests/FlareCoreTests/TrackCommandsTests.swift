@@ -159,9 +159,51 @@ import Testing
         var engine = CommandEngine(document: Fixtures.document())
         for frame in [0, 12, 40] { try engine.perform(key(frame, Self.red)) }
         let before = engine.document
-        // 40 + 10 is past the 48-frame scene, so neither key moves.
-        #expect(throws: CommandError.self) { try engine.perform(move([12, 40], by: 10)) }
+        // 40 + 10 is past the 48-frame scene, so neither key moves; the error names the key at 40.
+        #expect(throws: CommandError.invalidFrame(40)) { try engine.perform(move([12, 40], by: 10)) }
         #expect(engine.document == before)
+        // The error names the key that could not move (20), not where it would land (120).
+        try engine.perform(key(20, Self.blue))
+        let withTwenty = engine.document
+        #expect(throws: CommandError.invalidFrame(20)) { try engine.perform(move([20], by: 100)) }
+        #expect(throws: CommandError.invalidFrame(0)) { try engine.perform(move([0], by: -1)) }
+        #expect(throws: CommandError.invalidFrame(40)) { try engine.perform(move([40], by: .max)) }
+        #expect(engine.document == withTwenty)
+    }
+
+    /// A key may move onto a frame another moving key leaves, never onto a key that stays.
+    @Test
+    func moveOntoKeptKeyIsOccupied() throws {
+        var engine = CommandEngine(document: Fixtures.document())
+        for frame in [0, 12] { try engine.perform(key(frame, Self.red)) }
+        let before = engine.document
+        #expect(throws: CommandError.frameOccupied(property: "fill.0", frame: 12)) { try engine.perform(move([0], by: 12)) }
+        #expect(throws: CommandError.keyframeNotFound(property: "fill.0", frame: 5)) { try engine.perform(move([0, 5], by: 1)) }
+        #expect(engine.document == before)
+        try engine.perform(move([0, 12], by: 12))
+        #expect(fills(engine)?.map(\.frame) == [12, 24])
+    }
+
+    /// The last frame (the scene's duration, 48) takes a key by set or move; 49 does not.
+    @Test
+    func lastFrameIsKeyable() throws {
+        var engine = CommandEngine(document: Fixtures.document())
+        try engine.perform(key(48, Self.red))
+        #expect(throws: CommandError.invalidFrame(49)) { try engine.perform(key(49, Self.red)) }
+        #expect(throws: CommandError.invalidFrame(-1)) { try engine.perform(key(-1, Self.red)) }
+        try engine.perform(key(40, Self.blue))
+        try engine.perform(RemoveColorKeyframe(owner: Self.owner, layerID: "ball", target: .fill(shape: 0), frame: 48))
+        try engine.perform(move([40], by: 8))
+        #expect(fills(engine) == [ColorKeyframe(frame: 48, value: Self.blue)])
+        #expect(throws: CommandError.invalidFrame(48)) { try engine.perform(move([48], by: 1)) }
+    }
+
+    /// A target whose shape the layer lacks is refused by name.
+    @Test
+    func missingShapeRefused() throws {
+        var engine = CommandEngine(document: Fixtures.document())
+        #expect(throws: CommandError.shapeNotFound(5)) { try engine.perform(key(0, Self.red, .linear, .fill(shape: 5))) }
+        #expect(engine.document == Fixtures.document())
     }
 
     /// Moving no keys on a target with no track changes nothing and still undoes.
@@ -190,7 +232,13 @@ import Testing
         #expect(throws: CommandError.layerLocked("ball")) { try engine.perform(key(0, Self.red)) }
         engine = CommandEngine(document: Fixtures.document())
         for bad in [Color(r: .nan, g: 0, b: 0), Color(r: 0, g: 0, b: 1.5), Color(r: 0, g: 0, b: 0, a: .infinity)] {
-            #expect(throws: CommandError.self) { try engine.perform(key(0, bad)) }
+            do {
+                try engine.perform(key(0, bad))
+                Issue.record("\(bad) was not refused")
+            } catch CommandError.invalidColor {
+            } catch {
+                Issue.record("\(bad) threw \(error), not invalidColor")
+            }
         }
         #expect(engine.document == Fixtures.document())
     }

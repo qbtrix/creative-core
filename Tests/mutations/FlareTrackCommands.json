@@ -9,7 +9,7 @@
   {
     "note": "a colour key move clamps each key into the duration instead of refusing all",
     "file": "Sources/FlareCore/TrackCommands.swift",
-    "anchor": "guard !overflow, to >= 0, to <= duration else { throw CommandError.invalidFrame(overflow ? k.frame : to) }",
+    "anchor": "guard !overflow, to >= 0, to <= duration else { throw CommandError.invalidFrame(k.frame) }",
     "replacement": "guard !overflow, to >= 0, to <= duration else { k.frame = min(max(to, 0), duration); moved.append(k); continue }",
     "filter": "TrackCommandsTests.moveAllOrNothing"
   },
@@ -19,5 +19,47 @@
     "anchor": "return (kept + moved).sorted { $0.frame < $1.frame }",
     "replacement": "return kept + moved",
     "filter": "TrackCommandsTests.keysStaySorted"
+  },
+  {
+    "note": "a colour key move that would leave the duration is dropped silently instead of refusing all",
+    "file": "Sources/FlareCore/TrackCommands.swift",
+    "anchor": "guard !overflow, to >= 0, to <= duration else { throw CommandError.invalidFrame(k.frame) }",
+    "replacement": "guard !overflow, to >= 0, to <= duration else { continue }",
+    "filter": "TrackCommandsTests.moveAllOrNothing"
+  },
+  {
+    "note": "a colour key set refuses the last frame of the scene",
+    "file": "Sources/FlareCore/TrackCommands.swift",
+    "anchor": "guard key.frame >= 0, key.frame <= duration else { throw CommandError.invalidFrame(key.frame) }",
+    "replacement": "guard key.frame >= 0, key.frame < duration else { throw CommandError.invalidFrame(key.frame) }",
+    "filter": "TrackCommandsTests.lastFrameIsKeyable"
+  },
+  {
+    "note": "a colour key move refuses landing on the last frame of the scene",
+    "file": "Sources/FlareCore/TrackCommands.swift",
+    "anchor": "to >= 0, to <= duration else",
+    "replacement": "to >= 0, to < duration else",
+    "filter": "TrackCommandsTests.lastFrameIsKeyable"
+  },
+  {
+    "note": "a colour key move onto a key that stays is not refused as frameOccupied",
+    "file": "Sources/FlareCore/TrackCommands.swift",
+    "anchor": "throw CommandError.frameOccupied(property: key, frame: clash.frame)",
+    "replacement": "_ = clash",
+    "filter": "TrackCommandsTests.moveOntoKeptKeyIsOccupied"
+  },
+  {
+    "note": "a colour key set skips its invalidColor check on a NaN or out of range colour",
+    "file": "Sources/FlareCore/TrackCommands.swift",
+    "anchor": "guard value.isInRange else { throw CommandError.invalidColor(value) }",
+    "replacement": "",
+    "filter": "TrackCommandsTests.badColourAndLockedLayerRefused"
+  },
+  {
+    "note": "a colour command skips its shapeNotFound check on a missing shape",
+    "file": "Sources/FlareCore/TrackCommands.swift",
+    "anchor": "guard target.exists(in: layer) else { throw CommandError.shapeNotFound(target.index) }",
+    "replacement": "",
+    "filter": "TrackCommandsTests.missingShapeRefused"
   }
 ]
