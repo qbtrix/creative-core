@@ -43,6 +43,7 @@ Next: EC-2 #450 merges after its Metal check -> wave 3 (EC-3, EC-4, EC-5). Round
 - EC-8 adds no new test: the packet names the existing exporter tests and goldens as the oracle for the move.
 - Round 1 finding on Sources/CoreRaster/Codecs/PixelCodec.swift (RawPixelCodec guards without mutations) belongs to layered-codecs, not this feature: left to that lead.
 - dev full CI run 39111859890 on c614b52 is red (#453): Linux EngineStressTests.thousandCommandsNearTheLayerLimitStayInBudget 5.75s > 5s; macOS green. Fixers measured the test alone at ~3.3s on dev and on their branches; r1-a's point counting adds ~6% (3.5 -> 3.75s). A re-dispatched CI (39112737255) failed the same way at 6.17s, and the whole test took 34.1s against 23.7s and 25.7s on the last green dev runs (af0b73e, 3094ab1). On the runner that is a real ~35% regression from this feature's W1 validation and fields, not load. The fixer (lead/engine-contracts-stress) removes the happy-path cost, with the budget untouched. EC-f Belt-Slice-Done waits for a green Linux job.
+- EC-4 built on lead/engine-contracts-ec-4 (de552be, RenderDispatcherW1Tests pass, CoreRenderDispatcherW1 2/2) but held without a PR: scripts/ci fails on dev itself (#453), and CLAUDE.md says stop. It opens after the stress fix merges.
 
 ## Open
 - none

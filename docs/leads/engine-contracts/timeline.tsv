@@ -24,3 +24,4 @@ utc	stage	event	ref	note
 2026-10-18T08:54Z	4	pr-opened	#455	r1-a (10 findings, FlareW1Model 15/15)
 2026-10-18T08:54Z	4	pr-merged	#455	r1-a merged; round 1 fixes all on dev
 2026-10-18T08:56Z	4	ci-run	39112737255	dev c614b52 Linux red again 6.17s; test 34s vs 24-26s green: real regression, fixer on it
+2026-10-18T08:59Z	3	pr-opened	#456	EC-3 (CoreRenderFake), Metal check pending
