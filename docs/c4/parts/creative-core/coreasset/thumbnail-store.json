@@ -1,0 +1,10 @@
+{
+  "id": "thumbnail-store",
+  "name": "Thumbnail Store",
+  "description": "ThumbnailStore, the disk preview store: opaque encoded preview bytes keyed by PreviewKey (asset, content token, SizeClass), PreviewEntry with its VolumeRef and relative path, and Availability (online or offline). Public contract with stub bodies today; the store, budget, index recovery and volumes land in later preview-cache tasks.",
+  "technology": "Swift 6, Foundation",
+  "paths": [
+    "Sources/CoreAsset/Thumbnails/"
+  ],
+  "order": 20
+}
