@@ -35,6 +35,7 @@ Next: EC-2 #450 merges after its Metal check -> wave 3 (EC-3, EC-4, EC-5). Round
 | 2 | 8839b71 | CI: PASS (2nd run; 1st EngineStress 6.7s under load, 2.86s alone) | FlareW1Model 17/17, CoreRaster.W1Values 3/3, CoreRender.W1Contract 2/2, CoreRenderFake 13/13, CoreRenderDispatcherW1 2/2 | - | clarity, contract, compat, robustness, tests | 11 of 12 (2 major, 9 minor); 1 refuted; #10 routed to color-profiles | r2-a, r2-b, r2-c (wf_f6725ac5-6d8) | no |
 
 ## Decisions
+- #461 (e158c87) amended brief rule 9: a message starting `Belt released this run.` means stop at once; every other chat message still never stops the lead. Applied to this run.
 - Line lead over #429, #442, #441 (rule 19); one wave plan across them, files disjoint per wave.
 - Builder branches are named lead/<feature>-<task> (a ref lead/<feature>/<task> can't coexist with lead/<feature>).
 - PR bodies carry Slice: and Mutate: lines (v3 rules 4 and 14); build-wave.js adapted in the session scratchpad to say so.
