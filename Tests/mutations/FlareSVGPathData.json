@@ -1,0 +1,37 @@
+[
+  {
+    "note": "svg path data treats a relative l as absolute, so lines land at the raw numbers",
+    "file": "Sources/FlareCore/Import/SVGPathData.swift",
+    "anchor": "let base = relative ? current : Point(x: 0, y: 0)",
+    "replacement": "let base = Point(x: 0, y: 0)",
+    "filter": "SVGPathDataTests.relativeLine"
+  },
+  {
+    "note": "svg path data S skips reflecting the previous control point and uses the current point",
+    "file": "Sources/FlareCore/Import/SVGPathData.swift",
+    "anchor": ": reflect(lastCubic)",
+    "replacement": ": current",
+    "filter": "SVGPathDataTests.smoothReflects"
+  },
+  {
+    "note": "svg path data arc sweep flag inverted, so the centre goes on the wrong side of the chord",
+    "file": "Sources/FlareCore/Import/SVGPathData.swift",
+    "anchor": "let sign: Double = largeArc != sweep ? 1 : -1",
+    "replacement": "let sign: Double = largeArc == sweep ? 1 : -1",
+    "filter": "SVGPathDataTests.arcSweepFlag"
+  },
+  {
+    "note": "svg path data arc ignores the large-arc flag and always takes the short way",
+    "file": "Sources/FlareCore/Import/SVGPathData.swift",
+    "anchor": "let largeArc = try flag(), sweep = try flag()",
+    "replacement": "let largeArc = try flag() && false, sweep = try flag()",
+    "filter": "SVGPathDataTests.largeArcFlag"
+  },
+  {
+    "note": "svg path data arc skips scaling up radii too small for the chord",
+    "file": "Sources/FlareCore/Import/SVGPathData.swift",
+    "anchor": "let scale = lambda > 1 ? lambda.squareRoot() : 1",
+    "replacement": "let scale = 1.0",
+    "filter": "SVGPathDataTests.arcRadiiAndRotation"
+  }
+]
