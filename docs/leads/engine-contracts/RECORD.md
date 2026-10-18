@@ -32,6 +32,7 @@ Next: EC-2 #450 merges after its Metal check -> wave 3 (EC-3, EC-4, EC-5). Round
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
 |---|---|---|---|---|---|---|---|---|
 | 1 | 83b20aa | CI: PASS (1083 tests) | FlareW1Model 4/4, CoreRaster.W1Values 3/3 | - | clarity, contract, compat, robustness, tests | 15 (3 major, 12 minor); 1 outside the feature | r1-a, r1-b, r1-c | no |
+| 2 | 8839b71 | CI: PASS (2nd run; 1st EngineStress 6.7s under load, 2.86s alone) | FlareW1Model 17/17, CoreRaster.W1Values 3/3, CoreRender.W1Contract 2/2, CoreRenderFake 13/13, CoreRenderDispatcherW1 2/2 | - | clarity, contract, compat, robustness, tests | 11 of 12 (2 major, 9 minor); 1 refuted; #10 routed to color-profiles | r2-a, r2-b, r2-c (wf_f6725ac5-6d8) | no |
 
 ## Decisions
 - Line lead over #429, #442, #441 (rule 19); one wave plan across them, files disjoint per wave.
