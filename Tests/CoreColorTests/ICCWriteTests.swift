@@ -89,4 +89,20 @@ struct ICCWriteTests {
         ]
         for p in bad { #expect(throws: ColorError.self, "\(p.name)") { try p.iccData() } }
     }
+
+    @Test func errorsSayWhatIsNeeded() {
+        let g = ProfileCurve.gamma(1)
+        let cases: [(ColorProfile, String)] = [
+            (ColorProfile(name: "x", isGray: false, toXYZD50: Array(repeating: 0.1, count: 8), curves: [g, g, g]), "needs 9"),
+            (ColorProfile(name: "x", isGray: false, toXYZD50: ColorProfile.sRGB.toXYZD50, curves: [.table([0.5]), g, g]), "needs 2 or more"),
+            (ColorProfile(name: "x", isGray: false, toXYZD50: ColorProfile.sRGB.toXYZD50,
+                          curves: [.parametric(type: 5, params: [1, 2, 3]), g, g]), "0 to 4 with 1/3/4/5/7"),
+        ]
+        for (profile, words) in cases {
+            #expect { try profile.iccData() } throws: { error in
+                guard case ColorError.invalid(let why) = error else { return false }
+                return why.contains(words)
+            }
+        }
+    }
 }
