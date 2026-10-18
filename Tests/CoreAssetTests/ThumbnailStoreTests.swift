@@ -192,12 +192,13 @@ func previewKey(_ asset: String, _ size: SizeClass = .medium) -> PreviewKey {
         #expect(try scratch.previewFiles().count == 100)
     }
 
-    @Test func impossibleSizesInTheIndexThrow() throws {
+    @Test func impossibleSizesInTheIndexAreSetAside() throws {
         let scratch = try PreviewScratch()
         let entry = "{\"key\":{\"asset\":\"a\",\"content\":\"c\",\"size\":1024},\"lastRead\":0,\"byteCount\":"
         for size in ["-1", "\(Int.max)},\(entry)\(Int.max)"] {
             try Data("{\"version\":1,\"budgetBytes\":0,\"entries\":[\(entry)\(size)}]}".utf8).write(to: scratch.index)
-            #expect(throws: AssetError.self) { try ThumbnailStore(folder: scratch.folder, budgetBytes: 1 << 20) }
+            #expect(try ThumbnailStore(folder: scratch.folder, budgetBytes: 1 << 20).usedBytes == 0)
+            #expect(FileManager.default.fileExists(atPath: scratch.damagedIndex.path))
         }
     }
 
@@ -249,7 +250,7 @@ func previewKey(_ asset: String, _ size: SizeClass = .medium) -> PreviewKey {
 
 /// Seeded generator; the same algorithm as FlareCoreTests' `SplitMix64`, which
 /// this test target cannot import.
-private struct SplitMix64: RandomNumberGenerator {
+struct SplitMix64: RandomNumberGenerator {
     var state: UInt64
 
     mutating func next() -> UInt64 {

@@ -1,0 +1,44 @@
+[
+  {
+    "note": "a preview index with a newer version is accepted instead of set aside, caught by newerSetAside",
+    "file": "Sources/CoreAsset/Thumbnails/PreviewIndex.swift",
+    "anchor": "guard decoded.version == PreviewIndexFile.currentVersion else",
+    "replacement": "guard decoded.version >= PreviewIndexFile.currentVersion else",
+    "filter": "ThumbnailStoreRecoveryTests"
+  },
+  {
+    "note": "the preview store flushes its index on every read, caught by scrollFlushesRarely",
+    "file": "Sources/CoreAsset/Thumbnails/ThumbnailStore.swift",
+    "anchor": "if Date().timeIntervalSince(lastFlush) >= Self.flushInterval {",
+    "replacement": "if true {",
+    "filter": "ThumbnailStoreRecoveryTests"
+  },
+  {
+    "note": "an index rebuild fails on a preview file whose header doesn't decode instead of skipping it, caught by undecodableFilesAreSkippedAndKept",
+    "file": "Sources/CoreAsset/Thumbnails/PreviewIndex.swift",
+    "anchor": "guard let decoded = try? Self.decode(data) else { continue }  // skipped, left on disk",
+    "replacement": "let decoded = try Self.decode(data)",
+    "filter": "ThumbnailStoreRecoveryTests"
+  },
+  {
+    "note": "a closing preview store drops its unflushed reads, caught by lastReadSurvivesRelaunch",
+    "file": "Sources/CoreAsset/Thumbnails/ThumbnailStore.swift",
+    "anchor": "if unflushed { try? changeFolder { _ in } }",
+    "replacement": "_ = unflushed",
+    "filter": "ThumbnailStoreRecoveryTests"
+  },
+  {
+    "note": "opening the preview store keeps orphan temp files, caught by orphanTempFilesAreRemovedAtOpen",
+    "file": "Sources/CoreAsset/Thumbnails/PreviewIndex.swift",
+    "anchor": "for name in names where name.hasSuffix(\".tmp\") {",
+    "replacement": "for name in names where name.hasSuffix(\".tmp-none\") {",
+    "filter": "ThumbnailStoreRecoveryTests"
+  },
+  {
+    "note": "opening the preview store keeps index entries whose file is gone, caught by missingFilesDropOut",
+    "file": "Sources/CoreAsset/Thumbnails/PreviewIndex.swift",
+    "anchor": "let entries = loaded.filter { present.contains(Self.name(for: $0.key)) }",
+    "replacement": "let entries = loaded",
+    "filter": "ThumbnailStoreRecoveryTests"
+  }
+]
