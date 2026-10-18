@@ -45,6 +45,7 @@ Next: fix PRs for round 1 merge, then Anatomy round 2. CP-7/CP-8 wait on layered
 - Round 1, finding cp1-a #4 (lead decision): the built-in profiles (sRGB, Display P3, Linear sRGB) are quantised to the s15Fixed16 grid, as a real ICC file stores them, so `ColorProfile(iccData: p.iccData()) == p` holds exactly (packet CP-4) and an embedded built-in reopens equal (CP-7, CP-9). ICCShapeTests loosen to the grid: row sums within 3/65536 of D50, sRGB parameters within 1/65536 of IEC 61966-2-1. Done as fix batch cp1-d.
 
 - Round 2, finding #1 (LayeredImage.profile doc says nil means "no profile", but readers never fill it): left to CP-7/CP-8, which make the doc true. No separate doc edit, so the two batches don't race on LayeredImage.swift.
+- cp2-a → #519 (head 825536a, merged 3e56eee): convert input-contract doc, the parametric count/formula table with ParametricCurveCountTests, and the CP-5 packet tolerance. Its body has no `Mutate:` line (docs-only, no new entries). The lead notes this; the fixer template now asks for `Mutate: none (<why>)`.
 
 ## Open
 - From engine-contracts round 2 (finding #10): ICCShapeTests never asserts the Display P3 colourants (ColorProfile.swift:58, :80). CP-5's sRGB→P3 test must cover them.

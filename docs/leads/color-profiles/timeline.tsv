@@ -64,3 +64,4 @@ utc	stage	event	ref	note
 2026-10-18T15:26Z	anatomy	round2-fixes	wf_c291f212-d0b	round 2: 8 confirmed; cp2-a, cp2-b dispatched; CP-7/CP-8 wave wf_a4db31b1-dc6
 2026-10-18T15:32Z	-	heartbeat	-	waiting
 2026-10-18T15:50Z	-	heartbeat	-	waiting
+2026-10-18T15:52Z	anatomy	fix-merged	#519	cp2-a merged 3e56eee
