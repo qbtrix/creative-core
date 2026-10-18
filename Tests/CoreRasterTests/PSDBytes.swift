@@ -76,9 +76,13 @@ struct PSDFile {
             }
             section.u32(0) // global layer mask info
         }
-        w.u16(1)
+        return Data(w.out + mergedImage)
+    }
+    /// The merged image section: every channel, RLE.
+    var mergedImage: [UInt8] {
+        var w = BigEndian(); w.u16(1)
         Self.rows((0..<channels).flatMap { c in (0..<height).map { y in (0..<width).map { merged($0, y, c) } } }, rle: true, into: &w)
-        return Data(w.out)
+        return w.out
     }
     static func record(_ r: PSDRecord, _ channels: [(id: Int16, bytes: [UInt8])], into w: inout BigEndian) {
         for v in [r.top, r.left, r.bottom, r.right] { w.u32(v) }

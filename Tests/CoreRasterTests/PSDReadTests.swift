@@ -83,6 +83,68 @@ import Testing
         let empty = PSDRecord(name: "e", channels: [], compression: 0)
         #expect(kind(psdError(PSDFile(records: Array(repeating: empty, count: PSD.maxLayers + 1)).data)) == "tooLarge")
         #expect(try PSD.read(PSDFile(records: Array(repeating: empty, count: PSD.maxLayers)).data).nodes.count == PSD.maxLayers)
+        // No channel data: without the budget these open as `damaged` for the missing planes, not `tooLarge`.
+        var masked = PSDRecord(name: "m", channels: [])
+        masked.mask = (0, 0, 16_384, 16_384, 0, 0)
+        #expect(psdError(PSDFile(records: [masked]).data) == .tooLarge("268438528 pixels over \(PSD.maxTotalPixels)"), "the mask alone fills the budget")
+        let quarter = PSDRecord(name: "q", bottom: 8_000, right: 10_000, channels: [])
+        #expect(kind(psdError(PSDFile(records: Array(repeating: quarter, count: 4)).data)) == "tooLarge", "four layers each under the budget")
+        #expect(kind(psdError(PSDFile(records: Array(repeating: quarter, count: 3)).data)) == "damaged", "three fit, then lack channels")
+    }
+    @Test func layerSideBoundary() throws {
+        for (h, w) in [(1, PSD.maxSide), (PSD.maxSide, 1)] {
+            var edge = PSDRecord.layer("E", top: 0, left: 0, height: h, width: w)
+            edge.compression = 0
+            let layer = try #require(pixelLayer(try PSD.read(PSDFile(records: [edge]).data).nodes.first))
+            let corner = try layer.pixels.pixel(x: w - 1, y: h - 1)
+            #expect(layer.pixels.width == w && layer.pixels.height == h && near(corner, PSDFile.expected(w - 1, h - 1)))
+            (edge.bottom, edge.right) = (edge.bottom + h / PSD.maxSide, edge.right + w / PSD.maxSide)
+            #expect(kind(psdError(PSDFile(records: [edge]).data)) == "tooLarge", "\(edge.right) x \(edge.bottom)")
+        }
+    }
+    @Test func groupDepthLimit() throws {
+        func nest(_ depth: Int) -> Data {
+            PSDFile(records: Array(repeating: .divider, count: depth) + [.layer("L", top: 0, left: 0, height: 1, width: 1)]
+                    + Array(repeating: .folder("g"), count: depth)).data
+        }
+        var node = try PSD.read(nest(PSD.maxDepth)).nodes.first, depth = 0
+        while let group = layerGroup(node) { depth += 1; node = group.children.first }
+        #expect(depth == PSD.maxDepth && pixelLayer(node)?.name == "L" && PSD.maxDepth == OpenRaster.maxDepth)
+        #expect(kind(psdError(nest(PSD.maxDepth + 1))) == "tooLarge")
+    }
+    @Test func repeatedChannelIdThrows() {
+        var twice = PSDRecord.layer("T", top: 0, left: 0, height: 2, width: 2)
+        twice.channels = [-1, 0, 0, 1, 2]
+        #expect(psdError(PSDFile(records: [twice]).data) == .damaged("a channel id repeats in one layer"))
+    }
+    /// `file` with a merged image of colour and alpha from `PSDFile.sample`, then extra channels. Each extra RLE row is
+    /// a run of 128 bytes in a narrower row, so decoding any of them throws `damaged`.
+    func merged(_ file: PSDFile, rle: Bool) -> Data {
+        let kept = (0..<4).flatMap { c in (0..<file.height).map { y in (0..<file.width).map { PSDFile.sample($0, y, c == 3 ? -1 : Int16(c)) } } }
+        let extra = (file.channels - 4) * file.height
+        var w = BigEndian(); w.u16(rle ? 1 : 0)
+        if rle {
+            let packed = kept.map(PSDFile.packBits)
+            packed.forEach { w.u16($0.count) }; (0..<extra).forEach { _ in w.u16(2) }
+            packed.forEach { w.out += $0 }; (0..<extra).forEach { _ in w.out += [0x81, 9] }
+        } else {
+            kept.forEach { w.out += $0 }; w.out += Array(repeating: 7, count: extra * file.width)
+        }
+        return file.data.dropLast(file.mergedImage.count) + w.out
+    }
+    @Test func mergedImageSkipsExtraChannels() throws {
+        var file = PSDFile(channels: 56, width: 8, height: 4, records: [.layer("A", top: 0, left: 0, height: 2, width: 2)], negativeCount: true)
+        for rle in [true, false] {
+            let composite = try #require(try PSD.read(merged(file, rle: rle)).composite)
+            for y in 0..<4 { for x in 0..<8 { #expect(near(try composite.pixel(x: x, y: y), PSDFile.expected(x, y)), "rle \(rle)") } }
+        }
+        let truncated = merged(file, rle: false).dropLast()
+        #expect(kind(psdError(truncated)) == "damaged", "skipped raw planes must still be in the file")
+        file.negativeCount = false
+        let opaque = try #require(try PSD.read(merged(file, rle: true)).composite), decode = { (v: UInt8) in Float(TransferCurve.decode(Double(v) / 255)) }
+        let p = try opaque.pixel(x: 5, y: 3)
+        #expect(near(p, RGBA(r: decode(PSDFile.sample(5, 3, 0)), g: decode(PSDFile.sample(5, 3, 1)),
+                             b: decode(PSDFile.sample(5, 3, 2)), a: 1)), "a positive count skips the alpha too")
     }
     @Test func maskDefaultAndDisabled() throws {
         var masked = PSDRecord.layer("M", top: 0, left: 0, height: 4, width: 4)
@@ -90,6 +152,9 @@ import Testing
         let layer = try #require(pixelLayer(try PSD.read(PSDFile(records: [masked]).data).nodes.first))
         let mask = try #require(layer.mask)
         #expect(mask.defaultCoverage == 1 && mask.isDisabled && mask.x == 1 && mask.mask.width == 2 && layer.blendMode == .screen)
+        masked.mask?.color = 128
+        let odd = try #require(pixelLayer(try PSD.read(PSDFile(records: [masked]).data).nodes.first)?.mask)
+        #expect(odd.defaultCoverage == Float(128) / 255, "any default colour byte reads as byte / 255")
     }
     @Test func unknownBlendKeyIsNormal() throws {
         var odd = PSDRecord.layer("O", top: 0, left: 0, height: 4, width: 4)
