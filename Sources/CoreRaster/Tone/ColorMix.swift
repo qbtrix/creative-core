@@ -95,18 +95,18 @@ extension PixelBuffer {
     }
 
     /// Throws `RasterError.invalid` naming `name` unless every value is finite.
-    private static func checkFinite(_ name: String, _ values: [Float]) throws {
+    static func checkFinite(_ name: String, _ values: [Float]) throws {
         guard values.allSatisfy(\.isFinite) else { throw RasterError.invalid("\(name) \(values): must be finite") }
     }
 
     /// The straight pixel's sRGB-encoded rgb, each clamped to 0...1.
-    private static func encoded(_ p: RGBA) -> SIMD3<Double> {
+    static func encoded(_ p: RGBA) -> SIMD3<Double> {
         SIMD3(TransferCurve.encode(Double(p.r)), TransferCurve.encode(Double(p.g)), TransferCurve.encode(Double(p.b)))
             .clamped(lowerBound: .zero, upperBound: .one)
     }
 
     /// Straight linear RGBA of encoded `c` at alpha `a`.
-    private static func decoded(_ c: SIMD3<Float>, a: Float) -> RGBA {
+    static func decoded(_ c: SIMD3<Float>, a: Float) -> RGBA {
         RGBA(r: Float(TransferCurve.decode(Double(c.x))), g: Float(TransferCurve.decode(Double(c.y))),
              b: Float(TransferCurve.decode(Double(c.z))), a: a)
     }

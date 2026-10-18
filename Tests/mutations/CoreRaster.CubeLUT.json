@@ -1,0 +1,23 @@
+[
+  {
+    "note": "LUT apply steps the table blue index fastest instead of red, so a lookup reads the transposed entry, caught by ColorLUTTests.midpointsTrilinear and identityWithinTolerance",
+    "file": "Sources/CoreRaster/Tone/ColorMap.swift",
+    "anchor": "let step = SIMD3(1, n, n * n)",
+    "replacement": "let step = SIMD3(n * n, n, 1)",
+    "filter": "ColorLUTTests"
+  },
+  {
+    "note": "the cube parser skips the DOMAIN_MIN and DOMAIN_MAX check, so a 0...2 domain loads, caught by ColorLUTTests.refusesOtherDomain",
+    "file": "Sources/CoreRaster/Tone/CubeLUT.swift",
+    "anchor": "guard triple(tokens) == SIMD3(repeating: bound) else {",
+    "replacement": "guard triple(tokens) != nil else {",
+    "filter": "ColorLUTTests"
+  },
+  {
+    "note": "LUT apply takes the nearest lattice point instead of interpolating, so a cell midpoint jumps half a step, caught by ColorLUTTests.midpointsTrilinear",
+    "file": "Sources/CoreRaster/Tone/ColorMap.swift",
+    "anchor": "let f = x - SIMD3(Double(i.x), Double(i.y), Double(i.z))",
+    "replacement": "let f = (x - SIMD3(Double(i.x), Double(i.y), Double(i.z))).rounded(.toNearestOrAwayFromZero)",
+    "filter": "ColorLUTTests"
+  }
+]

@@ -1,13 +1,13 @@
 // ColorMapTests.swift: tone-pack TP-5's acceptance for the maps, written first
 // (TP-1 of docs/blueprints/core/features/tone-pack.md): gradientMap,
-// posterized, thresholded and inverted. Disabled until TP-5 lands.
+// posterized, thresholded and inverted.
 import CoreRaster
 import Testing
 
 @Suite struct ColorMapTests {
     let black = RGBA(r: 0, g: 0, b: 0, a: 1), white = RGBA(r: 1, g: 1, b: 1, a: 1)
 
-    @Test(.disabled("waits on TP-5")) func blackToWhiteIsLuma() throws {
+    @Test func blackToWhiteIsLuma() throws {
         let refs = ToneFixtures.references
         let map = [GradientMapStop(offset: 0, color: black), GradientMapStop(offset: 1, color: white)]
         let out = try ToneCheck.pixels(ToneCheck.row(refs.map(\.pixel)).gradientMap(map))
@@ -19,7 +19,7 @@ import Testing
     }
 
     /// Two levels give only 0 and 1, rounding to the nearer; four give thirds.
-    @Test(.disabled("waits on TP-5")) func posterizeTwoLevels() throws {
+    @Test func posterizeTwoLevels() throws {
         let input = [ToneCheck.pixel([0.4, 0.6, 0.1]), ToneCheck.pixel([0.9, 0.25, 0.75])]
         let out = try ToneCheck.pixels(ToneCheck.row(input).posterized(levels: 2)).map(ToneCheck.encoded)
         #expect(ToneCheck.gap(out[0], [0, 1, 0]) <= 1e-5)
@@ -34,7 +34,7 @@ import Testing
         }
     }
 
-    @Test(.disabled("waits on TP-5")) func thresholdOnLuma() throws {
+    @Test func thresholdOnLuma() throws {
         let green = ToneCheck.pixel([0, 1, 0])
         let input = [ToneFixtures.pureRed.pixel, green, ToneFixtures.saturated10.pixel, ToneFixtures.skinTone.pixel]
         let out = try ToneCheck.pixels(ToneCheck.row(input).thresholded(0.5)).map(ToneCheck.encoded)
@@ -44,7 +44,7 @@ import Testing
     }
 
     /// Components on a 1/256 grid, so 1 − (1 − x) is exact in Float.
-    @Test(.disabled("waits on TP-5")) func invertTwiceIsIdentity() throws {
+    @Test func invertTwiceIsIdentity() throws {
         var rng = SplitMix64(seed: 0xC2)
         let input = try ToneCheck.row((0..<64).map { _ in
             let a = Float(Int.random(in: 1...256, using: &rng)) / 256
@@ -56,7 +56,7 @@ import Testing
         #expect(ToneCheck.gap(red, [0, 1, 1]) <= 1e-6)
     }
 
-    @Test(.disabled("waits on TP-5")) func alphaKept() throws {
+    @Test func alphaKept() throws {
         let map = [GradientMapStop(offset: 0, color: black), GradientMapStop(offset: 1, color: white)]
         try ToneCheck.expectAlphaKept("gradientMap") { try $0.gradientMap(map) }
         try ToneCheck.expectAlphaKept("posterized") { try $0.posterized(levels: 3) }
@@ -64,7 +64,7 @@ import Testing
         try ToneCheck.expectAlphaKept("inverted") { $0.inverted() }
     }
 
-    @Test(.disabled("waits on TP-5")) func invalidParametersThrow() throws {
+    @Test func invalidParametersThrow() throws {
         let b = try ToneCheck.seeded(width: 2, height: 2, seed: 0xC3)
         let low = GradientMapStop(offset: 0, color: black), high = GradientMapStop(offset: 1, color: white)
         #expect(throws: RasterError.self) { try b.thresholded(.nan) }
