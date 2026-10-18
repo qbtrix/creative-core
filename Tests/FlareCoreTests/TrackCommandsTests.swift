@@ -2,8 +2,8 @@
 // undo steps. A new track command adds its id to `expectedIDs`, one sample to
 // `registrySamples()` and its random steps to `undoSteps` here;
 // CommandRegistryTests and UndoPropertyTests read all three, so neither shared
-// test file changes.
-// AP-3 turns the key checks on; Fixtures/tracks.flare keys fill, stroke, width and path.
+// test file changes; `addSampleTrack` gives the registry's sample document the
+// colour keys the samples edit. Fixtures/tracks.flare keys fill, stroke, width and path.
 import FlareCore
 import Foundation
 import Testing
@@ -16,12 +16,26 @@ import Testing
 
     /// The ids whose commands are still stubs that throw "not built"; each
     /// leaves this set when its task builds it and adds a registry sample.
-    static let notBuiltIDs: Set<String> = Set(expectedIDs)
+    static let notBuiltIDs: Set<String> = ["shapeKey.set", "shapeKey.remove"]
 
     /// One sample of every built track command (not in `notBuiltIDs`), each
     /// valid on `CommandRegistryTests.sampleDocument()`, in `expectedIDs` order.
     /// The shared tests execute every sample, so a stub gets one when it is built.
-    static func registrySamples() -> [any Command] { [] }
+    static func registrySamples() -> [any Command] {
+        [
+            SetColorKeyframe(owner: owner, layerID: "bg", target: .fill(shape: 0), frame: 12, value: blue, easing: .easeInOut),
+            RemoveColorKeyframe(owner: owner, layerID: "bg", target: .fill(shape: 0), frame: 0),
+            MoveColorKeyframes(owner: owner, layerID: "bg", target: .fill(shape: 0), frames: [24], by: 6),
+        ]
+    }
+
+    /// Gives "bg" of `doc`'s first scene ball's square and a red-to-blue fill
+    /// track keyed at 0 and 24, which `registrySamples()` edit. "bg" because
+    /// other samples remove ball's shape and text, which a colour track keys.
+    static func addSampleTrack(_ doc: inout Document) {
+        doc.scenes[0].layers[0].shapes = doc.scenes[0].layers[1].shapes
+        doc.scenes[0].layers[0].colorTracks = ["fill.0": [ColorKeyframe(frame: 0, value: red), ColorKeyframe(frame: 24, value: blue)]]
+    }
 
     static let owner = LayerOwner.scene(Fixtures.sceneID)
     static let (red, blue) = (Color(r: 1, g: 0, b: 0), Color(r: 0, g: 0, b: 1))
@@ -92,7 +106,7 @@ import Testing
         MoveColorKeyframes(owner: Self.owner, layerID: "ball", target: .fill(shape: 0), frames: frames, by: delta)
     }
 
-    @Test(.disabled("AP-3 turns this on"))
+    @Test
     func setMoveRemoveUndoExactly() throws {
         var engine = CommandEngine(document: Fixtures.document()), states: [Document] = []
         let remove = RemoveColorKeyframe(owner: Self.owner, layerID: "ball", target: .fill(shape: 0), frame: 0)
@@ -109,7 +123,7 @@ import Testing
         }
     }
 
-    @Test(.disabled("AP-3 turns this on"))
+    @Test
     func mergeOnlySameKey() throws {
         var drag = key(10, Self.red), other = key(10, Self.red, .linear, .stroke(shape: 0))
         let merged = [drag.merge(key(10, Self.blue)), drag.merge(key(20, Self.blue)), other.merge(key(10, Self.blue))]
@@ -122,7 +136,7 @@ import Testing
         #expect(engine.document == Fixtures.document() && !engine.canUndo)
     }
 
-    @Test(.disabled("AP-3 turns this on"))
+    @Test
     func moveAllOrNothing() throws {
         var engine = CommandEngine(document: Fixtures.document())
         for frame in [0, 12, 40] { try engine.perform(key(frame, Self.red)) }
@@ -132,7 +146,16 @@ import Testing
         #expect(engine.document == before)
     }
 
-    @Test(.disabled("AP-3 turns this on"))
+    /// Moving no keys on a target with no track changes nothing and still undoes.
+    @Test
+    func emptyMoveUndoes() throws {
+        var engine = CommandEngine(document: Fixtures.document())
+        try engine.perform(move([], by: 5))
+        try engine.undo()
+        #expect(engine.document == Fixtures.document() && fills(engine) == nil)
+    }
+
+    @Test
     func keysStaySorted() throws {
         var engine = CommandEngine(document: Fixtures.document())
         for (frame, value) in [(0, Self.red), (12, Self.blue), (24, Color.white)] { try engine.perform(key(frame, value)) }
@@ -141,7 +164,7 @@ import Testing
         #expect(fills(engine)?.map(\.value) == [Self.blue, Self.red, .white])
     }
 
-    @Test(.disabled("AP-3 turns this on"))
+    @Test
     func badColourAndLockedLayerRefused() throws {
         var locked = Fixtures.document()
         locked.scenes[0].layers[1].isLocked = true
@@ -154,7 +177,7 @@ import Testing
         #expect(engine.document == Fixtures.document())
     }
 
-    @Test(.disabled("AP-3 turns this on"), arguments: 0..<100)
+    @Test(arguments: 0..<100)
     func undoAllRestoresOriginal(seed: UInt64) throws {
         try assertUndoRestoresDocument(seed: seed, steps: Self.undoSteps, start: Fixtures.withSymbol())
     }

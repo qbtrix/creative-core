@@ -84,6 +84,7 @@ import Testing
         doc.stateMachines[0].states.append(MachineState(id: "off", name: "Off", sceneID: "outro",
                                                         startFrame: 41, endFrame: 48))
         doc.stateMachines[0].inputs = [MachineInputCommandTests.on]
+        TrackCommandsTests.addSampleTrack(&doc)
         return doc
     }
 
