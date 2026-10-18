@@ -1,5 +1,5 @@
 // CodecShapeTests.swift: the layered-codec contract exists with its exact
-// signatures, the PSD write and OpenRaster stubs throw `unsupported("not built")`,
+// signatures, PSD write validates, the OpenRaster stubs throw `unsupported("not built")`,
 // and RawPixelCodec round-trips exactly and refuses bad bytes.
 import CoreRaster
 import Testing
@@ -54,7 +54,7 @@ private func sampleImage() throws -> LayeredImage {
     let image = try sampleImage()
     let notBuilt = CodecError.unsupported("not built")
     let raw: any PixelCodec = RawPixelCodec()
-    #expect(throws: notBuilt) { try PSD.write(image) }
+    #expect(throws: CodecError.self) { try PSD.write(image) } // a 3x2 composite on a 10x8 canvas
     #expect(throws: notBuilt) { try OpenRaster.write(image, pixels: raw) }
     #expect(throws: notBuilt) { try OpenRaster.write(image, pixels: raw, extra: ["photo/document.json": Data()]) }
     #expect(PSD.maxSide == 30_000 && PSD.maxLayers == 8_000)

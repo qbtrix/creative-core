@@ -1,7 +1,6 @@
 // PSD.swift: the PSD codec's entry points and limits, from the published PSD
-// file format specification. `read` lives in PSDRead.swift; write lands in a
-// later task (PSDWrite.swift) and until then throws
-// `CodecError.unsupported("not built")`.
+// file format specification. `read` lives in PSDRead.swift and `write`'s
+// validation and encoding in PSDWrite.swift.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -19,8 +18,10 @@ public enum PSD {
     /// same cap as one `PixelBuffer`, so a file cannot multiply it by layers.
     public static let maxTotalPixels = PixelBuffer.maxPixels
 
-    /// Saves an image as PSD bytes.
+    /// Saves an image as 8-bit RGB PSD bytes that `read` reopens equal. Throws
+    /// a `CodecError`, before writing anything, for an image the format cannot
+    /// hold: see PSDWrite.swift.
     public static func write(_ image: LayeredImage) throws -> Data {
-        throw CodecError.unsupported("not built")
+        try encode(image)
     }
 }
