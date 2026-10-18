@@ -22,14 +22,16 @@ import Foundation
 }
 
 @Test func builtInsMapWhiteToTheD50PCS() {
-    // ICC.1 7.2.16: the PCS illuminant is D50 (0.9642, 1.0, 0.8249).
+    // ICC.1 7.2.16: the PCS illuminant is D50 (0.9642, 1.0, 0.8249). Each row sums three entries
+    // rounded to the s15Fixed16 grid, so it is within 3 / 65536 of D50.
+    let tolerance = 3.0 / 65536
     for profile in [ColorProfile.sRGB, .displayP3, .linearSRGB] {
         let m = profile.toXYZD50
         #expect(m.count == 9 && profile.curves.count == 3 && !profile.isGray)
         guard m.count == 9 else { continue }
-        #expect(abs(m[0] + m[1] + m[2] - 0.9642) < 1e-9)
-        #expect(abs(m[3] + m[4] + m[5] - 1.0) < 1e-9)
-        #expect(abs(m[6] + m[7] + m[8] - 0.8249) < 1e-9)
+        #expect(abs(m[0] + m[1] + m[2] - 0.9642) < tolerance)
+        #expect(abs(m[3] + m[4] + m[5] - 1.0) < tolerance)
+        #expect(abs(m[6] + m[7] + m[8] - 0.8249) < tolerance)
     }
 }
 
@@ -42,8 +44,16 @@ import Foundation
 }
 
 @Test func builtInCurvesAndNames() {
-    let srgbCurve = ProfileCurve.parametric(type: 3, params: [2.4, 1 / 1.055, 0.055 / 1.055, 1 / 12.92, 0.04045])
-    #expect(ColorProfile.sRGB.curves == [srgbCurve, srgbCurve, srgbCurve])
+    // The IEC 61966-2-1 parameters; the built-in holds them on the s15Fixed16 grid, within 2^-16.
+    let iec = [2.4, 1 / 1.055, 0.055 / 1.055, 1 / 12.92, 0.04045]
+    let curves = ColorProfile.sRGB.curves
+    #expect(curves.count == 3 && Set(curves).count == 1)
+    if case .parametric(let type, let params)? = curves.first {
+        #expect(type == 3 && params.count == iec.count)
+        #expect(zip(params, iec).allSatisfy { abs($0 - $1) < 1.0 / 65536 }, "\(params)")
+    } else {
+        Issue.record("sRGB curve is not parametric: \(curves)")
+    }
     #expect(ColorProfile.displayP3.curves == ColorProfile.sRGB.curves)
     #expect(ColorProfile.linearSRGB.curves == [.gamma(1), .gamma(1), .gamma(1)])
     #expect(Set([ColorProfile.sRGB.name, ColorProfile.displayP3.name, ColorProfile.linearSRGB.name]).count == 3)

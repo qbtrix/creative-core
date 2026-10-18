@@ -19,5 +19,12 @@
     "anchor": "let offset = placed[bytes] ?? start + body.count",
     "replacement": "let offset = start + body.count",
     "filter": "ICCWriteTests/equalTagsShareOneCopy"
+  },
+  {
+    "note": "icc built-ins left off the s15Fixed16 grid, so an embedded sRGB reads back different",
+    "file": "Sources/CoreColor/ICC/ColorProfile.swift",
+    "anchor": "(v * 65536).rounded() / 65536",
+    "replacement": "v",
+    "filter": "ICCWriteTests/roundTripsBuiltIns"
   }
 ]
