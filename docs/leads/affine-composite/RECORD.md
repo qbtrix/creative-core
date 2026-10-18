@@ -2,9 +2,9 @@
 
 Issue: #434 · Packet: docs/blueprints/core/features/affine-composite.md
 Run: act-1a150bfbcf7-sfwy · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
-Stage: 3 wave 1
-Base: a8a08d25e34e119dd399ede9d77880a2d16bc04b
-Next: wave 1 builders running (AC-0, AC-2); then wave 2 once they merge
+Stage: 3 wave 2
+Base: 15e96dd47c720025f5ae49b3649608deb65ab216
+Next: wave 2 builder running (AC-1 checks-first suites); then wave 3 once it merges
 
 Line lead for #434, #433 and #432 (rule 19); one wave plan across the three
 features, bookkeeping per feature. Packet v3 (has a Slices table).
@@ -12,9 +12,9 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 ## Tasks
 | id | wave | slice | behavior | files | test | mutation | PR | state |
 |---|---|---|---|---|---|---|---|---|
-| AC-0 | 1 | AC-a | Stubs for the contract slice's signatures (rule 18): `transformed`, `flipped`, `padded`, `composite(through:)`, `AffineMatrix.bounds`; throwing ones throw `RasterError.invalid("not built")`, `flipped` returns self | `Sources/CoreRaster/Affine/AffineTransform.swift`, `Sources/CoreRaster/Affine/CanvasSize.swift`, `Sources/CoreRaster/Compositing/CompositeAffine.swift`, `Tests/CoreRasterTests/AffineStubTests.swift` | `AffineStubTests` | none (no invariant) | | planned |
-| AC-2 | 1 | AC-a | Seeded layers (transparent borders, hard edges) and matrices (identity, translations, 90° multiples, skews, near-singular) | `Tests/CoreRasterTests/AffineFixtures.swift` | fixtures build | none | | planned |
-| AC-1 | 2 | AC-a | Checks first: `AffineOpsTests`, `CompositeAffineTests`, `CPUAffineTests` disabled by name (`waits on AC-3/5/6`) | the three test files | suites compile, disabled | none | | planned |
+| AC-0 | 1 | AC-a | Stubs for the contract slice's signatures (rule 18): `transformed`, `flipped`, `padded`, `composite(through:)`, `AffineMatrix.bounds`; throwing ones throw `RasterError.invalid("not built")`, `flipped` returns self | `Sources/CoreRaster/Affine/AffineTransform.swift`, `Sources/CoreRaster/Affine/CanvasSize.swift`, `Sources/CoreRaster/Compositing/CompositeAffine.swift`, `Tests/CoreRasterTests/AffineStubTests.swift` | `AffineStubTests` | none (no invariant) | #563 | merged |
+| AC-2 | 1 | AC-a | Seeded layers (transparent borders, hard edges) and matrices (identity, translations, 90° multiples, skews, near-singular) | `Tests/CoreRasterTests/AffineFixtures.swift` | fixtures build | none | #571 | merged |
+| AC-1 | 2 | AC-a | Checks first: `AffineOpsTests`, `CompositeAffineTests`, `CPUAffineTests` disabled by name (`waits on AC-3/5/6`) | the three test files | suites compile, disabled | none | | building |
 | AC-3 | 3 | AC-geo | `transformed` with fast paths, `flipped`; turns on those cases | `Sources/CoreRaster/Affine/AffineTransform.swift`, `Tests/CoreRasterTests/AffineOpsTests.swift`, `Tests/mutations/CoreRaster.AffineTransform.json` | `AffineOpsTests` | 4 (packet) | | planned |
 | AC-4 | 3 | AC-geo | `padded` around nine anchors; its cases in `CanvasSizeTests` | `Sources/CoreRaster/Affine/CanvasSize.swift`, `Tests/CoreRasterTests/CanvasSizeTests.swift`, `Tests/mutations/CoreRaster.CanvasSize.json` | `CanvasSizeTests` | 2 (packet) | | planned |
 | AC-5 | 4 | AC-comp | `composite(through:)`, `AffineMatrix.bounds`; turns on `CompositeAffineTests` | `Sources/CoreRaster/Compositing/CompositeAffine.swift`, `Tests/CoreRasterTests/CompositeAffineTests.swift`, `Tests/mutations/CoreRaster.CompositeAffine.json` | `CompositeAffineTests` | 2 (packet) | | planned |
