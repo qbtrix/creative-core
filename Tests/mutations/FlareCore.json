@@ -274,7 +274,7 @@
   },
   {
     "note": "SVG export rounds a tiny valid radial radius to r=0, disabling the gradient",
-    "file": "Sources/FlareCore/Export/SVGExporter.swift",
+    "file": "Sources/FlareCore/Export/SVGExporter+Style.swift",
     "anchor": "let r = rounded == \"0\" && radius > 0 ? plainDecimal(\"\\(radius)\") : rounded",
     "replacement": "let r = rounded",
     "filter": "SVGExporterTests"

@@ -1,42 +1,42 @@
 [
   {
     "note": "lottie scale bake skips the maxBakedKeys guard",
-    "file": "Sources/FlareCore/Export/LottieExporter.swift",
+    "file": "Sources/FlareCore/Export/LottieExporter+Tracks.swift",
     "anchor": "guard hi - lo + 1 <= LottieExporter.maxBakedKeys else {",
     "replacement": "guard hi - lo + 1 <= Int.max else {",
     "filter": "LottieScaleTrackTests"
   },
   {
     "note": "lottie scale bake range leaves the scene end",
-    "file": "Sources/FlareCore/Export/LottieExporter.swift",
+    "file": "Sources/FlareCore/Export/LottieExporter+Tracks.swift",
     "anchor": "let hi = min(durationFrames - 1, frames.max() ?? 0)",
     "replacement": "let hi = min(durationFrames, frames.max() ?? 0)",
     "filter": "LottieScaleTrackTests"
   },
   {
     "note": "lottie scale bake duration guard lets Int.min reach the range",
-    "file": "Sources/FlareCore/Export/LottieExporter.swift",
+    "file": "Sources/FlareCore/Export/LottieExporter+Tracks.swift",
     "anchor": "guard durationFrames > 0 else {",
     "replacement": "guard durationFrames != 0 else {",
     "filter": "LottieScaleTrackTests"
   },
   {
     "note": "lottie scale shared keys ignore easing mismatch",
-    "file": "Sources/FlareCore/Export/LottieExporter.swift",
+    "file": "Sources/FlareCore/Export/LottieExporter+Tracks.swift",
     "anchor": "$0.frame == $1.frame && $0.easing == $1.easing",
     "replacement": "$0.frame == $1.frame",
     "filter": "LottieScaleTrackTests"
   },
   {
     "note": "lottie scale bake starts before frame 0 without the lo clamp",
-    "file": "Sources/FlareCore/Export/LottieExporter.swift",
+    "file": "Sources/FlareCore/Export/LottieExporter+Tracks.swift",
     "anchor": "let lo = max(0, frames.min() ?? 0)",
     "replacement": "let lo = frames.min() ?? 0",
     "filter": "LottieScaleTrackTests"
   },
   {
     "note": "lottie scale constant axis fills the wrong slot on the one-track branch",
-    "file": "Sources/FlareCore/Export/LottieExporter.swift",
+    "file": "Sources/FlareCore/Export/LottieExporter+Tracks.swift",
     "anchor": "self = .animated(try LottieKeyframe.list(xs) { _, key in [try f(key.value), y] })",
     "replacement": "self = .animated(try LottieKeyframe.list(xs) { _, key in [y, try f(key.value)] })",
     "filter": "LottieScaleTrackTests"
@@ -50,7 +50,7 @@
   },
   {
     "note": "layer scale checks finite before x100",
-    "file": "Sources/FlareCore/Export/LottieExporter.swift",
+    "file": "Sources/FlareCore/Export/LottieExporter+Tracks.swift",
     "anchor": "func f(_ v: Double) throws -> Double { try LottieExporter.finite(v * 100) }",
     "replacement": "func f(_ v: Double) throws -> Double { try LottieExporter.finite(v) * 100 }",
     "filter": "LottieScaleTrackTests"
