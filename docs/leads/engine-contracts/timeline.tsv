@@ -79,3 +79,4 @@ utc	stage	event	ref	note
 2026-10-18T16:25Z	fix	ec-10	#527	EC-10 PR #527 open: head 9f4cb47, gate PASS, +62/-7 8 files, labels fast-lane+feature-done, Mutate: none (docs only). Status built; engineering.md W1 seams section names 24 seam files once. Awaiting lane merge and the feature-done CI run.
 2026-10-18T16:26Z	-	heartbeat	-	waiting
 2026-10-18T16:27Z	merge	ec-10	7fcd04d	#527 (EC-10, feature-done) merged 7fcd04d; feature-done CI run 39145044059 queued. Contact sheet waits on it.
+2026-10-18T16:36Z	ship	wait	39145044059	feature-done CI run on 7fcd04d still queued; contact sheet waits on it
