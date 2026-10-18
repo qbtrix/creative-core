@@ -19,5 +19,19 @@
     "anchor": "guard table.allSatisfy({ $0.x.isFinite && $0.y.isFinite && $0.z.isFinite }) else {",
     "replacement": "guard table.allSatisfy({ $0.x.isFinite && $0.z.isFinite }) else {",
     "filter": "W1ValuesTests.refusesNonFiniteEntry"
+  },
+  {
+    "note": "the color LUT accepts a size of 66",
+    "file": "Sources/CoreRaster/W1/W1Values.swift",
+    "anchor": "private static let sizes = 2...65",
+    "replacement": "private static let sizes = 2...66",
+    "filter": "W1ValuesTests.refusesSizeOutside2To65"
+  },
+  {
+    "note": "the affine inverse returns an overflowed inverse instead of nil",
+    "file": "Sources/CoreRaster/W1/W1Values.swift",
+    "anchor": "return parts.allSatisfy(\\.isFinite) ? inv : nil",
+    "replacement": "return inv",
+    "filter": "W1ValuesTests.singularHasNoInverse"
   }
 ]

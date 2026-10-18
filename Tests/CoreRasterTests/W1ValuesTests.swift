@@ -1,7 +1,8 @@
 // W1ValuesTests.swift: the W1 value types CoreRaster declares for the beta-80
 // engines. AffineMatrix.inverse is exact on the identity, nil on a singular
 // matrix and composes back to the identity; ColorLUT's checked init refuses a
-// size outside 2...65 and a table whose count is not size³; every value is
+// size outside 2...65 and a table whose count is not size³; GrayMix() is the
+// documented default mix; every value is
 // Hashable, so equal values hash alike and different ones compare unequal.
 import CoreRaster
 import Testing
@@ -37,6 +38,9 @@ private func hashesApart<T: Hashable>(_ value: T, _ other: T) -> Bool {
         #expect(AffineMatrix(a: .nan, b: 0, c: 0, d: 1, tx: 0, ty: 0).inverse == nil)
         // A determinant so small its reciprocal overflows has no finite inverse.
         #expect(AffineMatrix(a: 1e-200, b: 0, c: 0, d: 1e-200, tx: 0, ty: 0).inverse == nil)
+        // A finite, nonzero determinant whose inverse translation overflows.
+        #expect(AffineMatrix(a: 1e-10, b: 0, c: 0, d: 1e-10, tx: 1e300, ty: 0).inverse == nil)
+        #expect(AffineMatrix(a: 1, b: 0, c: 0, d: 1, tx: .infinity, ty: 0).inverse == nil)
         // A mirror is not singular: its determinant is negative, not zero.
         let mirror = AffineMatrix(a: -1, b: 0, c: 0, d: 1, tx: 4, ty: 0)
         #expect(mirror.inverse == AffineMatrix(a: -1, b: 0, c: 0, d: 1, tx: 4, ty: 0))
@@ -50,6 +54,13 @@ private func hashesApart<T: Hashable>(_ value: T, _ other: T) -> Bool {
         let inv = try #require(m.inverse)
         #expect(isIdentity(compose(m, inv), within: 1e-12))
         #expect(isIdentity(compose(inv, m), within: 1e-12))
+    }
+
+    @Test func grayMixDefaultIsTheDocumentedMix() {
+        let mix = GrayMix()
+        #expect(mix == GrayMix(reds: 40, yellows: 60, greens: 40, cyans: 60, blues: 20, magentas: 80))
+        #expect(mix.tint == nil)
+        #expect(GrayMix(blues: 0) == GrayMix(reds: 40, yellows: 60, greens: 40, cyans: 60, blues: 0, magentas: 80))
     }
 
     @Test func refusesSizeOutside2To65() throws {

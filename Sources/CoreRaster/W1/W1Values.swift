@@ -12,6 +12,8 @@
 public struct AffineMatrix: Hashable, Sendable {
     public var a, b, c, d, tx, ty: Double
 
+    /// The transform with these entries, taken as given; `inverse` is nil
+    /// when they make no finite inverse.
     public init(a: Double, b: Double, c: Double, d: Double, tx: Double, ty: Double) {
         self.a = a
         self.b = b
@@ -87,8 +89,8 @@ public struct GrayMix: Hashable, Sendable {
     public var reds, yellows, greens, cyans, blues, magentas: Float
     public var tint: RGBA?
 
-    public init(reds: Float, yellows: Float, greens: Float, cyans: Float, blues: Float, magentas: Float,
-                tint: RGBA? = nil) {
+    public init(reds: Float = 40, yellows: Float = 60, greens: Float = 40, cyans: Float = 60, blues: Float = 20,
+                magentas: Float = 80, tint: RGBA? = nil) {
         self.reds = reds
         self.yellows = yellows
         self.greens = greens
