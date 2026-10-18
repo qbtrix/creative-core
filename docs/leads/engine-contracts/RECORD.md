@@ -2,9 +2,9 @@
 
 Issue: #429 · Packet: docs/blueprints/core/features/engine-contracts.md
 Run: act-1a14ddaebc8-nwqn · Session: line lead (engine-contracts, animate-properties, color-profiles) · Started: 2026-10-18T07:15Z
-Stage: 3 wave 2
+Stage: 4 round 3 fixes
 Base: 9d01972365f04da4fe6074e9bdd56ceab5b616a8
-Next: EC-2 #450 merges after its Metal check -> wave 3 (EC-3, EC-4, EC-5). Round 1 fixes merged (#451 r1-b, #452 r1-c, #455 r1-a). Round 2 runs once wave 3 (EC-3, EC-4, EC-5) merges, so its critics see the whole EC-a/EC-b surface. AP-1 building.
+Next: Round 3 fixes r3-a (W1Values: #2 colour encoding docs, #5 HSLRange->HSLShift) and r3-b (W1Model/FlareFormat: #3 startOffset 0...1, #4 lineHeight doc, #14 boundary mutations) beside EC-9 (walk tests). Then round 4 (last allowed), then EC-10 with feature-done.
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -33,8 +33,10 @@ Next: EC-2 #450 merges after its Metal check -> wave 3 (EC-3, EC-4, EC-5). Round
 |---|---|---|---|---|---|---|---|---|
 | 1 | 83b20aa | CI: PASS (1083 tests) | FlareW1Model 4/4, CoreRaster.W1Values 3/3 | - | clarity, contract, compat, robustness, tests | 15 (3 major, 12 minor); 1 outside the feature | r1-a, r1-b, r1-c | no |
 | 2 | 8839b71 | CI: PASS (2nd run; 1st EngineStress 6.7s under load, 2.86s alone) | FlareW1Model 17/17, CoreRaster.W1Values 3/3, CoreRender.W1Contract 2/2, CoreRenderFake 13/13, CoreRenderDispatcherW1 2/2 | - | clarity, contract, compat, robustness, tests | 11 of 12 (2 major, 9 minor); 1 refuted; #10 routed to color-profiles | r2-a, r2-b, r2-c (wf_f6725ac5-6d8) | no |
+| 3 | f7413a6 | CI: PASS (2nd run; 1st EngineStress 6.9s under load) | FlareW1Model 19/19, CoreRaster.W1Values 5/5, CoreRender.W1Contract 2/2, CoreRenderFake 13/13, CoreRenderDispatcherW1 4/4 | - | clarity, contract, compat, robustness, tests | 14 (4 major, 10 minor); 2 refuted; #1, #8, #11 routed to animate-properties; #9, #12, #13 to color-profiles; #6, #7 are EC-9/EC-10 (planned); #10 covered by each feature's own round | r3-a, r3-b | no |
 
 ## Decisions
+- Round 3 (wf_754b6005-2a0) reviewed firstBase..f7413a6 on the shared dev, so it saw animate-properties and color-profiles code too; those findings went to their own records and fixers.
 - dev CI 39118832683 on 0660756: Linux green. EC-a, EC-b, EC-f merged-done; Mac-Finish-Wanted EC-a posted.
 - #461 (e158c87) amended brief rule 9: a message starting `Belt released this run.` means stop at once; every other chat message still never stops the lead. Applied to this run.
 - Line lead over #429, #442, #441 (rule 19); one wave plan across them, files disjoint per wave.

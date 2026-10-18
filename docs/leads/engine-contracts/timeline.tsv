@@ -50,3 +50,4 @@ utc	stage	event	ref	note
 2026-10-18T10:53Z	4	stage-start	round-3	Anatomy round 3 on dev f7413a6: gate + mutation (5 plans) running
 2026-10-18T11:05Z	-	heartbeat	-	waiting
 2026-10-18T11:12Z	4	gate-run	f7413a6	round 3 gate CI: PASS (2nd run, 1181 tests; 1st EngineStress 6.9s under load); mutation 43/43 across 5 plans; critic panel launched
+2026-10-18T11:18Z	4	round3-triage	f7413a6	14 confirmed, routed
