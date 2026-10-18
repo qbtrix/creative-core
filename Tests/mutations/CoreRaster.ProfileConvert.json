@@ -30,8 +30,22 @@
   {
     "note": "profile convert ignores the source tone curve and applies the matrix only",
     "file": "Sources/CoreRaster/Codecs/ProfileConvert.swift",
-    "anchor": "if linearIn && linearOut { return transform.applyLinear(c) }",
-    "replacement": "if true { return transform.applyLinear(c) }",
+    "anchor": "let decodeIn = Self.decodesAsBuffer(source) ? nil : try Self.transform(from: source, to: Self.linear(source), for: asked)",
+    "replacement": "let decodeIn: ProfileTransform? = nil",
     "filter": "ProfileConvertTests.decodesWithSourceCurve"
+  },
+  {
+    "note": "profile convert sends the built-in sRGB curve through a curve pass instead of the shortcut",
+    "file": "Sources/CoreRaster/Codecs/ProfileConvert.swift",
+    "anchor": "profile.curves.allSatisfy { $0 == .gamma(1) } || profile.curves == ColorProfile.sRGB.curves",
+    "replacement": "profile.curves.allSatisfy { $0 == .gamma(1) }",
+    "filter": "ProfileConvertTests.keepsOutOfGamut"
+  },
+  {
+    "note": "profile convert skips the target tone curve and leaves the target side linear",
+    "file": "Sources/CoreRaster/Codecs/ProfileConvert.swift",
+    "anchor": "let encodeOut = Self.decodesAsBuffer(target) ? nil : try Self.transform(from: Self.linear(target), to: target, for: asked)",
+    "replacement": "let encodeOut: ProfileTransform? = nil",
+    "filter": "ProfileConvertTests.encodesWithTargetCurve"
   }
 ]
