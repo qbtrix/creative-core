@@ -76,3 +76,4 @@ Next: VI-5 building, VI-7 building; Anatomy round 2 verdicts pending; Slice-Done
 - 18:13Z #544 merged 18:11 (aa0092c): VI-5 done, VI-svg PRs all merged; awaiting dev run with Linux green
 - 18:13Z VI-8 builder launched on lead/vector-import-VI-8 (round-trip + budget suites, shape-order check)
 - 18:21Z heartbeat: 18G free; dev CI 373 (66bd163) green but predates #542-#544; no open lead PRs; LC R3-1 and PC R3-2 queued on gate, VI-8 building
+- 18:43Z heartbeat: 18G free; dev CI 374 (bd50d5b, has #544 #545 #546 #548) Linux running; no open lead PRs; VI-8 and LC R3-2 working
