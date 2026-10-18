@@ -40,3 +40,4 @@ utc	stage	event	ref	note
 2026-10-18T11:54Z	-	heartbeat	-	waiting
 2026-10-18T12:04Z	fix-merged	pr-merged	#482	cp-r1 merged c462a2b
 2026-10-18T12:12Z	-	heartbeat	-	waiting
+2026-10-18T12:13Z	slice-done	belt-slice-done	#441	CP-convert done, run 39126063033
