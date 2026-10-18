@@ -2,9 +2,9 @@
 
 Issue: #441 · Packet: docs/blueprints/core/features/color-profiles.md
 Run: act-1a14ddaebc8-nwqn · Session: line lead (engine-contracts, animate-properties, color-profiles) · Started: 2026-10-18T07:15Z
-Stage: 4 Anatomy round 4 (the last) on bd50d5b: gate CI: PASS try 1 (1396 + 35), mutation 41/41; critic panel wf_345f27c8-424 running
+Stage: 5 Anatomy budget spent (4 rounds). Round 4 doc findings go to fix batch cp4-a (wf_a049a93f-ee9); the test and compat findings are filed as gaps #550 and #551. CP-10 waits on layered-codecs' LC-10, which waits on its R3-2 fixer.
 Base: 9d01972365f04da4fe6074e9bdd56ceab5b616a8
-Next: cp3-c merges (or a gap if the budget is out of reach); round 4 (last) gate + panel; CP-10 (feature-done, Closes #441); Mac-Finish-Wanted CP-z; contact sheet.
+Next: cp4-a merges; CP-10 (feature-done, Closes #441) once LC-10 has merged, since both edit the codecs part; Mac-Finish-Wanted CP-z; contact sheet.
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -53,9 +53,12 @@ Next: cp3-c merges (or a gap if the budget is out of reach); round 4 (last) gate
 | 1 | ca537c1 | CI: PASS | 12/12 (ICCRead, ICCWrite, ProfileTransform, ProfileConvert) | clarity, contract, compat, robustness, tests | 13 (4 major) | cp1-a (CP-icc docs, exact built-in round trip, gray target), cp1-b (ICC read class/version/para guards), cp1-c (convert honours tone curves, typed throws) |
 | 2 | ad85831 | CI: PASS | 25/25 (ICCRead 7, ICCWrite 4, ProfileTransform 7, ProfileConvert 7) | clarity, contract, compat, robustness, tests | 8 (2 major), 0 refuted | cp2-a (convert input contract doc, parametric table doc, CP-5 tolerance in packet), cp2-b (ICC write messages, ProfileTransform guard tests and 3 mutations, every para type round trip); #1 left to CP-7/CP-8 |
 | 3 | c3e0225 | CI: PASS (try 1, 1407 tests) | 34/34 (ICCRead 7, ICCWrite 4, ProfileTransform 11, ProfileConvert 7, PSDDeep 2, ORADeep 3) | clarity, contract, compat, robustness, tests | 7 (5 major, 2 minor), 0 refuted | cp3-a (para type 2/4 below-knee tests, ICC table range guard tests, 2 mutations), cp3-b (bitsPerChannel and PNG docs, refused embedded profile opens with nil profile in PSD and ORA, one error case, gray PSD write) |
+| 4 | bd50d5b | CI: PASS (try 1, 1396 + 35 tests) | 41/41 (ICCRead 7, ICCWrite 5, ProfileTransform 13, ProfileConvert 8, PSDDeep 4, ORADeep 4) | clarity, contract, compat, robustness, tests | 10 (3 major, 7 minor), 0 refuted; not clean | cp4-a (5 doc findings: PSD 16-bit and profile docs, ORA bad-profile contract, `try` in the convert example, profile decode convention, ICC refusal list); gaps #550 (p2, 4 ProfileConvert test gaps) and #551 (p3, PSD resource walk too strict) |
 - Round 2 fixes merged: cp2-a #519 (3e56eee), cp2-b #532 (c3e0225).
 - CP-9 merged #536 (4ece840): walk passes; deepOpen holds (16-bit 2329 ms vs 8-bit 1996 ms, budget 2595 ms, Linux release); convert24MP misses (median 6410 ms vs 150 ms, Linux release). Treated as a round 3 finding: fix batch cp3-c makes converted table-driven; if it cannot reach the budget, a gap issue is filed.
 - Round 3 fix cp3-a merged #537 (e39537c): para types 2/4 below-knee tests, ICC table range cases, 2 mutations.
 - Round 3 fix cp3-b merged #538 (61b4f10): bitsPerChannel and PixelCodec docs; a refused embedded profile opens as nil in PSD and ORA; CodecError.profileData unwraps ColorError; gray profile writes a grayscale PSD (non-neutral pixel throws). PSDDeep 4/4, ORADeep 4/4.
 - CP-7 #523 and CP-8 #529 merged (40249d5); lead check on 40249d5: CodecWalk, ORADeep, PSDDeep, CodecRoundTrip, OpenRaster, PSD 41 tests pass.
 - cp3-c merged #547 (1760ddc): convert24MP 6240.8 -> 606.6 ms (release, Linux), still over the 150 ms budget; gap #549 (p2) filed. #547 said "Closes #441" (the fixer template never said Refs), so its merge closed #441; the lead reopened #441, edited the #547 body to Refs, and patched the fixer templates to write Refs unless featureDone.
+- Round 4 is the last round (budget of 4). Its 5 doc-only findings are cheap and in the feature's own files, so they go in fix batch cp4-a (Refs #441). The 3 major test findings and the compat finding need new tests and a behaviour change, so they are filed as gaps #550 and #551 rather than starting a fifth round. cp3-c's 24 MP budget miss is gap #549.
+- fix-batch-v3.js referenced an undefined `A` in its Refs/Closes line (added after #547); it now reads `args`.
