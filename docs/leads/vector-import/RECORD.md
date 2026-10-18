@@ -79,3 +79,4 @@ Next: VI-5 building, VI-7 building; Anatomy round 2 verdicts pending; Slice-Done
 - 18:43Z heartbeat: 18G free; dev CI 374 (bd50d5b, has #544 #545 #546 #548) Linux running; no open lead PRs; VI-8 and LC R3-2 working
 - 19:00Z run 374 Linux green: Belt-Slice-Done VI-svg posted on #439 (footer stripped); VI-8 building
 - 19:22Z heartbeat: VI-8 has round-trip + budget suites drafted and a LottieExporter shape-order change in progress; no PR yet
+- 19:44Z heartbeat: VI-8 idle since 18:38 (machine load 0), resumed with foreground-gate instruction
