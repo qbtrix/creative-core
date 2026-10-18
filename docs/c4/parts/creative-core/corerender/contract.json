@@ -1,7 +1,7 @@
 {
   "id": "contract",
   "name": "Render Contract",
-  "description": "The RenderBackend contract: the op families (RenderOp), with the four CPU-first W1 families (maskedComposite, affine, effect, color) listed in RenderOp.notOnMetalYet, the one error type (RenderError), surface handles (RenderSurface), the tone adjustments the adjust and color families take (ToneAdjustment, whose family says which gates each case), the RenderBackend protocol with a not-on-this-backend default for each W1 method that throws unsupported with its family, the blend-mode-to-family and raster-error mappings every backend shares, the SurfaceStore that holds a backend's PixelBuffers behind one lock and updates one in place, and FakeBackend, the recording test double.",
+  "description": "The RenderBackend contract: the op families (RenderOp), with the four CPU-first W1 families (maskedComposite, affine, effect, color) listed in RenderOp.notOnMetalYet, the one error type (RenderError), surface handles (RenderSurface), the tone adjustments the adjust and color families take (ToneAdjustment, whose family says which gates each case), the RenderBackend protocol with a not-on-this-backend default for each W1 method that throws unsupported with its family, the blend-mode-to-family and raster-error mappings every backend shares, the SurfaceStore that holds a backend's PixelBuffers behind one lock and updates one in place, the resident-rendering methods (blank and the batched composite of CompositeSteps, each with a default built from the older methods) and ResidentSurfaces, the layer tiles kept on a backend across renders keyed by layer and tile and uploaded only when their pixels change, and FakeBackend, the recording test double.",
   "technology": "Swift 6, Foundation",
   "paths": [
     "Sources/CoreRender/CoreRender.swift",
@@ -11,7 +11,9 @@
     "Sources/CoreRender/RenderBackend.swift",
     "Sources/CoreRender/RenderBackend+NotOnThisBackend.swift",
     "Sources/CoreRender/SurfaceStore.swift",
-    "Sources/CoreRender/FakeBackend.swift"
+    "Sources/CoreRender/FakeBackend.swift",
+    "Sources/CoreRender/RenderBackend+Resident.swift",
+    "Sources/CoreRender/ResidentSurfaces.swift"
   ],
   "order": 10
 }
