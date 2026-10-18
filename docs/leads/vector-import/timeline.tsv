@@ -60,3 +60,4 @@ utc	stage	event	ref	note
 18:13Z	launch	VI-8 builder launched on lead/vector-import-VI-8 (round-trip + budget suites, shape-order check)
 18:21Z	heartbeat	heartbeat: 18G free; dev CI 373 (66bd163) green but predates #542-#544; no open lead PRs; LC R3-1 and PC R3-2 queued on gate, VI-8 building
 18:43Z	heartbeat	heartbeat: 18G free; dev CI 374 (bd50d5b, has #544 #545 #546 #548) Linux running; no open lead PRs; VI-8 and LC R3-2 working
+19:00Z	done	run 374 Linux green: Belt-Slice-Done VI-svg posted on #439 (footer stripped); VI-8 building
