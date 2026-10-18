@@ -40,3 +40,4 @@ utc	stage	event	ref	note
 2026-10-18T10:04Z	4	heartbeat	e158c87	noted #461 brief-rule amendment
 2026-10-18T10:11Z	-	heartbeat	-	waiting
 2026-10-18T10:21Z	3	ci-run	39118832683	dev CI started on 0660756
+2026-10-18T10:24Z	4	pr-merged	#465	r2-a merged cdad305
