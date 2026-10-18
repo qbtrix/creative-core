@@ -2,9 +2,9 @@
 
 Issue: #441 · Packet: docs/blueprints/core/features/color-profiles.md
 Run: act-1a14ddaebc8-nwqn · Session: line lead (engine-contracts, animate-properties, color-profiles) · Started: 2026-10-18T07:15Z
-Stage: 4 Anatomy round 1 fixes: cp1-a merged (#504 bddc33d), cp1-b merged (#503 ab21873). cp1-c (1831265, no PR yet) waits on a quiet gate (wall-clock budget tests fail at load 10 to 26). cp1-d running: the built-in s15Fixed16 decision below.
+Stage: 4 Anatomy round 3: gate and mutation on dev c3e0225 running (ICCRead, ICCWrite, ProfileTransform, ProfileConvert, PSDDeep, ORADeep)
 Base: 9d01972365f04da4fe6074e9bdd56ceab5b616a8
-Next: fix PRs for round 1 merge, then Anatomy round 2. CP-7/CP-8 wait on layered-codecs LC-write.
+Next: round 3 critic panel on c3e0225; CP-deep Slice-Done once a dev Linux job including 40249d5 is green; then CP-9/CP-10 (CP-z, feature-done, Mac-Finish-Wanted).
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -32,6 +32,8 @@ Next: fix PRs for round 1 merge, then Anatomy round 2. CP-7/CP-8 wait on layered
 ## Rounds
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
 |---|---|---|---|---|---|---|---|---|
+| 1 | ca537c1 | CI: PASS | 12/12 | - | clarity, contract, compat, robustness, tests | 13 | cp1-a #504, cp1-b #503, cp1-d #509, cp1-e #515 (carries cp1-c) | no |
+| 2 | ad85831 | CI: PASS try 1 | 25/25 (ICCRead 7/7, ICCWrite 4/4, ProfileTransform 7/7, ProfileConvert 7/7) | - | clarity, contract, compat, robustness, tests | 8 | cp2-a #519 (3e56eee), cp2-b #532 (c3e0225) | no |
 
 ## Decisions
 - Merged: CP-1 #458, CP-2 #462 + #466, CP-3 #468, CP-5 #469, CP-4 #470, CP-6 #476 (73a3ac9).
@@ -56,3 +58,4 @@ Next: fix PRs for round 1 merge, then Anatomy round 2. CP-7/CP-8 wait on layered
 |---|---|---|---|---|---|---|
 | 1 | ca537c1 | CI: PASS | 12/12 (ICCRead, ICCWrite, ProfileTransform, ProfileConvert) | clarity, contract, compat, robustness, tests | 13 (4 major) | cp1-a (CP-icc docs, exact built-in round trip, gray target), cp1-b (ICC read class/version/para guards), cp1-c (convert honours tone curves, typed throws) |
 | 2 | ad85831 | CI: PASS | 25/25 (ICCRead 7, ICCWrite 4, ProfileTransform 7, ProfileConvert 7) | clarity, contract, compat, robustness, tests | 8 (2 major), 0 refuted | cp2-a (convert input contract doc, parametric table doc, CP-5 tolerance in packet), cp2-b (ICC write messages, ProfileTransform guard tests and 3 mutations, every para type round trip); #1 left to CP-7/CP-8 |
+- CP-7 #523 and CP-8 #529 merged (40249d5); lead check on 40249d5: CodecWalk, ORADeep, PSDDeep, CodecRoundTrip, OpenRaster, PSD 41 tests pass.
