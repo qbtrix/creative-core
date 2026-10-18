@@ -32,6 +32,16 @@ import Testing
         #expect(o["x"] as? [Double] == [0.42] && o["y"] as? [Double] == [0] && i["x"] as? [Double] == [0.58] && i["y"] as? [Double] == [1])
     }
 
+    @Test func alphaKeysAnimateOpacity() throws {
+        var scene = try TrackCommandsTests.fixtureScene()
+        scene.layers[0].colorTracks["fill.0"] = [ColorKeyframe(frame: 0, value: Color(r: 1, g: 0, b: 0, a: 1)),
+                                                 ColorKeyframe(frame: 24, value: Color(r: 1, g: 0, b: 0, a: 0))]
+        let keys = try Self.keys("fl", "o", scene: scene)
+        #expect(keys.map { $0["t"] as? Int } == [0, 24] && keys.map { $0["s"] as? [Double] } == [[100], [0]])
+        // Opaque keys keep `o` static.
+        #expect(try Self.text { _ in }.contains(#""o":{"a":0,"k":100},"r":1,"ty":"fl""#))
+    }
+
     @Test func colourUnitRange() throws {
         let values = try (Self.keys("fl", "c") + Self.keys("st", "c")).flatMap { $0["s"] as? [Double] ?? [] }
         #expect(values.count == 16 && values.allSatisfy { (0...1).contains($0) })
