@@ -34,6 +34,7 @@ Next: AP-1 PR merges, then AP-2 (checks first)
 |---|---|---|---|---|---|---|---|---|
 
 ## Decisions
+- dev CI 39118832683 on 0660756: Linux green. AP-a merged-done.
 - #461 (e158c87) amended brief rule 9: a message starting `Belt released this run.` means stop at once; every other chat message still never stops the lead. Applied to this run.
 - "line N" in the wave column is the line lead's shared wave number (engine-contracts wave N runs beside it).
 - AP-1 (#457) check flags accepted: (1) the five stub commands have no UndoPropertyTests step, because they throw `not built` and the packet gives undoSteps to AP-2/AP-3, which add the steps when the commands work; (2) it touched CommandFuzzTests, CommandRegistryTests and TrackCommandsTests to register the new ids and keep the gate green (TrackCommandsTests was pre-allowed). 340 lines, 7 files.
