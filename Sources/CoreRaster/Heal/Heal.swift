@@ -1,144 +1,123 @@
 // Heal.swift: the true heal behind Photo's heal, spot heal and patch tools
 // (retouch-heal RH-3, Photo blueprint CR-7). Texture from the buffer shifted
 // by an offset is cloned through a mask and its colour solved so it meets the
-// destination's edge with no seam (gradient-domain editing). Declared here by
-// RH-0 as a stub; RH-3 fills in the body and never changes the signature.
+// destination's edge with no seam (gradient-domain editing).
 //
 // The solve works on the correction `h = f - g` (f the result, g the source):
 // keeping g's gradients inside the mask means `Δh = 0` there, with
 // `h = destination - source` on the ring just outside the mask. A neighbour
 // off the buffer is dropped (no flux across the buffer's edge). Solving for h
 // rather than f keeps a zero correction exactly zero, so a heal whose source
-// is the destination returns it bit for bit.
+// is the destination returns it bit for bit. Every allocation and loop is
+// sized by the mask's covered bounds, never by the buffer, so a dab heals at
+// dab speed on any photo; the solve is `HealSolver`'s multigrid.
 
 extension PixelBuffer {
-    /// The most pixels a heal's mask may cover; a mask covering more throws.
+    /// The most pixels a heal mask's covered bounds may hold (they bound its
+    /// work, and its covered area); larger bounds throw.
     public static let maxHealPixels = 4_000_000
 
-    /// Successive over-relaxation factor for the heal's solve.
-    static let healRelaxation = 1.9
-    /// The solve stops once no correction moves by this much in a sweep.
-    static let healTolerance = 1e-5
-    /// The solve never runs more sweeps than this.
-    static let healMaxSweeps = 500
+    /// The solve stops once no correction moves by this much in a V-cycle.
+    static let healTolerance: Float = 1e-5
+    /// The solve never runs more V-cycles than this.
+    static let healMaxCycles = 40
 
     /// The buffer with the source (itself shifted by `offset`) cloned through
     /// `mask` and its colour solved to match the destination along the mask's
     /// edge. Only pixels inside the mask's bounds change. The mask must match
-    /// the buffer's size and cover at most `maxHealPixels`; otherwise, or for
-    /// an offset whose source lies off the buffer, it throws
-    /// `RasterError.invalid`.
+    /// the buffer's size and its covered bounds hold at most `maxHealPixels`;
+    /// otherwise, or for an offset whose source lies off the buffer, it throws
+    /// `RasterError.invalid`. Pixel (x, y) takes its texture from (x + dx,
+    /// y + dy), and a feathered mask blends the result by coverage.
     public func healed(offset: (dx: Int, dy: Int), through mask: Mask) throws -> PixelBuffer {
+        var result = self
+        try result.heal(offset: offset, through: mask)
+        return result
+    }
+
+    /// `healed(offset:through:)` in place, so a brush dab pays for the dab,
+    /// not for a copy of the buffer. The buffer is unchanged when it throws.
+    public mutating func heal(offset: (dx: Int, dy: Int), through mask: Mask) throws {
         guard mask.width == width, mask.height == height else {
             throw RasterError.invalid("heal mask \(mask.width)x\(mask.height) differs from buffer \(width)x\(height)")
         }
-        guard mask.area <= Double(Self.maxHealPixels) else {
-            throw RasterError.invalid("heal mask covers \(mask.area) pixels: at most \(Self.maxHealPixels)")
+        guard let box = mask.coveredRect else { return }
+        guard box.width * box.height <= Self.maxHealPixels else {
+            throw RasterError.invalid("heal mask's covered bounds \(box.width)x\(box.height) hold more than \(Self.maxHealPixels) pixels")
         }
-        guard let box = try Self.coveredBounds(of: mask) else { return self }
         try checkHealSource(box, offset: offset)
         let (dx, dy) = offset
 
         // The grid: the mask's bounds plus the one-pixel ring that holds the
         // boundary values, clipped to the buffer.
-        let gx0 = max(box.minX - 1, 0), gx1 = min(box.maxX + 1, width - 1)
-        let gy0 = max(box.minY - 1, 0), gy1 = min(box.maxY + 1, height - 1)
+        let gx0 = max(box.x - 1, 0), gx1 = min(box.x + box.width, width - 1)
+        let gy0 = max(box.y - 1, 0), gy1 = min(box.y + box.height, height - 1)
         let gw = gx1 - gx0 + 1, gh = gy1 - gy0 + 1
         var cover = [Float](repeating: 0, count: gw * gh)
-        var h = [Double](repeating: 0, count: gw * gh * 4)
+        var solver = HealSolver(width: gw, height: gh)
+        var pixels = [SIMD4<Float>](repeating: .zero, count: gw * gh)
+        var all = components
+        func vector(_ x: Int, _ y: Int) -> SIMD4<Float> {
+            let i = (y * width + x) * 4
+            return SIMD4(all[i], all[i + 1], all[i + 2], all[i + 3])
+        }
         for gy in 0..<gh {
             for gx in 0..<gw {
                 let x = gx0 + gx, y = gy0 + gy, i = gy * gw + gx
                 let c = try mask.coverage(x: x, y: y)
                 cover[i] = c
-                guard c == 0 else { continue }
-                let dest = try pixel(x: x, y: y)
-                let src = try pixel(x: min(max(x + dx, 0), width - 1), y: min(max(y + dy, 0), height - 1))
-                let edge = Self.channelsOf(dest), from = Self.channelsOf(src)
-                for k in 0..<4 { h[i * 4 + k] = Double(edge[k]) - Double(from[k]) }
+                guard c == 0 else {
+                    solver.free(gx, gy)
+                    continue
+                }
+                let src = vector(min(max(x + dx, 0), width - 1), min(max(y + dy, 0), height - 1))
+                solver.fix(gx, gy, vector(x, y) - src)
             }
         }
 
-        Self.relaxHeal(&h, cover: cover, width: gw, height: gh)
+        solver.solve(tolerance: Self.healTolerance, maxCycles: Self.healMaxCycles)
 
-        var result = self
         for gy in 0..<gh {
             for gx in 0..<gw {
                 let i = gy * gw + gx
                 let c = cover[i]
-                guard c > 0 else { continue }
-                let x = gx0 + gx, y = gy0 + gy
-                let src = Self.channelsOf(try pixel(x: x + dx, y: y + dy))
-                let dest = Self.channelsOf(try pixel(x: x, y: y))
-                var out = [Float](repeating: 0, count: 4)
-                for k in 0..<4 {
-                    let f = Float(Double(src[k]) + h[i * 4 + k])
-                    out[k] = c >= 1 ? f : dest[k] + (f - dest[k]) * c
+                let x = gx0 + gx, y = gy0 + gy, dest = vector(x, y)
+                let f = c > 0 ? vector(x + dx, y + dy) + solver.value(gx, gy) : dest
+                let out = c >= 1 ? f : dest + (f - dest) * c
+                guard out.x.isFinite, out.y.isFinite, out.z.isFinite, out.w.isFinite else {
+                    throw RasterError.invalid("heal produced a non-finite pixel at (\(x), \(y))")
                 }
-                try result.setPixel(x: x, y: y, RGBA(r: out[0], g: out[1], b: out[2], a: out[3]))
+                pixels[i] = out
             }
         }
-        return result
+        all = [] // Released before the writes, so they copy nothing.
+        for gy in 0..<gh {
+            updateRow(x: gx0, y: gy0 + gy, count: gw) { row in
+                for gx in 0..<gw {
+                    for k in 0..<4 { row[gx * 4 + k] = pixels[gy * gw + gx][k] }
+                }
+            }
+        }
     }
 
     /// The smallest rectangle holding every pixel `mask` covers, or nil for
     /// an empty mask.
     static func coveredBounds(of mask: Mask) throws -> (minX: Int, minY: Int, maxX: Int, maxY: Int)? {
-        var minX = mask.width, minY = mask.height, maxX = -1, maxY = -1
-        for y in 0..<mask.height {
-            for x in 0..<mask.width where try mask.coverage(x: x, y: y) > 0 {
-                minX = min(minX, x)
-                maxX = max(maxX, x)
-                minY = min(minY, y)
-                maxY = max(maxY, y)
-            }
-        }
-        guard maxX >= 0 else { return nil }
-        return (minX, minY, maxX, maxY)
+        mask.coveredRect.map { ($0.x, $0.y, $0.x + $0.width - 1, $0.y + $0.height - 1) }
     }
 
     /// Throws unless the source of every pixel in `box`, shifted by
     /// `offset`, lies on the buffer; overflow counts as off the buffer.
-    func checkHealSource(_ box: (minX: Int, minY: Int, maxX: Int, maxY: Int), offset: (dx: Int, dy: Int)) throws {
-        let left = box.minX.addingReportingOverflow(offset.dx), right = box.maxX.addingReportingOverflow(offset.dx)
-        let top = box.minY.addingReportingOverflow(offset.dy), bottom = box.maxY.addingReportingOverflow(offset.dy)
+    func checkHealSource(_ box: TileRect, offset: (dx: Int, dy: Int)) throws {
+        let maxX = box.x + box.width - 1, maxY = box.y + box.height - 1
+        let left = box.x.addingReportingOverflow(offset.dx), right = maxX.addingReportingOverflow(offset.dx)
+        let top = box.y.addingReportingOverflow(offset.dy), bottom = maxY.addingReportingOverflow(offset.dy)
         guard !left.overflow, !right.overflow, !top.overflow, !bottom.overflow,
               left.partialValue >= 0, right.partialValue < width,
               top.partialValue >= 0, bottom.partialValue < height else {
-            throw RasterError.invalid("heal offset (\(offset.dx), \(offset.dy)) puts the source off the buffer")
+            let xs = left.overflow || right.overflow ? "overflows" : "\(left.partialValue)...\(right.partialValue)"
+            let ys = top.overflow || bottom.overflow ? "overflows" : "\(top.partialValue)...\(bottom.partialValue)"
+            throw RasterError.invalid("heal source x \(xs), y \(ys) is off the \(width)x\(height) buffer")
         }
     }
-
-    /// Solves `Δh = 0` for every covered cell of the grid by successive
-    /// over-relaxation, holding uncovered cells fixed. Every loop is bounded
-    /// by the grid and by `healMaxSweeps`.
-    static func relaxHeal(_ h: inout [Double], cover: [Float], width gw: Int, height gh: Int) {
-        var sweep = 0
-        while sweep < healMaxSweeps {
-            sweep += 1
-            var largest = 0.0
-            for gy in 0..<gh {
-                for gx in 0..<gw where cover[gy * gw + gx] > 0 {
-                    let i = gy * gw + gx
-                    let left = gx > 0, right = gx < gw - 1, up = gy > 0, down = gy < gh - 1
-                    let count = (left ? 1 : 0) + (right ? 1 : 0) + (up ? 1 : 0) + (down ? 1 : 0)
-                    guard count > 0 else { continue }
-                    for k in 0..<4 {
-                        var sum = 0.0
-                        if left { sum += h[(i - 1) * 4 + k] }
-                        if right { sum += h[(i + 1) * 4 + k] }
-                        if up { sum += h[(i - gw) * 4 + k] }
-                        if down { sum += h[(i + gw) * 4 + k] }
-                        let step = healRelaxation * (sum / Double(count) - h[i * 4 + k])
-                        h[i * 4 + k] += step
-                        largest = max(largest, abs(step))
-                    }
-                }
-            }
-            if largest < healTolerance { break }
-        }
-    }
-
-    /// A pixel's four components in storage order.
-    static func channelsOf(_ p: RGBA) -> [Float] { [p.r, p.g, p.b, p.a] }
 }

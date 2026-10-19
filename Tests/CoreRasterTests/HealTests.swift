@@ -68,6 +68,68 @@ func expectSameOutside(_ a: PixelBuffer, _ b: PixelBuffer, cx: Int, cy: Int, r: 
         let mask = try Mask(width: 2001, height: 2000, fill: 1)
         #expect(mask.area > Double(PixelBuffer.maxHealPixels))
         #expect(throws: RasterError.self) { try buffer.healed(offset: (dx: 0, dy: 0), through: mask) }
+        // Exactly maxHealPixels in the covered bounds still heals.
+        let atCap = try PixelBuffer(width: 2000, height: 2000, fill: RGBA(r: 0.5, g: 0.5, b: 0.5, a: 1))
+        let full = try Mask(width: 2000, height: 2000, fill: 1)
+        #expect(try atCap.healed(offset: (dx: 0, dy: 0), through: full) == atCap)
+    }
+
+    @Test func sparseMaskOverBoxCapThrows() throws {
+        // Two dots, area 2, whose covered bounds hold over 2000 x 2000 pixels:
+        // first the exact corners, then seeded dots near them.
+        var rng = SplitMix64(seed: 0x5BA5)
+        let n = 2100, buffer = try PixelBuffer(width: n, height: n, fill: RGBA(r: 0.5, g: 0.5, b: 0.5, a: 1))
+        for run in 0..<6 {
+            let a = run == 0 ? 0 : Int.random(in: 0..<40, using: &rng), b = run == 0 ? 0 : Int.random(in: 0..<40, using: &rng)
+            var mask = try Mask.rectangle(width: n, height: n, x: Double(a), y: Double(b), w: 1, h: 1)
+            try mask.add(Mask.rectangle(width: n, height: n, x: Double(n - 1 - b), y: Double(n - 1 - a), w: 1, h: 1))
+            #expect(mask.area == 2)
+            #expect(throws: RasterError.self) { try buffer.healed(offset: (dx: a % 3, dy: -b % 3), through: mask) }
+        }
+    }
+
+    @Test func offsetPointsFromDestinationToSource() throws {
+        // The only distinct pixel is at (15, 10); a 1-pixel mask at (10, 10)
+        // with offset (5, 0) takes its texture from there.
+        let grey = RGBA(r: 0.5, g: 0.5, b: 0.5, a: 1), mark = RGBA(r: 0.9, g: 0.1, b: 0.3, a: 1)
+        var buffer = try PixelBuffer(width: 32, height: 24, fill: grey)
+        try buffer.setPixel(x: 15, y: 10, mark)
+        let mask = try Mask.rectangle(width: 32, height: 24, x: 10, y: 10, w: 1, h: 1)
+        #expect(try buffer.healed(offset: (dx: 5, dy: 0), through: mask).pixel(x: 10, y: 10) == mark)
+    }
+
+    @Test func featherBlendsByCoverage() throws {
+        // A soft mask over the dark spot heals to the hard heal of its support,
+        // blended with the destination by coverage.
+        let buffer = try RetouchFixtures.spottedPhoto(width: 160, height: 96, seed: 31).spotted
+        let soft = try RetouchFixtures.disc(width: 160, height: 96, centerX: 120, centerY: 48, radius: 10, hardness: 0.5)
+        var hard = try Mask(width: 160, height: 96), partial: [(Int, Int, Float)] = []
+        for y in 0..<96 {
+            for x in 0..<160 where try soft.coverage(x: x, y: y) > 0 {
+                try hard.add(Mask.rectangle(width: 160, height: 96, x: Double(x), y: Double(y), w: 1, h: 1))
+                if try soft.coverage(x: x, y: y) < 1 { partial.append((x, y, try soft.coverage(x: x, y: y))) }
+            }
+        }
+        let blended = try buffer.healed(offset: (dx: -30, dy: 0), through: soft)
+        let solved = try buffer.healed(offset: (dx: -30, dy: 0), through: hard)
+        #expect(partial.count > 50)
+        for (x, y, c) in partial {
+            let d = try buffer.pixel(x: x, y: y), f = try solved.pixel(x: x, y: y), p = try blended.pixel(x: x, y: y)
+            let gap = max(abs(p.r - d.r - (f.r - d.r) * c), abs(p.g - d.g - (f.g - d.g) * c), abs(p.b - d.b - (f.b - d.b) * c))
+            #expect(gap <= 1e-5, "(\(x), \(y)) coverage \(c): off the blend by \(gap)")
+        }
+    }
+
+    @Test func healInPlaceMatchesHealed() throws {
+        let photo = try RetouchFixtures.spottedPhoto(width: 160, height: 96, seed: 31)
+        let spot = try #require(photo.spots.last)
+        var inPlace = photo.spotted
+        try inPlace.heal(offset: (dx: -30, dy: 0), through: spot.hole)
+        #expect(inPlace == (try photo.spotted.healed(offset: (dx: -30, dy: 0), through: spot.hole)))
+        #expect(inPlace != photo.spotted)
+        var untouched = photo.spotted
+        #expect(throws: RasterError.self) { try untouched.heal(offset: (dx: 1000, dy: 0), through: spot.hole) }
+        #expect(untouched == photo.spotted)
     }
 
     @Test func zeroOffsetFullMaskIsIdentity() throws {

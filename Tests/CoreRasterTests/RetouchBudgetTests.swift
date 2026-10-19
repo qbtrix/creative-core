@@ -1,6 +1,6 @@
 // RetouchBudgetTests.swift: the retouch-heal budgets (RH-7, quality rows
 // "Heal at dab speed" and "Remove a spot"): on the walk's 2400 x 1600 spotted
-// photo, healing a 200 px dab takes at most 12 ms, filling a 300 x 300 spot
+// photo, healing a 200 px dab in place takes at most 12 ms, filling a 300 x 300 spot
 // from its surroundings at most 400 ms, and a 200 px midtone dodge dab at most
 // 1 ms. The packet's budgets are release, reported: an optimized build gates
 // on them (the Mac finisher runs them there), and a debug build, which is what
@@ -10,9 +10,7 @@
 // path works and that its result is right, not its speed. Times are
 // wall-clock medians of `runs`, each run's earlier result freed before the
 // clock starts, printed as `budget <row>: <ms> ms (budget <ms> ms)` or
-// `(report only, debug)`. `healDab` measured about 390 ms in release on
-// Linux, so its release run is disabled as a bug in `healed` until that is
-// fixed; debug still runs and reports it.
+// `(report only, debug)`.
 import CoreRaster
 import Testing
 
@@ -57,15 +55,19 @@ private func report(_ row: String, _ time: Duration, budget: Duration) {
         try RetouchFixtures.spottedPhoto(width: width, height: height, seed: 0x5EA1)
     }
 
-    @Test(.disabled(if: optimized, "bug: healed takes ~390 ms for a 200 px dab on 2400x1600 in release (budget 12 ms)"))
-    func healDab() throws {
+    @Test func healDab() throws {
         let photo = try Self.photo()
         let r = 100 / Self.scale, cx = Self.width / 2, cy = Self.height / 2, shift = -300 / Self.scale
         let dab = try RetouchFixtures.disc(width: Self.width, height: Self.height, centerX: Double(cx),
                                            centerY: Double(cy), radius: Double(r), hardness: 0.8)
+        // A brush heals in place: each run starts on its own copy, as toneDab's does.
+        let corner = try photo.spotted.pixel(x: 0, y: 0)
         var healed = photo.spotted
-        let time = try median(free: { healed = photo.spotted }) {
-            healed = try photo.spotted.healed(offset: (dx: shift, dy: shift), through: dab)
+        let time = try median(free: {
+            healed = photo.spotted
+            try? healed.setPixel(x: 0, y: 0, corner)
+        }) {
+            try healed.heal(offset: (dx: shift, dy: shift), through: dab)
         }
         report("heal \(2 * r) px dab on \(Self.width)x\(Self.height)", time, budget: .milliseconds(12))
         // The timed heal removed spot 2's dark centre and kept the pixels outside its bounds.
