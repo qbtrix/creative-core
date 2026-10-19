@@ -30,8 +30,9 @@ component here.
 
 **Clean-room.** Box and motion blur, the bilateral filter, unsharp-mask
 clarity, the exact Euclidean distance transform (Felzenszwalb and
-Huttenlocher's published method) and alpha-based glows, shadows and strokes
-are public techniques; no task reads another product's code.
+Huttenlocher's published method), the anti-aliased edge distance strokes
+measure (Gustavson and Strand's published 2011 method) and alpha-based
+glows, shadows and strokes are public techniques; no task reads another product's code.
 
 ## Slices
 
@@ -52,7 +53,7 @@ Engine only. KJ-FX (`EffectWalkTests.walk`, FX-9): a 600 × 400 layer with
 a white rounded-rectangle shape on transparency, padded by 40 px, then
 through a `RenderDispatcher` over a fake without `effect`: drop shadow (dx 8,
 dy 8, blur 12, 50% black), stroke 4 px outside in blue, outer glow 16 px,
-and clarity 30 on the result; each step equals the direct CoreRaster call,
+and `clarity(amount: 30, radius: 30)` on the result; each step equals the direct CoreRaster call,
 and the shadow's darkest pixel sits 8 px right and down of the shape's
 corner.
 
@@ -105,15 +106,21 @@ extension PixelBuffer {
 - **denoised.** A bilateral filter: spatial sigma 1 + 4 × strength px,
   range sigma (1 − detail) × 0.2 in linear luma; chroma smoothed at twice the
   spatial sigma (colour noise goes first).
-- **clarity.** `unsharpMask` with a large radius (default 30 px), its
+- **clarity.** `unsharpMask` with a large radius (no default; 30 px is the recommended value), its
   amount scaled by a mid-tone weight (luma 0.2...0.8 full, 0 at the ends) so
   shadows and highlights don't clip; negative amounts blend toward the
   blurred copy.
 - **DistanceField.** Exact squared Euclidean distance transform (two 1D
   lower-envelope passes) to the alpha ≥ level set and to its complement;
   the field is in pixels.
-- **stroked.** Coverage from the field: outside `smoothstep(w + 0.5, w −
-  0.5, outside)`, inside the same on `inside`, centre ±w/2; the stroke goes
+- **stroked.** Coverage from one unsigned distance `d` to the anti-aliased
+  alpha edge, not to pixel centres: every edge pixel gets a sub-pixel edge
+  point from its alpha and its 3 × 3 alpha gradient (Gustavson and Strand,
+  "Anti-aliased Euclidean distance transform", Pattern Recognition Letters,
+  2011), `DistanceField.transform` finds each pixel's nearest edge pixel
+  exactly, and `d` is the nearest of the edge points of it and its eight
+  neighbours. Outside (off the alpha ≥ 0.5 shape) and inside (on it) both
+  use `smoothstep(w + 0.5, w − 0.5, d)`, centre ±w/2; the stroke goes
   under the layer for outside, over it for inside and centre (clipped to the
   layer for inside).
 - **glowing / shadowed.** Outer: the layer's alpha (offset for a shadow),
