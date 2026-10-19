@@ -5,7 +5,7 @@ Run: act-1a1511a1174-tlch · Started: 2026-10-18T22:40Z
 Line lead for: image-codecs (#562), preview-cache (#440, already done), vector-import (#439, VI-z left)
 Stage: 4 — IC-png r2 fix batch wf_5340cfcc-4ff; IC-jpeg r3 fix batch wf_63bfcf02-52b
 Base: 9385de9 (wave 4)
-Next: r2-png-b1, r2-png-b2 and r3-jpeg-b1 PRs merge, then IC-png round 3 and IC-jpeg round 4 (last allowed)
+Next: #676 (r2-png-b1, 1cb0228, 12/12) merged; r2-png-b2 and r3-jpeg-b1 PRs merge, then IC-png round 3 and IC-jpeg round 4 (last allowed)
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |

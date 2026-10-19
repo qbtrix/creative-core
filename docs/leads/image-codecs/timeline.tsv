@@ -50,3 +50,4 @@ utc	stage	event	ref	note
 2026-10-19T08:27:48Z	4	fix-start	wf_63bfcf02-52b	IC-jpeg r3: 8 confirmed (1 major), one batch
 2026-10-19T08:31:14Z	4	fix-start	wf_5340cfcc-4ff	IC-png r2: 9 confirmed (3 major), two batches
 2026-10-19T08:47:37Z	4	heartbeat	891372e	fix batches wf_63bfcf02-52b (IC-jpeg r3) wf_5340cfcc-4ff (IC-png r2) running
+2026-10-19T09:09:39Z	4	merged	#676	r2-png-b1 1cb0228 12/12; r2-png-b2, r3-jpeg-b1 fixers running
