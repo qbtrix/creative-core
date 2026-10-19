@@ -1,0 +1,16 @@
+[
+  {
+    "note": "applying sends an inner glow to the outer glow, so an inner glow paints around the shape instead of inside it, caught by CPUEffectTests.everyCaseEqualsDirect",
+    "file": "Sources/CoreRaster/Effects/Effects.swift",
+    "anchor": "try glowing(color: color, radius: radius, intensity: intensity, inner: inner)",
+    "replacement": "try glowing(color: color, radius: radius, intensity: intensity, inner: false)",
+    "filter": "CPUEffectTests"
+  },
+  {
+    "note": "applying drops the stroke position and always strokes outside, so inside and centre strokes land outside the shape, caught by CPUEffectTests.strokeKeepsPosition",
+    "file": "Sources/CoreRaster/Effects/Effects.swift",
+    "anchor": "try stroked(color: color, width: width, position: position)",
+    "replacement": "try stroked(color: color, width: width, position: .outside)",
+    "filter": "CPUEffectTests"
+  }
+]
