@@ -54,5 +54,12 @@
     "anchor": "if lo < y { cap = min(cap, y / (y - lo)) }",
     "replacement": "",
     "filter": "ColorAdjustTests"
+  },
+  {
+    "note": "mappingStraight band row range off by one, so each band skips its first row, caught by ToneBandTests.everyBandCountMatchesThePixelReference",
+    "file": "Sources/CoreRaster/Tone/ColorAdjust.swift",
+    "anchor": "let start = band * rows / count * rowLength,",
+    "replacement": "let start = (band * rows / count + 1) * rowLength,",
+    "filter": "ToneBandTests"
   }
 ]

@@ -2,21 +2,22 @@
 // drag on a preview"): on a 24 MP (6000 x 4000) cast photo each colour op
 // takes at most 120 ms and the 33³ LUT at most 180 ms, and on a 2 MP
 // (1600 x 1250) preview each colour op takes at most 12 ms. The packet's
-// budgets are release, reported: an optimized build gates on them (the Mac
-// finisher runs them there), and a debug build, which is what `scripts/ci`
-// runs in its parallel pass, only reports, so no wall-clock check can flake
-// the gate. Debug also runs an eighth of each side: the loops are many
-// times slower there, and the debug run proves the path works and that its result
-// is right, not its speed. Times are wall-clock medians of `runs`, each
-// run's earlier result freed before the clock starts, printed as
-// `budget <row>: <ms> ms (budget <ms> ms)` or `(report only, debug)`.
-// Every op misses in release on the Linux runner (4-core, loaded), so both
-// release runs are disabled as a bug in the colour ops until they are made
-// fast; debug still runs and reports. Measured medians, 24 MP / 2 MP:
-// vibrance 3867 / 272, hueSaturation 6298 / 557, hsl 6302 / 583,
-// blackAndWhite 8039 / 722, channelMixer 621 / 44, colorBalance 6145 / 522,
-// gradientMap 4828 / 482, lut 6115 / 526, posterize 4400 / 354,
-// threshold 2458 / 178, invert 442 / 43 (ms).
+// budgets are release, reported: every build runs every row and prints
+// `budget <row>: <ms> ms (<mode>; budget <ms> ms)`; only a macOS release
+// build (the Mac finisher) expects the budget, so neither Linux release nor
+// the debug build `scripts/ci` runs can flake on a wall-clock check. Debug
+// runs an eighth of each side: the loops are many times slower there, and
+// the debug run proves the path works and that its result is right, not its
+// speed. Times are wall-clock medians of `runs`, each run's earlier result
+// freed before the clock starts. Linux release medians, 24 MP / 2 MP (ms),
+// 4 cores at load ~9, after the banded loop (before it, in brackets):
+// vibrance 2372 / 182 [3867 / 272], hueSaturation 3909 / 329 [6298 / 557],
+// hsl 2068 / 172 [6302 / 583], blackAndWhite 3632 / 291 [8039 / 722],
+// channelMixer 482 / 46 [621 / 44], colorBalance 3763 / 385 [6145 / 522],
+// gradientMap 2679 / 291 [4828 / 482], lut 3430 / 322 [6115 / 526],
+// posterize 2806 / 245 [4400 / 354], threshold 1592 / 141 [2458 / 178],
+// invert 383 / 29 [442 / 43]. Every row still misses its budget on Linux:
+// the per-pixel sRGB encode and decode (`pow`) dominates and must stay bit-exact.
 import CoreRaster
 import Testing
 
@@ -44,11 +45,18 @@ private func median(free: () -> Void, _ body: () throws -> Void) throws -> Durat
     return wall.sorted()[runs / 2]
 }
 
-/// Prints `row` and, in an optimized build, expects `time` within `budget`.
+/// The budgets gate only in a macOS release build, where the Mac finisher runs them.
+#if os(macOS)
+private let gated = optimized
+#else
+private let gated = false
+#endif
+
+/// Prints `row` always and, when `gated`, expects `time` within `budget`.
 private func report(_ row: String, _ time: Duration, budget: Duration) {
-    let suffix = optimized ? "budget \(milliseconds(budget)) ms" : "report only, debug; budget \(milliseconds(budget)) ms in release"
-    print("budget \(row): \(milliseconds(time)) ms (\(suffix))")
-    if optimized { #expect(time <= budget, "\(row): median \(time) over \(budget)") }
+    let mode = gated ? "gated" : optimized ? "report only, release off macOS" : "report only, debug"
+    print("budget \(row): \(milliseconds(time)) ms (\(mode); budget \(milliseconds(budget)) ms)")
+    if gated { #expect(time <= budget, "\(row): median \(time) over \(budget)") }
 }
 
 /// One timed colour op, by name, with its settings from the KJ-TP walk.
@@ -110,14 +118,12 @@ enum ToneBudgetOp: String, CaseIterable, Sendable, CustomTestStringConvertible {
         }
     }
 
-    @Test(.disabled(if: optimized, "bug: every colour op measured 442-8039 ms on 24 MP in release (budget 120 ms, LUT 180 ms)"),
-          arguments: ToneBudgetOp.allCases)
+    @Test(arguments: ToneBudgetOp.allCases)
     func fullSize(_ op: ToneBudgetOp) throws {
         try Self.run(op, "24 MP", width: 6000 / Self.scale, height: 4000 / Self.scale, budget: op.fullBudget)
     }
 
-    @Test(.disabled(if: optimized, "bug: every colour op measured 43-722 ms on a 2 MP preview in release (budget 12 ms)"),
-          arguments: ToneBudgetOp.allCases)
+    @Test(arguments: ToneBudgetOp.allCases)
     func preview(_ op: ToneBudgetOp) throws {
         try Self.run(op, "2 MP preview", width: 1600 / Self.scale, height: 1250 / Self.scale, budget: .milliseconds(12))
     }

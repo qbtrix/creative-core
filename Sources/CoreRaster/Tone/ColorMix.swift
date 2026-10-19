@@ -24,14 +24,13 @@ extension PixelBuffer {
             try Self.checkFinite("blackAndWhite \(name)", [w])
         }
         let weights = raw.map { Double(min(max($0, -200), 300)) / 100 }
-        var tint: RGBA?
-        if let t = mix.tint {
+        let tint = try mix.tint.map { t in
             try Self.checkFinite("blackAndWhite tint", [t.r, t.g, t.b, t.a])
-            tint = RGBA(r: min(max(t.r, 0), 1), g: min(max(t.g, 0), 1), b: min(max(t.b, 0), 1), a: min(max(t.a, 0), 1))
+            return RGBA(r: min(max(t.r, 0), 1), g: min(max(t.g, 0), 1), b: min(max(t.b, 0), 1), a: min(max(t.a, 0), 1))
         }
         return try mappingStraight { p in
             let c = Self.encoded(p)
-            let lo = c.min(), hi = c.max(), hp = ColorMath.hsl(of: p).h / 60
+            let lo = c.min(), hi = c.max(), hp = ColorMath.hsl(encoded: c).h / 60
             let i = Int(hp) % 6
             let f = hp - Double(Int(hp))
             let w = weights[i] * (1 - f) + weights[(i + 1) % 6] * f
