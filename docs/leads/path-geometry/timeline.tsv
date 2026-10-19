@@ -38,3 +38,4 @@ utc	stage	event	ref	note
 2026-10-19T19:51:16Z	PG-shape	P5 #739 merged e2b83d0a; waits green dev run
 2026-10-19T19:51:48Z	build	P6 PG-z building (branch only; PR opens with feature-done after the round-2 fixes merge)
 2026-10-19T19:52:59Z	heartbeat	round 2 and builders running
+2026-10-19T20:11:07Z	heartbeat	round 2 and builders running
