@@ -2,9 +2,9 @@
 
 Issue: #433 · Packet: docs/blueprints/core/features/effects-engine.md
 Run: act-1a150bfbcf7-sfwy · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
-Stage: 3 wave 5 done (FX-7 merged) + 4 round 2 fixes landing
+Stage: 3 wave 6 building (FX-8) + 4 round 2 fixes merged; round 3 next
 Base: 4feaaf9fac3cc050901f8b459a0908515a927f54
-Next: FX-8 building (wave 6); r2-b3 fixer to finish and merge; round 3 once r2-b3 merges; FX-cpu merged-done after FX-8
+Next: round 3 gate+panel on dev 6199d27 or later; FX-8 building; FX-cpu merged-done after FX-8
 
 Line lead for #434, #433 and #432 (rule 19); one wave plan across the three
 features, bookkeeping per feature. Packet v3 (has a Slices table).
@@ -54,7 +54,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 | slice | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
 |---|---|---|---|---|---|---|---|---|---|
 | FX-a, FX-blur | 1 | 5ea5ae5 | PASS (try 5, budget retries under load) | 70/70 (BlurFamily 3/3) | - | clarity, contract, tests, robustness | 7 (2 major: motion blur not centred; box blur both-axes/three-pass untested; 5 minor), 1 refuted | #593 (r1-b1, merged; Mutate 9/9) | no |
-| FX-alpha, FX-blur, FX-a | 2 | 7d8af79 | PASS | 66/66 | - | clarity, contract, tests, robustness | 16 (4 major: LayerEffect radius unit differs per case; glow/shadow no fuzz; glow intensity and reach untested; clarity/denoise can store +inf; 12 minor), 1 refuted | r2-b1 #631 merged (be6cc41); r2-b2 #629 merged (e001b84); r2-b3 running | no |
+| FX-alpha, FX-blur, FX-a | 2 | 7d8af79 | PASS | 66/66 | - | clarity, contract, tests, robustness | 16 (4 major: LayerEffect radius unit differs per case; glow/shadow no fuzz; glow intensity and reach untested; clarity/denoise can store +inf; 12 minor), 1 refuted | r2-b1 #631 merged (be6cc41); r2-b2 #629 merged (e001b84); r2-b3 #639 merged (6199d27) | no |
 
 ## Decisions
 - FX-5 (#588): stroke distance measured to the sub-pixel anti-aliased edge (Gustavson & Strand 2011 edge points over the exact EDT's nearest seed + 8 neighbours); field−0.5 missed the 1% ring test by +7.2%. Shape is alpha ≥ 0.5; off-buffer is transparent; level inclusive; width 0...1000.
