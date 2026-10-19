@@ -87,3 +87,5 @@ utc	stage	event	ref	note
 2026-10-19T15:01Z	4	stage-start	wf_8379e09a-9ff	round 6 critic panel (clarity, contract, tests, robustness) on 4b238e0
 2026-10-19T15:22Z	4	round-findings	wf_8379e09a-9ff	round 6: 11 confirmed (1 major), 2 refuted, mutants 47/47
 2026-10-19T15:22Z	4	stage-start	r6-fix	one batch folded into TP-10 (feature-done)
+2026-10-19T15:39Z	4	pr-merged	#722	r6 fixes + TP-10, feature-done
+2026-10-19T15:39Z	4	stage-start	round 7	0b96aa5

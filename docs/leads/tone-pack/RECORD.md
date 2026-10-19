@@ -2,9 +2,9 @@
 
 Issue: #432 · Packet: docs/blueprints/core/features/tone-pack.md
 Run: act-1a1543c8a5f-6y14 (relaunch; first run act-1a150bfbcf7-sfwy) · Started: 2026-10-18T20:45Z · Relaunched: 2026-10-19T13:05Z
-Stage: 4 round 6 fix batch (TP-cpu, TP-z) on 4b238e0; folded with TP-10 into one feature-done PR (rule 20: fixes under 50 lines each)
-Base: 4b238e05
-Next: watch fix workflow r6 (branch fix/tone-pack-r6-tp10); add label feature-done to its PR; after merge, round 7 (TP-cpu round 4 of 4, TP-z 3 of 4) on the new dev SHA, then Belt-Slice-Done TP-z, Mac-Finish-Wanted TP-z, contact sheet
+Stage: 4 round 7 (TP-cpu 4/4, TP-z 3/4) on 0b96aa5: gate, mutation and critic panel running
+Base: 0b96aa5c
+Next: read round 7 (scratchpad round-7 ci.log, mutate.log, critic panel); read the dev CI run the feature-done merge (#722) dispatched; if green and round clean: Belt-Slice-Done TP-z, Mac-Finish-Wanted TP-z, contact sheet; else gap issues for findings past the cap
 
 Line lead for #434, #433 and #432 (rule 19); one wave plan across the three
 features, bookkeeping per feature. Packet v3 (has a Slices table).
@@ -22,7 +22,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 | TP-7 | 5 | TP-cpu | `CPUBackend+Color.swift` body; turns on `CPUColorTests` | `Sources/CoreRender/CPU/CPUBackend+Color.swift`, `Tests/CoreRenderTests/CPUColorTests.swift`, `Tests/mutations/CoreRenderCPUColor.json` | `CPUColorTests` | 2 (packet) | #609 | merged |
 | TP-8 | 6 | TP-cpu | `Samples+Color.swift` and CPU goldens | `Sources/CoreRender/Parity/Samples+Color.swift`, `Tests/CoreRenderTests/Golden/color/` | `CPUGoldenTests` | none: goldens | #638 | merged (52b0fdc) |
 | TP-9 | 7 | TP-z | KJ-TP walk; `ToneBudgetTests` (release, `.serialized`, reported) | `Tests/CoreRenderTests/ToneWalkTests.swift`, `Tests/CoreRasterTests/ToneBudgetTests.swift` | `ToneWalkTests.walk` | none | #698 (7f81db8) | merged |
-| TP-10 | 8 | TP-z | Packet status line says built; `feature-done` | `docs/blueprints/core/features/tone-pack.md` | – | none | | planned |
+| TP-10 | 8 | TP-z | Packet status line says built; `feature-done` | `docs/blueprints/core/features/tone-pack.md` | – | none | #722 (9ccff98) | merged |
 
 ## Acceptance (from the packet)
 - TP-3 `ColorAdjustTests`: every op at neutral `==` identity; vibrance 100 moves a 10%-saturated pixel more than a 90% one and a skin tone half as much; `hueSaturation` matches Photo's formula on 1,000 seeded pixels within 1e-6; `hsl` blues −100 saturation greys pure blue, leaves pure red; alpha and alpha-0 pixels unchanged. Mutations: `s` for `1 − s` → `lowSaturationMovesMost`; skin damping dropped → `skinMovesHalf`; weights over one neighbour → `rangeWeightsSumToOne`.
@@ -58,7 +58,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 | TP-mix, TP-map | 3 | 77b74a1 | PASS | 133/133 | - | clarity, contract, tests, robustness | 9 (4 major: WB bright set must use non-clipped pixels; clip guard untested; brightShare untested; 5 minor), 0 refuted; excluded: TP-8 not built (stale, merged after 77b74a1), JPEG SOF2 unbounded alloc (image-codecs, out of feature) | r3-b1 #643 merged (33e9202), r3-b2 #642 merged (48cbaf9) | no |
 | TP-mix, TP-map, TP-cpu | 4 | d902951 | PASS | 148/148 | - | clarity, contract, tests, robustness | 8 (1 major: TP-9 unbuilt; 7 minor), 0 refuted | r4-b2 #670 merged (f4cf85d), r4-b3 #675 merged (25915ce); r4-b1 #678 merged (3197e99), r4-b4 #698 merged (7f81db8) | no |
 | TP-mix, TP-map, TP-cpu, TP-z | 5 | 7f81db8 | PASS | 40/40 (tone plans) | - | clarity, contract, tests, robustness | 9 (1 major: colour ops miss release budgets 4-70x and ToneBudgetTests disabled in every optimized build; 8 minor: ToneAdjustment doc names wrong file, invert space unstated, gradientMap stop error lacks index, W1 tone value inits undocumented, walk auto tone skips dispatcher, AutoTone gamma/minimumSpan/white-balance pass-two untested), 4 refuted | r5-b1 #714 merged (f1089c4), r5-b2 #715 merged (d2f4262), r5-b3 #717 merged (9df2695; ops 1.3-3x faster bit-exact, still over budget on loaded Linux, budgets reported, Mac gates) | no |
-| TP-cpu, TP-z | 6 | 4b238e0 | PASS (1957 tests) | 47/47 (7 tone plans) | - | clarity, contract, tests, robustness | 11 (1 major: CPU posterize ignores its level count undetected, every path uses 4; 10 minor: budget report labels debug rows as full-size, ToneBudgetOp doc cites the walk, warm33 parse error dropped, Samples+Color tolerance doc, walk header promises `==` for invert, alpha-zero golden bands all zero, no mutation for lowest-band error, budget run accepts a no-op, ToneBandTests skips a wrong error case), 2 refuted | r6 batch folded into TP-10 PR | no |
+| TP-cpu, TP-z | 6 | 4b238e0 | PASS (1957 tests) | 47/47 (7 tone plans) | - | clarity, contract, tests, robustness | 11 (1 major: CPU posterize ignores its level count undetected, every path uses 4; 10 minor: budget report labels debug rows as full-size, ToneBudgetOp doc cites the walk, warm33 parse error dropped, Samples+Color tolerance doc, walk header promises `==` for invert, alpha-zero golden bands all zero, no mutation for lowest-band error, budget run accepts a no-op, ToneBandTests skips a wrong error case), 2 refuted | #722 merged (r6 fixes + TP-10, feature-done) | no |
 
 ## Decisions
 - TP-5 (#585): map ops on encoded values via `mappingStraight`; `inverted` is a − c on linear premultiplied (exact double inversion); `.cube` parse per packet, size 2...65, domain exactly 0…1; blue-fastest mutant moved to the apply stride (parser keeps file order); ColorMix helpers made internal for reuse.
