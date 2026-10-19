@@ -22,9 +22,10 @@ public enum Inflate {
         let bytes = [UInt8](data)
         guard bytes.count >= 2 else { throw bad("zlib header missing") }
         let cmf = Int(bytes[0]), flg = Int(bytes[1])
-        guard cmf & 0x0F == 8, cmf >> 4 <= 7, (cmf << 8 | flg) % 31 == 0, flg & 0x20 == 0 else {
-            throw bad("zlib header (method, window, check bits or preset dictionary)")
-        }
+        guard cmf & 0x0F == 8 else { throw bad("zlib compression method \(cmf & 0x0F), not 8") }
+        guard cmf >> 4 <= 7 else { throw bad("zlib window 2^\((cmf >> 4) + 8) over 32 KiB") }
+        guard (cmf << 8 | flg) % 31 == 0 else { throw bad("zlib header check bits fail") }
+        guard flg & 0x20 == 0 else { throw bad("zlib preset dictionary not supported") }
         var state = Inflater(bytes, from: 2, limit: limit)
         let end = try state.run()
         guard bytes.count - end >= 4 else { throw bad("Adler-32 missing") }

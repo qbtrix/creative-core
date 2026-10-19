@@ -61,5 +61,33 @@
     "anchor": "guard hlit <= 286, hdist <= 30 else",
     "replacement": "guard hlit <= 288, hdist <= 32 else",
     "filter": "InflateTests"
+  },
+  {
+    "note": "a code longer than 10 bits decodes through the walk, caught by InflateTests.longCodes",
+    "file": "Sources/CoreRaster/Codecs/Inflate.swift",
+    "anchor": "if value - n < first {",
+    "replacement": "if value - n <= first {",
+    "filter": "InflateTests"
+  },
+  {
+    "note": "a one-symbol distance code is accepted, caught by InflateTests.singleDistanceCode",
+    "file": "Sources/CoreRaster/Codecs/Inflate.swift",
+    "anchor": "used <= 1 else { return }",
+    "replacement": "used < 1 else { return }",
+    "filter": "InflateTests"
+  },
+  {
+    "note": "reserved distance codes 30 and 31 pass the distance-code guard, caught by InflateTests.damagedStreams",
+    "file": "Sources/CoreRaster/Codecs/Inflate.swift",
+    "anchor": "guard code < 30 else",
+    "replacement": "guard code < 32 else",
+    "filter": "InflateTests"
+  },
+  {
+    "note": "a zlib header with a preset dictionary is accepted, caught by InflateTests.damagedStreams",
+    "file": "Sources/CoreRaster/Codecs/Inflate.swift",
+    "anchor": "guard flg & 0x20 == 0 else",
+    "replacement": "guard flg & 0x20 == 0 || true else",
+    "filter": "InflateTests"
   }
 ]

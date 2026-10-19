@@ -4,10 +4,11 @@
 // groups, bottom to top, plus the optional merged composite. Any app maps its
 // own layers to and from this; PSD and OpenRaster translate it to bytes.
 // The ICC profile the file embeds rides along; nil when it has none.
-// CodecError is the error the layered codecs throw: `PSD.read`, `PSD.write`,
+// CodecError is the error the codecs throw: `PSD.read`, `PSD.write`,
 // `OpenRaster.read`, `OpenRaster.write`, `ZipStore.archive`,
-// `ZipStore.entries` and a `PixelCodec`'s `decodePNG` and `encodePNG`. Every
-// other CoreRaster API throws `RasterError`.
+// `ZipStore.entries`, a `PixelCodec`'s `decodePNG` and `encodePNG`, and the
+// single-image codecs `PNG`, `JPEG` and `Inflate`. Every other CoreRaster API
+// throws `RasterError`.
 import CoreColor
 
 /// A layered image: canvas size, the layer tree bottom to top, the merged
@@ -161,7 +162,7 @@ public struct LayerGroup: Equatable, Sendable {
     }
 }
 
-/// Why a codec could not read or write a layered file.
+/// Why a codec (layered files, PNG, JPEG, zlib) could not read or write its bytes.
 public enum CodecError: Error, Equatable, Sendable {
     /// The bytes are not this format at all (wrong signature).
     case notThisFormat
@@ -170,7 +171,7 @@ public enum CodecError: Error, Equatable, Sendable {
     /// The file uses a feature, or the caller asked for an encoder option,
     /// that this codec does not read or write.
     case unsupported(String)
-    /// A size or count is over the codec's limits.
+    /// A size, count or output length is over the codec's limits or the caller's `limit`.
     case tooLarge(String)
     /// An archive entry is compressed; the text names it.
     case compressedEntry(String)
