@@ -43,7 +43,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
 |---|---|---|---|---|---|
 | AC-a | AC-0, AC-1, AC-2 | engine-contracts:EC-a (merged on base) | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39174242588 | |
-| AC-geo | AC-3, AC-4 | AC-a | merged (waits on green dev CI) | | |
+| AC-geo | AC-3, AC-4 | AC-a | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39180267199 | |
 | AC-comp | AC-5, AC-6 | AC-geo; engine-contracts:EC-b (merged on base) | open | | |
 | AC-z | AC-7, AC-8, AC-9 | AC-comp | open | | wanted (budgets) |
 
