@@ -26,3 +26,4 @@ utc	stage	event	ref	note
 2026-10-19T18:02:27Z	stage4	round 1 fixes merged (#730, #733); round 2 gate+mutation on f99bcc4e
 2026-10-19T18:04:19Z	heartbeat	builders running
 2026-10-19T18:16:52Z	stage3	M3 #737 opened (3/3 CoreRenderCPUMaskedComposite)
+2026-10-19T18:17:42Z	stage3	M3 #737 merged; MM-raster waits a green ci.yml run holding it
