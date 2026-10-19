@@ -21,11 +21,13 @@ import Foundation
 
 /// A closed path that limits where its layer draws.
 public struct LayerMask: Codable, Sendable, Hashable {
-    /// The closed outline, in layer coordinates; points finite.
+    /// The outline, in layer coordinates; points finite. An open subpath is
+    /// implicitly closed.
     public var path: Path
     /// How this mask combines with the masks before it.
     public var mode: MaskMode
-    /// Edge softness in points.
+    /// The feather radius in points: renderers blur with sigma = feather / 3,
+    /// the same radius `Mask.feathered(radius:)` takes.
     public var feather: Double
     /// Mask strength, 0...1: 1 limits fully, 0 leaves the layer unmasked.
     public var opacity: Double
