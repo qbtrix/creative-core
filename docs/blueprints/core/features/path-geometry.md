@@ -9,7 +9,8 @@ contour); dash (a pattern and a phase); outline a stroke (width, join, cap,
 miter limit) into a fillable path; and the four booleans (union, subtract,
 intersect, exclude) under either fill rule. Linux-safe, value types only.
 **Line:** `line:core` · **Wave:** 5 (`waves.md`) · **Lead branch:** `lead/path-geometry`
-**Status:** planned
+**Status:** built (PG-1 to PG-12). Merged PRs: #713, #723, #731, #733, #735,
+#739, #741, and PG-z (walk, budgets, this status line).
 
 **Covers:** beta-80 plan row E1 ("path geometry: edit math, booleans, dash
 and trim outlines", the unfiled core issue); captain's answer to Q5 and kernel
@@ -184,6 +185,8 @@ budget time the finished ops, PG-12 is the prose task.
 | PG-10 | `PathBooleanTests`: two overlapping squares: union, subtract, intersect and exclude areas exact; nested squares subtract to a ring with a clockwise hole; touching squares union to one contour; a figure-eight under even-odd vs nonzero differ as expected; `maxBooleanVertices + 1` throws `tooComplex`; fuzz: 500 pairs, 64 sampled points each agree with `HitTest` on `a op b` | a sample point disagrees with set algebra | `FlarePathBoolean`: exclude keeps edges inside both → `PathBooleanTests.excludeDropsOverlap`; fill rule ignored (always even-odd) → `.nonZeroDiffers`; snap 1e-9 removed (touching squares stay two) → `.touchingUnionIsOne`; vertex cap off by one → `.capThrows` |
 | PG-11 | `PathOpsWalkTests.walk` (KJ-PG); `PathOpsBudgetTests`: nearest on the 10,000-anchor scribble ≤ 2 ms; dash and trim of it ≤ 5 ms; a 2 × 5,000-vertex boolean ≤ 50 ms (release, reported) | the ops disagree on the walk | none: walk and budgets |
 | PG-12 | the part names `PathOps/`; status line says built | – | – |
+
+PG-11 deviation (lead decision, PG-z): the budget scribble is `PathFixtures.handScribble()`, a local hand-drawn stroke (each anchor at most 20 from the last, controls within that step), not the random `scribble()`, whose controls span the whole 1000 box. That one is 8.49 M long and flattens to 401,801 points at tolerance 0.5. Flattening it alone took 5.7 ms in release, so trim (23.2 ms) and dash (43.4 ms) could not meet 5 ms. No pen stroke looks like that.
 
 ## Quality tests
 
