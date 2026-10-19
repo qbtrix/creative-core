@@ -1,18 +1,18 @@
 // CompositeAffine.swift: compositing a layer onto this buffer through an
 // AffineMatrix in place, touching only the transformed bounds widened by the
 // filter's reach, and those bounds as an integer rectangle.
-// The through-composite is `transformed` and the offset composite run over
-// that box alone: the layer is resampled into a buffer the size of the box
-// clipped to this one (the matrix moved by the box's origin, so each backdrop
-// pixel samples the same source point it would in a full-size copy), then
-// composited at that origin with the existing row blend. The box is the
-// corner bounds plus every pixel the kernel can reach past a hard edge, so
-// the result equals transform-then-composite. No full-size intermediate is
-// built, and rows outside the box are never written.
+// The through-composite walks that box, clipped to this buffer, one row at a
+// time: each backdrop row is resampled with `transformed` into a one-row
+// buffer (the matrix moved by the row's origin, so each backdrop pixel
+// samples the same source point it would in a full-size copy), then blended
+// at that row with the existing row blend. The box is the corner bounds plus
+// every pixel the kernel can reach past a hard edge, so the result equals
+// transform-then-composite. Peak extra memory is one box row: no full-size
+// intermediate is built, and rows outside the box are never written.
 // Invariants: a bad opacity or a non-finite or singular matrix throws before
 // any change, even for a layer mapped off this buffer; bounds come from all
-// four corners and are clamped in Double before they become Int, so a huge
-// matrix cannot overflow.
+// four corners, and bounds and reach are clamped in Double to 2^52 before
+// they become Int, so a huge matrix cannot overflow.
 
 extension PixelBuffer {
     /// Composites `src` mapped through `m` onto this buffer in place, sampled
@@ -26,8 +26,11 @@ extension PixelBuffer {
     /// `RasterError.invalid`, with this buffer unchanged, for an opacity
     /// outside 0...1 or not finite, a matrix with a non-finite entry or a
     /// singular one (`checkedInverse` says which), or a matrix that maps a corner of `src` outside the
-    /// finite range; a result that overflows to infinity throws as the offset
-    /// composite does.
+    /// finite range. A lanczos3 overshoot that is not finite, or a result
+    /// that overflows to infinity, throws `RasterError.invalid` at the first
+    /// such pixel in row order: the box's rows above it already hold the
+    /// composite, its row and the rest are untouched, and every component
+    /// stays finite. Extra memory is one box row, never a full-size copy.
     public mutating func composite(_ src: PixelBuffer, through m: AffineMatrix, mode: BlendMode, opacity: Float,
                                    filter: ResampleFilter) throws {
         guard (0...1).contains(opacity) else {
@@ -42,9 +45,17 @@ extension PixelBuffer {
         let x0 = max(box.x - pad.x, 0), x1 = min(box.x + box.width + pad.x, width)
         let y0 = max(box.y - pad.y, 0), y1 = min(box.y + box.height + pad.y, height)
         guard x0 < x1, y0 < y1 else { return }
-        let local = AffineMatrix(a: m.a, b: m.b, c: m.c, d: m.d, tx: m.tx - Double(x0), ty: m.ty - Double(y0))
-        let piece = try src.transformed(local, width: x1 - x0, height: y1 - y0, filter: filter)
-        try composite(piece, x: x0, y: y0, mode: mode, opacity: opacity)
+        for y in y0..<y1 {
+            let local = AffineMatrix(a: m.a, b: m.b, c: m.c, d: m.d, tx: m.tx - Double(x0), ty: m.ty - Double(y))
+            let row: PixelBuffer
+            do {
+                row = try src.transformed(local, width: x1 - x0, height: 1, filter: filter)
+            } catch {
+                // Size and invertibility passed above, so the resample's only throw left is the overshoot.
+                throw RasterError.invalid("composite through \(m) with \(filter): lanczos3 overshoot made a component non-finite; use .bilinear or keep components finite")
+            }
+            try composite(row, x: x0, y: y, mode: mode, opacity: opacity)
+        }
     }
 
     /// How many of this buffer's pixels past the corner bounds `filter` can
