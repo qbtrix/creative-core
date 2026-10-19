@@ -122,4 +122,23 @@ import Testing
         #expect(throws: RasterError.self) { try b.gradientMap([high, low]) }
         #expect(throws: RasterError.self) { try b.gradientMap([GradientMapStop(offset: .nan, color: black), high]) }
     }
+
+    /// A bad gradient stop's error names the stop by index and says which rule
+    /// it breaks: an offset outside 0...1, an offset below the stop before it,
+    /// or a non-finite colour.
+    @Test func gradientMapNamesTheFailingStop() throws {
+        let b = try ToneCheck.seeded(width: 2, height: 2, seed: 0xC4)
+        let low = GradientMapStop(offset: 0, color: black), high = GradientMapStop(offset: 1, color: white)
+        let cases: [([GradientMapStop], String)] = [
+            ([low, GradientMapStop(offset: 1.5, color: white)], "gradientMap stop 1 offset 1.5: must be in 0...1"),
+            ([low, GradientMapStop(offset: -0.25, color: white)], "gradientMap stop 1 offset -0.25: must be in 0...1"),
+            ([low, GradientMapStop(offset: 0.75, color: white), GradientMapStop(offset: 0.5, color: black)],
+             "gradientMap stop 2 offset 0.5: below stop 1 offset 0.75, stops must be sorted by offset"),
+            ([low, GradientMapStop(offset: 0.5, color: RGBA(r: .infinity, g: 0, b: 0, a: 1)), high],
+             "gradientMap stop 1 colour [inf, 0.0, 0.0]: must be finite"),
+        ]
+        for (stops, expected) in cases {
+            #expect(throws: RasterError.invalid(expected)) { try b.gradientMap(stops) }
+        }
+    }
 }

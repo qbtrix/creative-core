@@ -20,13 +20,16 @@ extension PixelBuffer {
         guard Self.gradientStops.contains(stops.count) else {
             throw RasterError.invalid("gradientMap with \(stops.count) stops: needs \(Self.gradientStops)")
         }
-        var last: Float = 0
-        for s in stops {
-            guard s.offset.isFinite, s.offset >= last, s.offset <= 1 else {
-                throw RasterError.invalid("gradientMap offset \(s.offset): must be sorted in 0...1")
+        // Each error names the failing stop by its index in `stops`.
+        for (i, s) in stops.enumerated() {
+            guard s.offset.isFinite, (0...1).contains(s.offset) else {
+                throw RasterError.invalid("gradientMap stop \(i) offset \(s.offset): must be in 0...1")
             }
-            try Self.checkFinite("gradientMap colour", [s.color.r, s.color.g, s.color.b])
-            last = s.offset
+            if i > 0, s.offset < stops[i - 1].offset {
+                throw RasterError.invalid("gradientMap stop \(i) offset \(s.offset): below stop \(i - 1) offset "
+                    + "\(stops[i - 1].offset), stops must be sorted by offset")
+            }
+            try Self.checkFinite("gradientMap stop \(i) colour", [s.color.r, s.color.g, s.color.b])
         }
         let offsets = stops.map(\.offset)
         let colors = stops.map {
@@ -103,10 +106,12 @@ extension PixelBuffer {
         }
     }
 
-    /// Each linear colour channel inverted against its own alpha (a − c on
-    /// premultiplied components), so inverting twice gives the input back. An
-    /// alpha-0 pixel passes through untouched, whatever colour it stores. An a − c that overflows a finite input
-    /// is clamped to the largest finite Float, so the result stays finite.
+    /// Inverts in linear premultiplied space (not sRGB-encoded): each colour
+    /// component c becomes a − c against its own alpha a, which is 1 minus the
+    /// straight linear colour, so inverting twice gives the input back. Alpha is
+    /// kept, and an alpha-0 pixel passes through untouched, whatever colour it
+    /// stores. An a − c that overflows a finite input is clamped to the largest
+    /// finite Float, so the result stays finite.
     public func inverted() -> PixelBuffer {
         var out = components
         let big = Float.greatestFiniteMagnitude
