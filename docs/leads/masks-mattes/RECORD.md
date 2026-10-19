@@ -12,7 +12,7 @@ Next: M3 (CPU composite) and M6 (exporters) building stacked; rebase and open on
 |---|---|---|---|---|---|
 | MM-a | MM-1, MM-2 (folded into the first raster and vector PRs) | engine-contracts:EC-a, EC-f (both slice-done 2026-10-18) | done | https://github.com/qbtrix/creative-core/actions/runs/39279766862 | none |
 | MM-raster | MM-3, MM-4, MM-5 | MM-a, engine-contracts:EC-b (done) | open | | wanted (release budgets) |
-| MM-vector | MM-6, MM-7, MM-8 | MM-a | open | | none |
+| MM-vector | MM-6, MM-7, MM-8 | MM-a | done | https://github.com/qbtrix/creative-core/actions/runs/39298046683 | none |
 | MM-z | MM-9, MM-10 (`feature-done`) | MM-raster, MM-vector, path-geometry (MM-10) | open | | wanted (budgets) |
 
 ## PRs (rule 20: one PR per slice, failing test first; split where the 400-line cap forces it)
