@@ -3,9 +3,9 @@
 Issue: #562 · Packet: docs/blueprints/core/features/image-codecs.md
 Run: act-1a1511a1174-tlch · Started: 2026-10-18T22:40Z
 Line lead for: image-codecs (#562), preview-cache (#440, already done), vector-import (#439, VI-z left)
-Stage: IC-png Anatomy round 3 (fix batch); IC-jpeg Anatomy round 4 (fix batch, last round)
+Stage: IC-png Anatomy round 4 (gate, last round); IC-jpeg Anatomy round 4 (fix batch, last round)
 Base: 9385de9 (wave 4)
-Next: r3-png-b1, r3-png-b2 PRs merge, then IC-png round 4 (last allowed); r4-jpeg-b1 PR merges, which ends IC-jpeg's Anatomy loop
+Next: IC-png r4 gate at 64bd637 then panel; r4-jpeg-b1 PR merges, which ends IC-jpeg's Anatomy loop
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -61,5 +61,5 @@ Next: r3-png-b1, r3-png-b2 PRs merge, then IC-png round 4 (last allowed); r4-jpe
 | 2 (IC-jpeg) | a672a6b | PASS (1799 tests) | 25/25 (JPEG 6, JPEGProgressive 12, JPEGWrite 7) | - | clarity, contract, robustness, tests | 9 confirmed, 1 refuted. Major: progressive coefficient-store bound 384 blocks/byte (48x looser than needed, ~3.2 GB from a 33 KB file); second-SOF refusal unpinned; entropy-decoder trap guards (Huffman code space and others) untested and unplanned. Minor: scan-pass tooLarge undocumented, tooLarge texts name no limit, damaged texts use array index and joined rules, three progressiveScanChecks cases pass without their clause, short-scan guard not isolated, EXIF orientation out-of-range untested | fix batch wf_a005f679-d21: b1 JPEG.swift/JPEGWrite, b2 JPEGProgressive/JPEGDecode | no |
 | IC-jpeg | 3 | 891372e | 8 (1 major, 7 minor; 1 refuted) | fix batch r3-jpeg-b1 wf_63bfcf02-52b |
 | IC-png | 2 | 891372e | 9 (3 major, 6 minor; 0 refuted) | fix batches r2-png-b1, r2-png-b2 wf_5340cfcc-4ff |
-| IC-png | 3 | 124c35e | 7 (2 major, 5 minor; 1 refuted) | fix batches r3-png-b1 (#696), r3-png-b2 (#692, merged) |
+| IC-png | 3 | 124c35e | 7 (2 major, 5 minor; 1 refuted) | fix batches r3-png-b1 (#696, merged), r3-png-b2 (#692, merged) |
 | IC-jpeg | 4 | 3d9c151 | 9 (2 major, 7 minor; 0 refuted); gate: local budget test outside the feature flaked, dev Linux CI green on 8cd57c6 | fix batch r4-jpeg-b1 |
