@@ -6,7 +6,8 @@
 //   co  = αs Cs' + cb (1 - αs),   αo = αs + αb (1 - αs)   (co, cb premultiplied)
 // Opacity 0 and a fully transparent source give back the backdrop exactly.
 // The source sits at an integer offset and is clipped to the backdrop; the
-// same-size call is the (0, 0) case.
+// same-size call is the (0, 0) case. One row loop serves this and the masked
+// composite (CompositeMasked.swift), which hands it each row's coverage.
 
 /// Composites `source` over `backdrop` and returns the result. Throws
 /// `RasterError.invalid` when the sizes differ, when `opacity` is outside
@@ -49,6 +50,18 @@ extension PixelBuffer {
     /// stored component stays finite.
     public mutating func composite(_ source: PixelBuffer, x: Int, y: Int,
                                    mode: BlendMode, opacity: Float) throws {
+        try composite(source, x: x, y: y, mode: mode, opacity: opacity) { _, _, _ in .full }
+    }
+
+    /// How much of one overlap row a mask covers: none (the row is not
+    /// written), all of it (the unmasked row), or a weight per pixel.
+    enum RowCoverage { case skip, full, partial([Float]) }
+
+    /// The composite above with each overlap row's coverage from `coverage(y,
+    /// x0, count)`, for the `count` pixels from column `x0` of row `y`: a
+    /// partial row scales each pixel's opacity by its weight.
+    mutating func composite(_ source: PixelBuffer, x: Int, y: Int, mode: BlendMode, opacity: Float,
+                            coverage: (_ y: Int, _ x0: Int, _ count: Int) -> RowCoverage) throws {
         // NaN and the infinities are outside the range, so this also checks finiteness.
         guard (0...1).contains(opacity) else {
             throw RasterError.invalid("opacity \(opacity): must be a finite value in 0...1")
@@ -66,9 +79,15 @@ extension PixelBuffer {
         try source.components.withUnsafeBufferPointer { src in
             try scratch.withUnsafeMutableBufferPointer { staged in
                 for by in max(y, 0)..<min(y + source.height, height) {
+                    let weights: [Float]?
+                    switch coverage(by, x0, count) {
+                    case .skip: continue
+                    case .full: weights = nil
+                    case .partial(let w): weights = w
+                    }
                     let from = ((by - y) * source.width + x0 - x) * Self.channels
                     let row = UnsafeBufferPointer(rebasing: src[from..<(from + n)])
-                    let opaqueRow = copies && stride(from: from + 3, to: from + n, by: 4).allSatisfy { src[$0] == 1 }
+                    let opaqueRow = copies && weights == nil && stride(from: from + 3, to: from + n, by: 4).allSatisfy { src[$0] == 1 }
                     try updateRow(x: x0, y: by, count: count) { span in
                         if opaqueRow {
                             _ = span.update(fromContentsOf: row)
@@ -78,7 +97,7 @@ extension PixelBuffer {
                             let i = k * Self.channels
                             let out = sourceOver(RGBA(r: row[i], g: row[i + 1], b: row[i + 2], a: row[i + 3]),
                                                 RGBA(r: span[i], g: span[i + 1], b: span[i + 2], a: span[i + 3]),
-                                                mode: mode, opacity: opacity)
+                                                mode: mode, opacity: weights.map { opacity * $0[k] } ?? opacity)
                             guard out.isFinite else {
                                 throw RasterError.invalid("pixel \(out) at (\(x0 + k), \(by)): components must be finite")
                             }

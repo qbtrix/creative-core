@@ -1,0 +1,30 @@
+[
+  {
+    "note": "the masked composite reads the mask row at the backdrop row instead of row minus maskY, so a mask placed lower still covers the rows above it, caught by MaskCompositeTests.maskOffsetMoves",
+    "file": "Sources/CoreRaster/Compositing/CompositeMasked.swift",
+    "anchor": "let row = (by - maskY) * mask.width - maskX",
+    "replacement": "let row = min(by, mask.height - 1) * mask.width - maskX",
+    "filter": "MaskCompositeTests"
+  },
+  {
+    "note": "the masked composite's skip-row test reads coverage >= 0 for > 0, so an empty mask writes every row of the backdrop, caught by MaskCompositeTests.emptyMaskLeavesBackdrop",
+    "file": "Sources/CoreRaster/Compositing/CompositeMasked.swift",
+    "anchor": "guard weights.contains(where: { $0 > 0 }) else { return .skip }",
+    "replacement": "guard weights.contains(where: { $0 >= 0 }) else { return .skip }",
+    "filter": "MaskCompositeTests"
+  },
+  {
+    "note": "the luminance matte ignores alpha, reading the luma of the straight colour, so white at half alpha reads 1, caught by MaskCompositeTests.transparentIsZero",
+    "file": "Sources/CoreRaster/Masks/MaskFromBuffer.swift",
+    "anchor": ": w.r * c[i] + w.g * c[i + 1] + w.b * c[i + 2]",
+    "replacement": ": (c[i + 3] == 0 ? 0 : (w.r * c[i] + w.g * c[i + 1] + w.b * c[i + 2]) / c[i + 3])",
+    "filter": "MaskCompositeTests"
+  },
+  {
+    "note": "the masked composite drops each pixel's weight on a partial row, so a half mask composites at full opacity, caught by MaskCompositeTests.halfMaskIsHalfOpacity",
+    "file": "Sources/CoreRaster/Composite.swift",
+    "anchor": "opacity: weights.map { opacity * $0[k] } ?? opacity)",
+    "replacement": "opacity: opacity)",
+    "filter": "MaskCompositeTests"
+  }
+]
