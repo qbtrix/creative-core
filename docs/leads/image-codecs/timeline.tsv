@@ -43,3 +43,4 @@ utc	stage	event	ref	note
 2026-10-19T07:23:47Z	stage-4	blocked	b83a0bd	dev build broken by #644 (Heal/FillFromSurroundings.swift), not ours; r1-png-b2 branch pushed cafb8f3 with no PR; other fixers running
 2026-10-19T07:42:57Z	stage-4	merged	#663	r2-jpeg-b1 merged 07:35Z (7403174), 16\/16
 2026-10-19T07:42:57Z	stage-4	unblocked	5142795	dev builds again (#661); rebasing r1-png-b1, r1-png-b2 for PRs
+2026-10-19T08:00:23Z	stage-4	prs-open	#664 #666 #667	IC-png r1 fixes: b3 6/6, b1 6/6, b2 3/3; b1 and b2 rebased and gated by the lead on dev 7403174
