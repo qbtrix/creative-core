@@ -1,10 +1,10 @@
 # affine-composite lead record
 
 Issue: #434 · Packet: docs/blueprints/core/features/affine-composite.md
-Run: act-1a150bfbcf7-sfwy · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
-Stage: 4 round 5 panel done (5 confirmed); fixes r5-b1, r5-b2 queued. AC-comp reaches its round cap (rounds 2-5); AC-z 2 rounds
+Run: act-1a1543c8a34-t9zw (previous act-1a150bfbcf7-sfwy / act-1a1511a1174-tlch) · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
+Stage: 4 round 5 fixes r5-b1 building (run act-1a1543c8a34-t9zw, dev 0b5a641; old queued fixes never started). AC-comp at its round cap; AC-z 2 rounds
 Base: 4feaaf9fac3cc050901f8b459a0908515a927f54
-Next: round 5 panel; then AC-9 (feature-done), Belt-Slice-Done AC-z, Mac-Finish-Wanted AC-z
+Next: r5-b1 PR merges; round 6 on AC-z; AC-9 (feature-done); Belt-Slice-Done AC-z; Mac-Finish-Wanted AC-z
 
 Line lead for #434, #433 and #432 (rule 19); one wave plan across the three
 features, bookkeeping per feature. Packet v3 (has a Slices table).
