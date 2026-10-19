@@ -3,7 +3,8 @@
 // 1/255 and a maximum of 4/255 of its A.3.3 reference: grey and YCbCr at
 // 4:4:4, 4:2:2 and 4:2:0, the zigzag order, restart intervals, the EXIF
 // orientation reported but not applied, and unsupported, oversized or
-// damaged files refused. Disabled until IC-6 (baseline).
+// damaged files refused; progressive codings (Annex G) read as their baseline
+// ones do. Disabled until IC-6 (baseline) and IC-7 (progressive).
 @testable import CoreRaster
 import CoreColor
 import Testing
@@ -137,7 +138,40 @@ import Foundation
             #expect(PNGFixtures.thrown { try JPEG.info(data) } == "damaged", "no SOF, or a segment past the end")
             #expect(PNGFixtures.thrown { try JPEG.read(data) } == "damaged")
         }
-        #expect(PNGFixtures.thrown { try JPEG.info(good.dropFirst()) } == "notThisFormat")
+        #expect(PNGFixtures.thrown { try JPEG.info(Data(good.dropFirst())) } == "notThisFormat")
         #expect(PNGFixtures.thrown { try JPEG.read(Data(PNGFixtures.signature)) } == "notThisFormat")
+    }
+
+    /// `f` coded progressive (JPEGFixtures.progressive) reads as its baseline coding does, within 1/255 per channel.
+    func sameAsBaseline(_ f: F.Frame, _ note: String) throws {
+        let data = F.progressive(f), a = try JPEG.read(data), b = try JPEG.read(F.baseline(f))
+        #expect(try JPEG.info(data).progressive)
+        #expect(a.width == f.width && a.height == f.height, "\(note)")
+        var worst = 0.0
+        for i in 0..<(min(a.width, b.width) * min(a.height, b.height)) {
+            let p = try a.pixel(x: i % a.width, y: i / a.width), q = try b.pixel(x: i % a.width, y: i / a.width)
+            for (u, v) in [(p.r, q.r), (p.g, q.g), (p.b, q.b)] { worst = max(worst, abs(TransferCurve.encode(Double(u)) - TransferCurve.encode(Double(v))) * 255) }
+        }
+        #expect(worst <= 1, "\(note): \(worst) levels from the baseline decode")
+        try check(f, data, note)
+    }
+
+    @Test(.disabled("waits on IC-7")) func progressiveMatchesBaseline() throws {
+        try sameAsBaseline(F.Frame(width: 21, height: 9, block: F.seeded(0x91)), "grey")
+        for (i, sampling) in Self.samplings.enumerated() {
+            try sameAsBaseline(F.Frame(width: 37, height: 21, sampling: sampling, block: F.seeded(0x92 + UInt64(i))), "\(sampling[0].h)x\(sampling[0].v)")
+        }
+    }
+
+    /// Luma AC at Al 1 then refined (G.1.2.3): the refinement carries every low bit and every ±1, so skipping it is
+    /// levels off. Zigzag 2...17 are 16 zero-history zeros before a refined coefficient, which takes a ZRL first.
+    @Test(.disabled("waits on IC-7")) func acRefinement() throws {
+        let flat = [Int](repeating: 16, count: 64)
+        let f = F.Frame(width: 16, height: 16, tables: [flat, flat], block: { _, x, y in
+            var q = [Int](repeating: 0, count: 64)
+            for (k, v) in [(1, 5), (18, -3), (20, 1), (40, -1), (45, 2), (63, 3)] { q[F.zigzag[k]] = x == y ? v : -v }
+            return q
+        })
+        try sameAsBaseline(f, "refined")
     }
 }
