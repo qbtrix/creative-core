@@ -1,8 +1,7 @@
-// ToneStubTests.swift: the tone-pack contract stubs (TP-0) as they stand
-// before TP-5 and TP-6 fill them. Every throwing op throws
-// `RasterError.invalid("not built")`, `inverted()` returns its input, and
-// `AutoTone` holds the five values it is given. Each filling task deletes the
-// rows here that its op outgrows.
+// ToneStubTests.swift: the tone-pack contract stub (TP-0) as it stands
+// before TP-6 fills it. `AutoTone.suggest` throws
+// `RasterError.invalid("not built")` and `AutoTone` holds the five values it
+// is given. TP-6 deletes the rows here that its op outgrows.
 import CoreRaster
 import Testing
 
@@ -12,22 +11,8 @@ private func sample() throws -> PixelBuffer {
     try PixelBuffer(width: 2, height: 2, fill: RGBA(r: 0.2, g: 0.4, b: 0.6, a: 1))
 }
 
-@Test func mapStubsThrowNotBuilt() throws {
-    let buffer = try sample()
-    let stops = [GradientMapStop(offset: 0, color: RGBA(r: 0, g: 0, b: 0, a: 1)),
-                 GradientMapStop(offset: 1, color: RGBA(r: 1, g: 1, b: 1, a: 1))]
-    let lut = try ColorLUT(size: 2, table: Array(repeating: SIMD3<Float>(0.5, 0.5, 0.5), count: 8))
-    #expect(throws: notBuilt) { try buffer.gradientMap(stops) }
-    #expect(throws: notBuilt) { try buffer.applying(lut) }
-    #expect(throws: notBuilt) { try buffer.posterized(levels: 4) }
-    #expect(throws: notBuilt) { try buffer.thresholded(0.5) }
-    #expect(throws: notBuilt) { try CubeLUT.parse("LUT_3D_SIZE 2\n") }
-    #expect(throws: notBuilt) { try AutoTone.suggest(for: buffer) }
-}
-
-@Test func invertedStubReturnsInput() throws {
-    let buffer = try sample()
-    #expect(buffer.inverted() == buffer)
+@Test func autoToneStubThrowsNotBuilt() throws {
+    #expect(throws: notBuilt) { try AutoTone.suggest(for: try sample()) }
 }
 
 @Test func autoToneHoldsItsValues() {

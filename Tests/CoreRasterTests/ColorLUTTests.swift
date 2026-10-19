@@ -1,11 +1,11 @@
 // ColorLUTTests.swift: tone-pack TP-5's acceptance for 3D LUTs, written first
 // (TP-1 of docs/blueprints/core/features/tone-pack.md): `CubeLUT.parse` and
-// `applying(_:)`, on ToneFixtures' `.cube` texts. Disabled until TP-5 lands.
+// `applying(_:)`, on ToneFixtures' `.cube` texts.
 import CoreRaster
 import Testing
 
 @Suite struct ColorLUTTests {
-    @Test(.disabled("waits on TP-5")) func identityWithinTolerance() throws {
+    @Test func identityWithinTolerance() throws {
         let lut = try CubeLUT.parse(ToneFixtures.identity17)
         #expect(lut.size == 17)
         #expect(try CubeLUT.parse(ToneFixtures.cube(title: "identity 2", size: 2,
@@ -17,7 +17,7 @@ import Testing
     }
 
     /// The warm 33³ table holds the hand values at lattice points, red index fastest.
-    @Test(.disabled("waits on TP-5")) func redFastest() throws {
+    @Test func redFastest() throws {
         let lut = try CubeLUT.parse(ToneFixtures.warm33)
         #expect(lut.size == 33)
         let points = [(0, 0, 0), (32, 0, 0), (0, 32, 0), (0, 0, 32), (5, 17, 29), (31, 2, 11), (16, 16, 16), (32, 32, 32)]
@@ -27,7 +27,7 @@ import Testing
     }
 
     /// Between lattice points the warm look is affine, so trilinear gives it exactly.
-    @Test(.disabled("waits on TP-5")) func midpointsTrilinear() throws {
+    @Test func midpointsTrilinear() throws {
         let lut = try CubeLUT.parse(ToneFixtures.warm33)
         let cells: [SIMD3<Double>] = [[0, 0, 0], [31, 0, 0], [0, 31, 0], [0, 0, 31], [4, 19, 27], [30, 1, 12],
                                       [15, 16, 17], [31, 31, 31]]
@@ -39,13 +39,13 @@ import Testing
         }
     }
 
-    @Test(.disabled("waits on TP-5")) func damagedFilesThrow() {
+    @Test func damagedFilesThrow() {
         for d in ToneFixtures.damaged {
             #expect(throws: RasterError.self, "\(d.label)") { try CubeLUT.parse(d.text) }
         }
     }
 
-    @Test(.disabled("waits on TP-5")) func refusesOtherDomain() {
+    @Test func refusesOtherDomain() {
         let other = ToneFixtures.damaged.filter { $0.label == "DOMAIN_MAX 2" }
         #expect(other.count == 1)
         for d in other {
@@ -55,7 +55,7 @@ import Testing
 
     /// 500 seeded mutations of a 3³ identity: each parses to a valid LUT or
     /// throws `RasterError`, never crashes.
-    @Test(.disabled("waits on TP-5")) func fuzz() {
+    @Test func fuzz() {
         let base = Array(ToneFixtures.cube(title: "fuzz", size: 3, entry: ToneFixtures.identityEntry(size: 3)).utf8)
         let alphabet = Array("0123456789.-+eE nan\n#LUT_3DSIZEDOMAIN_MINMAXTITLE\"".utf8)
         var rng = SplitMix64(seed: 0xD2)

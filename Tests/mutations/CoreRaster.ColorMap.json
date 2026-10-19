@@ -1,0 +1,16 @@
+[
+  {
+    "note": "posterize rounds each channel down instead of to the nearer level, so 0.6 of two levels becomes 0, caught by ColorMapTests.posterizeTwoLevels",
+    "file": "Sources/CoreRaster/Tone/ColorMap.swift",
+    "anchor": "c.rounded(.toNearestOrAwayFromZero) / steps",
+    "replacement": "c.rounded(.down) / steps",
+    "filter": "ColorMapTests"
+  },
+  {
+    "note": "threshold compares the red channel instead of the luma, so pure red turns white, caught by ColorMapTests.thresholdOnLuma",
+    "file": "Sources/CoreRaster/Tone/ColorMap.swift",
+    "anchor": "let v: Float = l >= level ? 1 : 0",
+    "replacement": "let v: Float = Float(Self.encoded(p).x) >= level ? 1 : 0",
+    "filter": "ColorMapTests"
+  }
+]
