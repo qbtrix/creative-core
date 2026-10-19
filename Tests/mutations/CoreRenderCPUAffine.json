@@ -4,5 +4,8 @@
    "replacement": "transformed(m, width: height, height: width, filter: filter)"},
   {"note": "cpu backend flipped inverts the flip axis", "filter": "CPUAffineTests", "file": "Sources/CoreRender/CPU/CPUBackend+Affine.swift",
    "anchor": "{ $0.flipped(axis) }",
-   "replacement": "{ $0.flipped(axis == .horizontal ? .vertical : .horizontal) }"}
+   "replacement": "{ $0.flipped(axis == .horizontal ? .vertical : .horizontal) }"},
+  {"note": "cpu backend affine composite lets a bare raster error escape", "filter": "CPUAffineTests", "file": "Sources/CoreRender/CPU/CPUBackend+Affine.swift",
+   "anchor": "try RenderError.mapping {\n                try backdrop.composite(source, through: m, mode: mode, opacity: opacity, filter: filter)\n            }",
+   "replacement": "try backdrop.composite(source, through: m, mode: mode, opacity: opacity, filter: filter)"}
 ]
