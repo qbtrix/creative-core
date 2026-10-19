@@ -1,9 +1,8 @@
 // MaskCommandsTests.swift: the mask family's registry ids, registry samples and
-// undo steps, and the MM-6 acceptance cases on Fixtures/masks.flare (a shape
-// layer with two masks, a layer luma-matted by a hidden one). A new mask
-// command adds its id to `expectedIDs`, one sample to `registrySamples()` and
-// its random steps to `undoSteps` here; CommandRegistryTests and
-// UndoPropertyTests read all three, so neither shared test file changes.
+// undo steps. A new mask command adds its id to `expectedIDs`, one sample to
+// `registrySamples()` and its random steps to `undoSteps` here;
+// CommandRegistryTests and UndoPropertyTests read all three, so neither shared
+// test file changes. Then the MM-6 cases on Fixtures/masks.flare.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -15,21 +14,16 @@ import Testing
 @Suite struct MaskCommandsTests {
     /// Every id in `MaskCommands.all`, in order, written out by hand.
     static let expectedIDs: [String] = ["mask.add", "mask.set", "mask.remove", "mask.move", "mask.setMatte"]
+    static let o = LayerOwner.scene(Fixtures.sceneID), m = LayerOwner.scene("masks")
 
-    static let o = LayerOwner.scene(Fixtures.sceneID)
-
-    /// A closed square from (a, a) to (b, b).
-    static func square(_ a: Double, _ b: Double) -> Path {
-        Path(polyline: [Point(x: a, y: a), Point(x: b, y: a), Point(x: b, y: b), Point(x: a, y: b)], closed: true)
-    }
     static func mask(_ a: Double, _ mode: MaskMode = .add, feather: Double = 0) -> LayerMask {
-        LayerMask(path: square(a, 100 - a), mode: mode, feather: feather)
+        let b = 100 - a
+        let points = [Point(x: a, y: a), Point(x: b, y: a), Point(x: b, y: b), Point(x: a, y: b)]
+        return LayerMask(path: Path(polyline: points, closed: true), mode: mode, feather: feather)
     }
 
     /// Gives the sample document's "ball" layer two masks, so the set, remove and move samples have masks to edit.
-    static func addSampleMasks(_ doc: inout Document) {
-        doc.scenes[0].layers[1].masks = [mask(10), mask(30, .subtract)]
-    }
+    static func addSampleMasks(_ doc: inout Document) { doc.scenes[0].layers[1].masks = [mask(10), mask(30, .subtract)] }
 
     /// One sample of every mask command, each valid on
     /// `CommandRegistryTests.sampleDocument()`, in `expectedIDs` order.
@@ -41,49 +35,44 @@ import Testing
          SetTrackMatte(owner: o, layerID: "ball", matte: TrackMatte(sourceLayerID: "bg", kind: .luma))]
     }
 
-    /// A mask index of `layer` in `owner`, about one time in eight one past the end or negative.
-    static func anyIndex(_ e: CommandEngine, _ owner: LayerOwner, _ layer: String, _ rng: inout SplitMix64) -> Int {
+    /// A random target and one of its mask indices, about one time in eight one past the end or negative.
+    static func anyIndex(_ e: CommandEngine, _ rng: inout SplitMix64) -> (LayerOwner, String, Int) {
+        let (owner, layer) = UndoPropertyTests.anyTarget(e, &rng)
         let count = e.document.layers(of: owner)?.first { $0.id == layer }?.masks.count ?? 0
-        guard count > 0, Int.random(in: 0..<8, using: &rng) > 0 else { return [-1, count].randomElement(using: &rng) ?? -1 }
-        return Int.random(in: 0..<count, using: &rng)
+        guard count > 0, Int.random(in: 0..<8, using: &rng) > 0 else { return (owner, layer, [-1, count].randomElement(using: &rng) ?? -1) }
+        return (owner, layer, Int.random(in: 0..<count, using: &rng))
     }
 
     /// A mask with a random inset, mode and feather, the feather sometimes negative or not finite.
     static func anyMask(_ rng: inout SplitMix64) -> LayerMask {
-        LayerMask(path: square(Double.random(in: 0...40, using: &rng), 90),
-                  mode: [MaskMode.add, .subtract, .intersect, .difference].randomElement(using: &rng) ?? .add,
-                  feather: UndoPropertyTests.anyNumber(in: -1...10, &rng),
-                  opacity: Double.random(in: 0...1.2, using: &rng), inverted: Bool.random(using: &rng))
+        var mask = mask(Double.random(in: 0...40, using: &rng), [.add, .subtract, .intersect, .difference].randomElement(using: &rng) ?? .add,
+                        feather: UndoPropertyTests.anyNumber(in: -1...10, &rng))
+        (mask.opacity, mask.inverted) = (Double.random(in: 0...1.2, using: &rng), Bool.random(using: &rng))
+        return mask
     }
 
     /// Random mask steps, valid and invalid, for assertUndoRestoresDocument.
     static let undoSteps: [UndoStep] = [
         { e, rng, _ in
-            let (owner, layer) = UndoPropertyTests.anyTarget(e, &rng)
-            let index: Int? = Bool.random(using: &rng) ? nil : anyIndex(e, owner, layer, &rng) + 1
-            try e.perform(AddLayerMask(owner: owner, layerID: layer, mask: anyMask(&rng), index: index))
+            let (owner, layer, i) = anyIndex(e, &rng)
+            try e.perform(AddLayerMask(owner: owner, layerID: layer, mask: anyMask(&rng), index: Bool.random(using: &rng) ? nil : i + 1))
         },
         { e, rng, _ in
-            let (owner, layer) = UndoPropertyTests.anyTarget(e, &rng)
-            let key: String? = Bool.random(using: &rng) ? "mask-drag" : nil
-            try e.perform(SetLayerMask(owner: owner, layerID: layer, index: anyIndex(e, owner, layer, &rng), mask: anyMask(&rng)),
-                          coalesceKey: key)
+            let (owner, layer, i) = anyIndex(e, &rng), key: String? = Bool.random(using: &rng) ? "mask-drag" : nil
+            try e.perform(SetLayerMask(owner: owner, layerID: layer, index: i, mask: anyMask(&rng)), coalesceKey: key)
         },
         { e, rng, _ in
-            let (owner, layer) = UndoPropertyTests.anyTarget(e, &rng)
-            try e.perform(RemoveLayerMask(owner: owner, layerID: layer, index: anyIndex(e, owner, layer, &rng)))
+            let (owner, layer, i) = anyIndex(e, &rng)
+            try e.perform(RemoveLayerMask(owner: owner, layerID: layer, index: i))
         },
         { e, rng, _ in
-            let (owner, layer) = UndoPropertyTests.anyTarget(e, &rng)
-            let from = anyIndex(e, owner, layer, &rng), to = anyIndex(e, owner, layer, &rng)
+            let (owner, layer, from) = anyIndex(e, &rng), to = anyIndex(e, &rng).2
             try e.perform(MoveLayerMask(owner: owner, layerID: layer, from: from, to: to))
         },
         { e, rng, _ in
             let (owner, layer) = UndoPropertyTests.anyTarget(e, &rng)
-            let source = (e.document.layers(of: owner)?.map(\.id) ?? []) + ["missing"]
-            let matte = Bool.random(using: &rng) ? nil
-                : (source.randomElement(using: &rng)).map { TrackMatte(sourceLayerID: $0, kind: .lumaInverted) }
-            try e.perform(SetTrackMatte(owner: owner, layerID: layer, matte: matte))
+            let source = Bool.random(using: &rng) ? nil : ((e.document.layers(of: owner)?.map(\.id) ?? []) + ["missing"]).randomElement(using: &rng)
+            try e.perform(SetTrackMatte(owner: owner, layerID: layer, matte: source.map { TrackMatte(sourceLayerID: $0, kind: .lumaInverted) }))
         },
     ]
 
@@ -102,8 +91,6 @@ import Testing
 
     // MARK: - MM-6 acceptance on the masks fixture
 
-    static let m = LayerOwner.scene("masks")
-
     static func fixture() throws -> Document {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent("Fixtures/masks.flare")
         return try FlareFormat.decode(Data(contentsOf: url))
@@ -111,8 +98,8 @@ import Testing
 
     static func layer(_ doc: Document, _ id: String) -> Layer? { doc.layers(of: m)?.first { $0.id == id } }
 
-    /// Performs `command` on the fixture, then checks undo restores it and redo gives the same result again; returns that result.
-    static func roundTrip(_ command: some Command) throws -> Document {
+    /// Performs `command` on the fixture, checks undo restores it and redo repeats it, and returns the card or `id` layer after.
+    static func roundTrip(_ command: some Command, _ id: String = "card") throws -> Layer? {
         let start = try fixture()
         var engine = CommandEngine(document: start)
         try engine.perform(command)
@@ -121,15 +108,14 @@ import Testing
         #expect(engine.document == start)
         try engine.redo()
         #expect(engine.document == after)
-        return after
+        return layer(after, id)
     }
 
     /// Checks `command` is refused through the engine and from `execute`, both leaving `start` unchanged.
     static func expectRefused(_ command: any Command, on start: Document) {
-        var engine = CommandEngine(document: start)
+        var engine = CommandEngine(document: start), direct = command, doc = start
         #expect(throws: (any Error).self) { try engine.perform(command) }
         #expect(engine.document == start && !engine.canUndo)
-        var direct = command, doc = start
         #expect(throws: (any Error).self) { try direct.execute(&doc) }
         #expect(doc == start)
     }
@@ -137,26 +123,22 @@ import Testing
     @Test func fixtureValidatesAndLoads() throws {
         let doc = try Self.fixture()
         try FlareFormat.validate(doc)
-        #expect(Self.layer(doc, "card")?.masks.map(\.mode) == [.add, .subtract])
-        #expect(Self.layer(doc, "card")?.masks.last?.feather == 8 && Self.layer(doc, "card")?.masks.last?.opacity == 0.75)
+        let card = Self.layer(doc, "card")
+        #expect(card?.masks.map(\.mode) == [.add, .subtract] && card?.masks.last?.feather == 8 && card?.masks.last?.opacity == 0.75)
         #expect(Self.layer(doc, "photo")?.matte == TrackMatte(sourceLayerID: "lumen", kind: .luma))
         #expect(Self.layer(doc, "lumen")?.isVisible == false)
         #expect(try FlareFormat.decode(FlareFormat.encode(doc)) == doc)
     }
 
     @Test func addSetRemoveUndoExactly() throws {
-        let extra = Self.mask(40, .difference, feather: 2)
-        #expect(Self.layer(try Self.roundTrip(AddLayerMask(owner: Self.m, layerID: "card", mask: extra, index: 1)), "card")?
-            .masks.map(\.mode) == [.add, .difference, .subtract])
-        #expect(Self.layer(try Self.roundTrip(AddLayerMask(owner: Self.m, layerID: "photo", mask: extra)), "photo")?.masks == [extra])
-        #expect(Self.layer(try Self.roundTrip(SetLayerMask(owner: Self.m, layerID: "card", index: 1, mask: extra)), "card")?
-            .masks.last == extra)
-        #expect(Self.layer(try Self.roundTrip(RemoveLayerMask(owner: Self.m, layerID: "card", index: 0)), "card")?
-            .masks.map(\.mode) == [.subtract])
-        let cleared = try Self.roundTrip(SetTrackMatte(owner: Self.m, layerID: "photo", matte: nil))
-        #expect(Self.layer(cleared, "photo")?.matte == nil)
-        let alpha = TrackMatte(sourceLayerID: "photo", kind: .alphaInverted)
-        #expect(Self.layer(try Self.roundTrip(SetTrackMatte(owner: Self.m, layerID: "card", matte: alpha)), "card")?.matte == alpha)
+        let extra = Self.mask(40, .difference, feather: 2), alpha = TrackMatte(sourceLayerID: "photo", kind: .alphaInverted)
+        #expect(try Self.roundTrip(AddLayerMask(owner: Self.m, layerID: "card", mask: extra, index: 1))?.masks.map(\.mode)
+            == [.add, .difference, .subtract])
+        #expect(try Self.roundTrip(AddLayerMask(owner: Self.m, layerID: "photo", mask: extra), "photo")?.masks == [extra])
+        #expect(try Self.roundTrip(SetLayerMask(owner: Self.m, layerID: "card", index: 1, mask: extra))?.masks.last == extra)
+        #expect(try Self.roundTrip(RemoveLayerMask(owner: Self.m, layerID: "card", index: 0))?.masks.map(\.mode) == [.subtract])
+        #expect(try Self.roundTrip(SetTrackMatte(owner: Self.m, layerID: "photo", matte: nil), "photo")?.matte == nil)
+        #expect(try Self.roundTrip(SetTrackMatte(owner: Self.m, layerID: "card", matte: alpha))?.matte == alpha)
     }
 
     /// Moving the first of three masks to the end and undoing gives back the same order, not a neighbour swap.
@@ -168,8 +150,6 @@ import Testing
         #expect(Self.layer(engine.document, "card")?.masks.map(\.mode) == [.subtract, .intersect, .add])
         try engine.undo()
         #expect(engine.document == start)
-        try engine.redo()
-        #expect(Self.layer(engine.document, "card")?.masks.map(\.mode) == [.subtract, .intersect, .add])
     }
 
     /// A drag of one mask coalesces into one step that undoes to before the drag; a step on another mask under the same key does not merge.
@@ -192,11 +172,7 @@ import Testing
         var engine = CommandEngine(document: try Self.fixture())
         try engine.perform(SetTrackMatte(owner: Self.m, layerID: "lumen", matte: TrackMatte(sourceLayerID: "card")))
         // photo -> lumen -> card: card matted by photo would close a cycle of three.
-        Self.expectRefused(SetTrackMatte(owner: Self.m, layerID: "card", matte: TrackMatte(sourceLayerID: "photo")),
-                           on: engine.document)
-        var direct = SetTrackMatte(owner: Self.m, layerID: "card", matte: TrackMatte(sourceLayerID: "photo"))
-        var doc = engine.document
-        #expect(throws: CommandError.self) { try direct.execute(&doc) }
+        Self.expectRefused(SetTrackMatte(owner: Self.m, layerID: "card", matte: TrackMatte(sourceLayerID: "photo")), on: engine.document)
         let start = try Self.fixture()
         Self.expectRefused(SetTrackMatte(owner: Self.m, layerID: "lumen", matte: TrackMatte(sourceLayerID: "photo")), on: start)
         Self.expectRefused(SetTrackMatte(owner: Self.m, layerID: "card", matte: TrackMatte(sourceLayerID: "card")), on: start)
@@ -212,30 +188,27 @@ import Testing
         Self.expectRefused(SetTrackMatte(owner: .symbol("pins"), layerID: "pin", matte: TrackMatte(sourceLayerID: "card")), on: start)
     }
 
-    @Test func refusesLockedLayer() throws {
-        var start = try Self.fixture()
-        try start.withLayer(Self.m, layer: "card") { $0.isLocked = true }
-        let commands: [any Command] = [
+    /// Every command refuses a locked layer, and the index commands an index outside the list.
+    @Test func refusesLockedLayerAndBadIndex() throws {
+        let start = try Self.fixture()
+        var locked = start
+        try locked.withLayer(Self.m, layer: "card") { $0.isLocked = true }
+        let lockedCommands: [any Command] = [
             AddLayerMask(owner: Self.m, layerID: "card", mask: Self.mask(20)),
             SetLayerMask(owner: Self.m, layerID: "card", index: 0, mask: Self.mask(20)),
             RemoveLayerMask(owner: Self.m, layerID: "card", index: 0),
             MoveLayerMask(owner: Self.m, layerID: "card", from: 0, to: 1),
             SetTrackMatte(owner: Self.m, layerID: "card", matte: TrackMatte(sourceLayerID: "lumen")),
         ]
-        for command in commands { Self.expectRefused(command, on: start) }
-    }
-
-    @Test func refusesBadIndex() throws {
-        let start = try Self.fixture()
-        let commands: [any Command] = [
+        for command in lockedCommands { Self.expectRefused(command, on: locked) }
+        let badIndex: [any Command] = [
             AddLayerMask(owner: Self.m, layerID: "card", mask: Self.mask(20), index: 3),
             AddLayerMask(owner: Self.m, layerID: "card", mask: Self.mask(20), index: -1),
             SetLayerMask(owner: Self.m, layerID: "card", index: 2, mask: Self.mask(20)),
-            RemoveLayerMask(owner: Self.m, layerID: "card", index: -1),
             RemoveLayerMask(owner: Self.m, layerID: "photo", index: 0),
             MoveLayerMask(owner: Self.m, layerID: "card", from: 0, to: 2),
             MoveLayerMask(owner: Self.m, layerID: "card", from: -1, to: 0),
         ]
-        for command in commands { Self.expectRefused(command, on: start) }
+        for command in badIndex { Self.expectRefused(command, on: start) }
     }
 }

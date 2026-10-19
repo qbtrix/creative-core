@@ -1,21 +1,7 @@
-{"format": "flare", "version": 1, "document": {"scenes": [{
-  "id": "masks", "name": "Masks", "fps": 24, "durationFrames": 24, "width": 100, "height": 100,
-  "layers": [
-    {"id": "card", "name": "Card", "tracks": {},
-     "shapes": [{"closed": true, "fill": {"r": 1, "g": 0, "b": 0, "a": 1},
-                 "points": [{"x": 0, "y": 0}, {"x": 100, "y": 0}, {"x": 100, "y": 100}, {"x": 0, "y": 100}]}],
-     "masks": [
-       {"mode": "add", "feather": 0, "opacity": 1, "inverted": false, "path": {"elements": [
-         {"move": {"to": {"x": 10, "y": 10}}}, {"line": {"to": {"x": 90, "y": 10}}}, {"line": {"to": {"x": 90, "y": 90}}},
-         {"line": {"to": {"x": 10, "y": 90}}}, {"close": {}}]}},
-       {"mode": "subtract", "feather": 8, "opacity": 0.75, "inverted": false, "path": {"elements": [
-         {"move": {"to": {"x": 50, "y": 30}}}, {"line": {"to": {"x": 70, "y": 50}}}, {"line": {"to": {"x": 50, "y": 70}}},
-         {"line": {"to": {"x": 30, "y": 50}}}, {"close": {}}]}}]},
-    {"id": "photo", "name": "Photo", "tracks": {},
-     "shapes": [{"closed": true, "fill": {"r": 0, "g": 0, "b": 1, "a": 1},
-                 "points": [{"x": 0, "y": 0}, {"x": 100, "y": 0}, {"x": 100, "y": 100}, {"x": 0, "y": 100}]}],
-     "matte": {"sourceLayerID": "lumen", "kind": "luma"}},
-    {"id": "lumen", "name": "Lumen", "tracks": {}, "isVisible": false,
-     "shapes": [{"closed": true, "fill": {"r": 0.5, "g": 0.5, "b": 0.5, "a": 1},
-                 "points": [{"x": 20, "y": 20}, {"x": 80, "y": 20}, {"x": 80, "y": 80}, {"x": 20, "y": 80}]}]}
-  ]}]}}
+{"format": "flare", "version": 1, "document": {"scenes": [{"id": "masks", "name": "Masks", "fps": 24, "durationFrames": 24, "width": 100, "height": 100, "layers": [
+  {"id": "card", "name": "Card", "tracks": {}, "shapes": [{"closed": true, "fill": {"r": 1, "g": 0, "b": 0, "a": 1}, "points": [{"x": 0, "y": 0}, {"x": 100, "y": 0}, {"x": 100, "y": 100}, {"x": 0, "y": 100}]}],
+   "masks": [{"mode": "add", "feather": 0, "opacity": 1, "inverted": false, "path": {"elements": [{"move": {"to": {"x": 10, "y": 10}}}, {"line": {"to": {"x": 90, "y": 10}}}, {"line": {"to": {"x": 90, "y": 90}}}, {"line": {"to": {"x": 10, "y": 90}}}, {"close": {}}]}},
+             {"mode": "subtract", "feather": 8, "opacity": 0.75, "inverted": false, "path": {"elements": [{"move": {"to": {"x": 50, "y": 30}}}, {"line": {"to": {"x": 70, "y": 50}}}, {"line": {"to": {"x": 50, "y": 70}}}, {"line": {"to": {"x": 30, "y": 50}}}, {"close": {}}]}}]},
+  {"id": "photo", "name": "Photo", "tracks": {}, "shapes": [{"closed": true, "fill": {"r": 0, "g": 0, "b": 1, "a": 1}, "points": [{"x": 0, "y": 0}, {"x": 100, "y": 0}, {"x": 100, "y": 100}, {"x": 0, "y": 100}]}], "matte": {"sourceLayerID": "lumen", "kind": "luma"}},
+  {"id": "lumen", "name": "Lumen", "tracks": {}, "isVisible": false, "shapes": [{"closed": true, "fill": {"r": 0.5, "g": 0.5, "b": 0.5, "a": 1}, "points": [{"x": 20, "y": 20}, {"x": 80, "y": 20}, {"x": 80, "y": 80}, {"x": 20, "y": 80}]}]}
+]}]}}
