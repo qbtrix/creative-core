@@ -1,0 +1,16 @@
+[
+  {
+    "note": "tone program lays every table at offset 0 so a second table step reads the first's table",
+    "file": "Sources/CoreRender/Metal/ToneProgram.swift",
+    "anchor": "outer: UInt32(min(table.below.count, table.above.count)), offset: UInt32(tables.count)))",
+    "replacement": "outer: UInt32(min(table.below.count, table.above.count)), offset: 0))",
+    "filter": "ToneProgramTests"
+  },
+  {
+    "note": "tone matrix drops the clamp at 0 so negative results pass into the lightness mix",
+    "file": "Sources/CoreRender/Metal/ToneProgram.swift",
+    "anchor": "let c = max(v, 0)",
+    "replacement": "let c = v",
+    "filter": "ToneProgramTests"
+  }
+]

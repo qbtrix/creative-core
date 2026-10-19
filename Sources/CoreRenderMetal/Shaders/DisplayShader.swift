@@ -5,6 +5,7 @@
 // for sRGB). `display_target` (resident rendering) computes the same bytes through `display_bytes` and
 // writes them into an 8-bit unorm texture at the tile's offset there instead, premultiplied when asked
 // with the CPU's rounding, (c x a + 127) / 255; `DisplayParams.stride` is then 1 for premultiplied.
+// `functions` (`DisplayParams`, `display_level`, `display_bytes`) is shared with ToneShader.swift's `display_tone`.
 #if canImport(Metal)
 import CoreRender
 
@@ -17,6 +18,33 @@ enum DisplayShader {
     #include <metal_stdlib>
     using namespace metal;
 
+    \(functions)
+
+    kernel void display_encode(texture2d<half, access::read> tile [[texture(0)]],
+                               device uchar4 *out [[buffer(0)]],
+                               constant float *table [[buffer(1)]],
+                               constant DisplayParams &p [[buffer(2)]],
+                               constant float *m [[buffer(3)]],
+                               uint2 gid [[thread_position_in_grid]]) {
+        if (gid.x >= tile.get_width() || gid.y >= tile.get_height()) { return; }
+        out[(gid.y + p.y) * p.stride + gid.x + p.x] = display_bytes(float4(tile.read(gid)), table, p.p3, m);
+    }
+
+    kernel void display_target(texture2d<half, access::read> tile [[texture(0)]],
+                               texture2d<float, access::write> out [[texture(1)]],
+                               constant float *table [[buffer(1)]],
+                               constant DisplayParams &p [[buffer(2)]],
+                               constant float *m [[buffer(3)]],
+                               uint2 gid [[thread_position_in_grid]]) {
+        if (gid.x >= tile.get_width() || gid.y >= tile.get_height()) { return; }
+        uint4 v = uint4(display_bytes(float4(tile.read(gid)), table, p.p3, m));
+        if (p.stride != 0 && v.a != 255) { v.rgb = (v.rgb * v.a + 127) / 255; }
+        out.write(float4(v) / 255.0f, uint2(gid.x + p.x, gid.y + p.y));
+    }
+    """
+
+    /// `DisplayParams`, `display_level` and `display_bytes`, which `display_tone` (ToneShader.swift) shares.
+    static let functions = """
     struct DisplayParams {
         uint x;
         uint y;
@@ -42,28 +70,6 @@ enum DisplayShader {
         }
         return uchar4(display_level(c.r, table), display_level(c.g, table),
                       display_level(c.b, table), display_level(px.a, table + 255));
-    }
-
-    kernel void display_encode(texture2d<half, access::read> tile [[texture(0)]],
-                               device uchar4 *out [[buffer(0)]],
-                               constant float *table [[buffer(1)]],
-                               constant DisplayParams &p [[buffer(2)]],
-                               constant float *m [[buffer(3)]],
-                               uint2 gid [[thread_position_in_grid]]) {
-        if (gid.x >= tile.get_width() || gid.y >= tile.get_height()) { return; }
-        out[(gid.y + p.y) * p.stride + gid.x + p.x] = display_bytes(float4(tile.read(gid)), table, p.p3, m);
-    }
-
-    kernel void display_target(texture2d<half, access::read> tile [[texture(0)]],
-                               texture2d<float, access::write> out [[texture(1)]],
-                               constant float *table [[buffer(1)]],
-                               constant DisplayParams &p [[buffer(2)]],
-                               constant float *m [[buffer(3)]],
-                               uint2 gid [[thread_position_in_grid]]) {
-        if (gid.x >= tile.get_width() || gid.y >= tile.get_height()) { return; }
-        uint4 v = uint4(display_bytes(float4(tile.read(gid)), table, p.p3, m));
-        if (p.stride != 0 && v.a != 255) { v.rgb = (v.rgb * v.a + 127) / 255; }
-        out.write(float4(v) / 255.0f, uint2(gid.x + p.x, gid.y + p.y));
     }
     """
 }

@@ -1,7 +1,9 @@
 // MetalBackend+DisplayTarget.swift: the display encode into a texture (resident rendering), so a canvas on
 // the GPU shows a surface with no readback: each tile goes through `display_target` (DisplayShader.swift)
 // into an 8-bit unorm texture the caller owns (a document texture, or a drawable's), at the surface's
-// offset there, as the bytes `display` returns, premultiplied with the CPU's rounding when asked.
+// offset there, as the bytes `display` returns, premultiplied with the CPU's rounding when asked. With a
+// non-empty `ToneProgram` the tiles go through `display_tone` (ToneShader.swift) instead, which runs the
+// program on each pixel first: a live adjustment is this one pass over the resident picture.
 // Invariants: the checks run in `display`'s order (unhealthy, surface, space) and then on the target, all
 // before any GPU work; evicted tiles are staged from their shadows, never restored; the lock covers lookup
 // and pipeline, not the GPU wait; the call returns once the GPU wrote the texture, so another queue may
@@ -18,14 +20,18 @@ extension MetalBackend {
     /// `.bgra8Unorm` texture on this backend's device with `.shaderWrite` usage, and the surface must lie
     /// inside it. Throws `unsupported(.display)` while unhealthy, `surfaceMismatch`, `RenderError.raster`
     /// for a non-display space or a target that does not qualify, and `deviceLost` (backend failed) when
-    /// the GPU work cannot run or fails. Returns once the GPU is done.
+    /// the GPU work cannot run or fails. Returns once the GPU is done. A non-empty `tone` is applied to each
+    /// pixel before the encode, as `adjusted` with each of its adjustments in turn would.
     public func display(_ s: RenderSurface, into target: any MTLTexture, x: Int, y: Int, colorSpace: ColorSpace,
-                        premultiplied: Bool) throws {
+                        premultiplied: Bool, tone: ToneProgram? = nil) throws {
+        let tone = tone.flatMap { $0.isEmpty ? nil : $0 }
         let (tiling, tiles, shadows, pipeline, queue) = try withLock {
             guard state.effectiveSupports.contains(.display) else { throw RenderError.unsupported(.display) }
             let stored = try lookup(s)
             stored.touch(tick())
-            let pipeline = try pipelines.pipeline(for: DisplayShader.targetKey, source: DisplayShader.source)
+            let pipeline = tone == nil
+                ? try pipelines.pipeline(for: DisplayShader.targetKey, source: DisplayShader.source)
+                : try pipelines.pipeline(for: ToneShader.key, source: ToneShader.source)
             return (stored.tiling, stored.tiles, stored.shadows, pipeline, commandQueue)
         }
         let table = try DisplayTable(colorSpace)
@@ -49,10 +55,25 @@ extension MetalBackend {
                 throw RenderError.raster("display target: tile \(index) has neither a texture nor a shadow")
             }
         }
+        var toneTables: (any MTLBuffer)?
+        if let tone {
+            let tables = tone.tables.isEmpty ? [Float(0)] : tone.tables
+            toneTables = tables.withUnsafeBytes { raw -> (any MTLBuffer)? in
+                raw.baseAddress.flatMap { device.makeBuffer(bytes: $0, length: raw.count, options: .storageModeShared) }
+            }
+            if toneTables == nil { throw targetLost("display target: no tone table buffer on \(device.name)") }
+        }
         guard let commands = queue.makeCommandBuffer(), let encoder = commands.makeComputeCommandEncoder() else {
             throw targetLost("display target: no command buffer or compute encoder on \(device.name)")
         }
         encoder.setComputePipelineState(pipeline)
+        if let tone {
+            let steps = tone.steps.flatMap { [$0.values.x.bitPattern, $0.values.y.bitPattern, $0.values.z.bitPattern,
+                                              $0.kind, $0.n, $0.outer, $0.offset] }
+            Self.setConstants(steps, on: encoder, index: 4)
+            encoder.setBuffer(toneTables, offset: 0, index: 5)
+            Self.setConstants([UInt32(clamping: tone.steps.count)], on: encoder, index: 6)
+        }
         encoder.setTexture(target, index: 1)
         Self.setConstants(table.thresholds, on: encoder, index: 1)
         Self.setConstants(table.matrix ?? [1, 0, 0, 0, 1, 0, 0, 0, 1], on: encoder, index: 3)
