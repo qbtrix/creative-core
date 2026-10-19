@@ -71,9 +71,6 @@ import Testing
 
     @Test func layoutStubsThrowNotBuilt() {
         let text = Self.text(), measured = FixedAdvances.measure(text)
-        #expect(throws: CommandError.notBuilt("TextLayout.lay is not built yet (text-engine)")) {
-            try TextLayout.lay(text, measured: measured)
-        }
         #expect(throws: CommandError.notBuilt("TextLayout.onPath is not built yet (text-engine)")) {
             try TextLayout.onPath(text, measured: measured, tolerance: 0.1)
         }
