@@ -73,7 +73,7 @@ extension Mask {
 }
 // Sources/CoreRaster/Masks/MaskContours.swift (MM-3)
 extension Mask {
-    public func contours(level: Float = 0.5) -> [[Mask.Point]]          // closed outlines, outer counter-clockwise
+    public func contours(level: Float = 0.5) throws -> [[Mask.Point]]   // closed outlines, outer positive shoelace (y-down); throws past maxContourSegments
     public var coveredBounds: (x: Int, y: Int, width: Int, height: Int)? { get }   // nil when empty
 }
 // Sources/CoreRaster/Masks/MaskFromBuffer.swift (MM-4)

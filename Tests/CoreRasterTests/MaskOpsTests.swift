@@ -1,6 +1,6 @@
 // MaskOpsTests.swift: the MM-3 acceptance row. Feathering keeps area and
 // range and reads half at a hard edge; contours trace closed outlines (outer
-// counter-clockwise, holes clockwise) near the analytic shape, resolve a
+// positive shoelace area, holes negative) near the analytic shape, resolve a
 // saddle by its cell mean; covered bounds are exact. Plus a seeded fuzz of
 // NaN, infinite and huge feather radii.
 import CoreRaster
@@ -86,16 +86,16 @@ import Testing
     }
 
     /// A saddle joins the pair its mean sides with: mean 0.55 joins the high diagonal, 0.45 splits it.
-    @Test func saddleFollowsMean() {
-        #expect(MaskFixtures.saddle(diagonal: 0.9, anti: 0.2).contours().count == 1)
-        #expect(MaskFixtures.saddle(diagonal: 0.6, anti: 0.3).contours().count == 2)
-        #expect(MaskFixtures.saddle(diagonal: 0.2, anti: 0.9).contours().count == 1)
-        #expect(MaskFixtures.saddle(diagonal: 0.3, anti: 0.6).contours().count == 2)
+    @Test func saddleFollowsMean() throws {
+        #expect(try MaskFixtures.saddle(diagonal: 0.9, anti: 0.2).contours().count == 1)
+        #expect(try MaskFixtures.saddle(diagonal: 0.6, anti: 0.3).contours().count == 2)
+        #expect(try MaskFixtures.saddle(diagonal: 0.2, anti: 0.9).contours().count == 1)
+        #expect(try MaskFixtures.saddle(diagonal: 0.3, anti: 0.6).contours().count == 2)
     }
 
     @Test func emptyMaskHasNoContoursAndNoBounds() throws {
         let empty = try Mask(width: 8, height: 8)
-        #expect(empty.contours().isEmpty && empty.coveredBounds == nil)
+        #expect(try empty.contours().isEmpty && empty.coveredBounds == nil)
     }
 
     @Test func boundsAreExact() throws {
@@ -115,10 +115,40 @@ import Testing
             if let out = try? mask.feathered(radius: radius) {
                 #expect(try MaskFixtures.all(out).allSatisfy { (0...1).contains($0) })
             }
-            for ring in mask.contours(level: .random(in: -0.5...1.5, using: &rng)) {
+            for ring in try mask.contours(level: .random(in: -0.5...1.5, using: &rng)) {
                 expectClosed(ring)
             }
         }
+    }
+
+    /// A radius whose sigma squared underflows keeps the mask, every value in 0...1 (no NaN weights).
+    @Test func underflowingRadiusKeepsTheMask() throws {
+        let full = try Mask(width: 8, height: 8, fill: 1)
+        var rng = SplitMix64(seed: 0x71E7)
+        let random = MaskFixtures.random(width: 9, height: 6, &rng)
+        for mask in [full, random] {
+            let out = try mask.feathered(radius: 1e-200)
+            #expect(try MaskFixtures.all(out).allSatisfy { (0...1).contains($0) })
+            #expect(out == mask)
+        }
+    }
+
+    /// Between samples 0 and 0.75 the 0.5 crossing sits 2/3 of the way, not at the midpoint.
+    @Test func crossingInterpolatesTheLevel() throws {
+        let rings = try MaskFixtures.values(width: 2, height: 1, [0, 0.75]).contours(level: 0.5)
+        let ring = try #require(rings.first)
+        #expect(rings.count == 1)
+        #expect(ring.contains { abs($0.x - (0.5 + 2.0 / 3)) < 1e-6 && abs($0.y - 0.5) < 1e-9 })
+        #expect(ring.contains { abs($0.x - 1.5) < 1e-9 && abs($0.y - (-0.5 + 2.0 / 3)) < 1e-6 })
+    }
+
+    /// A checkerboard just past the 4,000,000-segment cap (`Mask.maxContourSegments`) throws instead of building billions of links.
+    @Test func checkerboardOverTheSegmentCapThrows() throws {
+        // Every inner cell is a saddle with 2 segments: 2 x 1421² ≈ 4.04 million.
+        let n = 1420
+        let board = MaskFixtures.values(width: n, height: n, (0..<(n * n)).map { i in Float((i % n + i / n) % 2) })
+        #expect(2 * (n + 1) * (n + 1) > 4_000_000)
+        #expect(throws: RasterError.self) { _ = try board.contours() }
     }
 
     /// Consecutive points, last to first included, sit in neighbouring cells: no gap.

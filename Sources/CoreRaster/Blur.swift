@@ -69,7 +69,9 @@ extension PixelBuffer {
 
     /// The normalized 1-D Gaussian of `sigma`, 2 ceil(3 sigma) + 1 weights
     /// centered on the middle one, for a `width` x `height` image (its radius
-    /// limit). Sigma 0 gives the single weight 1. Masks feather with it too.
+    /// limit). Sigma 0, or one so small that 2 sigma² is 0 or subnormal (its
+    /// side weights would round to 0 or be NaN), gives the single weight 1.
+    /// Masks feather with it too.
     static func gaussianKernel(sigma: Double, width: Int, height: Int) throws -> [Double] {
         guard sigma.isFinite, sigma >= 0 else {
             throw RasterError.invalid("blur sigma \(sigma): must be finite and at least 0")
@@ -79,8 +81,10 @@ extension PixelBuffer {
         guard radius <= Double(limit) else {
             throw RasterError.invalid("blur sigma \(sigma): radius \(radius) is over \(limit)")
         }
+        let denominator = 2 * sigma * sigma
+        guard denominator.isNormal else { return [1] }
         let r = Int(radius)
-        let weights = (-r...r).map { x in sigma == 0 ? 1 : exp(-Double(x) * Double(x) / (2 * sigma * sigma)) }
+        let weights = (-r...r).map { x in exp(-Double(x) * Double(x) / denominator) }
         let total = weights.reduce(0, +)
         return weights.map { $0 / total }
     }
