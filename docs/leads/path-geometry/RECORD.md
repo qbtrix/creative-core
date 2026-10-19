@@ -22,7 +22,7 @@ Next: P3 (measure) and P4 (boolean) open once their regates pass; PG-edit done (
 | P1 | PG-a | PG-1, PG-7 | PathOps/{PathOps,PathEdit,PathMeasure,PathOutline,PathBoolean}.swift, Geometry.swift, PathOpsShapeTests, PathAreaSupport, geometry.json | PathOpsShapeTests | none (declarations) | #713 | merged |
 | P2 | PG-edit | PG-3, PG-4 | PathEdit.swift, PathFixtures, PathEditTests | PathEditTests | FlarePathEdit | #723 | merged |
 | P3 | PG-measure | PG-5, PG-6 | PathMeasure.swift, PathPropertySupport, PathMeasureTests, PathTrimDashTests | both | FlarePathMeasure | | building, stacked on P2 |
-| P4 | PG-shape | PG-9, PG-10 | PathBoolean.swift, PathBooleanTests, PathBooleanFuzzTests | both | FlarePathBoolean | #731 | in lane (6/6, 399 lines) |
+| P4 | PG-shape | PG-9, PG-10 | PathBoolean.swift, PathBooleanTests, PathBooleanFuzzTests | both | FlarePathBoolean | #731 | merged 17:44 |
 | P5 | PG-shape | PG-8 | PathOutline.swift, PathOutlineTests | PathOutlineTests | FlarePathOutline | | building, stacked on P4 |
 | P6 | PG-z | PG-11, PG-12 | PathOpsWalkTests, PathOpsBudgetTests, geometry.json, packet | walk | none | | waits all |
 
