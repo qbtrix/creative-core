@@ -1,0 +1,16 @@
+[
+  {
+    "note": "AutoTone clips 1% at each end of the luma histogram instead of 0.1%, so a clean ramp gets a black point above 0, caught by AutoToneTests.rampIsIdentity",
+    "file": "Sources/CoreRaster/Tone/AutoTone.swift",
+    "anchor": "static let clip = 0.001",
+    "replacement": "static let clip = 0.01",
+    "filter": "AutoToneTests"
+  },
+  {
+    "note": "AutoTone divides by an empty bright set, so an all-black buffer's white balance is NaN, caught by AutoToneTests.blackSuggestsIdentity",
+    "file": "Sources/CoreRaster/Tone/AutoTone.swift",
+    "anchor": "guard count > 0 else { return (0, 0) }",
+    "replacement": "guard count >= 0 else { return (0, 0) }",
+    "filter": "AutoToneTests"
+  }
+]
