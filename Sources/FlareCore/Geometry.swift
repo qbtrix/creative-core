@@ -23,7 +23,8 @@ import Musl
 import Darwin
 #endif
 
-/// Errors from geometry: matrix inversion, flattening and the path builders.
+/// Errors from geometry: matrix inversion, flattening, the path builders and
+/// the path operations in `PathOps/`.
 public enum GeometryError: Error, Equatable, Sendable {
     /// A matrix with zero or non-finite determinant, e.g. a zero scale, that has no inverse.
     case singularMatrix
@@ -37,6 +38,18 @@ public enum GeometryError: Error, Equatable, Sendable {
     /// A finite star inner ratio outside (0, 1]. Fix it by passing a ratio
     /// greater than 0 and at most 1.
     case invalidRatio
+    /// A path operation whose body has not landed yet; the payload names it,
+    /// e.g. "length(tolerance:)".
+    case notBuilt(String)
+    /// A contour, anchor or element index that is out of range, or a curve
+    /// parameter outside 0...1. Fix it by passing a location on the path.
+    case invalidLocation
+    /// A dash pattern that is empty, sums to zero, has a negative or
+    /// non-finite entry, or has more than 64 entries.
+    case invalidPattern
+    /// A boolean whose flattened inputs have this many vertices, more than
+    /// `Path.maxBooleanVertices`. Fix it by simplifying or splitting the input.
+    case tooComplex(Int)
 }
 
 public struct Matrix: Codable, Sendable, Hashable {
