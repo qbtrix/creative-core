@@ -26,5 +26,12 @@
     "anchor": "opacity: weights.map { opacity * $0[k] } ?? opacity)",
     "replacement": "opacity: opacity)",
     "filter": "MaskCompositeTests"
+  },
+  {
+    "note": "a masked composite clears a weight-0 pixel instead of keeping the backdrop, so uncovered pixels of a partial row turn transparent, caught by MaskCompositeTests",
+    "file": "Sources/CoreRaster/Composite.swift",
+    "anchor": "for c in i..<(i + Self.channels) { staged[c] = span[c] }",
+    "replacement": "for c in i..<(i + Self.channels) { staged[c] = 0 }",
+    "filter": "MaskCompositeTests"
   }
 ]

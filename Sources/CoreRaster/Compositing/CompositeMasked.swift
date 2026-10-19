@@ -19,7 +19,8 @@ extension PixelBuffer {
             }
             let row = (by - maskY) * mask.width - maskX
             var weights = [Float](repeating: 0, count: count)
-            for k in max(maskX - x0, 0)..<min(maskX - x0 + mask.width, count) { weights[k] = mask.storage[row + x0 + k] }
+            let from = max(maskX - x0, 0), to = min(maskX - x0 + mask.width, count)
+            weights.replaceSubrange(from..<to, with: mask.storage[(row + x0 + from)..<(row + x0 + to)])
             guard weights.contains(where: { $0 > 0 }) else { return .skip }
             return weights.allSatisfy { $0 == 1 } ? .full : .partial(weights)
         }
