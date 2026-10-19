@@ -82,12 +82,17 @@ private func report(_ row: String, _ time: Duration, budget: Duration) {
     }
 
     /// The timed composite drew the layer at the centre and left the backdrop
-    /// where the layer cannot reach.
-    static func checkPlaced(_ out: PixelBuffer, backdrop: PixelBuffer, m: AffineMatrix, layer: PixelBuffer) throws {
-        let box = try #require(m.bounds(of: layer.width, layer.height))
+    /// where the layer cannot reach: column 0, left of the turned layer's
+    /// write box at both sizes, checked at mid-height (not the corner the
+    /// untimed copy writes).
+    static func checkPlaced(_ out: PixelBuffer, backdrop: PixelBuffer, m: AffineMatrix, layer: PixelBuffer,
+                            filter: ResampleFilter) throws {
+        let wide = try #require(m.writeBounds(of: layer.width, layer.height, filter: filter))
+        #expect(wide.x > 0, "write box \(wide) reaches column 0")
         #expect(out != backdrop)
-        #expect(try out.pixel(x: out.width / 2, y: out.height / 2) != backdrop.pixel(x: out.width / 2, y: out.height / 2))
-        if box.y > 4 { #expect(try out.pixel(x: out.width / 2, y: 0) == backdrop.pixel(x: out.width / 2, y: 0)) }
+        let (mx, my) = (out.width / 2, out.height / 2)
+        #expect(try out.pixel(x: mx, y: my) != backdrop.pixel(x: mx, y: my))
+        #expect(try out.pixel(x: 0, y: my) == backdrop.pixel(x: 0, y: my))
     }
 
     @Test(arguments: [(ResampleFilter.bilinear, 140), (.lanczos3, 260)])
@@ -98,7 +103,7 @@ private func report(_ row: String, _ time: Duration, budget: Duration) {
         let m = Self.rotateScale(width: w, height: h, scale: 0.8, degrees: 20)
         let (time, out) = try Self.time(layer, through: m, onto: backdrop, filter: filter)
         report("commit \(w)x\(h) rotate-scale onto \(w)x\(h), \(filter)", time, budget: .milliseconds(budget))
-        try Self.checkPlaced(out, backdrop: backdrop, m: m, layer: layer)
+        try Self.checkPlaced(out, backdrop: backdrop, m: m, layer: layer, filter: filter)
     }
 
     @Test func previewDrag() throws {
@@ -108,6 +113,6 @@ private func report(_ row: String, _ time: Duration, budget: Duration) {
         let m = Self.rotateScale(width: w, height: h, scale: 0.7, degrees: 12)
         let (time, out) = try Self.time(layer, through: m, onto: backdrop, filter: .bilinear)
         report("preview drag \(w)x\(h) through-composite, bilinear", time, budget: .milliseconds(12))
-        try Self.checkPlaced(out, backdrop: backdrop, m: m, layer: layer)
+        try Self.checkPlaced(out, backdrop: backdrop, m: m, layer: layer, filter: .bilinear)
     }
 }

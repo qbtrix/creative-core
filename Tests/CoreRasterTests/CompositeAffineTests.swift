@@ -302,14 +302,21 @@ import Darwin
 
     /// A lanczos3 overshoot past Float's range during a through-composite
     /// names the operation the caller ran and the matrix they passed, not
-    /// the row resample's shifted internal matrix.
+    /// the row resample's shifted internal matrix. The layer's top 8 rows
+    /// are finite and opaque, so the backdrop rows whose kernel reads only
+    /// them (above row 7 + 8 - 3 = 12) already hold the composite when a
+    /// lower row throws, and the throwing row and every row below it keep
+    /// their bit patterns.
     @Test func overshootNamesCompositeThrough() throws {
         let big = Float.greatestFiniteMagnitude
-        var layer = try PixelBuffer(width: 12, height: 6)
-        for y in 0..<6 {
+        var layer = try PixelBuffer(width: 12, height: 14)
+        var clean = layer
+        for y in 0..<14 {
             for x in 0..<12 {
                 let v = (x / 2).isMultiple(of: 2) ? big : -big
-                try layer.setPixel(x: x, y: y, RGBA(r: v, g: v, b: v, a: v))
+                let fine = RGBA(r: Float(x % 3) / 2, g: Float(y) / 8, b: 0.5, a: 1)
+                try layer.setPixel(x: x, y: y, y < 8 ? fine : RGBA(r: v, g: v, b: v, a: v))
+                if y < 8 { try clean.setPixel(x: x, y: y, fine) }
             }
         }
         let base = try backdrop(seed: 526)
@@ -323,10 +330,28 @@ import Darwin
         #expect(got.components.allSatisfy { $0.isFinite })
         // The throw leaves every pixel outside the write box, the rows and columns just past it included, as it was.
         let wide = try #require(m.writeBounds(of: layer.width, layer.height, filter: .lanczos3))
-        if let written = try writtenBox(got, base) {
-            #expect(written[0] >= wide.x && written[1] >= wide.y, "\(written)")
-            #expect(written[2] <= wide.x + wide.width && written[3] <= wide.y + wide.height, "\(written)")
+        let written = try #require(try writtenBox(got, base))
+        #expect(written[0] >= wide.x && written[1] >= wide.y, "\(written)")
+        #expect(written[2] <= wide.x + wide.width && written[3] <= wide.y + wide.height, "\(written)")
+        // Rows 0..<12 read only the finite rows: they hold the composite, written from row 8 on at least.
+        let want = try reference(base, clean, m, mode: .normal, opacity: 1, filter: .lanczos3)
+        func row(_ a: PixelBuffer, _ y: Int) throws -> [UInt32] {
+            try (0..<a.width).flatMap { x -> [UInt32] in
+                let p = try a.pixel(x: x, y: y)
+                return [p.r, p.g, p.b, p.a].map(\.bitPattern)
+            }
         }
+        for y in 0..<12 {
+            for x in 0..<base.width {
+                let p = try got.pixel(x: x, y: y), q = try want.pixel(x: x, y: y)
+                #expect(max(abs(p.r - q.r), abs(p.g - q.g), abs(p.b - q.b), abs(p.a - q.a)) <= 1 / 255, "(\(x), \(y))")
+            }
+            if y >= 8 { #expect(try row(got, y) != row(base, y), "row \(y) not written") }
+        }
+        // The throwing row is the first from 12 on that is unchanged, before the box ends; it and all below are untouched.
+        let throwing = try #require(try (12..<base.height).first { try row(got, $0) == row(base, $0) })
+        #expect(throwing < wide.y + wide.height, "throwing row \(throwing), box \(wide)")
+        for y in throwing..<base.height { #expect(try row(got, y) == row(base, y), "row \(y) below the throw") }
     }
 
     /// An opaque 2-pixel checker, hard edges everywhere, turned and scaled
