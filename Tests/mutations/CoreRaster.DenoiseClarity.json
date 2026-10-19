@@ -2,7 +2,7 @@
   {
     "note": "denoise ignores the range sigma, so the bilateral filter becomes a plain Gaussian and smooths across the edge, caught by DenoiseClarityTests.edgeKept",
     "file": "Sources/CoreRaster/Effects/DenoiseClarity.swift",
-    "anchor": "return exp(-d * d / (2 * rangeSigma * rangeSigma))",
+    "anchor": "return t < Self.limit ? table[Int(t + 0.5)] : 0",
     "replacement": "return 1",
     "filter": "DenoiseClarityTests"
   },
@@ -11,6 +11,27 @@
     "file": "Sources/CoreRaster/Effects/DenoiseClarity.swift",
     "anchor": "let gain = k * Self.midToneWeight(luma)",
     "replacement": "let gain = k",
+    "filter": "DenoiseClarityTests"
+  },
+  {
+    "note": "denoise smooths chroma at the luma sigma instead of twice it, so colour noise stays, caught by DenoiseClarityTests.chromaSmoothedAtTwiceSigma",
+    "file": "Sources/CoreRaster/Effects/DenoiseClarity.swift",
+    "anchor": "guide: guide, sigma: 2 * sigma,",
+    "replacement": "guide: guide, sigma: sigma,",
+    "filter": "DenoiseClarityTests"
+  },
+  {
+    "note": "denoise drops the alpha normalisation of chroma, so transparent neighbours dilute an edge's colour, caught by DenoiseClarityTests.transparentLendsNoColour",
+    "file": "Sources/CoreRaster/Effects/DenoiseClarity.swift",
+    "anchor": "let shade = far[p][3] > 0 ? far[p][k] / far[p][3] : 0",
+    "replacement": "let shade = far[p][k]",
+    "filter": "DenoiseClarityTests"
+  },
+  {
+    "note": "clarity drops its overflow guard, so an infinite component is stored, caught by DenoiseClarityTests.clarityOverflowThrows",
+    "file": "Sources/CoreRaster/Effects/DenoiseClarity.swift",
+    "anchor": "throw RasterError.invalid(\"clarity amount \\(amount): result overflows\")",
+    "replacement": "return PixelBuffer(checkedWidth: width, height: height, storage: out)",
     "filter": "DenoiseClarityTests"
   }
 ]
