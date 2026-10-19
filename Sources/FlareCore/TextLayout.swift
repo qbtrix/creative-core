@@ -63,19 +63,26 @@ extension TextShape {
 }
 
 /// What the platform measured for one resolved run: one advance per grapheme
-/// (points) and the run's font ascent and descent (points, both >= 0).
+/// (points) and the run's font ascent and descent (points, all finite and >= 0).
+/// The fields stay settable; `TextLayout.lay` checks them again, so a value set
+/// out of range after `init` throws there instead of laying out.
 public struct GlyphRunMetrics: Sendable, Hashable {
     public var advances: [Double], ascent: Double, descent: Double
 
     /// Throws `ModelError.invalidText` when any value is NaN, infinite or negative.
     public init(advances: [Double], ascent: Double, descent: Double) throws {
+        try Self.check(advances: advances, ascent: ascent, descent: descent)
+        (self.advances, self.ascent, self.descent) = (advances, ascent, descent)
+    }
+
+    /// Throws `ModelError.invalidText` naming the first value that is NaN, infinite or negative.
+    static func check(advances: [Double], ascent: Double, descent: Double) throws {
         for (i, a) in advances.enumerated() where !(a.isFinite && a >= 0) {
             throw ModelError.invalidText("glyph advance \(i) is \(a); advances must be finite and >= 0")
         }
         guard ascent.isFinite, ascent >= 0, descent.isFinite, descent >= 0 else {
             throw ModelError.invalidText("ascent \(ascent) and descent \(descent) must be finite and >= 0")
         }
-        (self.advances, self.ascent, self.descent) = (advances, ascent, descent)
     }
 }
 
@@ -109,7 +116,8 @@ public struct TextLayout: Sendable, Hashable {
     /// newline (which also adds `paragraphSpacing`), a word wider than the box
     /// breaking by grapheme. Linear in the graphemes. Throws
     /// `ModelError.invalidText` on more than `maxGraphemes` graphemes, metrics
-    /// that don't match the runs, a run font size that is not finite and > 0, a
+    /// that don't match the runs or hold a value `GlyphRunMetrics.init` rejects
+    /// (checked again here, since the fields are settable), a run font size that is not finite and > 0, a
     /// paragraph value out of range (`lineHeight` finite and >= 0, `tracking`
     /// and `paragraphSpacing` finite, `boxWidth` finite and > 0; the file
     /// format further holds `lineHeight` to 0.5...4), or sums that overflow
@@ -137,9 +145,13 @@ public struct TextLayout: Sendable, Hashable {
             guard run.fontSize.isFinite, run.fontSize > 0 else {
                 throw ModelError.invalidText("run \(r) font size \(run.fontSize) must be finite and > 0")
             }
+            try GlyphRunMetrics.check(advances: metrics.advances, ascent: metrics.ascent, descent: metrics.descent)
             let track = run.tracking + style.tracking
             for a in metrics.advances {
-                guard (a + track).isFinite else { throw ModelError.invalidText("run \(r) tracking \(run.tracking) is not finite") }
+                guard (a + track).isFinite else {
+                    throw ModelError.invalidText("run \(r): advance \(a) + run tracking \(run.tracking) + paragraph tracking "
+                        + "\(style.tracking) overflows; keep them finite and small")
+                }
                 adv.append(a + track)
                 runOf.append(r)
             }
