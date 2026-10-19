@@ -43,3 +43,5 @@ utc	stage	event	ref	note
 2026-10-19T02:48:40Z	4	round-2	FX-alpha,FX-blur	panel 16 confirmed (4 major), 1 refuted; fix batch wf_d4c9865a-cbd running
 2026-10-19T03:34:52Z	3	heartbeat	-	dev run 384 green 641739b, no new slice done; AC-6/FX-7 gates held (load 15, r2 fixers running)
 2026-10-19T03:55:52Z	3	heartbeat	-	r2 fixers tone-pack/effects still in their gates (load 10); AC-6/FX-7 gates held
+2026-10-19T04:24:34Z	4	fix-merged	#631	r2-b1 glow pins merged be6cc41
+2026-10-19T04:24:34Z	3	rebase	#611	FX-7 rebased on #610 (union of cpuBuilt and stub rows) 44ebe3f, gating on tmpfs
