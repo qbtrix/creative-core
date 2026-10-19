@@ -36,3 +36,4 @@ utc	stage	event	ref	note
 2026-10-19T19:34:56Z	heartbeat	round 2 and builders running
 2026-10-19T19:43:26Z	stage-4	round 2 gate pass, 136/195 caught then OOM, 59 re-running, critics launched
 2026-10-19T19:50:32Z	stage 4	round-2 critics done; 3 fix batches launched
+2026-10-19T19:51:51Z	build	M7 MM-z building (branch only; PR opens with feature-done after the round-2 fixes merge)
