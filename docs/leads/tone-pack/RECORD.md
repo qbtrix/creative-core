@@ -54,7 +54,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 | slice | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
 |---|---|---|---|---|---|---|---|---|---|
 | TP-a, TP-mix | 1 | 5ea5ae5 | PASS (try 5, budget retries under load) | 70/70 | - | clarity, contract, tests, robustness | 11 (7 major: HSLShift hue unit; hueSaturation parity claim; preserveLuminosity clamp breaks luma; hsl, vibrance, colorBalance, channelMixer, blackAndWhite mutants escape; 4 minor), 0 refuted | #596 (r1-b1, merged; 8/8), #597 (r1-b2, merged; 10/10) | no |
-| TP-map | 2 | 7d8af79 | PASS | 66/66 | - | clarity, contract, tests, robustness | 10 (3 major: AutoTone public docs; AutoTone levels untested; gradientMap untested; 7 minor), 0 refuted | b1 #617 merged (28b5528), b2 #628 merged (9385de9), b4 #630 open, b3 being finished by a new fixer | no |
+| TP-map | 2 | 7d8af79 | PASS | 66/66 | - | clarity, contract, tests, robustness | 10 (3 major: AutoTone public docs; AutoTone levels untested; gradientMap untested; 7 minor), 0 refuted | b1 #617 merged (28b5528), b2 #628 merged (9385de9), b4 #630 merged (9cd326b), b3 being finished by a new fixer | no |
 
 ## Decisions
 - TP-5 (#585): map ops on encoded values via `mappingStraight`; `inverted` is a − c on linear premultiplied (exact double inversion); `.cube` parse per packet, size 2...65, domain exactly 0…1; blue-fastest mutant moved to the apply stride (parser keeps file order); ColorMix helpers made internal for reuse.
