@@ -4,7 +4,7 @@ Issue: #433 · Packet: docs/blueprints/core/features/effects-engine.md
 Run: act-1a150bfbcf7-sfwy · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
 Stage: 4 round 3 fixes running (r3-b1 DenoiseClarity, r3-b2 AlphaEffects, r3-b3 packet, r3-b4 parity harness)
 Base: 4feaaf9fac3cc050901f8b459a0908515a927f54
-Next: merge r3 fixes; round 4 panel on dev; FX-cpu merged-done once a green dev Linux run holds 2298d3f; then FX-9
+Next: merge r3 fixes; round 4 panel on dev; then FX-9, FX-10 (FX-z), feature-done on the last PR
 
 Line lead for #434, #433 and #432 (rule 19); one wave plan across the three
 features, bookkeeping per feature. Packet v3 (has a Slices table).
@@ -47,7 +47,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 | FX-a | FX-0, FX-1, FX-2 | engine-contracts:EC-a (merged on base) | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39174242588 | |
 | FX-blur | FX-3, FX-4 | FX-a | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39180267199 | |
 | FX-alpha | FX-5, FX-6 | FX-a | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39188534008 | |
-| FX-cpu | FX-7, FX-8 | FX-blur, FX-alpha; engine-contracts:EC-b (merged on base) | open | | |
+| FX-cpu | FX-7, FX-8 | FX-blur, FX-alpha; engine-contracts:EC-b (merged on base) | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39208393584 | |
 | FX-z | FX-9, FX-10 | FX-cpu | open | | wanted (budgets) |
 
 ## Rounds
