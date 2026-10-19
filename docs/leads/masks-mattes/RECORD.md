@@ -5,7 +5,7 @@ Run: act-1a15685b8d2-jkm8 · Session: https://claude.ai/code/session_0155HiDB6qG
 Line lead for: layered-codecs (#438, already done), masks-mattes (#431), path-geometry (#430)
 Stage: 3 final slice MM-z: M7 (623 lines) split into M7a (feather, 268), M7a2 (contours, composite skip, 24 MP budgets, 240) and M7b (walk and docs, 204, `feature-done`), stacked on dev fb09fdc2; gating
 Base: 0b5a641be359e283625fa5c798b8d02872fad344
-Next: open M7a and M7a2 once gated; M7b after P6b (#path-geometry PG-z) merges (both edit geometry.json); then Anatomy round 3 on dev
+Next: M7a #746 open; M7a2 gating (stacked); M7b after #745 (P6b) merges; then Anatomy round 3 on dev
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -24,7 +24,7 @@ Next: open M7a and M7a2 once gated; M7b after P6b (#path-geometry PG-z) merges (
 | M4 | MM-a + MM-vector | MM-2 (commands share, fixture), MM-6 | MaskCommands.swift, MaskCommandsTests, UndoPropertyTests, Fixtures/masks.flare | MaskCommandsTests | FlareMaskCommands | #720 | merged |
 | M5 | MM-vector | MM-7 | RenderList.swift, MatteRenderListTests | MatteRenderListTests | FlareMatteRenderList | #724 | merged |
 | M6 | MM-vector | MM-8 | Export/SVGExporter+Masks, Export/LottieExporter+Masks, both suites | both | FlareMaskExport | #729 | merged 17:06 (ccd78ae6) |
-| M7a | MM-z | MM-9 (feather) | Blur, Masks/MaskFeather, MaskFeatherBoxTests | MaskFeatherBoxTests | CoreRaster.MaskFeather | | gating |
+| M7a | MM-z | MM-9 (feather) | Blur, Masks/MaskFeather, MaskFeatherBoxTests | MaskFeatherBoxTests | CoreRaster.MaskFeather | #746 | open (5/5 caught) |
 | M7a2 | MM-z | MM-9 (contours, composite, budgets) | Composite, CompositeMasked, Masks/MaskContours, MaskBudgetTests | MaskBudgetTests, MaskOpsTests | CoreRaster.MaskContours, CoreRaster.CompositeMasked | | gating, stacked on M7a |
 | M7b | MM-z | MM-10 | MaskWalkTests (FlareCore, CoreRender), mask-walk.flare, geometry.json, packet, waves.md | MaskWalkTests | none | | waits M7a2 + path-geometry P6b |
 
