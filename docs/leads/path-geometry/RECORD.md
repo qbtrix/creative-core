@@ -22,8 +22,8 @@ Next: P3 (measure) and P4 (boolean) open once their regates pass; PG-edit done (
 | P1 | PG-a | PG-1, PG-7 | PathOps/{PathOps,PathEdit,PathMeasure,PathOutline,PathBoolean}.swift, Geometry.swift, PathOpsShapeTests, PathAreaSupport, geometry.json | PathOpsShapeTests | none (declarations) | #713 | merged |
 | P2 | PG-edit | PG-3, PG-4 | PathEdit.swift, PathFixtures, PathEditTests | PathEditTests | FlarePathEdit | #723 | merged |
 | P3 | PG-measure | PG-5, PG-6 | PathMeasure.swift, PathPropertySupport, PathMeasureTests, PathTrimDashTests | both | FlarePathMeasure | | building, stacked on P2 |
-| P4 | PG-shape | PG-9, PG-10 | PathBoolean.swift, PathBooleanTests, PathBooleanFuzzTests | both | FlarePathBoolean | | building |
-| P5 | PG-shape | PG-8 | PathOutline.swift, PathOutlineTests | PathOutlineTests | FlarePathOutline | | waits P4 |
+| P4 | PG-shape | PG-9, PG-10 | PathBoolean.swift, PathBooleanTests, PathBooleanFuzzTests | both | FlarePathBoolean | #731 | in lane (6/6, 399 lines) |
+| P5 | PG-shape | PG-8 | PathOutline.swift, PathOutlineTests | PathOutlineTests | FlarePathOutline | | building, stacked on P4 |
 | P6 | PG-z | PG-11, PG-12 | PathOpsWalkTests, PathOpsBudgetTests, geometry.json, packet | walk | none | | waits all |
 
 ## Rounds
@@ -37,6 +37,7 @@ Next: P3 (measure) and P4 (boolean) open once their regates pass; PG-edit done (
 - PG-a carries PG-1 and PG-7 (area helpers); fixtures (PG-3) ride PG-edit and generators (PG-5) ride PG-measure.
 - PG-shape is two PRs (boolean, then outline) because together they pass the 400-line cap and the outline unions through `combine`.
 - Builder branches are `lead/path-geometry-<pr id>`.
+- P4 boolean uses band-indexed pair splitting with per-segment ray-cast winding, not the packet's full sweep (marked `ponytail:`, the fallback is a sweep-line event queue). PG-11's 2×5,000-vertex ≤50 ms budget is the real test and is measured in P6. Output is polygons only, with no curve refit.
 
 ## Open
 - none
