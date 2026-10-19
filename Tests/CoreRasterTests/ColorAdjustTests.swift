@@ -81,9 +81,10 @@ enum ToneCheck {
 }
 
 @Suite struct ColorAdjustTests {
-    /// Hue/saturation as TP-3 defines it (lead note on #432): standard HSL on
-    /// the encoded values; hue rotates, saturation scales by 1 + s/100, and
-    /// lightness blends toward white (positive) or black (negative).
+    /// Hue/saturation as TP-3 defines it (lead note on #432): the standard HSL
+    /// rotate/scale/blend on the encoded values; hue rotates, saturation scales
+    /// by 1 + s/100, and lightness blends toward white (positive) or black
+    /// (negative). `hueSaturationHandValues` pins it to hand-computed pixels.
     static func hueSaturationReference(_ p: RGBA, hue: Double, saturation: Double, lightness: Double) -> RGBA {
         guard p.a > 0 else { return p }
         var (h, s, l) = ToneCheck.hsl(ToneCheck.encoded(p))
@@ -124,7 +125,7 @@ enum ToneCheck {
         #expect(abs(boostSkin / boostOther - 0.5) <= 0.05)
     }
 
-    @Test func hueSaturationMatchesReference() throws {
+    @Test func hueSaturationMatchesHSLReference() throws {
         let b = try ToneCheck.seeded(width: 40, height: 25, seed: 0xA2)
         let input = try ToneCheck.pixels(b)
         for (h, s, l) in [(30.0, 25.0, -10.0), (-120, -60, 40), (170, 100, 0)] {
@@ -146,13 +147,67 @@ enum ToneCheck {
         }
     }
 
-    /// Every range at -100 saturation greys every hue: the weights sum to 1.
+    /// Every range at lightness -50 halves every saturated pixel's HSL
+    /// lightness, exactly as one range alone would: the weights sum to 1
+    /// (a sum above 1 darkens more, below 1 less). Greys pass through.
     @Test func rangeWeightsSumToOne() throws {
-        let grey = HSLShift(saturation: -100)
-        let all = HSLAdjustment(reds: grey, oranges: grey, yellows: grey, greens: grey, aquas: grey, blues: grey,
-                                purples: grey, magentas: grey)
-        for p in try ToneCheck.pixels(ToneCheck.seeded(width: 32, height: 16, seed: 0xA3, opaque: true).hsl(all)) {
-            #expect(ToneCheck.spread(ToneCheck.encoded(p)) <= 1e-5, "\(p)")
+        let dark = HSLShift(lightness: -50)
+        let all = HSLAdjustment(reds: dark, oranges: dark, yellows: dark, greens: dark, aquas: dark, blues: dark,
+                                purples: dark, magentas: dark)
+        let b = try ToneCheck.seeded(width: 32, height: 16, seed: 0xA3, opaque: true)
+        let input = try ToneCheck.pixels(b)
+        let single = try ToneCheck.pixels(b.hueSaturation(hue: 0, saturation: 0, lightness: -50))
+        for (i, q) in try ToneCheck.pixels(b.hsl(all)).enumerated() {
+            let grey = ToneCheck.spread(ToneCheck.encoded(input[i])) == 0
+            #expect(ToneCheck.gap(q, grey ? input[i] : single[i]) <= 1e-5, "\(input[i])")
+        }
+    }
+
+    /// Hand-computed pixels, independent of the formula's code: hue +120 turns
+    /// pure red pure green; hue leaves mid grey alone; saturation -100 greys red
+    /// at its HSL lightness 0.5; lightness +-50 blends red toward white or black.
+    @Test func hueSaturationHandValues() throws {
+        let red = ToneCheck.pixel([1, 0, 0]), grey = ToneCheck.pixel([0.5, 0.5, 0.5])
+        let cases: [(RGBA, Float, Float, Float, SIMD3<Double>)] = [
+            (red, 120, 0, 0, [0, 1, 0]), (grey, 90, 0, 0, [0.5, 0.5, 0.5]), (red, 0, -100, 0, [0.5, 0.5, 0.5]),
+            (red, 0, 0, 50, [1, 0.5, 0.5]), (red, 0, 0, -50, [0.5, 0, 0]), (red, -60, 0, 0, [1, 0, 1]),
+        ]
+        for (p, h, s, l, want) in cases {
+            let out = try ToneCheck.pixels(ToneCheck.row([p]).hueSaturation(hue: h, saturation: s, lightness: l))
+            #expect(ToneCheck.gap(ToneCheck.encoded(out[0]), want) <= 1e-5, "\(p) at \(h), \(s), \(l)")
+        }
+    }
+
+    /// An `HSLShift` hue of 100 is a 30 degree turn, the same as `hueSaturation(hue: 30)`.
+    @Test func hslHueIsPercentOfThirtyDegrees() throws {
+        let red = try ToneCheck.row([ToneFixtures.pureRed.pixel])
+        let ranged = try ToneCheck.pixels(red.hsl(HSLAdjustment(reds: HSLShift(hue: 100))))
+        let turned = try ToneCheck.pixels(red.hueSaturation(hue: 30, saturation: 0, lightness: 0))
+        #expect(ToneCheck.gap(ranged[0], turned[0]) <= 1e-5)
+    }
+
+    /// Reds hue 100 turns pure red to hue 30; reds lightness 50 lifts pure red
+    /// to HSL lightness 0.75 and leaves a mid grey (no hue) alone.
+    @Test func rangeHueAndLightness() throws {
+        let red = ToneFixtures.pureRed.pixel, grey = ToneCheck.pixel([0.5, 0.5, 0.5])
+        let turned = try ToneCheck.pixels(ToneCheck.row([red]).hsl(HSLAdjustment(reds: HSLShift(hue: 100))))
+        #expect(abs(ToneCheck.hsl(ToneCheck.encoded(turned[0])).h - 30) <= 1e-4)
+        let lifted = try ToneCheck.pixels(ToneCheck.row([red, grey]).hsl(HSLAdjustment(reds: HSLShift(lightness: 50))))
+        #expect(abs(ToneCheck.hsl(ToneCheck.encoded(lifted[0])).l - 0.75) <= 1e-4)
+        #expect(lifted[1] == grey)
+    }
+
+    /// vibrance -100 is grey at linear luma; vibrance 100 keeps every in-gamut
+    /// straight channel in 0...1.
+    @Test func vibranceNegativeAndCapped() throws {
+        let b = try ToneCheck.seeded(width: 32, height: 16, seed: 0xA6, opaque: true)
+        for p in try ToneCheck.pixels(b.vibrance(-100)) {
+            let y = 0.2126 * p.r + 0.7152 * p.g + 0.0722 * p.b
+            #expect(max(abs(p.r - y), abs(p.g - y), abs(p.b - y)) <= 1e-6, "\(p)")
+        }
+        for p in try ToneCheck.pixels(b.vibrance(100)) {
+            let s = p.unpremultiplied()
+            #expect([s.r, s.g, s.b].allSatisfy { (-1e-6...(1 + 1e-6)).contains($0) }, "\(s)")
         }
     }
 
@@ -169,6 +224,19 @@ enum ToneCheck {
         #expect(throws: RasterError.self) { try b.hueSaturation(hue: 0, saturation: .nan, lightness: 0) }
         #expect(throws: RasterError.self) { try b.hueSaturation(hue: 0, saturation: 0, lightness: .nan) }
         #expect(throws: RasterError.self) { try b.hsl(HSLAdjustment(greens: HSLShift(hue: .nan))) }
+        let error = #expect(throws: RasterError.self) { try b.hsl(HSLAdjustment(blues: HSLShift(hue: .nan))) }
+        guard case .invalid(let why) = error else { return }
+        #expect(why.contains("blues"), "\(why)")
+    }
+
+    /// The documented policy: vibrance and hueSaturation throw out of range,
+    /// hsl clamps (reds saturation 150 acts as 100).
+    @Test func outOfRangePolicyIsDocumented() throws {
+        let b = try ToneCheck.seeded(width: 4, height: 4, seed: 0xA7, opaque: true)
+        #expect(throws: RasterError.self) { try b.vibrance(101) }
+        #expect(throws: RasterError.self) { try b.hueSaturation(hue: 181, saturation: 0, lightness: 0) }
+        let over = try b.hsl(HSLAdjustment(reds: HSLShift(saturation: 150)))
+        #expect(over == (try b.hsl(HSLAdjustment(reds: HSLShift(saturation: 100)))))
     }
 
     /// Out-of-range sliders throw; an `HSLShift` component is clamped to -100...100.

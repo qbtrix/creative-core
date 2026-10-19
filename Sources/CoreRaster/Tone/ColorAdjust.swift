@@ -25,6 +25,7 @@ extension PixelBuffer {
     /// encoded hue a colour picker shows), and capped so
     /// no channel leaves 0...1 (or its own range when already outside);
     /// a negative amount desaturates every pixel evenly (−100 is grey at luma).
+    /// Throws `RasterError.invalid` when `amount` is non-finite or outside its range.
     public func vibrance(_ amount: Float) throws -> PixelBuffer {
         try ColorMath.check("vibrance", amount, limit: 100)
         if amount == 0 { return self }
@@ -54,6 +55,7 @@ extension PixelBuffer {
     /// -100...100, as standard HSL on the encoded values: the hue rotates,
     /// saturation scales by 1 + saturation/100 (clamped to 0...1), and
     /// lightness blends toward white (positive) or black (negative).
+    /// Throws `RasterError.invalid` when a value is non-finite or outside its range.
     public func hueSaturation(hue: Float, saturation: Float, lightness: Float) throws -> PixelBuffer {
         try ColorMath.check("hue", hue, limit: 180)
         try ColorMath.check("saturation", saturation, limit: 100)
@@ -63,19 +65,22 @@ extension PixelBuffer {
         return try mappingStraight { ColorMath.shifted($0, by: shift, from: ColorMath.hsl(of: $0)) }
     }
 
+    /// An `HSLShift`'s `hue` is percent of a ±30° turn (100 = +30°), not
+    /// degrees as in `hueSaturation`; its saturation and lightness are percent.
     /// Per-hue-range HSL shifts over eight ranges centred at 0, 30, 60, 120,
     /// 180, 240, 270 and 300 degrees. A pixel's weight per range is a raised
     /// cosine from the range's centre to each neighbouring centre, so the
     /// weights sum to 1; the shifts are summed by weight and applied as in
-    /// `hueSaturation`, a range's hue 100 being 30 degrees. Each component is
-    /// clamped to -100...100; a non-finite one throws. A grey pixel (no hue)
-    /// and one whose summed shift is zero pass through untouched.
+    /// `hueSaturation`. Out-of-range values are clamped to -100...100; a
+    /// non-finite one throws `RasterError.invalid` naming its band. A grey
+    /// pixel (no hue) and one whose summed shift is zero pass through untouched.
     public func hsl(_ adjustment: HSLAdjustment) throws -> PixelBuffer {
-        let ranges = [adjustment.reds, adjustment.oranges, adjustment.yellows, adjustment.greens,
-                      adjustment.aquas, adjustment.blues, adjustment.purples, adjustment.magentas]
-        let shifts = try ranges.map { r -> ColorMath.Shift in
+        let bands = [("reds", adjustment.reds), ("oranges", adjustment.oranges), ("yellows", adjustment.yellows),
+                     ("greens", adjustment.greens), ("aquas", adjustment.aquas), ("blues", adjustment.blues),
+                     ("purples", adjustment.purples), ("magentas", adjustment.magentas)]
+        let shifts = try bands.map { band, r -> ColorMath.Shift in
             for (name, v) in [("hue", r.hue), ("saturation", r.saturation), ("lightness", r.lightness)] {
-                guard v.isFinite else { throw RasterError.invalid("hsl \(name) \(v): must be finite") }
+                guard v.isFinite else { throw RasterError.invalid("hsl \(band) \(name) \(v): must be finite") }
             }
             func clamped(_ v: Float) -> Double { Double(min(max(v, -100), 100)) }
             return ColorMath.Shift(hue: clamped(r.hue) * 0.3, saturation: clamped(r.saturation),
