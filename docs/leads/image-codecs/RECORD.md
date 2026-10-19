@@ -3,15 +3,15 @@
 Issue: #562 · Packet: docs/blueprints/core/features/image-codecs.md
 Run: act-1a1511a1174-tlch · Started: 2026-10-18T22:40Z
 Line lead for: image-codecs (#562), preview-cache (#440, already done), vector-import (#439, VI-z left)
-Stage: 4 round 1 (IC-jpeg); wave 4 IC-png PRs waiting on lane
+Stage: 4 round 1 (IC-png) gate running on c4baa59; IC-jpeg r1 fixes #648 #651 waiting on lane (#645 merged)
 Base: 9385de9 (wave 4)
-Next: IC-jpeg r1 fix batch (3 PRs) merges, then IC-jpeg round 2; IC-png round 1 once #636 merges
+Next: IC-png round 1 panel; IC-jpeg round 2 once #648 and #651 merge
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
 |---|---|---|---|---|---|
 | IC-a | IC-1, IC-2 | nothing | merged-done | 384 (641739b) | none |
-| IC-png | IC-3, IC-4, IC-5 | IC-a | open | | none |
+| IC-png | IC-3, IC-4, IC-5 | IC-a | built, round 1 | | none |
 | IC-jpeg | IC-6, IC-7, IC-8 | IC-a | open | | none |
 | IC-z | IC-9, IC-10 | IC-png, IC-jpeg | open | | wanted (release budgets) |
 
@@ -23,7 +23,7 @@ Next: IC-jpeg r1 fix batch (3 PRs) merges, then IC-jpeg round 2; IC-png round 1 
 | IC-3 | 3 | Inflate, Deflate bodies | Inflate.swift, Deflate.swift, InflateTests | InflateTests | CoreRaster.Inflate (3) | #625 (526da94) | merged |
 | IC-6 | 3 | JPEG info, baseline read | JPEG.swift, JPEGReadTests, JPEGFuzzTests | baseline half | CoreRaster.JPEG (2) | #627 (22a5fdd) | merged |
 | IC-4 | 4 | PNG info, read, decodePNG | PNG.swift, PNGReadTests, PNGFuzzTests | PNGReadTests | CoreRaster.PNG (3) | #637 (b4d80e2) | merged 05:14Z |
-| IC-5 | 4 | PNG write, encodePNG | PNGWrite.swift, PNGWriteTests | PNGWriteTests | CoreRaster.PNGWrite (2) | #636 (a4df142) | rebased on IC-4, 4 round-trip tests enabled, CI PASS 1776, waiting on lane |
+| IC-5 | 4 | PNG write, encodePNG | PNGWrite.swift, PNGWriteTests | PNGWriteTests | CoreRaster.PNGWrite (2) | #636 (a4df142) | merged 06:10Z (2e3ac14) |
 | IC-7 | 4 | progressive JPEG | JPEGProgressive.swift, JPEGReadTests | progressive half | CoreRaster.JPEGProgressive (1+) | #635 (a686651) | merged (dev 81ae63c) |
 | IC-8 | 4 | baseline JPEG write | JPEGWrite.swift, JPEGWriteTests | JPEGWriteTests | CoreRaster.JPEGWrite (2) | #634 (8e31fe9) | merged |
 | IC-9 | 5 | KJ-IC walk, budgets | ImageCodecWalkTests, ImageCodecBudgetTests | walk | – | | open |
@@ -56,3 +56,4 @@ Next: IC-jpeg r1 fix batch (3 PRs) merges, then IC-jpeg round 2; IC-png round 1 
 - The GitHub MCP server appends an attribution footer to every PR body it creates; each builder strips it with update_pull_request after create.
 - Stray: Tests/CoreRasterTests/ZZBench.swift came in with #625 (48 MB benchmark printing timings each test run). Route its removal into the IC-png/IC-jpeg Anatomy fix batch.
 - #636 rebase: duplicate PNG.paeth (reader and writer) collapsed to the reader's copy; stubsThrowCodecErrors deleted (no stubs remain); head a4df142, CI PASS (1776 tests), PNGWrite 2/2, PNG 3/3.
+- IC-jpeg r1 fix batch wf_4cb93cd0-ecb: b1 #648 (54e1a55, 12/12 JPEGProgressive, adds 64-pass scan budget), b2 #651 (4130d91, 5/5 JPEG), b3 #645 (c68428c, 7/7 JPEGWrite, merged 06:16Z). Branches use lead/image-codecs-r1-jpeg-bN (a nested name clashes with lead/image-codecs).
