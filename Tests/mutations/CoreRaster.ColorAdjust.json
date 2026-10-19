@@ -68,5 +68,12 @@
     "anchor": "compactMap({ $0 }).first {",
     "replacement": "compactMap({ $0 }).reversed().first {",
     "filter": "ToneBandTests"
+  },
+  {
+    "note": "mapStraight alpha-0 guard removed, so an alpha-0 pixel's stored colour is unpremultiplied to zero and written back, caught by ColorAdjustTests.alphaZeroKeepsStoredColor",
+    "file": "Sources/CoreRaster/Tone/ColorAdjust.swift",
+    "anchor": " where pixels[base + 3] != 0 {",
+    "replacement": " {",
+    "filter": "ColorAdjustTests.alphaZeroKeepsStoredColor"
   }
 ]

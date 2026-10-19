@@ -217,6 +217,20 @@ enum ToneCheck {
         try ToneCheck.expectAlphaKept("hsl") { try $0.hsl(HSLAdjustment(reds: HSLShift(hue: 20, saturation: 30, lightness: 10))) }
     }
 
+    /// An alpha-0 pixel with stored colour (not `RGBA.clear`) passes through
+    /// every op untouched: the shared alpha-0 guard skips it rather than
+    /// unpremultiplying it to zero and writing that back.
+    @Test func alphaZeroKeepsStoredColor() throws {
+        let hidden = RGBA(r: 0.4, g: 0.2, b: 0.7, a: 0)
+        let b = try ToneCheck.row([ToneCheck.pixel([0.8, 0.3, 0.2]), hidden])
+        let outs = [("vibrance", try b.vibrance(60)),
+                    ("hueSaturation", try b.hueSaturation(hue: 40, saturation: 30, lightness: 10)),
+                    ("hsl", try b.hsl(HSLAdjustment(reds: HSLShift(hue: 20, saturation: 30, lightness: 10))))]
+        for (name, out) in outs {
+            #expect(try out.pixel(x: 1, y: 0) == hidden, "\(name)")
+        }
+    }
+
     @Test func nanThrows() throws {
         let b = try ToneCheck.seeded(width: 2, height: 2, seed: 0xA4)
         #expect(throws: RasterError.self) { try b.vibrance(.nan) }
