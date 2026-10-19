@@ -24,7 +24,16 @@ public struct JPEGInfo: Hashable, Sendable {
     /// 5 to 8 are transposed: 5 mirrored across the main diagonal, 6 rotate
     /// 90 degrees clockwise to display, 7 mirrored across the other diagonal,
     /// 8 rotate 90 degrees counter-clockwise. For 5...8 the displayed image
-    /// is `height` wide and `width` tall.
+    /// is `height` wide and `width` tall. The `PixelBuffer` calls that turn
+    /// `JPEG.read`'s pixels upright, in order:
+    /// - 1: none.
+    /// - 2: `flipped(.horizontal)`.
+    /// - 3: `rotated(.degrees180)`.
+    /// - 4: `flipped(.vertical)`.
+    /// - 5: `rotated(.degrees90)` then `flipped(.horizontal)` (transpose).
+    /// - 6: `rotated(.degrees90)`.
+    /// - 7: `rotated(.degrees270)` then `flipped(.horizontal)` (transverse).
+    /// - 8: `rotated(.degrees270)`.
     public var orientation: Int
 }
 
@@ -138,7 +147,8 @@ struct JPEGDecoder {
         case 0xC4:
             while r.remaining > 0 {
                 let t = Int(try r.u8()), counts = try r.bytes(16), values = try r.bytes(counts.reduce(0) { $0 + Int($1) })
-                guard t >> 4 <= 1, t & 15 <= 3, values.count <= 256 else { throw CodecError.damaged("DHT class/id \(Self.nibbles(t)) out of range (class 0...1, id 0...3)") }
+                guard values.count <= 256 else { throw CodecError.damaged("DHT \(Self.nibbles(t)) has \(values.count) values (256 at most)") }
+                guard t >> 4 <= 1, t & 15 <= 3 else { throw CodecError.damaged("DHT class/id \(Self.nibbles(t)) out of range (class 0...1, id 0...3)") }
                 let table = try JPEGHuffman(counts: counts, values: values)
                 if t >> 4 == 0 { dc[t & 15] = table } else { ac[t & 15] = table }
             }
@@ -164,11 +174,13 @@ struct JPEGDecoder {
         guard height > 0 else { throw CodecError.unsupported("height from DNL") }
         guard width > 0 else { throw CodecError.damaged("width 0") }
         guard width <= JPEG.maxSide, height <= JPEG.maxSide else { throw CodecError.tooLarge("JPEG \(width)x\(height): sides are at most \(JPEG.maxSide)") }
-        guard n == 1 || n == 3 else { throw n == 0 ? CodecError.damaged("no components") : CodecError.unsupported("\(n) components") }
+        guard n == 1 || n == 3 else { throw n == 0 ? CodecError.damaged("no components") : CodecError.unsupported("\(n) components (4 is CMYK or YCCK, not read)") }
         var parts: [(id: Int, h: Int, v: Int, tq: Int)] = []
         for _ in 0..<n {
             let id = Int(try r.u8()), hv = Int(try r.u8()), tq = Int(try r.u8())
-            guard (1...4).contains(hv >> 4), (1...4).contains(hv & 15), tq <= 3 else { throw CodecError.damaged("SOF component \(id): sampling factors must be 1...4 and quant table 0...3") }
+            guard (1...4).contains(hv >> 4), (1...4).contains(hv & 15), tq <= 3 else {
+                throw CodecError.damaged("SOF component \(id): H \(hv >> 4) V \(hv & 15) Tq \(tq), need H and V 1...4 and Tq 0...3")
+            }
             parts.append((id, hv >> 4, hv & 15, tq))
         }
         let hmax = parts.map(\.h).max() ?? 1, vmax = parts.map(\.v).max() ?? 1
@@ -208,7 +220,9 @@ struct JPEGDecoder {
         for _ in 0..<Int(try r.u8()) {
             let id = Int(try r.u8()), t = Int(try r.u8())
             guard let i = f.components.firstIndex(where: { $0.id == id }) else { throw CodecError.damaged("scan names component \(id), not in the frame") }
-            guard quant[f.components[i].tq] != nil else { throw CodecError.damaged("no DQT \(f.components[i].tq)") }
+            guard quant[f.components[i].tq] != nil else {
+                throw CodecError.damaged("scan component \(id) uses DQT \(f.components[i].tq), not defined before its scan")
+            }
             parts.append(JPEGScan.Part(index: i, dc: t >> 4 < 4 ? dc[t >> 4] : nil, ac: t & 15 < 4 ? ac[t & 15] : nil))
         }
         let units = parts.reduce(0) { $0 + f.components[$1.index].h * f.components[$1.index].v }
@@ -223,7 +237,9 @@ struct JPEGDecoder {
             // progressive frame check() takes no AC scan of a component before its DC first scan (G.1.1.1.1), which
             // codes each of its blocks with 1 bit or more, inside the bytes left: 8 blocks a byte over all components.
             let coded = f.components.reduce(0) { $0 + $1.blocksX * $1.blocksY }
-            guard coded <= (f.progressive ? 8 : 4) * (bytes.count - at) else { throw CodecError.damaged("\(coded) blocks in too few bytes") }
+            guard coded <= (f.progressive ? 8 : 4) * (bytes.count - at) else {
+                throw CodecError.damaged("\(coded) blocks in too few bytes (\(bytes.count - at) after the scan header): truncated")
+            }
             coefficients = f.components.map { [Int32](repeating: 0, count: $0.stride * $0.rows * 64) }
         }
         return JPEGScan(parts: parts, ss: ss, se: se, ah: a >> 4, al: a & 15)

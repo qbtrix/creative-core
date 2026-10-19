@@ -92,14 +92,15 @@ enum JPEGFixtures {
     /// JFIF 1.02 APP0: version 1.02, no units, density 1:1, no thumbnail.
     static let jfif = segment(0xE0, Array("JFIF".utf8) + [0, 1, 2, 0, 0, 1, 0, 1, 0, 0])
     /// EXIF APP1: a TIFF header (MM big-endian or II little-endian, 42, IFD0 at 8) and IFD0 holding one entry,
-    /// Orientation (0x0112, SHORT, count 1, the value left-justified in the 4-byte field), no next IFD.
-    static func exif(_ orientation: Int, littleEndian: Bool) -> [UInt8] {
+    /// Orientation (0x0112, SHORT unless `type` says otherwise, count 1, the value left-justified in the 4-byte
+    /// field), no next IFD.
+    static func exif(_ orientation: Int, littleEndian: Bool, type: Int = 3) -> [UInt8] {
         func n(_ v: Int, _ size: Int) -> [UInt8] {
             let b = (0..<size).map { UInt8(truncatingIfNeeded: v >> (8 * (size - 1 - $0))) }
             return littleEndian ? b.reversed() : b
         }
         // Built as a list of parts: one long `+` chain times out the macOS type checker.
-        let entry: [[UInt8]] = [n(1, 2), n(0x0112, 2), n(3, 2), n(1, 4), n(orientation, 2), [0, 0], n(0, 4)]
+        let entry: [[UInt8]] = [n(1, 2), n(0x0112, 2), n(type, 2), n(1, 4), n(orientation, 2), [0, 0], n(0, 4)]
         let order: [UInt8] = Array((littleEndian ? "II" : "MM").utf8)
         let body: [[UInt8]] = [Array("Exif".utf8), [0, 0], order, n(42, 2), n(8, 4), Array(entry.joined())]
         return segment(0xE1, Array(body.joined()))

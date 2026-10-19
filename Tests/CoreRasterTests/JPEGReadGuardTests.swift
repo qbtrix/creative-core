@@ -4,8 +4,10 @@
 // and progressive stubs, a SOF with height 0 (height from DNL) is
 // unsupported, an interleaved scan of over 10 blocks per MCU (B.2.3) is
 // damaged, a second SOF and a scan cut short are named, an EXIF Orientation
-// outside 1...8 reads as 1, a size refusal names its limit, and seeded cuts
-// of the marker segments always throw.
+// outside 1...8 or not a SHORT reads as 1, a size refusal names its limit,
+// a SOF of width 0, a DHT of over 256 values and a segment length under 2 are
+// damaged and named, SOF refusals print the values read, and seeded cuts of
+// the marker segments and seeded SOF component fields always throw.
 @testable import CoreRaster
 import Testing
 #if canImport(FoundationEssentials)
@@ -42,6 +44,13 @@ import Foundation
     @Test func badTableNamesItInHex() {
         let dht = Data([0xFF, 0xD8] + F.segment(0xC4, [0x25] + [UInt8](repeating: 0, count: 16)))
         #expect(damagedText { try JPEG.info(dht) }?.contains("DHT class/id 0x25") == true)
+        // 45 codes of 15 bits and 255 of 16 fit C.2's code space, so only the 256-value limit refuses them.
+        // Built as lists of parts: one long `+` chain times out the macOS type checker.
+        let table: [[UInt8]] = [[0x00], [UInt8](repeating: 0, count: 14), [45, 255], [UInt8](repeating: 0, count: 300)]
+        let segments: [[UInt8]] = [[0xFF, 0xD8], F.segment(0xC4, Array(table.joined()))]
+        let many = Data(Array(segments.joined()))
+        let manyText = damagedText { try JPEG.info(many) }
+        #expect(manyText?.contains("DHT 0x00 has 300 values (256 at most)") == true, "\(manyText ?? "no damaged")")
         let dqt = Data([0xFF, 0xD8] + F.segment(0xDB, [0x24] + [UInt8](repeating: 1, count: 64)))
         #expect(damagedText { try JPEG.info(dqt) }?.contains("DQT precision/id 0x24") == true)
         let lossless = F.stub(F.Frame(width: 8, height: 8, block: F.seeded(0)), sof: 0xC3)
@@ -56,6 +65,7 @@ import Foundation
         for (name, data) in [("baseline", baseline), ("SOF2", progressive)] {
             let text = damagedText { try JPEG.read(data) }
             #expect(text?.contains("blocks in too few bytes") == true, "\(name): \(text ?? "no damaged")")
+            #expect(text?.contains("(4 after the scan header): truncated") == true, "\(name): \(text ?? "no damaged")")
         }
     }
 
@@ -97,6 +107,65 @@ import Foundation
         let f = F.Frame(width: 13, height: 7, sampling: [(1, 1), (1, 1), (1, 1)], block: F.seeded(0x0E))
         for value in [0, 9] {
             #expect(try JPEG.info(F.baseline(f, orientation: value, littleEndian: false)).orientation == 1, "\(value)")
+        }
+    }
+
+    /// An Orientation entry of type ASCII (2) or LONG (4), even one whose first two value bytes read 6
+    /// (little-endian), is no SHORT Orientation tag, so 1.
+    @Test func exifOrientationWrongType() throws {
+        let parts = F.split(F.baseline(F.Frame(width: 13, height: 7, block: F.seeded(0x0F))))
+        for type in [2, 4] {
+            let app1 = Array(F.exif(6, littleEndian: true, type: type).dropFirst(4))
+            #expect(try JPEG.info(F.join([(0xE1, app1)] + parts.segments, parts.scan)).orientation == 1, "type \(type)")
+        }
+        let short = Array(F.exif(6, littleEndian: true).dropFirst(4))
+        #expect(try JPEG.info(F.join([(0xE1, short)] + parts.segments, parts.scan)).orientation == 6)
+    }
+
+    /// JPEGInfo's width is 1...maxSide: a SOF of width 0 is damaged, from info and from read.
+    @Test func widthZero() {
+        let data = F.stub(F.Frame(width: 0, height: 8, block: F.seeded(0)))
+        let info = damagedText { try JPEG.info(data) }, read = damagedText { try JPEG.read(data) }
+        #expect(info?.contains("width 0") == true, "info: \(info ?? "no damaged")")
+        #expect(read?.contains("width 0") == true, "read: \(read ?? "no damaged")")
+    }
+
+    /// A segment length counts its own two bytes, so 1 is damaged and named, not a body that ends before it starts.
+    @Test func segmentLengthUnderTwo() {
+        let text = damagedText { try JPEG.info(Data([0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x01, 0x00, 0x00, 0xFF, 0xD9])) }
+        #expect(text?.contains("segment 0xFFE0 at byte 2") == true && text?.contains("length 1") == true, "\(text ?? "no damaged")")
+    }
+
+    /// SOF refusals print what was read: the H and V of a 0x55 sampling byte, a Tq of 5, and CMYK for 4 components.
+    @Test func sofRefusalsPrintValues() {
+        let parts = F.split(F.stub(F.Frame(width: 8, height: 8, block: F.seeded(0))))
+        func sof(_ hv: UInt8, _ tq: UInt8) -> Data {
+            var segments = parts.segments
+            if let i = segments.firstIndex(where: { $0.marker == 0xC0 }) { (segments[i].body[7], segments[i].body[8]) = (hv, tq) }
+            return F.join(segments, parts.scan)
+        }
+        let cases: [(UInt8, UInt8, String)] = [(0x55, 0, "SOF component 1: H 5 V 5 Tq 0"), (0x11, 5, "SOF component 1: H 1 V 1 Tq 5")]
+        for (hv, tq, want) in cases {
+            let text = damagedText { try JPEG.info(sof(hv, tq)) }
+            #expect(text?.contains(want) == true, "\(text ?? "no damaged")")
+        }
+        let cmyk = F.baseline(F.Frame(width: 8, height: 8, sampling: [(1, 1), (1, 1), (1, 1), (1, 1)], block: F.seeded(0x06)))
+        guard case .unsupported(let text) = error({ try JPEG.info(cmyk) }) else { Issue.record("4 components not unsupported"); return }
+        #expect(text.contains("4 components") && text.contains("CMYK"), "\(text)")
+    }
+
+    /// Seeded component count, sampling and Tq bytes in a SOF throw a CodecError or decode, never trap.
+    @Test func seededSOFFieldsThrow() {
+        var rng = SplitMix64(seed: 0x50F)
+        let good = F.split(F.baseline(F.Frame(width: 16, height: 8, sampling: [(2, 1), (1, 1), (1, 1)], block: F.seeded(0x510))))
+        guard let at = good.segments.firstIndex(where: { $0.marker == 0xC0 }) else { Issue.record("no SOF"); return }
+        for _ in 0..<400 {
+            var segments = good.segments
+            for k in [5, 7, 8, 10, 11, 13, 14] where Int.random(in: 0..<3, using: &rng) == 0 {
+                segments[at].body[k] = UInt8.random(in: 0...255, using: &rng)
+            }
+            let data = F.join(segments, good.scan)
+            do { _ = try JPEG.read(data) } catch is CodecError {} catch { Issue.record("\(error)") }
         }
     }
 
