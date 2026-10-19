@@ -11,7 +11,10 @@ that passes `FlareFormat.validate`, plus an import report that lists what
 was skipped. This is the inverse of `export`, and the oracle is the round
 trip: what FlareCore writes, it reads back equal.
 **Line:** `line:core` · **Wave:** 5 (`waves.md`) · **Lead branch:** `lead/vector-import`
-**Status:** planned
+**Status:** built. Merged PRs: #449, #478, #488, #490, #491, #494, #505,
+#506, #512, #517, #521, #522, #542, #544, #556, #580, and this packet's
+closing `feature-done` PR. Where this packet and the code differ, the code
+and its doc comments win.
 
 **Covers:** beta-80 plan row E11 ("SVG and Lottie readers; vector paste
 between apps"); Flare map row 2 ("import SVG ... FlareCore `Path` takes
