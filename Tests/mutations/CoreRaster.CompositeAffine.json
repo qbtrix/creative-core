@@ -33,5 +33,40 @@
     "anchor": "func pad(_ v: Double) -> Int { Int(min(v.rounded(.up) + 1, limit)) }",
     "replacement": "func pad(_ v: Double) -> Int { 0 }",
     "filter": "CompositeAffineTests"
+  },
+  {
+    "note": "the reach pad is inflated by 10000 so the work piece grows to the whole backdrop, the full-size intermediate the feature avoids, caught by CompositeAffineTests.rowsOutsideBoundsAreUntouched",
+    "file": "Sources/CoreRaster/Compositing/CompositeAffine.swift",
+    "anchor": "func pad(_ v: Double) -> Int { Int(min(v.rounded(.up) + 1, limit)) }",
+    "replacement": "func pad(_ v: Double) -> Int { Int(min(v.rounded(.up) + 10_000, limit)) }",
+    "filter": "CompositeAffineTests"
+  },
+  {
+    "note": "the reach drops the stretch floor so an upscale's pad shrinks below radius times scale and clips coverage past a hard edge, caught by CompositeAffineTests.hardEdgeKernelReachPastCorners",
+    "file": "Sources/CoreRaster/Compositing/CompositeAffine.swift",
+    "anchor": "let stretchX = min(max((inv.a * inv.a + inv.c * inv.c).squareRoot(), 1), Double(max(width, 1)))\n        let stretchY = min(max((inv.b * inv.b + inv.d * inv.d).squareRoot(), 1), Double(max(height, 1)))",
+    "replacement": "let stretchX = min((inv.a * inv.a + inv.c * inv.c).squareRoot(), Double(max(width, 1)))\n        let stretchY = min((inv.b * inv.b + inv.d * inv.d).squareRoot(), Double(max(height, 1)))",
+    "filter": "CompositeAffineTests"
+  },
+  {
+    "note": "the reach maps through the transposed linear part (b for x, c for y) so a sheared or anisotropic layer's pad is wrong per axis, caught by CompositeAffineTests.hardEdgeKernelReachPastCorners",
+    "file": "Sources/CoreRaster/Compositing/CompositeAffine.swift",
+    "anchor": "return (pad(abs(m.a) * rx + abs(m.c) * ry), pad(abs(m.b) * rx + abs(m.d) * ry))",
+    "replacement": "return (pad(abs(m.a) * rx + abs(m.b) * ry), pad(abs(m.c) * rx + abs(m.d) * ry))",
+    "filter": "CompositeAffineTests"
+  },
+  {
+    "note": "the box clip is dropped so the whole backdrop is resampled and blended, rows outside the bounds written, caught by CompositeAffineTests.rowsOutsideBoundsAreUntouched",
+    "file": "Sources/CoreRaster/Compositing/CompositeAffine.swift",
+    "anchor": "let x0 = max(box.x - pad.x, 0), x1 = min(box.x + box.width + pad.x, width)\n        let y0 = max(box.y - pad.y, 0), y1 = min(box.y + box.height + pad.y, height)",
+    "replacement": "let x0 = 0, x1 = width\n        let y0 = 0, y1 = height",
+    "filter": "CompositeAffineTests.rowsOutsideBoundsAreUntouched"
+  },
+  {
+    "note": "the opacity guard is dropped so a bad opacity on a layer mapped off the backdrop returns without throwing, caught by CompositeAffineTests.badInputThrowsAndLeavesBackdrop",
+    "file": "Sources/CoreRaster/Compositing/CompositeAffine.swift",
+    "anchor": "guard (0...1).contains(opacity) else {",
+    "replacement": "guard true else {",
+    "filter": "CompositeAffineTests"
   }
 ]
