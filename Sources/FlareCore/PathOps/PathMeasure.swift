@@ -52,13 +52,14 @@ extension Path {
         let span = e >= s ? e - s : 1 - s + e
         let from = wrap(s + offset)
         let rulers = mode == .eachContour ? ruler.lines.map { Ruler(lines: [$0]) } : [ruler]
-        var pieces: [[Point]] = []
+        var elements: [PathElement] = []
+        elements.reserveCapacity(ruler.lines.reduce(0) { $0 + $1.points.count + 4 })
         for r in rulers {
             let a = from * r.total, b = (from + span) * r.total
-            pieces += r.slice(a, Swift.min(b, r.total))
-            if b > r.total { pieces += r.slice(0, b - r.total) }
+            r.slice(a, Swift.min(b, r.total), into: &elements)
+            if b > r.total { r.slice(0, b - r.total, into: &elements) }
         }
-        return Path(pieces: pieces)
+        return Path(elements: elements)
     }
 
     /// The dashes of `pattern` (dash, gap, dash, ... lengths; an odd count
@@ -76,7 +77,7 @@ extension Path {
         let period = entries.reduce(0, +)
         guard period > 0, period.isFinite else { throw GeometryError.invalidPattern }
         guard phase.isFinite else { throw GeometryError.nonFinite }
-        var pieces: [[Point]] = [], steps = 0
+        var elements: [PathElement] = [], steps = 0
         for line in try Ruler(self, tolerance: tolerance).lines {
             // Find where `phase` falls in the pattern, then walk the contour.
             var i = 0, left = phase - (phase / period).rounded(.down) * period
@@ -89,18 +90,13 @@ extension Path {
                 steps += 1
                 guard steps <= Self.maxDashSteps else { throw GeometryError.tooComplex(Self.maxDashSteps) }
                 let next = Swift.min(d + remaining, line.length)
-                if i % 2 == 0, next > d { pieces.append(line.cut(d, next)) }
+                if i % 2 == 0, next > d { line.cut(d, next, into: &elements) }
                 d = next
                 i = (i + 1) % entries.count
                 remaining = entries[i]
             }
         }
-        return Path(pieces: pieces)
-    }
-
-    /// Open polylines, one subpath each.
-    init(pieces: [[Point]]) {
-        self.init(elements: pieces.flatMap { Path(polyline: $0, closed: false).elements })
+        return Path(elements: elements)
     }
 }
 
@@ -132,20 +128,20 @@ private struct RulerLine {
         return lerp(points[i], points[i + 1], (s - sums[i]) / (sums[i + 1] - sums[i]))
     }
 
-    /// The polyline from length `a` to `b` (0 <= a < b <= length): a binary
+    /// The polyline from length `a` to `b` (0 <= a < b <= length), appended as a move and lines: a binary
     /// search finds the first point past `a`, so a cut walks only its own span.
-    func cut(_ a: Double, _ b: Double) -> [Point] {
+    func cut(_ a: Double, _ b: Double, into elements: inout [PathElement]) {
         var lo = 0, hi = sums.count
         while lo < hi {
             let mid = (lo + hi) / 2
             if sums[mid] <= a { lo = mid + 1 } else { hi = mid }
         }
-        var result = [at(a)]
+        elements.append(.move(to: at(a)))
         while lo < sums.count, sums[lo] < b {
-            result.append(points[lo])
+            elements.append(.line(to: points[lo]))
             lo += 1
         }
-        return result + [at(b)]
+        elements.append(.line(to: at(b)))
     }
 }
 
@@ -162,20 +158,29 @@ private struct Ruler {
     }
 
     init(_ path: Path, tolerance: Double) throws {
-        let lines = try path.flattened(tolerance: tolerance).map { points in
-            let sums = zip(points, points.dropFirst()).reduce(into: [0.0]) { $0.append(($0.last ?? 0) + norm($1.1.x - $1.0.x, $1.1.y - $1.0.y)) }
-            guard (sums.last ?? 0).isFinite, points.allSatisfy(\.isFinite) else { throw GeometryError.nonFinite }
-            return RulerLine(points: points, sums: sums)
+        var lines: [RulerLine] = [], points: [Point] = [], sums: [Double] = [], finite = true
+        try path.forEachFlattenedPoint(tolerance: tolerance) { point, starts in
+            if starts || points.isEmpty {
+                if !points.isEmpty { lines.append(RulerLine(points: points, sums: sums)) }
+                (points, sums) = ([], [0])
+            } else if let last = points.last {
+                sums.append((sums.last ?? 0) + norm(point.x - last.x, point.y - last.y))
+            }
+            points.append(point)
+            finite = finite && point.isFinite
+            return false
         }
+        if !points.isEmpty { lines.append(RulerLine(points: points, sums: sums)) }
+        guard finite, lines.allSatisfy(\.length.isFinite) else { throw GeometryError.nonFinite }
         self.init(lines: lines)
         guard total.isFinite else { throw GeometryError.nonFinite }
     }
 
-    /// The pieces from `a` to `b` (0 <= a <= b <= total), one per line crossed.
-    func slice(_ a: Double, _ b: Double) -> [[Point]] {
-        lines.indices.compactMap { k in
+    /// Appends the pieces from `a` to `b` (0 <= a <= b <= total), one per line crossed.
+    func slice(_ a: Double, _ b: Double, into elements: inout [PathElement]) {
+        for k in lines.indices {
             let lo = Swift.max(a - offsets[k], 0), hi = Swift.min(b - offsets[k], lines[k].length)
-            return hi > lo ? lines[k].cut(lo, hi) : nil
+            if hi > lo { lines[k].cut(lo, hi, into: &elements) }
         }
     }
 }
