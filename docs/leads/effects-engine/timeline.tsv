@@ -24,3 +24,4 @@ utc	stage	event	ref	note
 2026-10-18T23:58:27Z	3	building	FX-5	builder launched on 5ea5ae5
 2026-10-19T00:12:23Z	3	pr-open	#586	FX-4 head 3beae89, 2/2 mutants
 2026-10-19T00:20:02Z	3	merged	#586	FX-4 squash 7f58cab; FX-blur all merged; dev CI 39180267199 queued on 789025a
+2026-10-19T00:29:06Z	3	pr-open	#588	FX-5 head 86134b8, 3/3 mutants
