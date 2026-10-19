@@ -34,7 +34,9 @@ enum FillCheck {
     }
 }
 
-@Suite struct FloodFillTests {
+/// Serialized, so the two large memory cases never overlap and count each
+/// other's allocations.
+@Suite(.serialized) struct FloodFillTests {
     private func cover(_ mask: Mask, _ p: (x: Int, y: Int)) throws -> Float { try mask.coverage(x: p.x, y: p.y) }
 
     @Test
@@ -259,7 +261,7 @@ enum FillCheck {
         #expect(extra <= 6 * pixels, "peak grew \(extra) bytes for \(pixels) pixels")
     }
 
-    /// A comb (`FillFixtures.comb`), 16 MP: every odd row is half one-pixel
+    /// A comb (`FillFixtures.comb`), 64 MP: every odd row is half one-pixel
     /// runs, so a fill that queues every run start piles up about one pending
     /// seed per four pixels. Peak memory past the input and the 4-byte mask
     /// stays at most 2 bytes per pixel.
