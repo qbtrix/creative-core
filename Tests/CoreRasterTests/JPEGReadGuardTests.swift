@@ -1,9 +1,11 @@
 // JPEGReadGuardTests.swift: the JPEG reader's refusals each named by their
 // message, not only their kind: a segment cut short names its marker in hex
 // (0xFFDB), the refuse-before-allocate block bound names itself for baseline
-// and progressive stubs, a SOF with height 0 (height from DNL) is
-// unsupported, an interleaved scan of over 10 blocks per MCU (B.2.3) is
-// damaged, a second SOF and a scan cut short are named, an EXIF Orientation
+// and progressive stubs at its edge, a SOF with height 0 (left to a DNL
+// marker) is unsupported, an interleaved scan of over 10 blocks per MCU or
+// of 0 or over 4 components (B.2.3) is damaged, fill bytes and standalone
+// markers between segments are skipped, a SOF of no components and a DHT or
+// DQT with one bad nibble are damaged, an EXIF IFD0 past its body reads as 1, a second SOF and a scan cut short are named, an EXIF Orientation
 // outside 1...8 or not a SHORT reads as 1, a size refusal names its limit,
 // a SOF of width 0, a DHT of over 256 values and a segment length under 2 are
 // damaged and named, SOF refusals print the values read, and seeded cuts of
@@ -42,8 +44,12 @@ import Foundation
     }
 
     @Test func badTableNamesItInHex() {
-        let dht = Data([0xFF, 0xD8] + F.segment(0xC4, [0x25] + [UInt8](repeating: 0, count: 16)))
-        #expect(damagedText { try JPEG.info(dht) }?.contains("DHT class/id 0x25") == true)
+        // Each byte breaks one nibble only, so each clause of the guard is needed on its own.
+        for t: UInt8 in [0x25, 0x05, 0x20] {
+            let dht = Data([0xFF, 0xD8] + F.segment(0xC4, [t] + [UInt8](repeating: 0, count: 16)))
+            let text = damagedText { try JPEG.info(dht) }
+            #expect(text?.contains("DHT class/id \(JPEGDecoder.nibbles(Int(t)))") == true, "\(text ?? "no damaged")")
+        }
         // 45 codes of 15 bits and 255 of 16 fit C.2's code space, so only the 256-value limit refuses them.
         // Built as lists of parts: one long `+` chain times out the macOS type checker.
         let table: [[UInt8]] = [[0x00], [UInt8](repeating: 0, count: 14), [45, 255], [UInt8](repeating: 0, count: 300)]
@@ -51,8 +57,11 @@ import Foundation
         let many = Data(Array(segments.joined()))
         let manyText = damagedText { try JPEG.info(many) }
         #expect(manyText?.contains("DHT 0x00 has 300 values (256 at most)") == true, "\(manyText ?? "no damaged")")
-        let dqt = Data([0xFF, 0xD8] + F.segment(0xDB, [0x24] + [UInt8](repeating: 1, count: 64)))
-        #expect(damagedText { try JPEG.info(dqt) }?.contains("DQT precision/id 0x24") == true)
+        for t: UInt8 in [0x24, 0x04, 0x20] {
+            let dqt = Data([0xFF, 0xD8] + F.segment(0xDB, [t] + [UInt8](repeating: 1, count: 64)))
+            let text = damagedText { try JPEG.info(dqt) }
+            #expect(text?.contains("DQT precision/id \(JPEGDecoder.nibbles(Int(t)))") == true, "\(text ?? "no damaged")")
+        }
         let lossless = F.stub(F.Frame(width: 8, height: 8, block: F.seeded(0)), sof: 0xC3)
         guard case .unsupported(let text) = error({ try JPEG.info(lossless) }) else { Issue.record("SOF3 not unsupported"); return }
         #expect(text.contains("0xFFC3"))
@@ -76,6 +85,52 @@ import Foundation
         let data = Data(head + F.sos([0, 1, 2], 0, 0, 0, 0) + [UInt8](repeating: 0, count: 1_000) + [0xFF, 0xD9])
         let text = damagedText { try JPEG.read(data) }
         #expect(text?.contains("blocks in too few bytes") == true, "\(text ?? "no damaged")")
+    }
+
+    /// The bound at its edge: 64 grey blocks pass with 8 bytes left in SOF2 (1 bit a block) and 16 in baseline
+    /// (2 bits a block), and one byte fewer is refused, so the multipliers are exactly 8 and 4.
+    @Test func blockBoundAtEdge() {
+        let f = F.Frame(width: 64, height: 64, block: F.seeded(0))
+        for (sof, se, left) in [(UInt8(0xC2), 0, 8), (UInt8(0xC0), 63, 16)] {
+            let head = F.header(f, sof: sof, precision: 8, restart: 0, orientation: nil, littleEndian: false) + F.sos([0], 0, se, 0, 0)
+            for (bytes, refused) in [(left, false), (left - 1, true)] {
+                let data = Data(head + [UInt8](repeating: 0, count: bytes - 2) + [0xFF, 0xD9])
+                let text = error { try JPEG.read(data) }.map { "\($0)" } ?? "returned"
+                #expect(text.contains("64 blocks in too few bytes") == refused, "SOF \(sof) \(bytes) left: \(text)")
+            }
+        }
+    }
+
+    /// B.2.3: a scan names 1...4 components, so an SOS of 0 (which would decode nothing) or 5 is damaged.
+    @Test func scanComponentCount() {
+        let grey = F.header(F.Frame(width: 8, height: 8, block: F.seeded(0)), sof: 0xC0, precision: 8, restart: 0,
+                            orientation: nil, littleEndian: false)
+        let three = F.Frame(width: 8, height: 8, sampling: [(1, 1), (1, 1), (1, 1)], block: F.seeded(0))
+        let colour = F.header(three, sof: 0xC0, precision: 8, restart: 0, orientation: nil, littleEndian: false)
+        let five: [UInt8] = [5, 1, 0x00, 2, 0x11, 3, 0x11, 1, 0x00, 2, 0x11, 0, 63, 0]
+        for (count, data) in [(0, grey + F.segment(0xDA, [0, 0, 63, 0])), (5, colour + F.segment(0xDA, five))] {
+            let text = damagedText { try JPEG.read(Data(data + [UInt8](repeating: 0, count: 8) + [0xFF, 0xD9])) }
+            #expect(text?.contains("scan names \(count) components") == true, "\(text ?? "no damaged")")
+        }
+    }
+
+    /// B.1.1.2: 0xFF fill bytes before a marker, TEM and an RSTm between segments are skipped, so the pixels match.
+    @Test func fillBytesAndStandaloneMarkers() throws {
+        let good = F.baseline(F.Frame(width: 13, height: 7, sampling: [(2, 1), (1, 1), (1, 1)], block: F.seeded(0x11)))
+        let parts = F.split(good)
+        let fill: [UInt8] = [0xFF, 0xFF, 0xFF, 0x01, 0xFF, 0xD3, 0xFF]
+        let padded: [UInt8] = parts.segments.flatMap { fill + F.segment($0.marker, $0.body) }
+        let soi: [UInt8] = [0xFF, 0xD8]
+        #expect(try JPEG.read(Data(soi + padded + parts.scan)) == JPEG.read(good))
+    }
+
+    /// A SOF of no components is damaged (not unsupported); an EXIF IFD0 offset past the TIFF body reads as 1.
+    @Test func noComponentsAndFarIFD() throws {
+        let sof = F.segment(0xC0, [8] + F.be16(8) + F.be16(8) + [0])
+        #expect(damagedText { try JPEG.info(Data([0xFF, 0xD8] + sof + [0xFF, 0xD9])) }?.contains("no components") == true)
+        let parts = F.split(F.baseline(F.Frame(width: 8, height: 8, block: F.seeded(0x12))))
+        let tiff: [UInt8] = Array("Exif".utf8) + [0, 0] + Array("MM".utf8) + [0, 42, 0x00, 0x00, 0xFF, 0xFF]
+        #expect(try JPEG.info(F.join([(0xE1, tiff)] + parts.segments, parts.scan)).orientation == 1)
     }
 
     /// An 8 x 8 baseline scan, then a SOF for 64 x 64: the store was sized for the first frame, so the second is refused.
@@ -144,7 +199,10 @@ import Foundation
             if let i = segments.firstIndex(where: { $0.marker == 0xC0 }) { (segments[i].body[7], segments[i].body[8]) = (hv, tq) }
             return F.join(segments, parts.scan)
         }
-        let cases: [(UInt8, UInt8, String)] = [(0x55, 0, "SOF component 1: H 5 V 5 Tq 0"), (0x11, 5, "SOF component 1: H 1 V 1 Tq 5")]
+        // 0x51, 0x01 and 0x15 break H or V alone, so each clause of the sampling guard is needed on its own.
+        let cases: [(UInt8, UInt8, String)] = [(0x55, 0, "SOF component 1: H 5 V 5 Tq 0"), (0x11, 5, "SOF component 1: H 1 V 1 Tq 5"),
+                                               (0x51, 0, "SOF component 1: H 5 V 1"), (0x01, 0, "SOF component 1: H 0 V 1"),
+                                               (0x15, 0, "SOF component 1: H 1 V 5")]
         for (hv, tq, want) in cases {
             let text = damagedText { try JPEG.info(sof(hv, tq)) }
             #expect(text?.contains(want) == true, "\(text ?? "no damaged")")
@@ -182,7 +240,7 @@ import Foundation
     @Test func heightFromDNL() {
         let data = F.stub(F.Frame(width: 8, height: 0, block: F.seeded(0)))
         guard case .unsupported(let text) = error({ try JPEG.info(data) }) else { Issue.record("height 0 not unsupported"); return }
-        #expect(text.contains("DNL"))
+        #expect(text.contains("height 0") && text.contains("DNL"), "\(text)")
     }
 
     /// 4x4, 4x4 and 1x1 factors in one interleaved scan are 33 blocks per MCU, over B.2.3's 10.

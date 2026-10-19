@@ -3,7 +3,7 @@
 // length holds (C.2), a DC size over 15 in sequential and progressive scans,
 // an AC run past coefficient 63 or past a progressive band's end, a
 // refinement symbol of size 2 (G.1.2.3), a restart interval the RSTm markers
-// do not deliver (B.2.4.4), a scan table no DHT defined; the SOF component id
+// do not deliver (B.2.4.4), a scan table no DHT defined or past id 3; the SOF component id
 // (not its array position) in progressive order errors; and seeded random
 // DHT tables over random scan bytes throw or decode, never trap.
 @testable import CoreRaster
@@ -42,8 +42,8 @@ import Foundation
         let cases: [(String, [UInt8], String)] = [
             ("3 one-bit codes", [0xFF, 0xD8] + F.segment(0xC4, [0x00, 3] + [UInt8](repeating: 0, count: 15) + [0, 1, 2]),
              "too many 1-bit codes"),
-            ("baseline DC value 16", Self.head(sof: 0xC0) + dc16 + F.sos([0], 0, 63, 0, 0) + Self.zeros, "DC size 16"),
-            ("progressive DC value 16", Self.head(sof: 0xC2) + dc16 + F.sos([0], 0, 0, 0, 0) + Self.zeros, "DC size 16"),
+            ("baseline DC value 16", Self.head(sof: 0xC0) + dc16 + F.sos([0], 0, 63, 0, 0) + Self.zeros, "DC size 16 is over 15"),
+            ("progressive DC value 16", Self.head(sof: 0xC2) + dc16 + F.sos([0], 0, 0, 0, 0) + Self.zeros, "DC size 16 is over 15"),
             ("three ZRL then 0xF1", Self.head(sof: 0xC0) + F.sos([0], 0, 63, 0, 0) + Self.coded { w in
                 w.put(dc, 0); for _ in 0..<3 { w.put(ac, 0xF0) }; w.put(ac, 0xF1); w.put(1, 1)
             }, "past coefficient 63"),
@@ -51,10 +51,12 @@ import Foundation
                 for _ in 0..<2 { w.put(dc, 0); w.put(ac, 0x00) }
             }, "restart interval 1 missing"),
             ("refinement symbol of size 2", progressive + F.sos([0], 1, 63, 0, 1) + [0xAF] + F.sos([0], 1, 63, 1, 0)
-             + Self.coded { $0.put(ac, 0x02); $0.put(3, 2) }, "refinement size 2"),
+             + Self.coded { $0.put(ac, 0x02); $0.put(3, 2) }, "refinement symbol size 2: an AC refinement codes size 0 or 1"),
             ("band 1...5, run 5", progressive + F.sos([0], 1, 5, 0, 0) + Self.coded { $0.put(ac, 0x51); $0.put(1, 1) },
              "past coefficient 5"),
             ("table 2 never defined", Self.head(sof: 0xC0) + F.segment(0xDA, [1, 1, 0x22, 0, 63, 0]) + Self.zeros, "no DHT DC table"),
+            // Selectors past 3 name no table slot, so they read as undefined rather than index past the 4 slots.
+            ("table 5 past the slots", Self.head(sof: 0xC0) + F.segment(0xDA, [1, 1, 0x55, 0, 63, 0]) + Self.zeros, "no DHT DC table"),
         ]
         for (name, bytes, message) in cases {
             let text = damagedText(bytes)

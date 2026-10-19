@@ -74,7 +74,7 @@ struct JPEGBits {
     /// F.2.2: one sequential block's DC difference and AC run/size symbols into `store` at `base`, zigzag undone.
     mutating func block(_ dc: JPEGHuffman, _ ac: JPEGHuffman, _ pred: inout Int32, _ store: inout [Int32], _ base: Int) throws {
         let s = try symbol(dc)
-        guard s <= 15 else { throw CodecError.damaged("DC size \(s)") }
+        guard s <= 15 else { throw CodecError.damaged("DC size \(s) is over 15") }
         pred = pred &+ receive(s)
         store[base] = pred
         var k = 1

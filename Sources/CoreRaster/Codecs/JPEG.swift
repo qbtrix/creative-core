@@ -12,9 +12,10 @@ import Foundation
 
 /// What a JPEG's markers say, read without decoding any scan.
 public struct JPEGInfo: Hashable, Sendable {
-    /// Frame width and height in pixels (each 1...`JPEG.maxSide`) as stored
-    /// in SOF, before `orientation` is applied, and the component count
-    /// (1 grey, 3 YCbCr).
+    /// Frame width and height in pixels (each 1...`JPEG.maxSide`, their
+    /// product at most `PixelBuffer.maxPixels`, so `JPEG.read` will not refuse
+    /// the size) as stored in SOF, before `orientation` is applied, and the
+    /// component count (1 grey, 3 YCbCr).
     public var width, height, components: Int
     /// True for a progressive frame (SOF2).
     public var progressive: Bool
@@ -39,7 +40,8 @@ public struct JPEGInfo: Hashable, Sendable {
 
 /// JPEG files to and from `PixelBuffer`. Throws `CodecError`: `notThisFormat`
 /// without SOI, `damaged` for a broken stream, `unsupported` for arithmetic
-/// coding, lossless or hierarchical frames, 12-bit samples or CMYK,
+/// coding, lossless or hierarchical frames, 12-bit samples, CMYK, a quality
+/// outside 1...100 (write) or a height left to a DNL marker (read),
 /// `tooLarge` past its limits.
 public enum JPEG {
     /// The largest width or height read or written, in pixels; the pixel
@@ -49,7 +51,8 @@ public enum JPEG {
     /// The frame header and EXIF orientation of `data`, with no scan decoded.
     /// Throws `notThisFormat` without SOI, `damaged` for a malformed marker
     /// segment or no SOF, `unsupported` for a frame type it does not read,
-    /// `tooLarge` for a side over `maxSide`.
+    /// `tooLarge` for a side over `maxSide` or more than `PixelBuffer.maxPixels`
+    /// pixels, so a size `info` returns is one `read` will not refuse.
     public static func info(_ data: Data) throws -> JPEGInfo {
         var d = try JPEGDecoder(data)
         _ = try d.nextScan()
@@ -166,14 +169,16 @@ struct JPEGDecoder {
         }
     }
 
-    /// SOF (B.2.2): 8-bit samples, one or three components with factors 1...4, sides checked before anything else.
+    /// SOF (B.2.2): 8-bit samples, one or three components with factors 1...4, sides and pixel count checked before anything else.
     static func frame(_ r: inout ByteReader, progressive: Bool, seen: Bool) throws -> JPEGFrame {
         guard !seen else { throw CodecError.damaged("a second SOF") }
         let precision = try r.u8(), height = Int(try r.u16()), width = Int(try r.u16()), n = Int(try r.u8())
         guard precision == 8 else { throw CodecError.unsupported("\(precision)-bit samples") }
-        guard height > 0 else { throw CodecError.unsupported("height from DNL") }
+        guard height > 0 else { throw CodecError.unsupported("SOF height 0 (the height is set later by a DNL marker, which is not read)") }
         guard width > 0 else { throw CodecError.damaged("width 0") }
         guard width <= JPEG.maxSide, height <= JPEG.maxSide else { throw CodecError.tooLarge("JPEG \(width)x\(height): sides are at most \(JPEG.maxSide)") }
+        // Sides are at most maxSide, so the product cannot overflow.
+        guard width * height <= PixelBuffer.maxPixels else { throw CodecError.tooLarge("JPEG \(width)x\(height): more than \(PixelBuffer.maxPixels) pixels") }
         guard n == 1 || n == 3 else { throw n == 0 ? CodecError.damaged("no components") : CodecError.unsupported("\(n) components (4 is CMYK or YCCK, not read)") }
         var parts: [(id: Int, h: Int, v: Int, tq: Int)] = []
         for _ in 0..<n {
@@ -231,8 +236,6 @@ struct JPEGDecoder {
         }
         let ss = Int(try r.u8()), se = Int(try r.u8()), a = Int(try r.u8())
         if coefficients.isEmpty {
-            // Sides are at most maxSide, so the product cannot overflow.
-            guard f.width * f.height <= PixelBuffer.maxPixels else { throw CodecError.tooLarge("JPEG \(f.width)x\(f.height): more than \(PixelBuffer.maxPixels) pixels") }
             // A sequential block takes at least a DC code and an EOB, two bits, so the bytes left bound the blocks. In a
             // progressive frame check() takes no AC scan of a component before its DC first scan (G.1.1.1.1), which
             // codes each of its blocks with 1 bit or more, inside the bytes left: 8 blocks a byte over all components.

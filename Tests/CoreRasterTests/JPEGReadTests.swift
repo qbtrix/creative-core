@@ -143,16 +143,20 @@ import Foundation
     }
 
     /// Sizes come from SOF and are refused before any pixel buffer: the scans here are two bytes, so `tooLarge`
-    /// (not `damaged`) shows the check came first. 20,000² is within the side limit and over `PixelBuffer.maxPixels`.
+    /// (not `damaged`) shows the check came first. 20,000² is within the side limit and over `PixelBuffer.maxPixels`,
+    /// so `info` refuses it too.
     @Test func refusesHuge() throws {
         for (width, height) in [(JPEG.maxSide + 1, 1), (1, JPEG.maxSide + 1), (20_000, 20_000)] {
             for sampling in [[(1, 1)], Self.samplings[2]] {
                 let data = F.stub(F.Frame(width: width, height: height, sampling: sampling, block: F.seeded(0)))
                 #expect(PNGFixtures.thrown { try JPEG.read(data) } == "tooLarge", "\(width)x\(height)")
-                let overSide = width > JPEG.maxSide || height > JPEG.maxSide
-                #expect(PNGFixtures.thrown { try JPEG.info(data) } == (overSide ? "tooLarge" : "returned"))
+                #expect(PNGFixtures.thrown { try JPEG.info(data) } == "tooLarge", "info \(width)x\(height)")
             }
         }
+        // info refuses the pixel count read would refuse, as PNG.info does, naming the limit.
+        do { _ = try JPEG.info(F.stub(F.Frame(width: 20_000, height: 20_000, block: F.seeded(0)))); Issue.record("info returned") }
+        catch CodecError.tooLarge(let text) { #expect(text.contains("\(PixelBuffer.maxPixels)"), "\(text)") }
+        catch { Issue.record("\(error)") }
         #expect(PNGFixtures.thrown { try JPEG.read(F.stub(F.Frame(width: JPEG.maxSide, height: 1, block: F.seeded(0)))) } == "damaged")
         #expect(PNGFixtures.thrown { try JPEG.read(F.stub(F.Frame(width: JPEG.maxSide, height: 8, block: F.seeded(0)), sof: 0xC2)) } == "damaged")
     }

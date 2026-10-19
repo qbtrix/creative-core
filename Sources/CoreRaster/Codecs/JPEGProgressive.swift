@@ -50,7 +50,7 @@ extension JPEGDecoder {
         }
         guard ah == 0 || ah == al + 1 else { throw CodecError.damaged("refinement scan at Ah \(ah), Al \(al): a refinement must have Al = Ah - 1") }
         for part in scan.parts {
-            guard part.index < n else { throw CodecError.damaged("scan component \(part.index)") }
+            guard part.index < n else { throw CodecError.damaged("scan names component index \(part.index), past the frame's \(n) components") }
             let want = ah == 0 ? -1 : ah
             guard ss == 0 || coded[part.index][0] >= 0, coded[part.index][ss...se].allSatisfy({ $0 == want }) else {
                 throw CodecError.damaged("component \(f.components[part.index].id) coefficients \(ss)...\(se) out of order")
@@ -79,7 +79,7 @@ extension JPEGBits {
     /// G.1.2.1: a DC first scan's difference added to the prediction, the sum scaled by 2^Al.
     mutating func dcFirst(_ dc: JPEGHuffman, _ al: Int, _ pred: inout Int32, _ store: inout [Int32], _ base: Int) throws {
         let s = try symbol(dc)
-        guard s <= 15 else { throw CodecError.damaged("DC size \(s)") }
+        guard s <= 15 else { throw CodecError.damaged("DC size \(s) is over 15") }
         pred = pred &+ receive(s)
         store[base] = pred << al
     }
@@ -115,7 +115,7 @@ extension JPEGBits {
             var r = rs >> 4, value: Int32 = 0
             if s == 0, r < 15 { eobrun = (1 << r) + Int(bits(r)); break }
             if s != 0 {
-                guard s == 1 else { throw CodecError.damaged("refinement size \(s)") }
+                guard s == 1 else { throw CodecError.damaged("refinement symbol size \(s): an AC refinement codes size 0 or 1") }
                 value = bits(1) == 1 ? one : -one
             }
             while k <= scan.se {
