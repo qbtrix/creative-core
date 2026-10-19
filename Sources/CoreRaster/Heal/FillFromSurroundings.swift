@@ -5,9 +5,9 @@
 // outside the hole (dilated by `r`) that best matches the patch around it,
 // found by the seeded search in PatchSearch.swift, coarse to fine on a pyramid
 // of up to three levels. The hole is then healed against the ring: its tone
-// is the ring's, relaxed in (`relaxHeal`), and its grain each source's own
-// (the source minus its local mean). All state is local: the same seed gives
-// the same pixels.
+// is the ring's, solved in by the heal's multigrid (`HealSolver`), and its
+// grain each source's own (the source minus its local mean). All state is
+// local: the same seed gives the same pixels.
 
 extension PixelBuffer {
     /// The largest patch radius the fill uses; a larger `patchRadius` acts as this.
@@ -80,13 +80,23 @@ extension PixelBuffer {
         return try grainedFill(levels[0], map: map, tone: h, cover: cover, grid: (gx0, gy0, gw, gh))
     }
 
-    /// Relaxes `tone` into the hole, adds each hole pixel's source grain (the
-    /// source minus the mean of the unmasked pixels within `fillGrainRadius`
-    /// of it) and blends feathered pixels by coverage.
+    /// Solves `tone` into the hole (ring cells fixed, hole cells harmonic),
+    /// adds each hole pixel's source grain (the source minus the mean of the
+    /// unmasked pixels within `fillGrainRadius` of it) and blends feathered
+    /// pixels by coverage.
     func grainedFill(_ level: PatchLevel, map: [Int], tone: [Double], cover: [Float],
                      grid: (x0: Int, y0: Int, w: Int, h: Int)) throws -> PixelBuffer {
-        var tone = tone
-        Self.relaxHeal(&tone, cover: cover, width: grid.w, height: grid.h)
+        var tone = tone, solver = HealSolver(width: grid.w, height: grid.h)
+        for i in cover.indices {
+            let t = i * 4, gx = i % grid.w, gy = i / grid.w
+            solver.fix(gx, gy, SIMD4(Float(tone[t]), Float(tone[t + 1]), Float(tone[t + 2]), Float(tone[t + 3])))
+            if cover[i] > 0 { solver.free(gx, gy) }
+        }
+        solver.solve(tolerance: Self.healTolerance, maxCycles: Self.healMaxCycles)
+        for i in cover.indices where cover[i] > 0 {
+            let v = solver.value(i % grid.w, i / grid.w)
+            for k in 0..<4 { tone[i * 4 + k] = Double(v[k]) }
+        }
         var result = self
         for i in cover.indices where cover[i] > 0 {
             let x = grid.x0 + i % grid.w, y = grid.y0 + i / grid.w, s = map[y * width + x]
@@ -99,7 +109,7 @@ extension PixelBuffer {
                 }
             }
             func grain(_ k: Int) -> Double { Double(level.pixels[s * 4 + k]) - mean[k] / max(n, 1) }
-            let dest = Self.channelsOf(try pixel(x: x, y: y)), c = min(cover[i], 1)
+            let p = try pixel(x: x, y: y), dest = [p.r, p.g, p.b, p.a], c = min(cover[i], 1)
             var out = [Float](repeating: 0, count: 4)
             for k in 0..<4 { out[k] = dest[k] + (Float(tone[i * 4 + k] + grain(k)) - dest[k]) * c }
             try result.setPixel(x: x, y: y, RGBA(r: out[0], g: out[1], b: out[2], a: out[3]))

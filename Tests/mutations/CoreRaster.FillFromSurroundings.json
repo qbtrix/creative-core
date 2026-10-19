@@ -9,8 +9,8 @@
   {
     "note": "the fill skips the heal step and keeps the ring's mean tone flat across the hole, so the fill does not meet the ring where its tone varies, caught by FillFromSurroundingsTests.toneMeetsRing",
     "file": "Sources/CoreRaster/Heal/FillFromSurroundings.swift",
-    "anchor": "Self.relaxHeal(&tone, cover: cover, width: grid.w, height: grid.h)",
-    "replacement": "_ = tone",
+    "anchor": "solver.solve(tolerance: Self.healTolerance, maxCycles: Self.healMaxCycles)",
+    "replacement": "_ = solver",
     "filter": "FillFromSurroundingsTests.toneMeetsRing"
   },
   {
