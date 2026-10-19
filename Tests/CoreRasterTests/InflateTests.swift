@@ -28,9 +28,25 @@ import Foundation
     /// and 18 + 107 (256 zeros), 1 for end of block, 1 for the distance code, then end of block (bit 0).
     /// zlib rejects it as "invalid code lengths set".
     static let incompleteLengthCode: [UInt8] = [0x05, 0xC0, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x20, 0xFF, 0xAE, 0x01]
+    /// Fixed block: BFINAL 1, BTYPE 01, then literal/length code 286 (8 bits 11000110), which 3.2.6 reserves.
+    static let fixed286: [UInt8] = [0x1B, 0x03, 0x00]
+    /// Fixed block: 'a' 'b' 'c' as three 8-bit literals, end of block.
+    static let fixedABC: [UInt8] = [0x4B, 0x4C, 0x4A, 0x06, 0x00]
+    /// Dynamic headers: HLIT 30 (287 codes); HDIST 30 (31 codes); HCLEN 14.
+    static let hlit30: [UInt8] = [0xF5, 0xC0, 0x01]
+    static let hdist30: [UInt8] = [0x05, 0xDE, 0x01]
+    /// Dynamic block: HLIT 0, HDIST 0 (258 lengths), HCLEN 14; the code-length code gives 1 code 0 and 18
+    /// code 1. Then 18 + 127 (138 zeros) and 18 + 127 again, 18 more than the 120 left.
+    static let repeatPast: [UInt8] = [0x05, 0xC0, 0x81, 0x00, 0x00, 0x00, 0x00, 0x00, 0x90, 0xFF, 0x7F]
+    /// The same header, then 18 + 127 and 18 + 109: all 258 lengths 0, so symbol 256 (end of block) has no code.
+    static let noEndOfBlock: [UInt8] = [0x05, 0xC0, 0x81, 0x00, 0x00, 0x00, 0x00, 0x00, 0x90, 0xFF, 0x6D, 0x00]
 
     func raw(_ bytes: [UInt8], limit: Int = 1 << 20) throws -> [UInt8] { [UInt8](try Inflate.raw(Data(bytes), limit: limit)) }
     func zlib(_ bytes: [UInt8], limit: Int = 1 << 20) throws -> [UInt8] { [UInt8](try Inflate.zlib(Data(bytes), limit: limit)) }
+    /// The full description of the error `raw(bytes)` throws, or "returned".
+    func rawError(_ bytes: [UInt8]) -> String {
+        do { _ = try raw(bytes); return "returned" } catch { return String(describing: error) }
+    }
 
     @Test func storedBlocks() throws {
         #expect(try raw([0x00, 0x02, 0x00, 0xFD, 0xFF, 0x61, 0x62, 0x01, 0x01, 0x00, 0xFE, 0xFF, 0x63]) == Array("abc".utf8))
@@ -74,6 +90,23 @@ import Foundation
             ("no final block", [0x00, 0x03, 0x00, 0xFC, 0xFF, 0x61, 0x62, 0x63]), ("cut mid-block", Array(Self.dynamic.prefix(12))),
         ]
         for (name, bytes) in rawCases { #expect(F.thrown { try raw(bytes) } == "damaged", "\(name)") }
+        let named: [(String, [UInt8], String)] = [
+            ("length code 286 in a fixed block", Self.fixed286, "length code 286"),
+            ("HLIT 30", Self.hlit30, "HLIT or HDIST"), ("HDIST 30", Self.hdist30, "HLIT or HDIST"),
+            ("lengths repeat past the codes", Self.repeatPast, "repeat past"),
+            ("no end-of-block code", Self.noEndOfBlock, "no end-of-block"),
+        ]
+        for (name, bytes, text) in named {
+            let message = rawError(bytes)
+            #expect(message.hasPrefix("damaged") && message.contains(text), "\(name): \(message)")
+        }
+    }
+
+    /// Inflate stops at the final block (zlib: at the Adler-32) and ignores what follows.
+    @Test func trailingBytesIgnored() throws {
+        let data = Data("trailing".utf8)
+        #expect(try Inflate.zlib(Deflate.zlib(data) + [0xFF], limit: 64) == data)
+        #expect(try raw(Self.fixedA + [0xFF, 0x00]) == [0x61])
     }
 
     /// The limit is checked before the output grows: a 6-byte stored block then a reserved block type
@@ -84,6 +117,9 @@ import Foundation
         #expect(F.thrown { try raw(six, limit: 6) } == "damaged")
         #expect(F.thrown { try raw(Self.dynamic, limit: 477) } == "tooLarge")
         #expect(F.thrown { try raw(Self.dynamic, limit: 0) } == "tooLarge")
+        #expect(F.thrown { try raw(Self.fixedA, limit: 0) } == "tooLarge", "a literal past the limit")
+        #expect(F.thrown { try raw(Self.fixedABC, limit: 2) } == "tooLarge", "the third literal past the limit")
+        #expect(try raw(Self.fixedABC, limit: 3) == Array("abc".utf8))
         #expect(try raw(Self.dynamic, limit: 478) == Self.dynamicOut)
         #expect(F.thrown { try zlib(F.stored([UInt8](repeating: 1, count: 1_000)), limit: 999) } == "tooLarge")
     }
@@ -121,6 +157,18 @@ import Foundation
         let fast = Deflate.zlib(data, level: 1), best = Deflate.zlib(data, level: 9)
         #expect(best.count < fast.count)
         #expect(try Inflate.zlib(best, limit: data.count) == data)
+    }
+
+    /// Levels past 9 search the level-9 chain (1,024 steps), not a longer one: on the same chain-sensitive
+    /// data an 8,192-step chain (level 12 unclamped) writes different bytes.
+    @Test func deflateLevelAboveNineActsAsNine() throws {
+        var rng = SplitMix64(seed: 0x1C6)
+        let data = Data((0..<20_000).map { _ in UInt8.random(in: 0...3, using: &rng) })
+        let nine = Deflate.zlib(data, level: 9)
+        #expect(nine != Deflate.zlib(data, level: 1), "the data is chain-sensitive")
+        #expect(Deflate.zlib(data, level: 12) == nine)
+        #expect(Deflate.zlib(data, level: Int.max) == nine)
+        #expect(Deflate.zlib(data, level: -5) == Deflate.zlib(data, level: 0))
     }
 
     /// Golden bytes, derived by hand from RFC 1951, 3.2.6 and checked against an independent zlib decoder:

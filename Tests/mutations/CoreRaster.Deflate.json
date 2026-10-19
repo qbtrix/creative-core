@@ -12,5 +12,12 @@
     "anchor": "chain: 4 << (min(level, 9) - 1)",
     "replacement": "chain: 1",
     "filter": "InflateTests"
+  },
+  {
+    "note": "deflate levels past 9 search a longer chain instead of acting as level 9, caught by InflateTests.deflateLevelAboveNineActsAsNine",
+    "file": "Sources/CoreRaster/Codecs/Deflate.swift",
+    "anchor": "chain: 4 << (min(level, 9) - 1)",
+    "replacement": "chain: 4 << (level - 1)",
+    "filter": "InflateTests"
   }
 ]
