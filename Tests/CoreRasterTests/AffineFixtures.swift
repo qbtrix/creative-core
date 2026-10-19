@@ -1,6 +1,6 @@
 // AffineFixtures.swift: seeded inputs for the affine-composite suites
 // (AffineOpsTests, CanvasSizeTests, CompositeAffineTests, CPUAffineTests).
-// Layers have a transparent border and hard-edged blocks of premultiplied
+// Layers have a transparent border (or none) and hard-edged blocks of premultiplied
 // color inside, so resampling seams and outside-is-clear both show; matrices
 // cover the identity, whole-pixel translations, quarter turns about a centre,
 // scales, skews, a near-singular and a singular map. Same seed, same values,
@@ -32,11 +32,13 @@ enum AffineFixtures {
         return buffer
     }
 
-    /// `count` seeded layers, sizes from 6 x 6 to 40 x 40, each with its own seed.
-    static func layers(count: Int, seed: UInt64) throws -> [PixelBuffer] {
+    /// `count` seeded layers, sizes from 6 x 6 to 40 x 40, each with its own
+    /// seed and a `border`-pixel transparent frame (0 for hard edges at the sides).
+    static func layers(count: Int, seed: UInt64, border: Int = 2) throws -> [PixelBuffer] {
         var rng = SplitMix64(seed: seed)
         return try (0..<count).map { _ in
-            try layer(seed: rng.next(), width: .random(in: 6...40, using: &rng), height: .random(in: 6...40, using: &rng))
+            try layer(seed: rng.next(), width: .random(in: 6...40, using: &rng), height: .random(in: 6...40, using: &rng),
+                      border: border)
         }
     }
 
