@@ -4,7 +4,7 @@ Issue: #434 · Packet: docs/blueprints/core/features/affine-composite.md
 Run: act-1a150bfbcf7-sfwy · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
 Stage: 3 wave 5 + 4 round 2 (gate on 7d8af79)
 Base: 4feaaf9fac3cc050901f8b459a0908515a927f54
-Next: AC-6 building; round 2 gate+mutate running on 7d8af79, critic panel after
+Next: AC-7 building (wave 6); AC-comp merged-done once a green dev Linux run holds 917ffc4; round 3 of AC-comp after
 
 Line lead for #434, #433 and #432 (rule 19); one wave plan across the three
 features, bookkeeping per feature. Packet v3 (has a Slices table).
@@ -18,8 +18,8 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 | AC-3 | 3 | AC-geo | `transformed` with fast paths, `flipped`; turns on those cases | `Sources/CoreRaster/Affine/AffineTransform.swift`, `Tests/CoreRasterTests/AffineOpsTests.swift`, `Tests/mutations/CoreRaster.AffineTransform.json` | `AffineOpsTests` | 4 (packet) | #583 | merged |
 | AC-4 | 3 | AC-geo | `padded` around nine anchors; its cases in `CanvasSizeTests` | `Sources/CoreRaster/Affine/CanvasSize.swift`, `Tests/CoreRasterTests/CanvasSizeTests.swift`, `Tests/mutations/CoreRaster.CanvasSize.json` | `CanvasSizeTests` | 2 (packet) | #584 | merged |
 | AC-5 | 4 | AC-comp | `composite(through:)`, `AffineMatrix.bounds`; turns on `CompositeAffineTests` | `Sources/CoreRaster/Compositing/CompositeAffine.swift`, `Tests/CoreRasterTests/CompositeAffineTests.swift`, `Tests/mutations/CoreRaster.CompositeAffine.json` | `CompositeAffineTests` | 2 (packet) | #603 | merged |
-| AC-6 | 5 | AC-comp | CPU bodies for the three `affine` calls; turns on `CPUAffineTests` | `Sources/CoreRender/CPU/CPUBackend+Affine.swift`, `Tests/CoreRenderTests/CPUAffineTests.swift`, `Tests/mutations/CoreRenderCPUAffine.json` | `CPUAffineTests` | 2 (packet) | #610 | open |
-| AC-7 | 6 | AC-z | `Samples+Affine.swift` and CPU goldens | `Sources/CoreRender/Parity/Samples+Affine.swift`, `Tests/CoreRenderTests/Golden/affine/` | `CPUGoldenTests` | none: goldens | | planned |
+| AC-6 | 5 | AC-comp | CPU bodies for the three `affine` calls; turns on `CPUAffineTests` | `Sources/CoreRender/CPU/CPUBackend+Affine.swift`, `Tests/CoreRenderTests/CPUAffineTests.swift`, `Tests/mutations/CoreRenderCPUAffine.json` | `CPUAffineTests` | 2 (packet) | #610 | merged |
+| AC-7 | 6 | AC-z | `Samples+Affine.swift` and CPU goldens | `Sources/CoreRender/Parity/Samples+Affine.swift`, `Tests/CoreRenderTests/Golden/affine/` | `CPUGoldenTests` | none: goldens | | building |
 | AC-8 | 7 | AC-z | KJ-AC walk; `AffineBudgetTests` (release, `.serialized`, reported) | `Tests/CoreRenderTests/AffineWalkTests.swift`, `Tests/CoreRasterTests/AffineBudgetTests.swift` | `AffineWalkTests.walk` | none | | planned |
 | AC-9 | 8 | AC-z | Packet status line says built; `feature-done` | `docs/blueprints/core/features/affine-composite.md` | – | none | | planned |
 
