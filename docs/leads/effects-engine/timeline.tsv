@@ -40,3 +40,4 @@ utc	stage	event	ref	note
 2026-10-19T02:07:06Z	3	pr-open	#611	FX-7 gate passed after restart; fast-lane
 2026-10-19T02:11:47Z	4	round-2	7d8af79	gate PASS, mutate 66/66; critic panel launched (clarity, contract, tests, robustness)
 2026-10-19T02:29:47Z	4	merged-done	FX-alpha	https://github.com/qbtrix/creative-core/actions/runs/39188534008 (Linux green, #588 #605)
+2026-10-19T02:48:40Z	4	round-2	FX-alpha,FX-blur	panel 16 confirmed (4 major), 1 refuted; fix batch wf_d4c9865a-cbd running
