@@ -61,5 +61,19 @@
     "anchor": "let margin = r + max(Self.fillContext, max(box.width, box.height) / 2)",
     "replacement": "let margin = max(width, height)",
     "filter": "FillFromSurroundingsTests.workScalesWithMaskNotBuffer"
+  },
+  {
+    "note": "the fill's patch search drops its source fallback, so a mask that leaves only a frame thinner than the patch radius throws covers every pixel instead of filling from the frame, caught by FillFromSurroundingsTests.fillsWhenOnlyAThinFrameRemains",
+    "file": "Sources/CoreRaster/Heal/PatchSearch.swift",
+    "anchor": "if !source.contains(true) { source = hole.map { !$0 } }",
+    "replacement": "",
+    "filter": "FillFromSurroundingsTests.fillsWhenOnlyAThinFrameRemains"
+  },
+  {
+    "note": "the fill's search window drops the half-side term and adds only r + 32 around a large hole, so a hole whose window holds more than maxHealPixels is searched with too little context instead of throwing, caught by FillFromSurroundingsTests.searchWindowGrowsWithHole",
+    "file": "Sources/CoreRaster/Heal/FillFromSurroundings.swift",
+    "anchor": "let margin = r + max(Self.fillContext, max(box.width, box.height) / 2)",
+    "replacement": "let margin = r + Self.fillContext",
+    "filter": "FillFromSurroundingsTests.searchWindowGrowsWithHole"
   }
 ]

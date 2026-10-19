@@ -71,7 +71,10 @@ None.
 // Sources/CoreRaster/Heal/Heal.swift (RH-3)
 extension PixelBuffer {
     public static let maxHealPixels = 4_000_000   // the mask's covered bounds (width × height), not its area; more throws.
-                                                  // filledFromSurroundings counts those bounds plus a one-pixel ring.
+                                                  // filledFromSurroundings counts its search window: the covered bounds
+                                                  // plus patchRadius + max(32, half the bounds' longer side) on each
+                                                  // side, clipped to the buffer (a square spot of about 1000 x 1000 is
+                                                  // the largest that fits when the window is not clipped).
     public func healed(offset: (dx: Int, dy: Int), through mask: Mask) throws -> PixelBuffer     // CR-7; only the mask's bounds change
 }
 // Sources/CoreRaster/Heal/FillFromSurroundings.swift (RH-4)
@@ -84,7 +87,7 @@ extension PixelBuffer {
     public mutating func burn(_ dab: Mask, x: Int, y: Int, range: TonalRange, exposure: Float) throws
     public mutating func sponge(_ dab: Mask, x: Int, y: Int, amount: Float) throws }                       // -1...1
 // Sources/CoreRaster/Heal/Smudge.swift (RH-6)
-public struct SmudgeState: Sendable { public init(strength: Float)                                         // 0...1
+public struct SmudgeState: Sendable { public init(strength: Float) throws                                  // 0...1; NaN or outside throws
     public mutating func dab(_ dab: Mask, x: Int, y: Int, on buffer: inout PixelBuffer) throws }           // first dab picks up only
 ```
 
@@ -102,12 +105,21 @@ public struct SmudgeState: Sendable { public init(strength: Float)              
   (width × height) over `maxHealPixels` throw, whatever the covered area,
   because the solve's work scales with the bounds: a sparse mask over a
   wide box throws.
-- **filledFromSurroundings.** Dilate the mask by `patchRadius`; for each
-  hole pixel, a randomized nearest-neighbour search (seeded SplitMix64; 5
-  iterations of propagation and random search) for the best `2r + 1` patch
-  centred outside the hole; fill from the matches coarse to fine on a
-  3-level pyramid; then heal the filled region against the ring, so its
-  tone meets the edge. Same seed, same pixels.
+- **filledFromSurroundings.** r is `patchRadius` clamped to 1...8
+  (`fillMaxPatchRadius`): below 1 throws, above 8 acts as 8. The search
+  window is the mask's covered bounds plus r + max(32, half the bounds'
+  longer side) on each side, clipped to the buffer; a window over
+  `maxHealPixels` throws before any work, and every array is the window's
+  size, never the buffer's. Dilate the hole by r inside the window; source
+  centres are the window pixels outside that dilation, or, when the
+  dilation covers the whole window (a frame thinner than r is all that is
+  left), every window pixel outside the undilated hole; a mask that covers
+  the whole window throws. For each hole pixel, a randomized
+  nearest-neighbour search (seeded SplitMix64; 5 iterations of propagation
+  and random search) for the best `2r + 1` patch centred on a source; fill
+  from the matches coarse to fine on a pyramid of up to 3 levels; then
+  heal the filled region against the ring, so its tone meets the edge.
+  Same seed, same pixels.
 - **Tone dabs.** Weight per pixel: dab coverage × range weight at the
   pixel's straight Rec. 709 luma (shadows: `1 − smoothstep(0.2, 0.4, luma)`,
   midtones: `smoothstep(0.2, 0.4, luma) × (1 − smoothstep(0.6, 0.8, luma))`,
@@ -123,7 +135,9 @@ public struct SmudgeState: Sendable { public init(strength: Float)              
 - **Smudge.** Hold a carried patch the dab's size; each dab blends the
   carried patch onto the buffer by `strength × coverage`, then replaces the
   carried patch with what is now under the dab (so the colour drags and
-  fades). The first dab only picks up.
+  fades). The first dab only picks up. `init` throws `RasterError.invalid`
+  for a strength outside 0...1 or NaN, where the brush chose it, not at
+  the first dab.
 
 ## Tasks
 
