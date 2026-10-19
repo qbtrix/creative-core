@@ -96,5 +96,40 @@
     "anchor": "if line.end > line.start || chars.last?.isNewline == true {",
     "replacement": "if line.end > line.start {",
     "filter": "TextLayoutTests.boundsAndTrailingNewline"
+  },
+  {
+    "note": "text layout adds paragraph spacing after soft-wrapped lines",
+    "file": "Sources/FlareCore/TextLayout.swift",
+    "anchor": "let spacing = n > 0 && pieces[n - 1].endsParagraph ? style.paragraphSpacing : 0",
+    "replacement": "let spacing = n > 0 ? style.paragraphSpacing : 0",
+    "filter": "TextLayoutTests.newlineAddsParagraphSpacing"
+  },
+  {
+    "note": "text layout aligns unboxed lines against zero instead of the widest line",
+    "file": "Sources/FlareCore/TextLayout.swift",
+    "anchor": "let container = style.boxWidth ?? pieces.reduce(0) { max($0, $1.ink) }",
+    "replacement": "let container = style.boxWidth ?? 0",
+    "filter": "TextLayoutTests.centreShiftsByHalfTheSlack"
+  },
+  {
+    "note": "text layout lineHeight guard accepts negative values",
+    "file": "Sources/FlareCore/TextLayout.swift",
+    "anchor": "try need(style.lineHeight.isFinite && style.lineHeight >= 0,",
+    "replacement": "try need(style.lineHeight.isFinite,",
+    "filter": "TextLayoutTests.badInputThrows"
+  },
+  {
+    "note": "text layout paragraphSpacing guard accepts NaN",
+    "file": "Sources/FlareCore/TextLayout.swift",
+    "anchor": "try need(style.paragraphSpacing.isFinite,",
+    "replacement": "try need(true,",
+    "filter": "TextLayoutTests.badInputThrows"
+  },
+  {
+    "note": "text layout line gap takes the run with the tallest ascent plus descent",
+    "file": "Sources/FlareCore/TextLayout.swift",
+    "anchor": "(ascent, descent) = (max(ascent, measured[r].ascent), max(descent, measured[r].descent))",
+    "replacement": "(ascent, descent) = ascent + descent >= measured[r].ascent + measured[r].descent ? (ascent, descent) : (measured[r].ascent, measured[r].descent)",
+    "filter": "TextLayoutTests.lineGapTakesMaxAscentAndMaxDescentSeparately"
   }
 ]

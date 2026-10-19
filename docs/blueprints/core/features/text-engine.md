@@ -104,8 +104,9 @@ public struct EditTextString: LayerCommand { owner, layerID, textIndex, replacin
   next word's advances (plus tracking per grapheme, the run's and the
   paragraph's) while the line fits `boxWidth`; a word alone wider than the
   box breaks by grapheme; trailing spaces don't count toward the width.
-  Line height: `lineHeight × max over the line's runs of (ascent + descent)`;
-  the first baseline at the first line's max ascent. Alignment: leading,
+  Line height: the gap to a line is `lineHeight × (max ascent + max
+  descent)`, each max taken separately over that line's runs; the first
+  baseline at the first line's max ascent. Alignment: leading,
   centre and trailing shift `x`; justified spreads the extra width over the
   line's spaces (every line but a paragraph's last). No box: one line per
   paragraph.
