@@ -24,3 +24,4 @@ utc	stage	event	ref	note
 2026-10-18T23:57:38Z	4	slice-done	AC-a	Belt-Slice-Done on #434, run 39174242588
 2026-10-18T23:58:27Z	4	round-start	round-1	gate+mutate on 5ea5ae5 (covers merged slices)
 2026-10-19T00:12:23Z	3	building	AC-5	builder launched (with bad-input test)
+2026-10-19T00:31:01Z	4	round-gate	round-1	scripts/ci PASS on 5ea5ae5 (try 5, budget retries under load); mutate 70/70 caught incl. all feature plans; critic panel launched (clarity, contract, tests, robustness)
