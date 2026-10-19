@@ -32,7 +32,7 @@ public techniques; no task reads another product's code.
 |---|---|---|---|---|
 | AC-a | The checks for every op and seeded layers and matrices are written, the checks disabled. | AC-1, AC-2 | `AffineOpsTests`, `CompositeAffineTests`, `CPUAffineTests` | engine-contracts:EC-a |
 | AC-geo | A buffer resamples through any invertible matrix with transparent outside (identity and whole-pixel translations are exact copies), flips exactly, and the canvas pads or crops around any of nine anchors. | AC-3, AC-4 | `AffineOpsTests` | AC-a |
-| AC-comp | A layer composites onto a backdrop through a matrix in place, equal to transforming it first and compositing the copy, touching only the transformed bounds, and the CPU backend runs the three `affine` calls with `==` results. | AC-5, AC-6 | `CompositeAffineTests`, `CPUAffineTests` | AC-geo; engine-contracts:EC-b (AC-6) |
+| AC-comp | A layer composites onto a backdrop through a matrix in place, equal to transforming it first and compositing the copy, touching only the transformed bounds widened by the filter's reach, and the CPU backend runs the three `affine` calls with `==` results. | AC-5, AC-6 | `CompositeAffineTests`, `CPUAffineTests` | AC-geo; engine-contracts:EC-b (AC-6) |
 | AC-z | The parity samples and goldens are in, a walk free-transforms a photo layer and a footage frame, the budgets hold, and the feature is built. | AC-7, AC-8, AC-9 | `CPUGoldenTests`, `AffineWalkTests`, `AffineBudgetTests` | AC-comp |
 
 `ui_slice: none`: engine only. Its screens: S7 transform handles (Photo,
@@ -44,7 +44,7 @@ Engine only. KJ-AC (`AffineWalkTests.walk`, AC-8): a 3000 × 2000 layer
 scaled 0.5, rotated 30° about its centre and moved (40, 25), composited
 through the matrix onto a 4000 × 3000 white backdrop on the CPU backend:
 equal within 1/255 to transform-then-composite, and only the rotated
-bounds' rows changed; flipped twice is the input; the canvas padded to
+bounds' rows, widened by bilinear's reach, changed; flipped twice is the input; the canvas padded to
 5000 × 3000 at `.right` keeps the image's right edge at x 5000; a
 1920 × 1080 frame placed at 0.25 scale with bilinear.
 
@@ -86,9 +86,14 @@ public extension AffineMatrix { func bounds(of width: Int, _ height: Int) -> (x:
   the anchor's offset (`(newW − oldW) × {0, 0.5, 1}`, rounded down);
   smaller sizes crop by the same offsets.
 - **composite(through:).** Bounds of the source's corners under `m`,
-  clipped to the backdrop; for each backdrop pixel in them, sample the
-  source as `transformed` does and blend in place by the existing row blend
-  for `mode`; rows outside the bounds aren't touched.
+  widened on every side by the filter's reach (radius × stretch source
+  pixels, stretch the inverse's column length clamped to 1...source size,
+  mapped forward through `m`'s linear part and rounded up, plus 1), clipped
+  to the backdrop; for each backdrop pixel in that box, sample the source as
+  `transformed` does and blend in place by the existing row blend for
+  `mode`; pixels outside the box aren't touched. The reach keeps a hard
+  edge's kernel coverage past the corners, so the result equals
+  transform-then-composite.
 
 ## Tasks
 
@@ -126,7 +131,7 @@ them, AC-9 is the status task.
 | AC-1, AC-2 | suites compile, disabled; fixtures build | – | – |
 | AC-3 | `AffineOpsTests`: identity and a (7, −3) translation are `==` copies (shifted); a 90° rotation about the centre equals `rotated(.degrees90)`; a 2× scale of a checkerboard keeps edge positions within 0.5 px; outside pixels are exactly 0; a singular matrix throws; `flipped` twice is `==` and once mirrors pixel (0, 0) to (w − 1, 0) | a pixel centre is off by half or outside isn't clear | `CoreRaster.AffineTransform`: sample at `(x, y)` not the centre → `AffineOpsTests.ninetyEqualsRotated`; inverse not used (forward map) → `.scaleKeepsEdges`; translation fast path off by one → `.translationIsExact`; vertical flip reverses columns → `.flipMirrorsRows` |
 | AC-4 | `CanvasSizeTests`: padding 100 × 50 to 200 × 100 at each of nine anchors places the image at the expected offset; shrinking crops by the same rule; size 0 throws | an anchor offset is wrong | `CoreRaster.CanvasSize`: centre offset rounds up → `CanvasSizeTests.centreRoundsDown`; right uses `oldW − newW` → `.rightAnchorKeepsRightEdge` |
-| AC-5 | `CompositeAffineTests`: for 50 seeded layers and matrices and every `BlendMode`, through-composite equals transform-then-composite within 1/255 (`==` for whole-pixel translations); backdrop rows outside the bounds are untouched; a matrix that maps the layer off the backdrop changes nothing | a pixel differs or rows outside change | `CoreRaster.CompositeAffine`: bounds from two corners only → `CompositeAffineTests.rotatedBoundsCoverCorners`; opacity applied twice → `.equalsTransformThenComposite` |
+| AC-5 | `CompositeAffineTests`: for 50 seeded layers and matrices and every `BlendMode`, through-composite equals transform-then-composite within 1/255 (`==` for whole-pixel translations); only the corner bounds widened by the filter's reach are written (a -0.0 backdrop compared by bit pattern), rows outside untouched; a matrix that maps the layer off the backdrop changes nothing | a pixel differs or rows outside change | `CoreRaster.CompositeAffine`: bounds from two corners only → `CompositeAffineTests.rotatedBoundsCoverCorners`; opacity applied twice → `.equalsTransformThenComposite` |
 | AC-6 | `CPUAffineTests`: each `affine` call on the CPU `==` the direct op; a dispatcher over a fake without `affine` routes all three to the CPU | a wrapper reorders arguments | `CoreRenderCPUAffine`: width and height swapped → `CPUAffineTests.equalsDirect`; flip axis inverted → `.flipAxisKept` |
 | AC-7 | `CPUGoldenTests` zero delta on every affine golden | a golden changes | none |
 | AC-8 | `AffineWalkTests.walk`; `AffineBudgetTests`: a 12 MP layer through a rotate-scale onto 12 MP ≤ 140 ms bilinear, ≤ 260 ms Lanczos-3 (release, reported) | the walk's checks fail | none |
