@@ -50,7 +50,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 ## Rounds
 | slice | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
 |---|---|---|---|---|---|---|---|---|---|
-| AC-a, AC-geo | 1 | 5ea5ae5 | PASS (try 5, budget retries under load) | 70/70 | - | clarity, contract, tests, robustness | 9 (3 major: downscale widening, `/ total` normalisation and exactCopy limit guard untested; 6 minor), 0 refuted | #598 (r1-b1, open; 9/9) | no |
+| AC-a, AC-geo | 1 | 5ea5ae5 | PASS (try 5, budget retries under load) | 70/70 | - | clarity, contract, tests, robustness | 9 (3 major: downscale widening, `/ total` normalisation and exactCopy limit guard untested; 6 minor), 0 refuted | #598 (r1-b1, merged; 9/9) | no |
 
 ## Decisions
 - AC-4 (#584): `padded` places the source with whole-pixel `transformed` at floor offsets per anchor; `CanvasSizeTests.swift` was created (packet lists it, file did not exist).

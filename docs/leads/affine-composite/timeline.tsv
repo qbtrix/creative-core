@@ -29,3 +29,4 @@ utc	stage	event	ref	note
 2026-10-19T00:42:44Z	4	slice-done	AC-geo	Belt-Slice-Done posted on #434 (https://github.com/qbtrix/creative-core/actions/runs/39180267199, dev 789025a)
 2026-10-19T01:08:43Z	4	fix-pr	#598	r1-b1 affine fixes open, fast-lane (9/9); attribution footer stripped from body
 2026-10-19T01:19:34Z	build	pr-open	#603	AC-5 composite through matrix (AC-comp), Mutate 2\/2; open question for round 2: fringe past integer bounds clipped
+2026-10-19T01:20:20Z	anatomy	merged	#598	r1-b1 fix merged
