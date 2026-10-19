@@ -55,3 +55,4 @@ utc	stage	event	ref	note
 2026-10-19T06:51:21Z	4	round 3 panel	77b74a1	8 confirmed (2 major), 0 refuted; not clean
 2026-10-19T06:51:21Z	4	fix batches	wf_0fc6505d-5b3	r3-b1 r3-b2 r3-b3 launched
 2026-10-19T07:05:34Z	4	heartbeat	-	r3 fixes running (wf_0fc6505d-5b3)
+2026-10-19T07:27:07Z	4	heartbeat	-	r3 fixes running (wf_0fc6505d-5b3), agents active
