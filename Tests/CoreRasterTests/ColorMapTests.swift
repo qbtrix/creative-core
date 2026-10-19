@@ -86,6 +86,12 @@ import Testing
         #expect(out.first?.r == Float.greatestFiniteMagnitude)
     }
 
+    /// An alpha-0 pixel passes through untouched, even with stored colour.
+    @Test func invertLeavesAlphaZero() throws {
+        let input = try ToneCheck.row([RGBA(r: 0.3, g: 0.2, b: 0.1, a: 0)])
+        #expect(input.inverted() == input)
+    }
+
     @Test func alphaKept() throws {
         let map = [GradientMapStop(offset: 0, color: black), GradientMapStop(offset: 1, color: white)]
         try ToneCheck.expectAlphaKept("gradientMap") { try $0.gradientMap(map) }

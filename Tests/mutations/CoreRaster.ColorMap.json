@@ -33,5 +33,12 @@
     "anchor": "min(max(a - c, -big), big)",
     "replacement": "a - c",
     "filter": "ColorMapTests"
+  },
+  {
+    "note": "invert stops skipping alpha-0 pixels, so a clear pixel storing colour 0.3 comes back as -0.3, caught by ColorMapTests.invertLeavesAlphaZero",
+    "file": "Sources/CoreRaster/Tone/ColorMap.swift",
+    "anchor": "for base in stride(from: 0, to: out.count, by: Self.channels) where out[base + 3] != 0 {",
+    "replacement": "for base in stride(from: 0, to: out.count, by: Self.channels) {",
+    "filter": "ColorMapTests"
   }
 ]
