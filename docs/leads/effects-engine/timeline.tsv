@@ -62,3 +62,4 @@ utc	stage	event	ref	note
 2026-10-19T07:48:56Z	4	heartbeat	-	round 4 mutation 41/176 caught so far, none escaped
 2026-10-19T08:11:54Z	4	heartbeat	-	round 4 mutation 121/176 caught, none escaped
 2026-10-19T08:21:44Z	4	panel-start	wf_14759c5a-295	round 4 gate PASS, mutation 176/176; panel running
+2026-10-19T08:35:45Z	4	fix-start	wf_fe65728f-9d5	round 4 panel: 8 confirmed (3 major), 1 refuted; r4-b1..b4 fixing, r4-b4 builds FX-9
