@@ -1,29 +1,20 @@
 // PathBoolean.swift: union, subtract, intersect and exclude of two filled
-// paths, as closed polygons.
-//
-// Both inputs are flattened; only closed subpaths fill, as in HitTest. Every
-// edge is split where it crosses or runs along another, endpoints snapped to
-// a 1e-9 grid so touching vertices and collinear overlaps merge into one
-// segment that counts how many edges of each input run along it. Each
-// segment then learns each input's winding just beside its middle by a ray
-// cast through horizontal bands (a vertical ray for a horizontal segment), is
-// kept when the op is inside on exactly one side, and is directed so the
-// result's inside lies on a fixed side. Kept segments chain into contours.
+// paths.
 //
 // Invariants:
 // - the result's filled area is the set operation on the inputs' filled areas
 //   under `rule`
 // - more than `maxBooleanVertices` flattened vertices throws
-//   GeometryError.tooComplex(count) instead of running unbounded; a NaN or
-//   infinite coordinate throws GeometryError.nonFinite
-// - output contours are closed, outer counter-clockwise on screen (negative
-//   shoelace area with y down), holes clockwise
-// - every loop is bounded by the segment count; the bands hold at most 8
-//   entries per segment
+//   GeometryError.tooComplex(count) instead of running unbounded
+// - output contours are closed, outer counter-clockwise, holes clockwise
 //
-// ponytail: band-indexed pair splitting instead of the full Martinez–Rueda–
-// Feito sweep, and polygon output (curves are not re-fitted). Ceiling: a
-// sweep-line event queue if the 2 × 5,000-vertex budget fails.
+// Closed subpaths flatten; edges split at crossings and collinear overlaps
+// (ends snapped to 1e-9, so shared edges merge); a banded ray cast (at most 8
+// band entries per segment) gives each segment's two sides each input's
+// winding; segments where the op changes are kept, directed and chained.
+// ponytail: band-indexed splitting, not the full Martinez–Rueda–Feito sweep,
+// and no curve re-fit. Ceiling: a sweep-line event queue if the 2 × 5,000-vertex
+// budget fails.
 
 extension Path {
     /// Most flattened vertices, both inputs together, `combine` accepts.
@@ -32,24 +23,20 @@ extension Path {
     /// `a op b` as one path, each input filled under `rule` and flattened to
     /// `tolerance`.
     ///
-    /// Throws `GeometryError.tooComplex` past `maxBooleanVertices`,
-    /// `GeometryError.nonFinite` for a NaN or infinite coordinate and
-    /// `GeometryError.invalidTolerance` for a bad tolerance.
+    /// Throws `GeometryError.tooComplex` past `maxBooleanVertices` and
+    /// `GeometryError.invalidTolerance` for a bad tolerance; NaN or infinity
+    /// throws `GeometryError.nonFinite`.
     public static func combine(_ op: BooleanOp, _ a: Path, _ b: Path, rule: FillRule,
                                tolerance: Double) throws -> Path {
         var count = 0
-        for path in [a, b] {
-            try path.forEachFlattenedPoint(tolerance: tolerance) { _, _ in count += 1; return false }
-        }
+        for path in [a, b] { try path.forEachFlattenedPoint(tolerance: tolerance) { _, _ in count += 1; return false } }
         guard count <= maxBooleanVertices else { throw GeometryError.tooComplex(count) }
         var edges: [BooleanEdge] = []
         for (owner, path) in [a, b].enumerated() {
             for polygon in try path.filledPolygons(tolerance: tolerance) {
                 for (p, q) in zip(polygon, polygon.dropFirst()) {
                     let edge = BooleanEdge(p: snapped(p), q: snapped(q), owner: owner)
-                    guard edge.p.x.isFinite, edge.p.y.isFinite, edge.q.x.isFinite, edge.q.y.isFinite else {
-                        throw GeometryError.nonFinite
-                    }
+                    guard [edge.p.x, edge.p.y, edge.q.x, edge.q.y].allSatisfy(\.isFinite) else { throw GeometryError.nonFinite }
                     if edge.p != edge.q { edges.append(edge) }
                 }
             }
@@ -62,16 +49,14 @@ extension Path {
         var result: [[Point]] = [], current: [PathElement] = [], start: Point?
         for element in elements {
             if case .move(let to) = element {
-                current = []
-                start = to
+                (current, start) = ([], to)
             } else if current.isEmpty, let start {
                 current = [.move(to: start)]
             }
             current.append(element)
-            if case .close = element {
-                result += try Path(elements: current).flattened(tolerance: tolerance)
-                current = []
-            }
+            guard case .close = element else { continue }
+            result += try Path(elements: current).flattened(tolerance: tolerance)
+            current = []
         }
         return result
     }
@@ -83,18 +68,14 @@ private struct BooleanEdge { var p: Point, q: Point, owner: Int }
 /// A split segment with ends ordered by (y, x), and per input how many of
 /// its edges run lo to hi minus hi to lo.
 private struct BooleanSegment: Hashable { var lo: Point, hi: Point }
-
 private func snap(_ v: Double) -> Double { (v * 1e9).rounded() / 1e9 }
-
 private func snapped(_ p: Point) -> Point { Point(x: snap(p.x), y: snap(p.y)) }
-
 private func cross(_ ax: Double, _ ay: Double, _ bx: Double, _ by: Double) -> Double { ax * by - ay * bx }
 
 /// Segments bucketed into horizontal bands by y, for pair search and ray casts.
 private struct Bands {
     var minY = 0.0, height = 1.0, count = 1
     var buckets: [[Int]] = []
-
     init(_ segments: [(Point, Point)]) {
         let lows = segments.map { min($0.0.y, $0.1.y) }, highs = segments.map { max($0.0.y, $0.1.y) }
         minY = lows.min() ?? 0
@@ -112,11 +93,10 @@ private struct Bands {
             for k in band(low)...band(high) { buckets[k].append(i) }
         }
     }
-
+    /// The band holding `y`, clamped; NaN lands in band 0.
     func band(_ y: Double) -> Int {
         let k = (y - minY) / height
-        guard k > 0 else { return 0 }
-        return k >= Double(count - 1) ? count - 1 : Int(k)
+        return k > 0 ? (k >= Double(count - 1) ? count - 1 : Int(k)) : 0
     }
 }
 

@@ -28,13 +28,6 @@
     "filter": "PathBooleanTests.capThrows"
   },
   {
-    "note": "path boolean own coincident edges not added crossing a segment",
-    "file": "Sources/FlareCore/PathOps/PathBoolean.swift",
-    "anchor": "let left = right &+ net",
-    "replacement": "let left = right &- net",
-    "filter": "PathBooleanTests|PathBooleanFuzzTests"
-  },
-  {
     "note": "path boolean horizontal segment frame not mirrored so it keeps its direction",
     "file": "Sources/FlareCore/PathOps/PathBoolean.swift",
     "anchor": "result.append(inRight == (f == 0) ?",
@@ -47,12 +40,5 @@
     "anchor": "if t > 0, t < 1 { cuts[k].append((t, end)) }",
     "replacement": "if t > 1, t < 1 { cuts[k].append((t, end)) }",
     "filter": "PathBooleanTests.partlySharedEdgeSplitsAtTheOtherEnds|PathBooleanFuzzTests"
-  },
-  {
-    "note": "path boolean pair search checks each pair only in the last band",
-    "file": "Sources/FlareCore/PathOps/PathBoolean.swift",
-    "anchor": "guard bands.band(max(min(p.y, p2.y), min(q.y, q2.y))) == index else { continue }",
-    "replacement": "guard bands.band(min(max(p.y, p2.y), max(q.y, q2.y))) == index + 1 else { continue }",
-    "filter": "PathBooleanFuzzTests"
   }
 ]

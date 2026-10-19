@@ -1,13 +1,11 @@
-// PathBooleanFuzzTests.swift: 500 seeded polygon pairs through every
-// Path.combine op. Pairs are random (self-crossing), on an integer grid
-// (touching vertices, collinear edges), identical, grid-shifted or nested,
-// with repeated points; one in 25 carries a NaN or infinite coordinate and
-// must throw nonFinite. Otherwise the area identities hold and 64 sampled
-// points away from the input edges agree with HitTest's set algebra.
+// PathBooleanFuzzTests.swift: 500 seeded pairs (random, integer grid,
+// identical, shifted, nested, repeated points; 1 in 25 non-finite, which must
+// throw) through every op: area identities hold and sampled points match HitTest.
 import FlareCore
 import Testing
 
 @Suite struct PathBooleanFuzzTests {
+    static let ops: [BooleanOp] = [.union, .subtract, .intersect, .exclude], box = Rect(minX: -1, minY: -4, maxX: 13, maxY: 11)
     static func polygon(_ rng: inout SplitMix64) -> [Point] {
         let grid = Bool.random(using: &rng)
         var points = (0..<Int.random(in: 3...7, using: &rng)).map { _ in
@@ -36,18 +34,8 @@ import Testing
         }
     }
 
-    static func keeps(_ op: BooleanOp, _ a: Bool, _ b: Bool) -> Bool {
-        switch op {
-        case .union: a || b
-        case .subtract: a && !b
-        case .intersect: a && b
-        case .exclude: a != b
-        }
-    }
-
     @Test func seededPairsThrowOrMatchSetAlgebra() throws {
         var rng = SplitMix64(seed: 430)
-        let ops: [BooleanOp] = [.union, .subtract, .intersect, .exclude]
         for _ in 0..<500 {
             let pa = Self.polygon(&rng)
             var pb = Self.partner(of: pa, &rng)
@@ -58,17 +46,15 @@ import Testing
                 #expect(throws: GeometryError.nonFinite) { try Path.combine(.union, a, b, rule: rule, tolerance: 0.01) }
                 continue
             }
-            let results = try ops.map { try Path.combine($0, a, b, rule: rule, tolerance: 0.01) }
+            let results = try Self.ops.map { try Path.combine($0, a, b, rule: rule, tolerance: 0.01) }
             let areas = try results.map { -(try PathArea.signedArea($0)) }
             let bMinusA = -(try PathArea.signedArea(Path.combine(.subtract, b, a, rule: rule, tolerance: 0.01)))
             #expect(abs(areas[0] - (areas[1] + areas[2] + bMinusA)) < 1e-6, "union = a-b + a&b + b-a")
             #expect(abs(areas[3] - (areas[1] + bMinusA)) < 1e-6, "exclude = a-b + b-a")
-            let box = Rect(minX: -1, minY: -4, maxX: 13, maxY: 11)
-            for p in PathArea.points(in: box, count: 64, rng: &rng) where !Self.nearEdge(p, pa) && !Self.nearEdge(p, pb) {
+            for p in PathArea.points(in: Self.box, count: 64, rng: &rng) where !Self.nearEdge(p, pa) && !Self.nearEdge(p, pb) {
                 let inA = PathArea.contains(a, p, rule: rule), inB = PathArea.contains(b, p, rule: rule)
-                for (op, result) in zip(ops, results) {
-                    #expect(PathArea.contains(result, p, rule: .nonZero) == Self.keeps(op, inA, inB), "\(op) at \(p)")
-                }
+                let want = [inA || inB, inA && !inB, inA && inB, inA != inB] // ops' order
+                #expect(results.map { PathArea.contains($0, p, rule: .nonZero) } == want, "at \(p)")
             }
         }
     }
