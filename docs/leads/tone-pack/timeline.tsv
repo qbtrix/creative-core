@@ -35,3 +35,4 @@ utc	stage	event	ref	note
 2026-10-19T01:10:32Z	3	pr-open	#600	TP-6 auto tone, fast-lane (2/2)
 2026-10-19T01:20:20Z	build	merged	#597 #600	r1-b2 fix and TP-6 merged; TP-map complete
 2026-10-19T01:20:20Z	build	start	TP-7	builder on lead/tone-pack-tp-7 from dev 6b4393a
+2026-10-19T01:28:26Z	anatomy	round-start	7d8af79	round 2 gate+mutate (changed since 5ea5ae5)

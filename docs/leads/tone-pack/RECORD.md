@@ -2,9 +2,9 @@
 
 Issue: #432 · Packet: docs/blueprints/core/features/tone-pack.md
 Run: act-1a150bfbcf7-sfwy · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
-Stage: 3 wave 5 + 4 round 2 pending
+Stage: 3 wave 5 + 4 round 2 (gate on 7d8af79)
 Base: 4feaaf9fac3cc050901f8b459a0908515a927f54
-Next: TP-7 building (TP-cpu); round 2 on dev once AC-5 (#603) and FX-6 merge; TP-map merged-done on the next green dev Linux run
+Next: TP-7 building; round 2 gate+mutate running on 7d8af79, critic panel after
 
 Line lead for #434, #433 and #432 (rule 19); one wave plan across the three
 features, bookkeeping per feature. Packet v3 (has a Slices table).
