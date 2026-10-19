@@ -101,12 +101,15 @@ extension PixelBuffer {
 
     /// Each linear colour channel inverted against its own alpha (a − c on
     /// premultiplied components), so inverting twice gives the input back and
-    /// an alpha-0 pixel stays clear.
+    /// an alpha-0 pixel stays clear. An a − c that overflows a finite input
+    /// is clamped to the largest finite Float, so the result stays finite.
     public func inverted() -> PixelBuffer {
         var out = components
+        let big = Float.greatestFiniteMagnitude
+        func invert(_ a: Float, _ c: Float) -> Float { min(max(a - c, -big), big) }
         for base in stride(from: 0, to: out.count, by: Self.channels) {
             let a = out[base + 3]
-            (out[base], out[base + 1], out[base + 2]) = (a - out[base], a - out[base + 1], a - out[base + 2])
+            (out[base], out[base + 1], out[base + 2]) = (invert(a, out[base]), invert(a, out[base + 1]), invert(a, out[base + 2]))
         }
         return PixelBuffer(checkedWidth: width, height: height, storage: out)
     }
