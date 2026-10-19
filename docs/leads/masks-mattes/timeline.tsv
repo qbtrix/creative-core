@@ -55,3 +55,4 @@ utc	stage	event	ref	note
 2026-10-19T22:36:02Z	heartbeat	round-2 fixes and final slices running
 2026-10-19T22:54:11Z	heartbeat	final slices P6 and M7 running
 2026-10-19T23:12:16Z	heartbeat	final slices P6 and M7 running
+2026-10-19T23:25:46Z	M7	built f0e682aa over caps; splitting into M7a/M7b

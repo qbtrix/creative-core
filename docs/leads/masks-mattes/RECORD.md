@@ -52,3 +52,5 @@ Next: M3 (CPU composite) and M6 (exporters) building stacked; rebase and open on
 
 ## Open
 - none
+- M7 at f0e682aa (on 1c7ea8e1): 712 lines / 16 files, CI: PASS, mutate 25/25. Release 6000x4000: masked composite 1.20x (1.3x), contours 52.6 ms (60), feather r20 722 ms (250, over; was 6,159). Feather is now a 4-pass extended box (Gwosdek et al. 2011) past sigma 2, within 0.025 of the exact Gaussian; no golden moved.
+- Decision (lead, 2026-10-19): split M7 into M7a (CoreRaster perf, on dev) and M7b (walk, budgets, docs, stacked; feature-done, Mac-Finish-Wanted). One bounded try at a column-strip vertical pass; if feather stays over, it goes to the Mac finish and round 3.
