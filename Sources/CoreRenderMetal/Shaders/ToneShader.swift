@@ -7,7 +7,8 @@
 // table's gain at the Rec. 709 luminance; hue/saturation as standard HSL on the clamped sRGB-encoded values;
 // or a 3x3 matrix, clamp at 0 and lightness mix), premultiply. Textures: 0 the source tile, 1 the target (or
 // output tile). Buffers: 1 display thresholds, 2 `DisplayParams`, 3 the display matrix (`display_tone` only,
-// as `display_target`), 4 the steps (`ToneStep`, seven 4-byte fields), 5 the tables, 6 the step count.
+// as `display_target`), 4 the steps (`ToneStep`, seven 4-byte fields), 5 the tables (device memory: each thread
+// indexes them at its own value), 6 the step count.
 #if canImport(Metal)
 import CoreRender
 
@@ -80,18 +81,18 @@ enum ToneShader {
         return l >= 0.0f ? c + (1.0f - c) * l : c * (1.0f + l);
     }
 
-    static float3 tone_matrix(float3 c, constant float *t) {
+    static float3 tone_matrix(float3 c, device const float *t) {
         return float3(tone_light(t[0] * c.r + t[1] * c.g + t[2] * c.b, t[9]),
                       tone_light(t[3] * c.r + t[4] * c.g + t[5] * c.b, t[9]),
                       tone_light(t[6] * c.r + t[7] * c.g + t[8] * c.b, t[9]));
     }
 
-    static float4 tone_apply(float4 px, constant ToneStep *steps, uint count, constant float *tables) {
+    static float4 tone_apply(float4 px, constant ToneStep *steps, uint count, device const float *tables) {
         if (px.a == 0.0f) { return float4(0.0f); }
         float3 c = px.rgb / px.a;
         for (uint i = 0; i < count; i++) {
             ToneStep s = steps[i];
-            constant float *t = tables + s.offset;
+            device const float *t = tables + s.offset;
             if (s.kind == 0) {
                 c = c * float3(s.a, s.b, s.c);
             } else if (s.kind == 1) {
@@ -115,7 +116,7 @@ enum ToneShader {
                              constant DisplayParams &p [[buffer(2)]],
                              constant float *m [[buffer(3)]],
                              constant ToneStep *steps [[buffer(4)]],
-                             constant float *tables [[buffer(5)]],
+                             device const float *tables [[buffer(5)]],
                              constant uint &count [[buffer(6)]],
                              uint2 gid [[thread_position_in_grid]]) {
         if (gid.x >= tile.get_width() || gid.y >= tile.get_height()) { return; }
@@ -128,7 +129,7 @@ enum ToneShader {
     kernel void adjust_program(texture2d<half, access::read> src [[texture(0)]],
                                texture2d<half, access::write> dst [[texture(1)]],
                                constant ToneStep *steps [[buffer(4)]],
-                               constant float *tables [[buffer(5)]],
+                               device const float *tables [[buffer(5)]],
                                constant uint &count [[buffer(6)]],
                                uint2 gid [[thread_position_in_grid]]) {
         if (gid.x >= src.get_width() || gid.y >= src.get_height()) { return; }

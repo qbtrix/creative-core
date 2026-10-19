@@ -63,7 +63,10 @@ enum AdjustShader {
     #define OCTAVE_LAST_X1 \(AdjustTable.octaveX(AdjustTable.octaveCount - 1))f
 
     // `AdjustTable.octave`: o at |x| = a > 0, the line from f(0) under 2^OCTAVE_MIN, the last interval's past.
-    static float adjust_octave(constant float *o, uint count, float a, float zero) {
+    // Templates on the table pointer: `adjust_tone` reads a constant table, the tone-program kernels a device
+    // one (each thread indexes it at its own value, which the constant address space serves slowly).
+    template <typename Table>
+    static float adjust_octave(Table o, uint count, float a, float zero) {
         uint bits = as_type<uint>(a);
         int octave = int((bits >> 23) & 0xFFu) - 127 - (OCTAVE_MIN);
         if (octave < 0) { return zero + (o[0] - zero) * (a * OCTAVE_FIRST_INV); }
@@ -78,7 +81,8 @@ enum AdjustShader {
         return o[i] + (o[i + 1] - o[i]) * (f - float(j));
     }
 
-    static float adjust_value(float v, constant float *t, uint n, uint outer) {
+    template <typename Table>
+    static float adjust_value(float v, Table t, uint n, uint outer) {
         if (n < 1) { return v; }
         if (!(v >= 0.0f)) { return outer < 2 ? t[0] : adjust_octave(t + n + 1, outer, -v, t[0]); }
         if (v > 1.0f) { return outer < 2 ? t[n] : adjust_octave(t + n + 1 + outer, outer, v, t[0]); }
