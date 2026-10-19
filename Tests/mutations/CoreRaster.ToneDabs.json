@@ -4,14 +4,14 @@
     "file": "Sources/CoreRaster/Heal/ToneDabs.swift",
     "anchor": "case .midtones: return PixelBuffer.smoothstep(0.2, 0.4, l) * (1 - PixelBuffer.smoothstep(0.6, 0.8, l))",
     "replacement": "case .midtones: return 1 - PixelBuffer.smoothstep(0.2, 0.4, l) * (1 - PixelBuffer.smoothstep(0.6, 0.8, l))",
-    "filter": "ToneDabTests"
+    "filter": "ToneDabTests.midtonesOnly"
   },
   {
     "note": "tone dab coverage ignored, so a feathered dab's edge lifts as much as its centre, caught by ToneDabTests.dabCoverageWeights",
     "file": "Sources/CoreRaster/Heal/ToneDabs.swift",
     "anchor": "let factor = 1 + gain * coverage * range.weight(luma: Self.luma(p) / p.a)",
     "replacement": "let factor = 1 + gain * range.weight(luma: Self.luma(p) / p.a)",
-    "filter": "ToneDabTests"
+    "filter": "ToneDabTests.dabCoverageWeights"
   },
   {
     "note": "tone dab burn gain drops the packet's 0.5, so burn at exposure 1 blacks out a midtone instead of halving it, caught by ToneDabTests.dodgeBurnMagnitude",
@@ -33,5 +33,19 @@
     "anchor": "p.r = min(max(p.r, 0), alpha)",
     "replacement": "p.r = min(max(p.r, 0), 1)",
     "filter": "ToneDabTests.translucentUsesStraightLuma"
+  },
+  {
+    "note": "sponge coverage ignored, so a feathered dab's edge greys as fully as its centre, caught by ToneDabTests.spongeCoverageWeights",
+    "file": "Sources/CoreRaster/Heal/ToneDabs.swift",
+    "anchor": "let k = 1 + amount * coverage",
+    "replacement": "let k = 1 + amount",
+    "filter": "ToneDabTests.spongeCoverageWeights"
+  },
+  {
+    "note": "tone dab transparent-pixel guard removed, so the straight-luma divide is 0/0 and a dodge over a clear pixel writes NaN, caught by ToneDabTests.transparentPixelsUntouched",
+    "file": "Sources/CoreRaster/Heal/ToneDabs.swift",
+    "anchor": "guard p.a > 0 else { continue }",
+    "replacement": "",
+    "filter": "ToneDabTests.transparentPixelsUntouched"
   }
 ]

@@ -4,14 +4,14 @@
     "file": "Sources/CoreRaster/Heal/Smudge.swift",
     "anchor": "carried = try Self.pickUp(dab, x: x, y: y, from: buffer)",
     "replacement": "if carried == nil { carried = try Self.pickUp(dab, x: x, y: y, from: buffer) }",
-    "filter": "SmudgeTests"
+    "filter": "SmudgeTests.colourFades"
   },
   {
     "note": "the first dab of a stroke paints a clear patch instead of only picking up, caught by SmudgeTests.firstDabPicksUp",
     "file": "Sources/CoreRaster/Heal/Smudge.swift",
     "anchor": "if strength > 0, let patch = carried, carriedWidth == dab.width, carriedHeight == dab.height {",
     "replacement": "if strength > 0, let patch = Optional(carried ?? [RGBA?](repeating: .clear, count: dab.width * dab.height)) {",
-    "filter": "SmudgeTests"
+    "filter": "SmudgeTests.firstDabPicksUp"
   },
   {
     "note": "smudge lays the carried patch at full weight wherever the dab touches, ignoring feathered coverage, caught by SmudgeTests.featherWeightsByCoverage",

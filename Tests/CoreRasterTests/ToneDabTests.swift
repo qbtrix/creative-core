@@ -55,8 +55,9 @@ private func chroma(_ p: RGBA) -> Float { max(p.r, p.g, p.b) - min(p.r, p.g, p.b
     }
 
     /// Dodge multiplies linear colour by 1 + exposure × weight, burn by
-    /// 1 − exposure × weight × 0.5: at full weight, exposure 1 doubles (dodge)
-    /// or halves (burn) patch 1 (luma 0.5, midtone weight 1).
+    /// 1 − exposure × weight × 0.5, a linear gain and not stops: at full
+    /// weight on patch 1 (luma 0.5, midtone weight 1), exposure 1 doubles
+    /// (dodge) or halves (burn), but exposure 0.5 gives ×1.5 and ×0.75.
     @Test func dodgeBurnMagnitude() throws {
         let cases: [(DabOp, Float)] = [
             ({ try $0.dodge($1, x: $2, y: $3, range: .midtones, exposure: 0.5) }, 0.75),
@@ -102,6 +103,30 @@ private func chroma(_ p: RGBA) -> Float { max(p.r, p.g, p.b) - min(p.r, p.g, p.b
         let centre = try buffer.pixel(x: 10, y: 10).r - 0.5, feather = try buffer.pixel(x: 17, y: 10).r - 0.5
         #expect(feather > 0 && feather < centre, "centre lift \(centre), feather lift \(feather)")
         #expect(try buffer.pixel(x: 0, y: 0) == grey)
+    }
+
+    /// Sponge weights by coverage: at amount -1 the hard centre of a
+    /// feathered dab goes grey while a feathered pixel keeps some chroma.
+    @Test func spongeCoverageWeights() throws {
+        var buffer = try PixelBuffer(width: 20, height: 20, fill: RetouchFixtures.tint)
+        try buffer.sponge(try RetouchFixtures.roundDab(radius: 10, hardness: 0.5), x: 0, y: 0, amount: -1)
+        let input = chroma(RetouchFixtures.tint)
+        let centre = try chroma(buffer.pixel(x: 10, y: 10)), feather = try chroma(buffer.pixel(x: 17, y: 10))
+        #expect(centre <= Self.tolerance, "centre chroma \(centre)")
+        #expect(feather > Self.tolerance && feather < input - Self.tolerance, "feather chroma \(feather) of \(input)")
+    }
+
+    /// A fully transparent pixel has no straight luma; every op leaves it clear.
+    @Test func transparentPixelsUntouched() throws {
+        let input = try PixelBuffer(width: 8, height: 8, fill: .clear)
+        let dab = try Mask(width: 8, height: 8, fill: 1)
+        for op: DabOp in [{ try $0.dodge($1, x: $2, y: $3, range: .midtones, exposure: 1) },
+                          { try $0.burn($1, x: $2, y: $3, range: .shadows, exposure: 1) },
+                          { try $0.sponge($1, x: $2, y: $3, amount: 1) }] {
+            var out = input
+            try op(&out, dab, 0, 0)
+            #expect(out == input)
+        }
     }
 
     @Test func alphaNeverChanges() throws {
