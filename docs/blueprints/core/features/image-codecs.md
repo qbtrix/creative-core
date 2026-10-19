@@ -75,8 +75,8 @@ public enum Inflate {
     public static func zlib(_ data: Data, limit: Int) throws -> Data
     public static func raw(_ data: Data, limit: Int) throws -> Data }
 public enum Deflate {
-    /// zlib-wrapped DEFLATE: fixed-Huffman blocks with LZ77 over a 32 KiB window (hash chains, lazy
-    /// match off), or stored blocks at level 0. Deterministic: the same input gives the same bytes.
+    /// zlib-wrapped DEFLATE: LZ77 over a 32 KiB window (bounded hash chains, lazy from level 4) into
+    /// stored, fixed or dynamic Huffman blocks, whichever is smallest, or stored blocks at level 0. Deterministic: the same input gives the same bytes.
     public static func zlib(_ data: Data, level: Int = 6) -> Data }
 
 // Sources/CoreRaster/Codecs/PNG.swift (IC-1 stub; IC-4 read, IC-5 write)

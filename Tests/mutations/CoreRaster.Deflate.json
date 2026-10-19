@@ -1,23 +1,9 @@
 [
-  {
-    "note": "the deflate 32 KiB window guard is dropped so matches reach past it, caught by InflateTests.deflateWindowLimit",
-    "file": "Sources/CoreRaster/Codecs/Deflate.swift",
-    "anchor": "while candidate >= 0, i - candidate <= 32_768, left > 0 {",
-    "replacement": "while candidate >= 0, left > 0 {",
-    "filter": "InflateTests"
-  },
-  {
-    "note": "the deflate hash chain is one step at every level, caught by InflateTests.deflateLevelsSearchLonger",
-    "file": "Sources/CoreRaster/Codecs/Deflate.swift",
-    "anchor": "chain: 4 << (min(level, 9) - 1)",
-    "replacement": "chain: 1",
-    "filter": "InflateTests"
-  },
-  {
-    "note": "deflate levels past 9 search a longer chain instead of acting as level 9, caught by InflateTests.deflateLevelAboveNineActsAsNine",
-    "file": "Sources/CoreRaster/Codecs/Deflate.swift",
-    "anchor": "chain: 4 << (min(level, 9) - 1)",
-    "replacement": "chain: 4 << (level - 1)",
-    "filter": "InflateTests"
-  }
+  {"note": "the deflate 32 KiB window guard is dropped so matches reach past it, caught by InflateTests.deflateWindowLimit", "file": "Sources/CoreRaster/Codecs/Deflate.swift", "anchor": "while candidate >= 0, i - candidate <= 32_768, left > 0 {", "replacement": "while candidate >= 0, left > 0 {", "filter": "InflateTests"},
+  {"note": "the deflate hash chain is one step at every level, caught by InflateTests.deflateLevelsSearchLonger", "file": "Sources/CoreRaster/Codecs/Deflate.swift", "anchor": "(self.input, chain, good) = (input, 4 << (level - 1),", "replacement": "(self.input, chain, good) = (input, 1,", "filter": "InflateTests"},
+  {"note": "deflate levels past 9 search a longer chain instead of acting as level 9, caught by DeflateTests.niceLengthEndsTheSearch", "file": "Sources/CoreRaster/Codecs/Deflate.swift", "anchor": "let level = min(level, 9)", "replacement": "let level = min(level, 12)", "filter": "DeflateTests"},
+  {"note": "deflate's code length limiter is skipped so clamped codes overfill Kraft's sum, caught by DeflateTests.lengthsStayWithinTheLimit", "file": "Sources/CoreRaster/Codecs/DeflateHuffman.swift", "anchor": "while kraft > 1 << limit {", "replacement": "while kraft < 0 {", "filter": "DeflateTests"},
+  {"note": "deflate's fixed or dynamic block choice is inverted, caught by DeflateTests.skewedBytesTakeDynamicBlocks", "file": "Sources/CoreRaster/Codecs/DeflateHuffman.swift", "anchor": "let dynamicWins = dynamic < fixed", "replacement": "let dynamicWins = dynamic > fixed", "filter": "DeflateTests"},
+  {"note": "deflate never stores a block that does not compress, caught by DeflateTests.randomBytesTakeStoredBlocks", "file": "Sources/CoreRaster/Codecs/DeflateHuffman.swift", "anchor": "guard (bytes.count / 65_535 + 1) * 40 + bytes.count * 8 >= min(fixed, dynamic) else {", "replacement": "guard true else {", "filter": "DeflateTests"},
+  {"note": "deflate's nice length is ignored so the search never stops early, caught by DeflateTests.niceLengthEndsTheSearch", "file": "Sources/CoreRaster/Codecs/Deflate.swift", "anchor": "if best >= nice || best == most { break }", "replacement": "if best == most { break }", "filter": "DeflateTests"}
 ]
