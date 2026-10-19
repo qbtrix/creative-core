@@ -42,3 +42,4 @@ utc	stage	event	ref	note
 2026-10-19T02:11:47Z	4	round-2	7d8af79	gate PASS, mutate 66/66; critic panel launched (clarity, contract, tests, robustness)
 2026-10-19T02:15:44Z	anatomy	round 2 panel	TP-map	10 confirmed, 0 refuted, not clean; fix batch r2-b1..b4 launched
 2026-10-19T02:27:07Z	build	merged	#609	TP-7 (TP-cpu) merged as c4d1511
+2026-10-19T02:29:47Z	4	merged-done	TP-map	https://github.com/qbtrix/creative-core/actions/runs/39188534008 (Linux green, #585 #600)

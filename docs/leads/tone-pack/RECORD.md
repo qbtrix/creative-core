@@ -46,7 +46,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 |---|---|---|---|---|---|
 | TP-a | TP-0, TP-1, TP-2 | engine-contracts:EC-a (merged on base) | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39180267199 | |
 | TP-mix | TP-3, TP-4 | TP-a | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39180267199 | |
-| TP-map | TP-5, TP-6 | TP-a | open | | |
+| TP-map | TP-5, TP-6 | TP-a | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39188534008 | |
 | TP-cpu | TP-7, TP-8 | TP-mix, TP-map; engine-contracts:EC-b (merged on base) | open | | |
 | TP-z | TP-9, TP-10 | TP-cpu | open | | wanted (budgets) |
 
