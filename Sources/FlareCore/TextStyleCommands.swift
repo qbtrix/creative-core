@@ -1,6 +1,11 @@
-// TextStyleCommands.swift: the text run and style command family. Stubs today
-// (TE-1): they decode, encode and register, but execute and undo throw
-// `CommandError.notBuilt` until TE-3 (here) and TE-4 (+Paragraph) build them.
+// TextStyleCommands.swift: the text run and style command family: style a
+// grapheme range, clear it, and edit the string with its runs kept on their
+// graphemes. Offsets count graphemes (`Character`s), never UTF-16 units. After
+// each command the runs are sorted, never overlap, stay inside the string,
+// touching equal neighbours are merged, and a run in the shape's own style is
+// dropped. A range outside the string throws `invalidIndex` with the document
+// untouched; undo puts back the old text, so it is exact. The paragraph and
+// path commands live in TextStyleCommands+Paragraph.swift (TE-4).
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -28,11 +33,11 @@ public struct TextRunStyle: Codable, Sendable, Hashable {
 
 /// Sets `style`'s non-nil fields on graphemes `range` of text `textIndex`,
 /// splitting and merging runs so they never overlap.
-/// Stub: execute and undo throw `CommandError.notBuilt`.
 public struct ApplyTextStyle: LayerParamsCommand {
     public static let id = "text.applyStyle"
     public var label: String { "Apply Text Style" }
     public var owner: LayerOwner, layerID: String, textIndex: Int, range: Range<Int>, style: TextRunStyle
+    var oldText: TextShape?
     public init(owner: LayerOwner, layerID: String, textIndex: Int, range: Range<Int>, style: TextRunStyle) {
         (self.owner, self.layerID, self.textIndex, self.range, self.style) = (owner, layerID, textIndex, range, style)
     }
@@ -41,16 +46,22 @@ public struct ApplyTextStyle: LayerParamsCommand {
     init(owner: LayerOwner, layerID: String, params: Params) {
         self.init(owner: owner, layerID: layerID, textIndex: params.textIndex, range: params.range, style: params.style)
     }
-    public mutating func execute(_ document: inout Document) throws { throw TextLayout.notBuilt(Self.id) }
-    public func undo(_ document: inout Document) throws { throw TextLayout.notBuilt(Self.id) }
+    public mutating func execute(_ document: inout Document) throws {
+        let (range, style) = (range, style)
+        oldText = try document.editTextRuns(owner, layer: layerID, index: textIndex) { try $0.restyle(range) { $0.applying(style) } }
+    }
+    public func undo(_ document: inout Document) throws {
+        try document.restoreText(oldText, owner, layer: layerID, index: textIndex)
+    }
 }
 
 /// Removes every run style from graphemes `range` of text `textIndex`, so
-/// they take the shape's own style. Stub: execute and undo throw `CommandError.notBuilt`.
+/// they take the shape's own style.
 public struct ClearTextStyle: LayerParamsCommand {
     public static let id = "text.clearStyle"
     public var label: String { "Clear Text Style" }
     public var owner: LayerOwner, layerID: String, textIndex: Int, range: Range<Int>
+    var oldText: TextShape?
     public init(owner: LayerOwner, layerID: String, textIndex: Int, range: Range<Int>) {
         (self.owner, self.layerID, self.textIndex, self.range) = (owner, layerID, textIndex, range)
     }
@@ -59,16 +70,23 @@ public struct ClearTextStyle: LayerParamsCommand {
     init(owner: LayerOwner, layerID: String, params: Params) {
         self.init(owner: owner, layerID: layerID, textIndex: params.textIndex, range: params.range)
     }
-    public mutating func execute(_ document: inout Document) throws { throw TextLayout.notBuilt(Self.id) }
-    public func undo(_ document: inout Document) throws { throw TextLayout.notBuilt(Self.id) }
+    public mutating func execute(_ document: inout Document) throws {
+        let range = range
+        oldText = try document.editTextRuns(owner, layer: layerID, index: textIndex) { try $0.restyle(range) { _ in .plain } }
+    }
+    public func undo(_ document: inout Document) throws {
+        try document.restoreText(oldText, owner, layer: layerID, index: textIndex)
+    }
 }
 
 /// Replaces graphemes `replacing` of text `textIndex` with `with`, keeping
-/// every run on its graphemes. Stub: execute and undo throw `CommandError.notBuilt`.
+/// every run on its graphemes: runs after the edit shift, a run the edit cuts
+/// shrinks, and inserted text takes the style of the grapheme before it.
 public struct EditTextString: LayerParamsCommand {
     public static let id = "text.editString"
     public var label: String { "Edit Text" }
     public var owner: LayerOwner, layerID: String, textIndex: Int, replacing: Range<Int>, with: String
+    var oldText: TextShape?
     public init(owner: LayerOwner, layerID: String, textIndex: Int, replacing: Range<Int>, with: String) {
         (self.owner, self.layerID, self.textIndex, self.replacing, self.with) = (owner, layerID, textIndex, replacing, with)
     }
@@ -77,6 +95,119 @@ public struct EditTextString: LayerParamsCommand {
     init(owner: LayerOwner, layerID: String, params: Params) {
         self.init(owner: owner, layerID: layerID, textIndex: params.textIndex, replacing: params.replacing, with: params.with)
     }
-    public mutating func execute(_ document: inout Document) throws { throw TextLayout.notBuilt(Self.id) }
-    public func undo(_ document: inout Document) throws { throw TextLayout.notBuilt(Self.id) }
+    public mutating func execute(_ document: inout Document) throws {
+        let (range, with) = (replacing, with)
+        oldText = try document.editTextRuns(owner, layer: layerID, index: textIndex) { try $0.replace(range, with: with) }
+    }
+    public func undo(_ document: inout Document) throws {
+        try document.restoreText(oldText, owner, layer: layerID, index: textIndex)
+    }
+}
+
+extension Document {
+    /// `editText` with an `edit` that may throw; a refused edit puts the text
+    /// back, so the document is left as it was.
+    mutating func editTextRuns(_ owner: LayerOwner, layer: String, index: Int,
+                               _ edit: (inout TextShape) throws -> Void) throws -> TextShape {
+        var failure: (any Error)?
+        let old = try editText(owner, layer: layer, index: index) { text in
+            let saved = text
+            do { try edit(&text) } catch { (failure, text) = (error, saved) }
+        }
+        if let failure { throw failure }
+        return old
+    }
+}
+
+extension TextRun {
+    /// A run with no style of its own: every field nil.
+    static let plain = TextRun(start: 0, length: 0)
+
+    /// This run's style with `style`'s non-nil fields set over it.
+    func applying(_ style: TextRunStyle) -> TextRun {
+        TextRun(start: start, length: length, fontFamily: style.fontFamily ?? fontFamily, fontSize: style.fontSize ?? fontSize,
+                weight: style.weight ?? weight, italic: style.italic ?? italic, fill: style.fill ?? fill,
+                tracking: style.tracking ?? tracking, baselineShift: style.baselineShift ?? baselineShift)
+    }
+
+    /// This run's style over graphemes `start ..< end`.
+    func over(_ start: Int, _ end: Int) -> TextRun {
+        var run = self
+        (run.start, run.length) = (start, end - start)
+        return run
+    }
+}
+
+extension TextShape {
+    /// Throws `invalidIndex` unless `range` lies inside the string's graphemes.
+    func checkGraphemes(_ range: Range<Int>) throws {
+        if range.lowerBound < 0 { throw CommandError.invalidIndex(range.lowerBound) }
+        if string.count < range.upperBound { throw CommandError.invalidIndex(range.upperBound) }
+    }
+
+    /// Restyles graphemes `range`: each piece inside it (part of a run, or a gap
+    /// in the shape's own style) takes `transform` of its style; outside, runs keep theirs.
+    mutating func restyle(_ range: Range<Int>, _ transform: (TextRun) -> TextRun) throws {
+        try checkGraphemes(range)
+        let (lo, hi) = (range.lowerBound, range.upperBound)
+        var out: [TextRun] = []
+        var cursor = lo
+        for run in runs.sorted(by: { $0.start < $1.start }) {
+            let end = run.start + run.length
+            if run.start < lo { out.append(run.over(run.start, min(end, lo))) }
+            if end > hi { out.append(run.over(max(run.start, hi), end)) }
+            let (s, e) = (max(run.start, cursor), min(end, hi))
+            guard s < e else { continue }
+            if cursor < s { out.append(transform(.plain).over(cursor, s)) }
+            out.append(transform(run).over(s, e))
+            cursor = e
+        }
+        if cursor < hi { out.append(transform(.plain).over(cursor, hi)) }
+        runs = normalized(out)
+    }
+
+    /// Replaces graphemes `range` with `with`. A run starting before the edit
+    /// keeps its start, else it moves past the inserted text; a run ending before
+    /// the edit keeps its end, else the end moves with the string, so a run
+    /// ending at the edit point takes the inserted text. Throws
+    /// `invalidDocument` when `with` would fuse with a neighbouring grapheme.
+    mutating func replace(_ range: Range<Int>, with: String) throws {
+        try checkGraphemes(range)
+        let (lo, hi, count) = (range.lowerBound, range.upperBound, string.count)
+        let from = string.index(string.startIndex, offsetBy: lo), to = string.index(from, offsetBy: hi - lo)
+        let edited = String(string[..<from]) + with + String(string[to...])
+        let delta = with.count - (hi - lo)
+        guard edited.count == count + delta else {
+            throw CommandError.invalidDocument("inserted text fuses with a neighbouring grapheme")
+        }
+        string = edited
+        runs = normalized(runs.map { run in
+            let end = run.start + run.length
+            let start = run.start < lo ? run.start : max(run.start, hi) + delta
+            return run.over(start, lo > end ? end : max(end, hi) + delta)
+        })
+    }
+
+    /// `runs` sorted, with fields equal to the shape's own cleared, empty and
+    /// plain runs dropped, and touching equal neighbours merged.
+    func normalized(_ runs: [TextRun]) -> [TextRun] {
+        var out: [TextRun] = []
+        for var run in runs.sorted(by: { $0.start < $1.start }) where run.length > 0 {
+            if run.fontFamily == fontFamily { run.fontFamily = nil }
+            if run.fontSize == fontSize { run.fontSize = nil }
+            if run.weight == 400 { run.weight = nil }
+            if run.italic == false { run.italic = nil }
+            if run.fill == fill { run.fill = nil }
+            if run.tracking == 0 { run.tracking = nil }
+            if run.baselineShift == 0 { run.baselineShift = nil }
+            let style = run.over(0, 0)
+            guard style != .plain else { continue }
+            if let last = out.last, last.start + last.length == run.start, last.over(0, 0) == style {
+                out[out.count - 1].length += run.length
+            } else {
+                out.append(run)
+            }
+        }
+        return out
+    }
 }

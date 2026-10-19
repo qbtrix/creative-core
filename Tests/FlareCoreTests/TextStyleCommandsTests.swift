@@ -2,8 +2,7 @@
 // undo steps. A new text style command adds its id to `expectedIDs`, one sample to
 // `registrySamples()` and its random steps to `undoSteps` here;
 // CommandRegistryTests and UndoPropertyTests read all three, so neither shared
-// test file changes. The acceptance cases below wait, disabled by name, on the
-// task that builds their command (TE-3 runs and string, TE-4 paragraph and path).
+// test file changes. The paragraph and path cases wait, disabled by name, on TE-4.
 @testable import FlareCore
 import Testing
 
@@ -15,14 +14,63 @@ import Testing
 
     /// The ids whose commands are still stubs that throw "not built"; each
     /// leaves this set when its task builds it and adds a registry sample.
-    static let notBuiltIDs: Set<String> = Set(expectedIDs)
+    static let notBuiltIDs: Set<String> = ["text.setParagraph", "text.setOnPath"]
 
     /// One sample of every built text style command (not in `notBuiltIDs`), each valid on
-    /// `CommandRegistryTests.sampleDocument()`, in `expectedIDs` order.
-    static func registrySamples() -> [any Command] { [] }
+    /// `CommandRegistryTests.sampleDocument()` (text "Hello" on the ball layer, "H" bold), in `expectedIDs` order.
+    static func registrySamples() -> [any Command] {
+        [ApplyTextStyle(owner: o, layerID: "ball", textIndex: 0, range: 1..<4, style: TextRunStyle(weight: 700, italic: true)),
+         ClearTextStyle(owner: o, layerID: "ball", textIndex: 0, range: 0..<5),
+         EditTextString(owner: o, layerID: "ball", textIndex: 0, replacing: 1..<3, with: "é👍🏽")]
+    }
+
+    /// Makes "H" of the registry sample document's scene text bold, so the clear
+    /// sample has a style to remove (and "Hi", from the set-string sample, still holds it).
+    static func addSampleRuns(_ doc: inout Document) {
+        doc.scenes[0].layers[1].texts[0].runs = [bold(0, 1)]
+    }
+
+    /// A text index and a grapheme range on `layer`, sometimes out of bounds.
+    static func anyRange(_ e: CommandEngine, _ layer: String, _ rng: inout SplitMix64) -> (Int, Range<Int>) {
+        let index = TextCommandsTests.anyIndex(e, layer, &rng)
+        let a = Int.random(in: -1...8, using: &rng), b = Int.random(in: -1...8, using: &rng)
+        return (index, min(a, b)..<max(a, b))
+    }
 
     /// Random text style steps, valid and invalid, for assertUndoRestoresDocument.
-    static let undoSteps: [UndoStep] = []
+    static let undoSteps: [UndoStep] = [
+        { e, rng, _ in
+            let layer = UndoPropertyTests.anyLayer(e, &rng)
+            let (index, range) = anyRange(e, layer, &rng)
+            let style = TextRunStyle(fontSize: UndoPropertyTests.anyNumber(in: -1...48, &rng),
+                                     weight: [nil, 400, 700, 1000].randomElement(using: &rng) ?? nil)
+            try e.perform(ApplyTextStyle(owner: o, layerID: layer, textIndex: index, range: range, style: style))
+        },
+        { e, rng, _ in
+            let layer = UndoPropertyTests.anyLayer(e, &rng)
+            let (index, range) = anyRange(e, layer, &rng)
+            try e.perform(ClearTextStyle(owner: o, layerID: layer, textIndex: index, range: range))
+        },
+        { e, rng, _ in
+            let layer = UndoPropertyTests.anyLayer(e, &rng)
+            let (index, range) = anyRange(e, layer, &rng)
+            let with = ["", "x", "é👍🏽", "\u{301}"].randomElement(using: &rng) ?? ""
+            try e.perform(EditTextString(owner: o, layerID: layer, textIndex: index, replacing: range, with: with))
+        },
+    ]
+
+    @Test(arguments: 0..<100 as Range<UInt64>)
+    func undoAllRestoresOriginal(seed: UInt64) throws {
+        try assertUndoRestoresDocument(seed: seed, steps: TextCommandsTests.undoSteps + Self.undoSteps,
+                                       start: TextFixtures.document(Self.boldMid))
+    }
+
+    /// A combining mark inserted after a letter would fuse two graphemes, so it is refused.
+    @Test func fusingInsertRefused() {
+        var engine = CommandEngine(document: TextFixtures.document())
+        #expect(throws: CommandError.self) { try engine.perform(Self.edit(1..<1, "\u{301}")) }
+        #expect(engine.document == TextFixtures.document() && !engine.canUndo)
+    }
 
     @Test func familyListsExactlyItsIDs() {
         #expect(TextStyleCommands.all.map { $0.id } == Self.expectedIDs)
@@ -56,22 +104,22 @@ import Testing
     /// "Bring the light" with graphemes 6..<11 ("the l") bold.
     static let boldMid = TextFixtures.text(runs: [bold(6, 5)])
 
-    @Test(.disabled("waits on TE-3")) func boldInTheMiddleGivesThreeRuns() throws {
+    @Test func boldInTheMiddleGivesThreeRuns() throws {
         let text = try Self.run([Self.apply(6..<11)])
         #expect(text?.runs == [Self.bold(6, 5)] && text?.resolvedRuns.map(\.weight) == [400, 700, 400])
     }
-    @Test(.disabled("waits on TE-3")) func equalNeighboursMerge() throws {
+    @Test func equalNeighboursMerge() throws {
         #expect(try Self.run([Self.apply(6..<11), Self.apply(6..<8)])?.runs == [Self.bold(6, 5)])
         #expect(try Self.run([Self.apply(0..<3), Self.apply(3..<6)])?.runs == [Self.bold(0, 6)])
         #expect(try Self.run([Self.apply(6..<11), Self.apply(8..<9, TextRunStyle(italic: true))])?.runs == [
             Self.bold(6, 2), TextRun(start: 8, length: 1, weight: 700, italic: true), Self.bold(9, 2),
         ])
     }
-    @Test(.disabled("waits on TE-3")) func boldAllThenClearLeavesNoRuns() throws {
+    @Test func boldAllThenClearLeavesNoRuns() throws {
         #expect(try Self.run([Self.apply(0..<15), Self.clear(0..<15)])?.runs == [])
         #expect(try Self.run([Self.apply(0..<15, TextRunStyle(fontSize: 24))])?.runs == [])
     }
-    @Test(.disabled("waits on TE-3")) func editKeepsRunsOnTheirGraphemes() throws {
+    @Test func editKeepsRunsOnTheirGraphemes() throws {
         #expect(try Self.run([Self.edit(0..<5, "Take")], on: Self.boldMid)?.runs == [Self.bold(5, 5)])
         #expect(try Self.run([Self.edit(7..<9, "IGH")], on: Self.boldMid)?.runs == [Self.bold(6, 6)])
         let across = try Self.run([Self.edit(9..<13, "")], on: Self.boldMid)
@@ -79,16 +127,16 @@ import Testing
         #expect(try Self.run([Self.edit(6..<6, "warm ")], on: Self.boldMid)?.runs == [Self.bold(11, 5)])
     }
     /// Text inserted at a run's end takes the style before it, so the run grows.
-    @Test(.disabled("waits on TE-3")) func runAtEditPointGrows() throws {
+    @Test func runAtEditPointGrows() throws {
         let grown = try Self.run([Self.edit(11..<11, "s")], on: Self.boldMid)
         #expect(grown?.string == "Bring the lsight" && grown?.runs == [Self.bold(6, 6)])
     }
-    @Test(.disabled("waits on TE-3")) func emojiAndCombiningMarksAreOneStep() throws {
+    @Test func emojiAndCombiningMarksAreOneStep() throws {
         #expect(try Self.run([Self.apply(1..<2)], on: TextFixtures.text(TextFixtures.emoji))?.runs == [Self.bold(1, 1)])
         let marks = try Self.run([Self.edit(1..<2, "o")], on: TextFixtures.text(TextFixtures.combining))
         #expect(marks?.string == "e\u{301}on\u{303}" && marks?.string.count == 3)
     }
-    @Test(.disabled("waits on TE-3")) func rangePastEndRefused() throws {
+    @Test func rangePastEndRefused() throws {
         #expect(try Self.run([Self.apply(10..<15)])?.runs == [Self.bold(10, 5)])
         for command in [Self.apply(10..<16), Self.clear(14..<16), Self.edit(15..<16, "x")] as [any Command] {
             var engine = CommandEngine(document: TextFixtures.document())
@@ -96,7 +144,7 @@ import Testing
             #expect(engine.document == TextFixtures.document() && !engine.canUndo)
         }
     }
-    @Test(.disabled("waits on TE-3")) func lockedLayerRefused() {
+    @Test func lockedLayerRefused() {
         var locked = TextFixtures.document()
         locked.scenes[0].layers[1].isLocked = true
         for command in [Self.apply(0..<1), Self.clear(0..<1), Self.edit(0..<1, "x")] as [any Command] {
@@ -106,7 +154,7 @@ import Testing
         }
     }
     /// Seeded random styles and edits either throw a CommandError or leave runs inside the string.
-    @Test(.disabled("waits on TE-3"), arguments: 0..<50 as Range<UInt64>) func fuzz(seed: UInt64) throws {
+    @Test(arguments: 0..<50 as Range<UInt64>) func fuzz(seed: UInt64) throws {
         var rng = SplitMix64(seed: seed)
         var engine = CommandEngine(document: TextFixtures.document(Self.boldMid))
         for _ in 0..<20 {

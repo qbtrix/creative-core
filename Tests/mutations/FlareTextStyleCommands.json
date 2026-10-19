@@ -1,0 +1,23 @@
+[
+  {
+    "note": "text style merge skipped, so equal neighbours stay split",
+    "file": "Sources/FlareCore/TextStyleCommands.swift",
+    "anchor": "            if let last = out.last, last.start + last.length == run.start, last.over(0, 0) == style {",
+    "replacement": "            if let last = out.last, last.start + last.length == run.start, last.over(0, 0) == style, false {",
+    "filter": "TextStyleCommandsTests.equalNeighboursMerge"
+  },
+  {
+    "note": "text edit shift uses >= for > at the edit point, so a run ending there does not grow",
+    "file": "Sources/FlareCore/TextStyleCommands.swift",
+    "anchor": "            return run.over(start, lo > end ? end : max(end, hi) + delta)",
+    "replacement": "            return run.over(start, lo >= end ? end : max(end, hi) + delta)",
+    "filter": "TextStyleCommandsTests.runAtEditPointGrows"
+  },
+  {
+    "note": "text range check uses <= for <, so a range ending at the string's end is refused",
+    "file": "Sources/FlareCore/TextStyleCommands.swift",
+    "anchor": "        if string.count < range.upperBound { throw CommandError.invalidIndex(range.upperBound) }",
+    "replacement": "        if string.count <= range.upperBound { throw CommandError.invalidIndex(range.upperBound) }",
+    "filter": "TextStyleCommandsTests.rangePastEndRefused"
+  }
+]
