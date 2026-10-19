@@ -1,6 +1,5 @@
 // FillFromSurroundingsTests.swift: retouch-heal RH-4's acceptance, written
-// first by RH-1 (docs/blueprints/core/features/retouch-heal.md). Disabled
-// until RH-4 lands.
+// first by RH-1 (docs/blueprints/core/features/retouch-heal.md).
 import CoreRaster
 import Testing
 
@@ -23,14 +22,14 @@ private func lumaStats(_ buffer: PixelBuffer, under mask: Mask) throws -> (mean:
         return (photo, try #require(photo.spots.first))
     }
 
-    @Test(.disabled("waits on RH-4")) func toneMeetsRing() throws {
+    @Test func toneMeetsRing() throws {
         let (photo, spot) = try Self.spotOne()
         let filled = try photo.spotted.filledFromSurroundings(spot.hole, seed: 1)
         let hole = try lumaStats(filled, under: spot.hole), ring = try lumaStats(filled, under: spot.ring)
         #expect(abs(hole.mean - ring.mean) <= 3.0 / 255, "hole mean \(hole.mean), ring mean \(ring.mean)")
     }
 
-    @Test(.disabled("waits on RH-4")) func textureMatchesRing() throws {
+    @Test func textureMatchesRing() throws {
         let (photo, spot) = try Self.spotOne()
         let filled = try photo.spotted.filledFromSurroundings(spot.hole, seed: 1)
         let hole = try lumaStats(filled, under: spot.hole), ring = try lumaStats(filled, under: spot.ring)
@@ -38,14 +37,14 @@ private func lumaStats(_ buffer: PixelBuffer, under mask: Mask) throws -> (mean:
                 "hole variance \(hole.variance), ring variance \(ring.variance)")
     }
 
-    @Test(.disabled("waits on RH-4")) func seedChangesFill() throws {
+    @Test func seedChangesFill() throws {
         let (photo, spot) = try Self.spotOne()
         let a = try photo.spotted.filledFromSurroundings(spot.hole, seed: 42)
         #expect(try photo.spotted.filledFromSurroundings(spot.hole, seed: 42) == a)
         #expect(try photo.spotted.filledFromSurroundings(spot.hole, seed: 43) != a)
     }
 
-    @Test(.disabled("waits on RH-4")) func neverCopiesFromHole() throws {
+    @Test func neverCopiesFromHole() throws {
         // A one-pixel checkerboard in the hole is far sharper than the grain (steps
         // under 0.4): texture copied from inside keeps its steps through the heal.
         let (photo, spot) = try Self.spotOne()
@@ -65,19 +64,19 @@ private func lumaStats(_ buffer: PixelBuffer, under mask: Mask) throws -> (mean:
         }
     }
 
-    @Test(.disabled("waits on RH-4")) func emptyMaskIsIdentity() throws {
+    @Test func emptyMaskIsIdentity() throws {
         let (photo, _) = try Self.spotOne()
         #expect(try photo.spotted.filledFromSurroundings(Mask(width: 160, height: 96), seed: 3) == photo.spotted)
     }
 
-    @Test(.disabled("waits on RH-4")) func outsideBoundsUntouched() throws {
+    @Test func outsideBoundsUntouched() throws {
         let (photo, spot) = try Self.spotOne()
         let filled = try photo.spotted.filledFromSurroundings(spot.hole, seed: 5)
         try expectSameOutside(filled, photo.spotted, cx: Int(spot.centerX), cy: Int(spot.centerY),
                               r: Int(spot.radius) + 2)
     }
 
-    @Test(.disabled("waits on RH-4")) func fuzzedInputsThrowOrFill() throws {
+    @Test func fuzzedInputsThrowOrFill() throws {
         var rng = SplitMix64(seed: 0xF111)
         let photo = try RetouchFixtures.spottedPhoto(width: 32, height: 24, seed: 2)
         for _ in 0..<60 {
