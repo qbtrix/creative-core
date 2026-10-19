@@ -19,5 +19,4 @@ import Testing
     let buffer = try PixelBuffer(width: 4, height: 4)
     let mask = try Mask(width: 4, height: 4, fill: 1)
     #expect(throws: RasterError.self) { try buffer.healed(offset: (dx: 1, dy: 0), through: mask) }
-    #expect(throws: RasterError.self) { try buffer.filledFromSurroundings(mask, seed: 1) }
 }

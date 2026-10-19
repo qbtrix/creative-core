@@ -1,6 +1,5 @@
 // FillFromSurroundingsTests.swift: retouch-heal RH-4's acceptance, written
-// first by RH-1 (docs/blueprints/core/features/retouch-heal.md). Disabled
-// until RH-4 lands.
+// first by RH-1 (docs/blueprints/core/features/retouch-heal.md).
 import CoreRaster
 import Testing
 
@@ -23,14 +22,27 @@ private func lumaStats(_ buffer: PixelBuffer, under mask: Mask) throws -> (mean:
         return (photo, try #require(photo.spots.first))
     }
 
-    @Test(.disabled("waits on RH-4")) func toneMeetsRing() throws {
+    @Test func toneMeetsRing() throws {
         let (photo, spot) = try Self.spotOne()
         let filled = try photo.spotted.filledFromSurroundings(spot.hole, seed: 1)
         let hole = try lumaStats(filled, under: spot.hole), ring = try lumaStats(filled, under: spot.ring)
         #expect(abs(hole.mean - ring.mean) <= 3.0 / 255, "hole mean \(hole.mean), ring mean \(ring.mean)")
+
+        // On a smooth field every patch has the wrong tone; the heal still
+        // lands each hole pixel on the field.
+        let field = try RetouchFixtures.gradientField(width: 64, height: 48)
+        let disc = try RetouchFixtures.disc(width: 64, height: 48, centerX: 32, centerY: 24, radius: 6)
+        let smooth = try field.filledFromSurroundings(disc, seed: 1)
+        for y in 0..<48 {
+            for x in 0..<64 where try disc.coverage(x: x, y: y) > 0 {
+                let p = try smooth.pixel(x: x, y: y), f = RetouchFixtures.fieldValue(x: x, y: y)
+                let gap = max(abs(p.r - f.r), abs(p.g - f.g), abs(p.b - f.b))
+                #expect(gap <= 1.0 / 255, "(\(x), \(y)) off the field by \(gap)")
+            }
+        }
     }
 
-    @Test(.disabled("waits on RH-4")) func textureMatchesRing() throws {
+    @Test func textureMatchesRing() throws {
         let (photo, spot) = try Self.spotOne()
         let filled = try photo.spotted.filledFromSurroundings(spot.hole, seed: 1)
         let hole = try lumaStats(filled, under: spot.hole), ring = try lumaStats(filled, under: spot.ring)
@@ -38,14 +50,14 @@ private func lumaStats(_ buffer: PixelBuffer, under mask: Mask) throws -> (mean:
                 "hole variance \(hole.variance), ring variance \(ring.variance)")
     }
 
-    @Test(.disabled("waits on RH-4")) func seedChangesFill() throws {
+    @Test func seedChangesFill() throws {
         let (photo, spot) = try Self.spotOne()
         let a = try photo.spotted.filledFromSurroundings(spot.hole, seed: 42)
         #expect(try photo.spotted.filledFromSurroundings(spot.hole, seed: 42) == a)
         #expect(try photo.spotted.filledFromSurroundings(spot.hole, seed: 43) != a)
     }
 
-    @Test(.disabled("waits on RH-4")) func neverCopiesFromHole() throws {
+    @Test func neverCopiesFromHole() throws {
         // A one-pixel checkerboard in the hole is far sharper than the grain (steps
         // under 0.4): texture copied from inside keeps its steps through the heal.
         let (photo, spot) = try Self.spotOne()
@@ -56,28 +68,31 @@ private func lumaStats(_ buffer: PixelBuffer, under mask: Mask) throws -> (mean:
                 try checkered.setPixel(x: x, y: y, RGBA(r: v, g: v, b: v, a: 1))
             }
         }
-        let filled = try checkered.filledFromSurroundings(spot.hole, seed: 9)
-        for y in 0..<96 {
-            for x in 1..<160 where try spot.hole.coverage(x: x, y: y) == 1 && spot.hole.coverage(x: x - 1, y: y) == 1 {
-                let d = try filled.pixel(x: x, y: y).g - filled.pixel(x: x - 1, y: y).g
-                #expect(abs(d) <= 0.45, "(\(x), \(y)) step \(d) is the hole's checkerboard")
+        // Many seeds, so a search that let a patch overlap the hole would pick one.
+        for seed: UInt64 in 9..<41 {
+            let filled = try checkered.filledFromSurroundings(spot.hole, seed: seed)
+            for y in 0..<96 {
+                for x in 1..<160 where try spot.hole.coverage(x: x, y: y) == 1 && spot.hole.coverage(x: x - 1, y: y) == 1 {
+                    let d = try filled.pixel(x: x, y: y).g - filled.pixel(x: x - 1, y: y).g
+                    #expect(abs(d) <= 0.45, "seed \(seed) (\(x), \(y)) step \(d) is the hole's checkerboard")
+                }
             }
         }
     }
 
-    @Test(.disabled("waits on RH-4")) func emptyMaskIsIdentity() throws {
+    @Test func emptyMaskIsIdentity() throws {
         let (photo, _) = try Self.spotOne()
         #expect(try photo.spotted.filledFromSurroundings(Mask(width: 160, height: 96), seed: 3) == photo.spotted)
     }
 
-    @Test(.disabled("waits on RH-4")) func outsideBoundsUntouched() throws {
+    @Test func outsideBoundsUntouched() throws {
         let (photo, spot) = try Self.spotOne()
         let filled = try photo.spotted.filledFromSurroundings(spot.hole, seed: 5)
         try expectSameOutside(filled, photo.spotted, cx: Int(spot.centerX), cy: Int(spot.centerY),
                               r: Int(spot.radius) + 2)
     }
 
-    @Test(.disabled("waits on RH-4")) func fuzzedInputsThrowOrFill() throws {
+    @Test func fuzzedInputsThrowOrFill() throws {
         var rng = SplitMix64(seed: 0xF111)
         let photo = try RetouchFixtures.spottedPhoto(width: 32, height: 24, seed: 2)
         for _ in 0..<60 {

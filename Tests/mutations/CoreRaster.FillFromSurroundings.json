@@ -1,0 +1,23 @@
+[
+  {
+    "note": "the fill's clearance check never sees a masked pixel, so candidate patches are allowed inside the hole and the fill copies the hole's own pixels, caught by FillFromSurroundingsTests.neverCopiesFromHole",
+    "file": "Sources/CoreRaster/Heal/FillFromSurroundings.swift",
+    "anchor": "for x in ox0...ox1 where try mask.coverage(x: x, y: y) > 0 {",
+    "replacement": "for x in ox0...ox1 where try mask.coverage(x: x, y: y) > 1 {",
+    "filter": "FillFromSurroundingsTests.neverCopiesFromHole"
+  },
+  {
+    "note": "the fill skips the heal step and clones its best patch as is, so the patch keeps its own tone and does not meet the ring, caught by FillFromSurroundingsTests.toneMeetsRing",
+    "file": "Sources/CoreRaster/Heal/FillFromSurroundings.swift",
+    "anchor": "return try healed(offset: (dx: chosen.dx, dy: chosen.dy), through: mask)",
+    "replacement": "return try cloned(offset: (dx: chosen.dx, dy: chosen.dy), through: mask)",
+    "filter": "FillFromSurroundingsTests.toneMeetsRing"
+  },
+  {
+    "note": "the fill's search ignores its seed and always starts from a fixed state, so every seed gives the same fill, caught by FillFromSurroundingsTests.seedChangesFill",
+    "file": "Sources/CoreRaster/Heal/FillFromSurroundings.swift",
+    "anchor": "var rng = FillRandom(state: seed)",
+    "replacement": "var rng = FillRandom(state: 0)",
+    "filter": "FillFromSurroundingsTests.seedChangesFill"
+  }
+]
