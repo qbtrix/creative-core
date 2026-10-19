@@ -53,21 +53,24 @@ private let gated = false
 #endif
 
 /// Prints `row` always and, when `gated`, expects `time` within `budget`.
+/// The budget is the full-size release one; debug says so.
 private func report(_ row: String, _ time: Duration, budget: Duration) {
     let mode = gated ? "gated" : optimized ? "report only, release off macOS" : "report only, debug"
-    print("budget \(row): \(milliseconds(time)) ms (\(mode); budget \(milliseconds(budget)) ms)")
+    let label = optimized ? "budget" : "full-size release budget"
+    print("budget \(row): \(milliseconds(time)) ms (\(mode); \(label) \(milliseconds(budget)) ms)")
     if gated { #expect(time <= budget, "\(row): median \(time) over \(budget)") }
 }
 
-/// One timed colour op, by name, with its settings from the KJ-TP walk.
+/// One timed colour op, by name, with the settings of `CPUColorTests.cases()`
+/// (CoreRenderTests); the LUT row times the 33³ warm look, named `lut 33³`.
 enum ToneBudgetOp: String, CaseIterable, Sendable, CustomTestStringConvertible {
     case vibrance, hueSaturation, hsl, blackAndWhite, channelMixer, colorBalance
-    case gradientMap, lut, posterize, threshold, invert
+    case gradientMap, lut = "lut 33³", posterize, threshold, invert
 
     var testDescription: String { rawValue }
 
-    /// The warm look 33³, parsed once.
-    static let warm33: ColorLUT? = try? CubeLUT.parse(ToneFixtures.warm33)
+    /// The warm look 33³, parsed once, keeping the parser's error.
+    static let warm33 = Result { try CubeLUT.parse(ToneFixtures.warm33) }
 
     /// The 24 MP budget: 180 ms for the 33³ LUT, 120 ms for every other op.
     var fullBudget: Duration { self == .lut ? .milliseconds(180) : .milliseconds(120) }
@@ -88,8 +91,7 @@ enum ToneBudgetOp: String, CaseIterable, Sendable, CustomTestStringConvertible {
             return try b.gradientMap([GradientMapStop(offset: 0, color: RGBA(r: 0.1, g: 0, b: 0.3, a: 1)),
                                       GradientMapStop(offset: 1, color: RGBA(r: 1, g: 0.9, b: 0.6, a: 1))])
         case .lut:
-            guard let lut = Self.warm33 else { throw RasterError.invalid("warm look 33 did not parse") }
-            return try b.applying(lut)
+            return try b.applying(Self.warm33.get())
         case .posterize: return try b.posterized(levels: 4)
         case .threshold: return try b.thresholded(0.5)
         case .invert: return b.inverted()
@@ -110,7 +112,8 @@ enum ToneBudgetOp: String, CaseIterable, Sendable, CustomTestStringConvertible {
         let empty = try PixelBuffer(width: 1, height: 1)
         var out = empty
         let time = try median(free: { out = empty }) { out = try op.apply(photo) }
-        report("\(op.rawValue) \(size) \(width)x\(height)", time, budget: budget)
+        let at = Self.scale == 1 ? "" : " at 1/\(Self.scale) per side"
+        report("\(op.rawValue) \(size)\(at) \(width)x\(height)", time, budget: budget)
         #expect(out.width == width && out.height == height)
         #expect(out != photo, "\(op.rawValue) left the photo unchanged")
         for (x, y) in [(0, 0), (width / 2, height / 2), (width - 1, height - 1), (width / 5, height * 4 / 5)] {

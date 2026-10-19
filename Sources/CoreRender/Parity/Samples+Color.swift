@@ -2,7 +2,9 @@
 // One call per colour case of `ToneAdjustment`, vibrance through invert and the LUT, each away
 // from its neutral value, run on the four 9x7 edge-case sources (random, alpha 0 with color left,
 // subnormal alpha, opaque rows) the older families use, bit for bit; a sample is named
-// `<case>-<source>`. The LUT is a 5³ warm look built in code, so no file is read.
+// `<case>-<source>`. The LUT is a 5³ warm look built in code, so no file is read. The
+// `<case>-alpha-zero` bands are all zero in display bytes (alpha 0 writes 0, 0, 0, 0), so they
+// prove nothing about colour; `CPUColorTests.alphaZeroKeepsStoredColor` proves the alpha-0 contract.
 import CoreColor
 import CoreRaster
 
@@ -26,7 +28,9 @@ enum ColorSamples {
         }
     }
 
-    /// The colour goldens, cut with the tolerance every `ToneAdjustment` is held to.
+    /// The colour goldens. The CPU must reproduce them exactly (`CPUGoldenTests`); another
+    /// backend's result is compared with `.standard` (2 bytes, 1e-3 linear) through
+    /// `ParityHarness.compare`.
     static let packs = [ParityPack(.color, tolerance: .standard)]
 
     /// One named, non-neutral call per colour case.

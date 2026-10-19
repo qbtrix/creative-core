@@ -61,5 +61,12 @@
     "anchor": "let start = band * rows / count * rowLength,",
     "replacement": "let start = (band * rows / count + 1) * rowLength,",
     "filter": "ToneBandTests"
+  },
+  {
+    "note": "mappingStraight reports the last failed band instead of the first, so the error names a higher index",
+    "file": "Sources/CoreRaster/Tone/ColorAdjust.swift",
+    "anchor": "compactMap({ $0 }).first {",
+    "replacement": "compactMap({ $0 }).reversed().first {",
+    "filter": "ToneBandTests"
   }
 ]
