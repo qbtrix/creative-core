@@ -12,5 +12,33 @@
     "anchor": "if inner { cover *= layerAlpha }",
     "replacement": "if inner { cover *= 1 }",
     "filter": "AlphaEffectLightTests"
+  },
+  {
+    "note": "the glow ignores its intensity, so every nonzero intensity glows as 1, caught by AlphaEffectLightTests.intensityScalesGlow",
+    "file": "Sources/CoreRaster/Effects/AlphaEffects+Light.swift",
+    "anchor": "mask.sample(Double(x) - dx, Double(y) - dy) * scale)",
+    "replacement": "mask.sample(Double(x) - dx, Double(y) - dy))",
+    "filter": "AlphaEffectLightTests"
+  },
+  {
+    "note": "the glow and shadow blur by reach over six instead of reach over three, so a glow reaches half its radius, caught by AlphaEffectLightTests.glowReachesItsRadius",
+    "file": "Sources/CoreRaster/Effects/AlphaEffects+Light.swift",
+    "anchor": "boxBlurred(radius: reach / 3)",
+    "replacement": "boxBlurred(radius: reach / 6)",
+    "filter": "AlphaEffectLightTests"
+  },
+  {
+    "note": "the light mask is padded one pixel whatever the offset, so an offset cannot pull in blur that spilled past the edge, caught by AlphaEffectLightTests.offsetPullsInBlurPastTheEdge",
+    "file": "Sources/CoreRaster/Effects/AlphaEffects+Light.swift",
+    "anchor": "let pad = Int(min(offset, reach + 3).rounded(.up)) + 2",
+    "replacement": "let pad = 1",
+    "filter": "AlphaEffectLightTests"
+  },
+  {
+    "note": "the inner glow and shadow darken the layer by the mask cover instead of the light's alpha, so a clear inner shadow changes the layer, caught by AlphaEffectLightTests.intensityZeroIsIdentity",
+    "file": "Sources/CoreRaster/Effects/AlphaEffects+Light.swift",
+    "anchor": "src[o + k] * (1 - lightAlpha)",
+    "replacement": "src[o + k] * (1 - cover)",
+    "filter": "AlphaEffectLightTests"
   }
 ]

@@ -1,8 +1,10 @@
 // AlphaEffectLightTests.swift: effects-engine FX-6's glow and shadow
 // acceptance: a drop shadow's centroid moves by (dx, dy), +y down; an inner
 // shadow or glow never paints outside the layer's alpha; an outer glow or
-// shadow never changes an opaque pixel; intensity 0 is identity; bad inputs
-// throw naming the field, and a huge offset reads as off the canvas.
+// shadow never changes an opaque pixel; intensity 0 and a clear shadow are
+// identity; intensity scales the glow; the glow reaches its radius; an offset
+// pulls in blur past the edge; bad inputs throw naming the field, a huge offset
+// reads as off the canvas, and seeded fuzz never crashes.
 import CoreRaster
 import Testing
 
@@ -69,7 +71,60 @@ import Testing
         let disc = try EffectFixtures.disc(size: 32, radius: 10)
         for inner in [false, true] {
             #expect(try disc.glowing(color: gold, radius: 8, intensity: 0, inner: inner) == disc)
+            // A clear shadow colour has opacity 0: nothing changes either.
+            let clear = RGBA(r: 0, g: 0, b: 0, a: 0)
+            #expect(try disc.shadowed(color: clear, dx: 3, dy: 4, blur: 6, inner: inner) == disc)
         }
+    }
+
+    @Test func intensityScalesGlow() throws {
+        // Outside the layer the glow's alpha is linear in the intensity.
+        let disc = try EffectFixtures.disc(size: 32, radius: 10)
+        let half = try addedAlpha(disc.glowing(color: gold, radius: 8, intensity: 0.5, inner: false), over: disc)
+        let full = try addedAlpha(disc.glowing(color: gold, radius: 8, intensity: 1, inner: false), over: disc)
+        var lit = 0
+        for y in 0..<32 {
+            for x in 0..<32 where try disc.pixel(x: x, y: y).a == 0 {
+                let h = try half.pixel(x: x, y: y).a, f = try full.pixel(x: x, y: y).a
+                if f > 0 { lit += 1 }
+                #expect(abs(h - f / 2) <= 1e-5, "(\(x), \(y)): \(h) at 0.5, \(f) at 1")
+            }
+        }
+        #expect(lit > 0)
+    }
+
+    @Test func glowReachesItsRadius() throws {
+        // The radius-5 disc covers columns and rows 27...36 (centre 31.5). A
+        // glow of radius 12 adds alpha 11.5 px past that edge and none from 13 px on.
+        let disc = try EffectFixtures.disc(size: 64, radius: 5)
+        let added = try addedAlpha(disc.glowing(color: gold, radius: 12, intensity: 1, inner: false), over: disc)
+        for (x, y) in [(48, 31), (48, 32), (15, 31), (15, 32), (31, 48), (32, 48), (31, 15), (32, 15)] {
+            #expect(try added.pixel(x: x, y: y).a > 0, "no glow at (\(x), \(y))")
+        }
+        for y in 0..<64 {
+            for x in 0..<64 where max(abs(Double(x) - 31.5), abs(Double(y) - 31.5)) - 5 >= 13 {
+                #expect(try added.pixel(x: x, y: y).a == 0, "glow at (\(x), \(y))")
+            }
+        }
+    }
+
+    @Test func offsetPullsInBlurPastTheEdge() throws {
+        // An opaque square on the right edge, its shadow pulled 10 px left:
+        // the column left of the square shows blur that spilled past the
+        // edge, the same as on a buffer padded 20 px and cropped back.
+        var layer = try PixelBuffer(width: 32, height: 32)
+        for y in 12..<20 { for x in 24..<32 { try layer.setPixel(x: x, y: y, EffectFixtures.white) } }
+        let out = try layer.shadowed(color: shade, dx: -10, dy: 0, blur: 6, inner: false)
+        let big = try layer.padded(width: 72, height: 72, anchor: .center)
+        let reference = try big.shadowed(color: shade, dx: -10, dy: 0, blur: 6, inner: false)
+            .cropped(x: 20, y: 20, width: 32, height: 32)
+        var lit = 0
+        for y in 0..<32 {
+            let a = try out.pixel(x: 23, y: y).a, want = try reference.pixel(x: 23, y: y).a
+            if want > 0 { lit += 1 }
+            #expect(abs(a - want) <= 1e-5, "row \(y): \(a), padded \(want)")
+        }
+        #expect(lit > 0)
     }
 
     @Test func glowAndShadowStayInTheirRanges() throws {
@@ -109,5 +164,23 @@ import Testing
         let inner = try disc.shadowed(color: shade, dx: -1e300, dy: 1e300, blur: 3, inner: true)
         let centre = try inner.pixel(x: 8, y: 8)
         #expect(abs(centre.r - 0.4) < 1e-6 && centre.a == 1)
+    }
+
+    @Test func fuzzNeverCrashes() throws {
+        var rng = SplitMix64(seed: 0xF6_F022)
+        let glyph = try EffectFixtures.glyphMask()
+        for i in 0..<200 {
+            let reach = EffectFuzz.value(&rng, in: 0...1_000), intensity = EffectFuzz.value(&rng, in: 0...1)
+            // Offsets: mostly within the glyph's reach, else past it by up to
+            // 1,000 px, NaN or infinite (a huge finite offset has its own test).
+            let dx = EffectFuzz.value(&rng, in: -64...64), dy = EffectFuzz.value(&rng, in: -64...64)
+            let inner = i % 2 == 0
+            try EffectFuzz.expectThrowsOrKeepsSize(glyph) {
+                try $0.glowing(color: gold, radius: reach, intensity: intensity, inner: inner)
+            }
+            try EffectFuzz.expectThrowsOrKeepsSize(glyph) {
+                try $0.shadowed(color: shade, dx: dx, dy: dy, blur: reach, inner: inner)
+            }
+        }
     }
 }
