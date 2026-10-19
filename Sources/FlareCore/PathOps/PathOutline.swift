@@ -7,11 +7,6 @@
 // - a width that is zero, negative or not finite throws GeometryError.nonFinite
 //
 // ponytail: stub until PG-8; it throws GeometryError.notBuilt with its name.
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import Foundation
-#endif
 
 extension Path {
     /// The outline of this path stroked at `width` with `join`, `cap` (open

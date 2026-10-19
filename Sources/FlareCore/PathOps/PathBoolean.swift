@@ -9,11 +9,6 @@
 // - output contours are closed, outer counter-clockwise, holes clockwise
 //
 // ponytail: stub until PG-10; it throws GeometryError.notBuilt with its name.
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import Foundation
-#endif
 
 extension Path {
     /// Most flattened vertices, both inputs together, `combine` accepts.

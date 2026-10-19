@@ -7,11 +7,6 @@
 //   extensions on FlareCore's `Path`, never a second path type
 // - a handle equal to its anchor's point is stored as nil
 // - `PathLocation.element` indexes `Path.elements`; `t` is in 0...1
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import Foundation
-#endif
 
 /// How an anchor's two handles relate.
 public enum AnchorKind: String, Codable, Sendable, Hashable {
@@ -76,14 +71,9 @@ public enum TrimMode: String, Codable, Sendable, Hashable {
     case eachContour
 }
 
-/// The set operation `Path.combine` applies to two filled areas.
+/// The set operation `Path.combine` applies to two filled areas: inside
+/// either (union), the first but not the second (subtract), both
+/// (intersect), or exactly one (exclude).
 public enum BooleanOp: String, Codable, Sendable, Hashable {
-    /// Inside either.
-    case union
-    /// Inside the first and not the second.
-    case subtract
-    /// Inside both.
-    case intersect
-    /// Inside exactly one.
-    case exclude
+    case union, subtract, intersect, exclude
 }

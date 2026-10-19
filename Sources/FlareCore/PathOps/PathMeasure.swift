@@ -8,11 +8,6 @@
 //   more than 64 entries, throws GeometryError.invalidPattern
 //
 // ponytail: stubs until PG-6; each throws GeometryError.notBuilt with its name.
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import Foundation
-#endif
 
 extension Path {
     /// The length of the path flattened to `tolerance`.

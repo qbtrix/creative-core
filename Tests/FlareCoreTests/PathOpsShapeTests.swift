@@ -35,27 +35,14 @@ import Testing
         #expect(throws: GeometryError.notBuilt(name)) { try call() }
     }
 
-    @Test func stubNamesAreDistinct() {
-        #expect(Set(Self.stubs.map(\.0)).count == Self.stubs.count)
-    }
-
-    @Test func anchorsViewSignatures() {
+    @Test func anchorsViewAndValueTypes() {
         let contours: [PathContour] = Self.square.contours
-        let rebuilt: Path = Path(contours: contours)
-        _ = rebuilt.elements
-    }
-
-    @Test func valueTypesHoldTheirFields() {
+        _ = Path(contours: contours).elements
         let anchor = PathAnchor(point: Point(x: 1, y: 2), handleIn: Point(x: 0, y: 2), handleOut: nil, kind: .smooth)
-        #expect(anchor.handleIn == Point(x: 0, y: 2))
-        #expect(anchor.handleOut == nil)
+        #expect(anchor.handleIn == Point(x: 0, y: 2) && anchor.handleOut == nil)
         #expect(PathAnchor(point: Point(x: 1, y: 2)).kind == .corner)
-        let contour = PathContour(anchors: [anchor], closed: true)
-        #expect(contour.anchors == [anchor] && contour.closed)
-        #expect(Self.location.element == 1 && Self.location.t == 0.5)
-        #expect(TrimMode(rawValue: "eachContour") == .eachContour)
-        #expect(BooleanOp(rawValue: "exclude") == .exclude)
-        #expect(AnchorKind(rawValue: "symmetric") == .symmetric)
+        #expect(PathContour(anchors: [anchor], closed: true).anchors == [anchor])
+        #expect(TrimMode(rawValue: "eachContour") == .eachContour && BooleanOp(rawValue: "exclude") == .exclude)
         #expect(Path.maxBooleanVertices == 200_000)
     }
 

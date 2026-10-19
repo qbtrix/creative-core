@@ -9,11 +9,6 @@
 //
 // ponytail: stubs until PG-4; the throwing ones throw GeometryError.notBuilt
 // with their own name, `contours` is empty and `init(contours:)` is empty.
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import Foundation
-#endif
 
 extension Path {
     /// The path as contours of anchors. Quads are raised to cubics; a handle

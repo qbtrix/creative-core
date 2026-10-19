@@ -58,6 +58,9 @@ enum PathArea {
         let area = bounds.width * bounds.height
         #expect(abs(abs(try PathArea.signedArea(path)) - area) < 1e-9)
         #expect(abs(PathArea.sampledArea(path, rule: .nonZero, in: bounds, grid: 100) - area) < 1e-6)
+        let points = [Point(x: 0, y: 0), Point(x: 4, y: 0), Point(x: 4, y: 3)]
+        #expect(try PathArea.signedArea(Path(polyline: points, closed: true)) == 6)
+        #expect(try PathArea.signedArea(Path(polyline: points.reversed(), closed: true)) == -6)
     }
 
     @Test func ellipseAreaIsAQuarterPiOfItsBounds() throws {
@@ -66,14 +69,6 @@ enum PathArea {
         let expected = Double.pi * bounds.width * bounds.height / 4
         #expect(abs(abs(try PathArea.signedArea(path)) - expected) / expected < 1e-3)
         #expect(abs(PathArea.sampledArea(path, rule: .evenOdd, in: bounds) - expected) / expected < 1e-2)
-    }
-
-    @Test func reversingAPathFlipsTheSign() throws {
-        let points = [Point(x: 0, y: 0), Point(x: 4, y: 0), Point(x: 4, y: 3)]
-        let forward = try PathArea.signedArea(Path(polyline: points, closed: true))
-        let backward = try PathArea.signedArea(Path(polyline: points.reversed(), closed: true))
-        #expect(forward == 6)
-        #expect(backward == -6)
     }
 
     @Test func starSamplesAgreeWithShoelaceAndStayInBounds() throws {
