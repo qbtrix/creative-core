@@ -26,5 +26,26 @@
     "anchor": "guard (2...PixelBuffer.maxGradientStops).contains(stops.count) else {",
     "replacement": "guard (2..<PixelBuffer.maxGradientStops).contains(stops.count) else {",
     "filter": "RasterGradientTests.sixtyFourStopsAccepted"
+  },
+  {
+    "note": "the linear projection drops the y term, so a vertical or diagonal drag ramps along x only, caught by RasterGradientTests.shapesFollowDiagonalDirection",
+    "file": "Sources/CoreRaster/Fill/RasterGradient.swift",
+    "anchor": "let along = (dx * vx + dy * vy) / length2",
+    "replacement": "let along = dx * vx / length2",
+    "filter": "RasterGradientTests.shapesFollowDiagonalDirection"
+  },
+  {
+    "note": "perceptual stops are mixed as linear light, not in OKLab, caught by RasterGradientTests.stopsInterpolateInOKLab",
+    "file": "Sources/CoreRaster/Fill/RasterGradient.swift",
+    "anchor": "? try FillColor.converted(c, from: .linearSRGB, to: .oklab, what: \"gradient stop colour \\(c)\") : c",
+    "replacement": "? c : c",
+    "filter": "RasterGradientTests.stopsInterpolateInOKLab"
+  },
+  {
+    "note": "the diamond gradient drops its cross axis and becomes a reflected ramp, caught by RasterGradientTests.shapesMatchAnalyticT",
+    "file": "Sources/CoreRaster/Fill/RasterGradient.swift",
+    "anchor": "case .diamond: return max(abs(along), abs((vx * dy - vy * dx) / length2))",
+    "replacement": "case .diamond: return abs(along)",
+    "filter": "RasterGradientTests.shapesMatchAnalyticT"
   }
 ]

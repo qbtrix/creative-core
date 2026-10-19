@@ -14,8 +14,13 @@ import Darwin
 import CoreColor
 
 /// The space a gradient interpolates its stops in: linear light, or OKLab
-/// (perceptual).
-public enum GradientSpace: Hashable, Sendable { case linear, perceptual }
+/// (perceptual). Not the ramp's shape: that is `RasterGradientShape`.
+public enum GradientSpace: Hashable, Sendable {
+    /// Mix the stops' linear-light sRGB components.
+    case linear
+    /// Mix the stops in OKLab (perceptually even).
+    case perceptual
+}
 
 /// One stop of a raster gradient: a colour (straight alpha) at an offset.
 public struct RasterGradientStop: Hashable, Sendable {
@@ -27,6 +32,8 @@ public struct RasterGradientStop: Hashable, Sendable {
     /// on it before using it here.
     public var color: RGBA
 
+    /// A stop at `offset` whose `color` is straight (not premultiplied)
+    /// alpha, in linear-light sRGB.
     public init(offset: Float, color: RGBA) {
         self.offset = offset
         self.color = color
@@ -126,7 +133,8 @@ private struct GradientRamp {
         offsets = stops.map { Double($0.offset) }
         colors = try stops.map { stop in
             let c = Color3(Double(stop.color.r), Double(stop.color.g), Double(stop.color.b))
-            let inSpace = space == .perceptual ? try Self.converted(c, from: .linearSRGB, to: .oklab) : c
+            let inSpace = space == .perceptual
+                ? try FillColor.converted(c, from: .linearSRGB, to: .oklab, what: "gradient stop colour \(c)") : c
             return (inSpace, Double(stop.color.a))
         }
     }
@@ -148,16 +156,10 @@ private struct GradientRamp {
 
     /// Back to linear light, premultiplied, as a finite `RGBA`.
     private func finish(_ c: Color3, _ alpha: Double) throws -> RGBA {
-        let linear = space == .perceptual ? try Self.converted(c, from: .oklab, to: .linearSRGB) : c
+        let linear = space == .perceptual
+            ? try FillColor.converted(c, from: .oklab, to: .linearSRGB, what: "gradient colour \(c)") : c
         let out = RGBA(r: Float(linear.c0), g: Float(linear.c1), b: Float(linear.c2), a: Float(alpha)).premultiplied()
         guard out.isFinite else { throw RasterError.invalid("gradient colour \(out): not finite in Float") }
         return out
-    }
-
-    /// CoreColor's conversion, its `ColorError` mapped to `RasterError`.
-    private static func converted(_ c: Color3, from source: ColorSpace, to target: ColorSpace) throws -> Color3 {
-        do { return try c.converted(from: source, to: target) } catch {
-            throw RasterError.invalid("gradient colour \(c): \(error)")
-        }
     }
 }
