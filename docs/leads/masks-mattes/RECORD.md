@@ -31,6 +31,8 @@ Next: M3 (CPU composite) and M6 (exporters) building stacked; rebase and open on
 |---|---|---|---|---|---|---|---|---|
 | 1 | a658945b | builders' gates | per plan, all caught | 39279766862 | correctness, robustness, reuse, tests+mutation, first-use clarity | 0 blockers, 5 should-fix, 7 nits (across both features) | lead/masks-mattes-r1-b1 | no |
 
+- Round-1 masks fixes: PR #730 (lead/masks-mattes-r1-b1), in lane.
+
 ## Decisions
 - Rule 20: MM-1 and MM-2 (disabled checks) are not their own PRs; each slice PR adds its own failing suite as its first commit. MM-a is slice-done once M1 and M4 (which carry the fixtures) merge.
 - MM-10 edits `geometry.json`, which path-geometry's last PR also edits, so M7 runs after path-geometry's P6 merges.
