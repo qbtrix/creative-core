@@ -1,5 +1,5 @@
 // CPUAffineTests.swift: affine-composite AC-6's acceptance, written first
-// (AC-1), disabled by name until AC-6 fills `CPUBackend+Affine.swift`: each
+// (AC-1) and turned on by AC-6, which fills `CPUBackend+Affine.swift`: each
 // `.affine` call on the CPU `==` the CoreRaster op it wraps (non-square sizes
 // and both axes, so swapped arguments show), and a dispatcher over a fake
 // without `.affine` routes all three to the CPU.
@@ -35,7 +35,7 @@ private func affineLayer(width: Int, height: Int, seed: UInt64) throws -> PixelB
         return pixels
     }
 
-    @Test(.disabled("waits on AC-6"))
+    @Test
     func equalsDirect() throws {
         let buffer = try affineLayer(width: 11, height: 7, seed: 61)
         for (i, m) in Self.matrices.enumerated() {
@@ -46,7 +46,7 @@ private func affineLayer(width: Int, height: Int, seed: UInt64) throws -> PixelB
         }
     }
 
-    @Test(.disabled("waits on AC-6"))
+    @Test
     func flipAxisKept() throws {
         let buffer = try affineLayer(width: 9, height: 6, seed: 62)
         for axis in [FlipAxis.horizontal, .vertical] {
@@ -55,7 +55,7 @@ private func affineLayer(width: Int, height: Int, seed: UInt64) throws -> PixelB
         #expect(buffer.flipped(.horizontal) != buffer.flipped(.vertical))
     }
 
-    @Test(.disabled("waits on AC-6"))
+    @Test
     func compositeThroughEqualsDirect() throws {
         let layer = try affineLayer(width: 10, height: 8, seed: 63)
         let backdrop = try affineLayer(width: 16, height: 12, seed: 64)
@@ -74,7 +74,7 @@ private func affineLayer(width: Int, height: Int, seed: UInt64) throws -> PixelB
         }
     }
 
-    @Test(.disabled("waits on AC-6"))
+    @Test
     func dispatcherRoutesAffineToCPU() throws {
         let fake = FakeBackend(supports: Set(RenderOp.allCases).subtracting([.affine]))
         let d = RenderDispatcher(preferred: fake, fallback: CPUBackend())

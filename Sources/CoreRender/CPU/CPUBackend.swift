@@ -30,7 +30,9 @@ public struct CPUBackend: RenderBackend {
     /// The CPU is never lost.
     public var isHealthy: Bool { true }
 
-    private let store: SurfaceStore
+    /// Internal so each family file (`CPUBackend+<Family>.swift`) can write a
+    /// backdrop in place, as `composite` does here.
+    let store: SurfaceStore
 
     /// A CPU backend named `name`, written into every surface it makes.
     public init(name: String = "cpu") {

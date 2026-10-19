@@ -1,0 +1,8 @@
+[
+  {"note": "cpu backend transformed swaps width and height", "filter": "CPUAffineTests", "file": "Sources/CoreRender/CPU/CPUBackend+Affine.swift",
+   "anchor": "transformed(m, width: width, height: height, filter: filter)",
+   "replacement": "transformed(m, width: height, height: width, filter: filter)"},
+  {"note": "cpu backend flipped inverts the flip axis", "filter": "CPUAffineTests", "file": "Sources/CoreRender/CPU/CPUBackend+Affine.swift",
+   "anchor": "{ $0.flipped(axis) }",
+   "replacement": "{ $0.flipped(axis == .horizontal ? .vertical : .horizontal) }"}
+]
