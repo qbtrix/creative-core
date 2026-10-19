@@ -1,5 +1,5 @@
 // DistanceFieldTests.swift: effects-engine FX-5's `DistanceField` acceptance,
-// written first (FX-1), disabled until FX-5 builds it: exact Euclidean distance
+// written first (FX-1), on since FX-5 built it: exact Euclidean distance
 // on a 64 x 64 grid, alpha equal to `level` is inside, inside and outside are
 // complements, a bad level throws and stray lookups never crash.
 import CoreRaster
@@ -13,7 +13,7 @@ import Testing
         return b
     }
 
-    @Test(.disabled("waits on FX-5")) func exactEuclidean() throws {
+    @Test func exactEuclidean() throws {
         for (px, py) in [(20, 37), (0, 0), (63, 5)] {
             let field = try DistanceField(alpha: single(x: px, y: py))
             #expect(field.width == 64 && field.height == 64)
@@ -29,7 +29,7 @@ import Testing
         }
     }
 
-    @Test(.disabled("waits on FX-5")) func levelIsInclusive() throws {
+    @Test func levelIsInclusive() throws {
         let half = try single(size: 8, x: 4, y: 4, a: 0.5)
         let atLevel = try DistanceField(alpha: half, level: 0.5)
         #expect(atLevel.outside(x: 4, y: 4) == 0 && atLevel.outside(x: 4, y: 7) == 3 && atLevel.inside(x: 4, y: 4) == 1)
@@ -39,7 +39,7 @@ import Testing
         #expect(below.inside(x: 4, y: 4) == 0 && below.outside(x: 4, y: 4) > 0)
     }
 
-    @Test(.disabled("waits on FX-5")) func insideAndOutsideAreComplements() throws {
+    @Test func insideAndOutsideAreComplements() throws {
         let field = try DistanceField(alpha: EffectFixtures.disc(size: 64, radius: 16))
         // Pixel (x, y)'s centre is (x + 0.5, y + 0.5); the disc is centred on (32, 32).
         for y in 0..<64 {
@@ -52,7 +52,7 @@ import Testing
         }
     }
 
-    @Test(.disabled("waits on FX-5")) func badLevelThrowsAndLookupsNeverCrash() throws {
+    @Test func badLevelThrowsAndLookupsNeverCrash() throws {
         let b = try single(size: 8, x: 2, y: 2)
         for bad: Float in [.nan, .infinity, -.infinity] {
             #expect(throws: RasterError.self) { try DistanceField(alpha: b, level: bad) }

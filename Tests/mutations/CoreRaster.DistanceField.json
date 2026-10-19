@@ -1,0 +1,23 @@
+[
+  {
+    "note": "the distance transform runs the column pass only and skips the row pass, so a pixel beside a lone shape pixel reads as infinitely far, caught by DistanceFieldTests.exactEuclidean",
+    "file": "Sources/CoreRaster/Effects/DistanceField.swift",
+    "anchor": "envelopePass(&f, &nearest, lines: height, length: width, along: 1, across: width, border: border, &scratch)",
+    "replacement": "// row pass skipped",
+    "filter": "DistanceFieldTests"
+  },
+  {
+    "note": "the distance field level test is strict, so a pixel whose alpha equals the level is left out of the shape, caught by DistanceFieldTests.levelIsInclusive",
+    "file": "Sources/CoreRaster/Effects/DistanceField.swift",
+    "anchor": "shape[i] = src[i * c + 3] >= level",
+    "replacement": "shape[i] = src[i * c + 3] > level",
+    "filter": "DistanceFieldTests"
+  },
+  {
+    "note": "the stroke swaps outside and inside of the shape, so an outside stroke paints over the layer instead of around it, caught by AlphaEffectTests.outsideStrokeIsOutside and insideStrokeIsInside",
+    "file": "Sources/CoreRaster/Effects/AlphaEffects.swift",
+    "anchor": "inShape = layerAlpha >= 0.5",
+    "replacement": "inShape = layerAlpha < 0.5",
+    "filter": "AlphaEffectTests"
+  }
+]
