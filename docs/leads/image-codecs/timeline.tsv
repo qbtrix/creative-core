@@ -70,3 +70,4 @@ utc	stage	event	ref	note
 2026-10-19T10:56:19Z	IC-png r4	gate pass	64bd637	CI: PASS; 922 anchors; Inflate 13/13, Deflate 3/3, PNG 11/11, PNGWrite 4/4; panel started
 2026-10-19T11:01:31Z	IC-png r4	panel clean	64bd637	0 blocker/major, 7 minor filed as #703 #704 #705; both slices Anatomy done; #702 not in run 39238594196
 2026-10-19T11:02:47Z	IC-9	build started	2436c3a	wave 5, one builder (build-wave-lead.js, run wf_0125facc-92b)
+2026-10-19T11:09:31Z	IC-9	heartbeat	wf_0125facc-92b	IC-9 builder running; dev CI run 404 (8613770, without #702) still queued
