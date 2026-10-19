@@ -30,8 +30,22 @@
   {
     "note": "clarity drops its overflow guard, so an infinite component is stored, caught by DenoiseClarityTests.clarityOverflowThrows",
     "file": "Sources/CoreRaster/Effects/DenoiseClarity.swift",
-    "anchor": "throw RasterError.invalid(\"clarity amount \\(amount): result overflows\")",
+    "anchor": "throw RasterError.invalid(\"clarity: result overflows Float; source pixel components are too large\")",
     "replacement": "return PixelBuffer(checkedWidth: width, height: height, storage: out)",
+    "filter": "DenoiseClarityTests"
+  },
+  {
+    "note": "denoise drops its overflow guard, so an infinite component is stored, caught by DenoiseClarityTests.denoiseOverflowThrows",
+    "file": "Sources/CoreRaster/Effects/DenoiseClarity.swift",
+    "anchor": "throw RasterError.invalid(\"denoise: result overflows Float; source pixel components are too large\")",
+    "replacement": "return PixelBuffer(checkedWidth: width, height: height, storage: out)",
+    "filter": "DenoiseClarityTests"
+  },
+  {
+    "note": "denoise drops its pixel cap, so an oversized buffer allocates its scratch instead of throwing, caught by DenoiseClarityTests.denoiseOverItsPixelCapThrows",
+    "file": "Sources/CoreRaster/Effects/DenoiseClarity.swift",
+    "anchor": "guard width * height <= Self.maxDenoisePixels else {",
+    "replacement": "guard width * height <= Self.maxPixels else {",
     "filter": "DenoiseClarityTests"
   }
 ]
