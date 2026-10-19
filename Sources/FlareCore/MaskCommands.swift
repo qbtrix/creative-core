@@ -126,8 +126,7 @@ public struct MoveLayerMask: LayerParamsCommand {
     public mutating func execute(_ document: inout Document) throws {
         let (from, to) = (from, to)
         try document.withEditableLayer(owner, layer: layerID) { l in
-            try l.masks.checkMaskIndex(from)
-            try l.masks.checkMaskIndex(to)
+            try l.masks.checkMaskIndex(from); try l.masks.checkMaskIndex(to)
             l.masks.insert(l.masks.remove(at: from), at: to)
         }
         moved = true
@@ -135,8 +134,7 @@ public struct MoveLayerMask: LayerParamsCommand {
     public func undo(_ document: inout Document) throws {
         guard moved else { throw CommandError.notExecuted }
         try document.withLayer(owner, layer: layerID) { l in
-            try l.masks.checkMaskIndex(to)
-            try l.masks.checkMaskIndex(from)
+            try l.masks.checkMaskIndex(to); try l.masks.checkMaskIndex(from)
             l.masks.insert(l.masks.remove(at: to), at: from)
         }
     }
