@@ -12,7 +12,8 @@
     "Sources/FlareCore/HitQuery.swift",
     "Sources/FlareCore/Marquee.swift",
     "Sources/FlareCore/WorldBounds.swift",
-    "Sources/FlareCore/PathBuilders*.swift"
+    "Sources/FlareCore/PathBuilders*.swift",
+    "Sources/FlareCore/PathOps/"
   ],
   "order": 20
 }
