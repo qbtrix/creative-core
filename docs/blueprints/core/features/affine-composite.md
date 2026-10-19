@@ -8,7 +8,7 @@ layer onto a backdrop *through* an affine map in place, so a moved, scaled
 and rotated layer never needs a full-size intermediate copy. CoreRaster ops
 plus the CPU backend's new `affine` family.
 **Line:** `line:core` · **Wave:** 6 (`waves.md`) · **Lead branch:** `lead/affine-composite`
-**Status:** planned
+**Status:** built
 
 **Covers:** beta-80 plan row E5 ("affine composite, flip, canvas pad (CR-1,
 CR-2, H6)"); Photo blueprint 8.4 CR-1 and CR-2 (PV-7 transform and flip);
