@@ -1,0 +1,30 @@
+[
+  {
+    "note": "miter limit compared to the full width instead of half",
+    "file": "Sources/FlareCore/PathOps/PathOutline.swift",
+    "anchor": "miter <= miterLimit * h",
+    "replacement": "miter <= miterLimit * 2 * h",
+    "filter": "PathOutlineTests.miterLimitBevels"
+  },
+  {
+    "note": "square cap extends by the full width instead of half",
+    "file": "Sources/FlareCore/PathOps/PathOutline.swift",
+    "anchor": "let extent = h",
+    "replacement": "let extent = 2 * h",
+    "filter": "PathOutlineTests.squareCapAddsHalf"
+  },
+  {
+    "note": "join drawn on the same side whichever way the path turns",
+    "file": "Sources/FlareCore/PathOps/PathOutline.swift",
+    "anchor": "let outer: Double = turn > 0 ? -1 : 1",
+    "replacement": "let outer: Double = 1",
+    "filter": "PathOutlineTests.roundJoinArea"
+  },
+  {
+    "note": "outline width guard lets a zero width through",
+    "file": "Sources/FlareCore/PathOps/PathOutline.swift",
+    "anchor": "guard width.isFinite, width > 0,",
+    "replacement": "guard width.isFinite, width >= 0,",
+    "filter": "PathOutlineTests.badWidthThrows"
+  }
+]
