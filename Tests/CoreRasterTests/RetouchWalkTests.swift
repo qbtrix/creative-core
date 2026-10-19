@@ -203,7 +203,7 @@ import Testing
         let dab = try RetouchFixtures.roundDab(radius: 16)
         let before = image
         let cx = Int(spot.centerX), cy = Int(spot.centerY), edge = cx + Int(spot.radius)
-        var smudge = SmudgeState(strength: 0.9)
+        var smudge = try SmudgeState(strength: 0.9)
         for k in 0..<20 {
             try smudge.dab(dab, x: cx + 8 * k - 16, y: cy - 16, on: &image)
         }
