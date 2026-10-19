@@ -13,7 +13,8 @@
 // its path, which refers to it by id ("g0", "g1", ... in document order).
 // Each layer's <g> carries its id and name, XML-escaped. Numbers are rounded
 // to 4 decimals and never use exponent notation; a non-finite value throws.
-// Each text shape is one <text> element (SVGExporter+Text). Type on a path is
+// Each text shape is one <text> element (SVGExporter+Text), laid out over the
+// metrics `export`'s `measure` gives (0.5 em per grapheme by default). Type on a path is
 // not written yet: a visible layer with one throws `unsupported("textPath")`.
 // A render list that stopped expanding instances at its budget throws
 // `sceneTooLarge` before anything is written.
@@ -38,8 +39,23 @@ public enum SVGExportError: Error, Equatable, Sendable {
 }
 
 public enum SVGExporter {
-    /// `symbols` are the document's symbols, which the scene's instances name.
-    public static func export(scene: Scene, frame: Double, symbols: [Symbol] = []) throws -> String {
+    /// The scene at `frame` as an SVG document. `symbols` are the document's
+    /// symbols, which the scene's instances name.
+    ///
+    /// Each text shape is laid out with `TextLayout.lay` over the metrics
+    /// `measure` gives it (one `GlyphRunMetrics` per `resolvedRuns`, in
+    /// order); its line breaks, baselines and justified per-grapheme `x`
+    /// lists come from that layout. The default, `FixedAdvances.measure`,
+    /// gives every grapheme 0.5 em, not the platform's font metrics: pass the
+    /// app's measured advances so the SVG wraps and justifies as the screen does.
+    ///
+    /// Throws `SVGExportError` (`nonFiniteValue`, `unresolvedSymbol`,
+    /// `sceneTooLarge`, or `unsupported("textPath")` for a visible layer with
+    /// type on a path), or `ModelError.invalidText` when the layout refuses a
+    /// text shape: a paragraph value out of range, metrics that do not match
+    /// its runs, or more than `TextLayout.maxGraphemes` graphemes.
+    public static func export(scene: Scene, frame: Double, symbols: [Symbol] = [],
+                              measure: (TextShape) -> [GlyphRunMetrics] = FixedAdvances.measure) throws -> String {
         let w = try number(scene.width)
         let h = try number(scene.height)
         var lines = [
@@ -50,7 +66,7 @@ public enum SVGExporter {
         let list = scene.renderList(at: frame, symbols: symbols)
         if list.isTruncated { throw SVGExportError.sceneTooLarge }
         for node in sampled(list.nodes, layers: scene.layers, frame: frame, symbols: symbols) {
-            try emit(node, inSymbol: false, into: &lines, gradients: &gradients)
+            try emit(node, inSymbol: false, into: &lines, gradients: &gradients, measure: measure)
         }
         lines.append("</svg>")
         return lines.joined(separator: "\n") + "\n"
@@ -60,7 +76,8 @@ public enum SVGExporter {
     /// as a <path>, an instance as a nested <g> with the instance transform.
     /// `inSymbol` is true below an instance, where layers repeat once per
     /// instance, so only scene layers get an id.
-    static func emit(_ node: RenderNode, inSymbol: Bool, into lines: inout [String], gradients: inout Int) throws {
+    static func emit(_ node: RenderNode, inSymbol: Bool, into lines: inout [String], gradients: inout Int,
+                     measure: (TextShape) -> [GlyphRunMetrics]) throws {
         switch node {
         case .layer(let layer):
             // Type on a path throws before anything in its layer is written or checked.
@@ -72,7 +89,7 @@ public enum SVGExporter {
             let ids = " \(idName)=\"\(escape(layer.id))\" data-name=\"\(escape(layer.name))\""
             lines.append("<g\(ids)\(try matrix(layer.transform))\(opacityAttr)>")
             for child in layer.children {
-                try emit(child, inSymbol: inSymbol, into: &lines, gradients: &gradients)
+                try emit(child, inSymbol: inSymbol, into: &lines, gradients: &gradients, measure: measure)
             }
             lines.append("</g>")
         case .shape(_, let shape):
@@ -89,11 +106,11 @@ public enum SVGExporter {
             }
             lines.append("<path d=\"\(d)\"\(attr)\(try stroke(shape.stroke))/>")
         case .text(_, let text):
-            lines.append(contentsOf: try textElement(text, gradients: &gradients))
+            lines.append(contentsOf: try textElement(text, gradients: &gradients, measure: measure))
         case .instance(_, let instance, let symbolID, _, let children):
             lines.append("<g data-symbol=\"\(escape(symbolID))\"\(try matrix(instance.transform))>")
             for child in children {
-                try emit(child, inSymbol: true, into: &lines, gradients: &gradients)
+                try emit(child, inSymbol: true, into: &lines, gradients: &gradients, measure: measure)
             }
             lines.append("</g>")
         case .unresolved(_, let symbolID):

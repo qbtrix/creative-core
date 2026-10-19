@@ -1,8 +1,9 @@
 // SVGExporter+Text.swift: a text shape as one SVG <text> element.
 //
-// The shape is laid out with `TextLayout.lay` over `FixedAdvances` (the
-// platform-free measurer), so the lines, baselines and justified positions
-// are the layout's, offset by the shape's position. Each line is a
+// The shape is laid out with `TextLayout.lay` over the metrics `measure`
+// gives (`FixedAdvances`, the platform-free measurer, unless the caller of
+// `export` passes measured ones), so the lines, baselines and justified
+// positions are the layout's, offset by the shape's position. Each line is a
 // `<tspan x y>` at its baseline; inside it each resolved run is a `<tspan>`
 // with its font-family, font-size, fill and, when not the default,
 // font-weight, font-style, letter-spacing (the run's tracking plus the
@@ -13,11 +14,15 @@
 // `xml:space="preserve"`. A gradient run fill is a gradient element before the
 // <text>, like a path's. Numbers use `SVGExporter.number`, so a non-finite
 // value throws `nonFiniteValue`; a text the layout refuses throws its
-// `ModelError.invalidText`. Type on a path is not written here yet.
+// `ModelError.invalidText`. Lines and runs both tile the string in order, so
+// one run cursor walks them together and the work is linear in lines plus
+// runs. Type on a path is not written here yet.
 
 extension SVGExporter {
-    /// The lines of one `<text>` element for `text`, gradient elements first.
-    static func textElement(_ text: TextShape, gradients: inout Int) throws -> [String] {
+    /// The lines of one `<text>` element for `text`, laid out over
+    /// `measure(text)`, gradient elements first.
+    static func textElement(_ text: TextShape, gradients: inout Int,
+                            measure: (TextShape) -> [GlyphRunMetrics]) throws -> [String] {
         let style = text.paragraph ?? ParagraphStyle()
         let runs = text.resolvedRuns
         var out: [String] = [], attributes: [String] = []
@@ -29,11 +34,12 @@ extension SVGExporter {
             attributes.append(try runAttributes(run, paint: paint, paragraphTracking: style.tracking))
         }
         let origin = text.position
-        let layout = try TextLayout.lay(text, measured: FixedAdvances.measure(text))
+        let layout = try TextLayout.lay(text, measured: measure(text))
         let anchor = style.alignment == .center ? " text-anchor=\"middle\""
             : style.alignment == .trailing ? " text-anchor=\"end\"" : ""
         out.append("<text xml:space=\"preserve\"\(anchor)>")
         let chars = Array(text.string)
+        var first = 0
         for line in layout.lines {
             let lead = line.x.first ?? 0
             let x: String
@@ -46,7 +52,10 @@ extension SVGExporter {
             var end = line.graphemes.upperBound
             while end > line.graphemes.lowerBound, chars[end - 1].isWhitespace { end -= 1 }
             var spans = ""
-            for (run, attrs) in zip(runs, attributes) {
+            // Skip the runs that end before this line, so no line restarts from run 0.
+            while first < runs.count, runs[first].start + runs[first].length <= line.graphemes.lowerBound { first += 1 }
+            for (run, attrs) in zip(runs[first...], attributes[first...]) {
+                if run.start >= end { break }
                 let lower = max(run.start, line.graphemes.lowerBound), upper = min(run.start + run.length, end)
                 guard lower < upper else { continue }
                 spans += "<tspan\(attrs)>\(escape(String(chars[lower..<upper])))</tspan>"
