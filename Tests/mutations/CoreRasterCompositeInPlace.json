@@ -2,8 +2,8 @@
   {
     "note": "the in-place composite copies a normal row that is not wholly opaque",
     "file": "Sources/CoreRaster/Composite.swift",
-    "anchor": "let opaqueRow = copies && stride(from: from + 3, to: from + n, by: 4).allSatisfy { src[$0] == 1 }",
-    "replacement": "let opaqueRow = copies",
+    "anchor": "let opaqueRow = copies && weights == nil && stride(from: from + 3, to: from + n, by: 4).allSatisfy { src[$0] == 1 }",
+    "replacement": "let opaqueRow = copies && weights == nil",
     "filter": "CompositeInPlaceTests"
   },
   {
