@@ -2,9 +2,9 @@
 
 Issue: #432 · Packet: docs/blueprints/core/features/tone-pack.md
 Run: act-1a150bfbcf7-sfwy · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
-Stage: 4 round 4 panel running on d902951 (gate PASS, 148/148 mutants)
+Stage: 4 round 4 fixes running (wf_62790f68-535: r4-b1..b3 fixes, r4-b4 builds TP-9)
 Base: 4feaaf9fac3cc050901f8b459a0908515a927f54
-Next: round 4 panel; then TP-9, TP-10 (TP-z), feature-done on the last PR
+Next: merge r4 fixes (incl. TP-9); round 5 panel on dev; then TP-10 (feature-done)
 
 Line lead for #434, #433 and #432 (rule 19); one wave plan across the three
 features, bookkeeping per feature. Packet v3 (has a Slices table).
@@ -21,7 +21,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 | TP-6 | 3 | TP-map | `AutoTone.suggest`; turns on `AutoToneTests` | `Sources/CoreRaster/Tone/AutoTone.swift`, its tests, `Tests/mutations/CoreRaster.AutoTone.json` | `AutoToneTests` | 2 (packet) | #600 | merged |
 | TP-7 | 5 | TP-cpu | `CPUBackend+Color.swift` body; turns on `CPUColorTests` | `Sources/CoreRender/CPU/CPUBackend+Color.swift`, `Tests/CoreRenderTests/CPUColorTests.swift`, `Tests/mutations/CoreRenderCPUColor.json` | `CPUColorTests` | 2 (packet) | #609 | merged |
 | TP-8 | 6 | TP-cpu | `Samples+Color.swift` and CPU goldens | `Sources/CoreRender/Parity/Samples+Color.swift`, `Tests/CoreRenderTests/Golden/color/` | `CPUGoldenTests` | none: goldens | #638 | merged (52b0fdc) |
-| TP-9 | 7 | TP-z | KJ-TP walk; `ToneBudgetTests` (release, `.serialized`, reported) | `Tests/CoreRenderTests/ToneWalkTests.swift`, `Tests/CoreRasterTests/ToneBudgetTests.swift` | `ToneWalkTests.walk` | none | | planned |
+| TP-9 | 7 | TP-z | KJ-TP walk; `ToneBudgetTests` (release, `.serialized`, reported) | `Tests/CoreRenderTests/ToneWalkTests.swift`, `Tests/CoreRasterTests/ToneBudgetTests.swift` | `ToneWalkTests.walk` | none | r4-b4 (wf_62790f68-535) | building |
 | TP-10 | 8 | TP-z | Packet status line says built; `feature-done` | `docs/blueprints/core/features/tone-pack.md` | – | none | | planned |
 
 ## Acceptance (from the packet)
@@ -56,6 +56,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 | TP-a, TP-mix | 1 | 5ea5ae5 | PASS (try 5, budget retries under load) | 70/70 | - | clarity, contract, tests, robustness | 11 (7 major: HSLShift hue unit; hueSaturation parity claim; preserveLuminosity clamp breaks luma; hsl, vibrance, colorBalance, channelMixer, blackAndWhite mutants escape; 4 minor), 0 refuted | #596 (r1-b1, merged; 8/8), #597 (r1-b2, merged; 10/10) | no |
 | TP-map | 2 | 7d8af79 | PASS | 66/66 | - | clarity, contract, tests, robustness | 10 (3 major: AutoTone public docs; AutoTone levels untested; gradientMap untested; 7 minor), 0 refuted | b1 #617 merged (28b5528), b2 #628 merged (9385de9), b4 #630 merged (9cd326b), b3 #632 merged (60faf3a); round 2 fixes all merged | no |
 | TP-mix, TP-map | 3 | 77b74a1 | PASS | 133/133 | - | clarity, contract, tests, robustness | 9 (4 major: WB bright set must use non-clipped pixels; clip guard untested; brightShare untested; 5 minor), 0 refuted; excluded: TP-8 not built (stale, merged after 77b74a1), JPEG SOF2 unbounded alloc (image-codecs, out of feature) | r3-b1 #643 merged (33e9202), r3-b2 #642 merged (48cbaf9) | no |
+| TP-mix, TP-map, TP-cpu | 4 | d902951 | PASS | 148/148 | - | clarity, contract, tests, robustness | 8 (1 major: TP-9 unbuilt; 7 minor), 0 refuted | r4-b1..b4 running (wf_62790f68-535) | no |
 
 ## Decisions
 - TP-5 (#585): map ops on encoded values via `mappingStraight`; `inverted` is a − c on linear premultiplied (exact double inversion); `.cube` parse per packet, size 2...65, domain exactly 0…1; blue-fastest mutant moved to the apply stride (parser keeps file order); ColorMix helpers made internal for reuse.
