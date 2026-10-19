@@ -86,3 +86,4 @@ utc	stage	event	ref	note
 2026-10-19T16:54:17Z	5	wave-start	AC-9	status line + waves row built, r6 F1-F3 folded
 2026-10-19T17:06:19Z	5	gate	a77ab8c3	scripts/ci rerun on dev a77ab8c3: CI: PASS (1957 parallel + 36 budget); the r6 single failure on 88ed878 did not reproduce (wall-clock under load)
 2026-10-19T17:16:11Z	5	waiting	wave C	final-PR builders running gates/mutation under the shared lock; no PR open yet
+2026-10-19T17:38:55Z	5	waiting	wave C	feature-done builders: gates and mutation plans queued behind the shared gate lock; FX-10 branch pushed at 77f9ea05
