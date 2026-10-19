@@ -13,7 +13,8 @@
 // its path, which refers to it by id ("g0", "g1", ... in document order).
 // Each layer's <g> carries its id and name, XML-escaped. Numbers are rounded
 // to 4 decimals and never use exponent notation; a non-finite value throws.
-// Text is not drawn yet: a visible layer with text throws `unsupported("text")`.
+// Each text shape is one <text> element (SVGExporter+Text). Type on a path is
+// not written yet: a visible layer with one throws `unsupported("textPath")`.
 // A render list that stopped expanding instances at its budget throws
 // `sceneTooLarge` before anything is written.
 #if canImport(FoundationEssentials)
@@ -32,7 +33,7 @@ public enum SVGExportError: Error, Equatable, Sendable {
     /// instances of each other many levels deep. Every symbol exists; place
     /// fewer instances or flatten the nesting.
     case sceneTooLarge
-    /// The scene draws something this exporter cannot write yet, e.g. "text".
+    /// The scene draws something this exporter cannot write yet, e.g. "textPath".
     case unsupported(String)
 }
 
@@ -62,9 +63,9 @@ public enum SVGExporter {
     static func emit(_ node: RenderNode, inSymbol: Bool, into lines: inout [String], gradients: inout Int) throws {
         switch node {
         case .layer(let layer):
-            // Text throws before anything in its layer is written or checked.
+            // Type on a path throws before anything in its layer is written or checked.
             for child in layer.children {
-                if case .text = child { throw SVGExportError.unsupported("text") }
+                if case .text(_, let text) = child, text.onPath != nil { throw SVGExportError.unsupported("textPath") }
             }
             let opacityAttr = layer.opacity == 1 ? "" : " opacity=\"\(try number(layer.opacity))\""
             let idName = inSymbol ? "data-id" : "id"
@@ -87,8 +88,8 @@ public enum SVGExporter {
                 attr = " fill=\"url(#\(id))\""
             }
             lines.append("<path d=\"\(d)\"\(attr)\(try stroke(shape.stroke))/>")
-        case .text:
-            throw SVGExportError.unsupported("text")
+        case .text(_, let text):
+            lines.append(contentsOf: try textElement(text, gradients: &gradients))
         case .instance(_, let instance, let symbolID, _, let children):
             lines.append("<g data-symbol=\"\(escape(symbolID))\"\(try matrix(instance.transform))>")
             for child in children {

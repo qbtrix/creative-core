@@ -1,6 +1,6 @@
 // SVGTextExportTests.swift: TE-7's acceptance checks for SVG text (runs as
 // tspans, lines at their layout baselines, alignment, justified x lists) and
-// TE-8's for type on a path (`textPath`). Each case waits, disabled by name,
+// TE-8's for type on a path (`textPath`). TE-7 built its cases; each TE-8 case waits, disabled by name,
 // until its task builds the writer and removes the trait.
 @testable import FlareCore
 import Testing
@@ -17,7 +17,7 @@ import Testing
     static func wrapped(_ alignment: TextAlignment) -> TextShape {
         TextFixtures.text("Bring the light home", paragraph: ParagraphStyle(alignment: alignment, lineHeight: 1.5, boxWidth: 120))
     }
-    @Test(.disabled("waits on TE-7")) func runWeightWritten() throws {
+    @Test func runWeightWritten() throws {
         let red = Fill.solid(Color(r: 1, g: 0, b: 0))
         let runs = [TextRun(start: 6, length: 5, fontFamily: "Mono", weight: 700, italic: true, fill: red,
                             tracking: 2, baselineShift: -3)]
@@ -29,18 +29,30 @@ import Testing
             #expect(svg.contains(attribute), "\(attribute)")
         }
     }
-    @Test(.disabled("waits on TE-7")) func baselinesFromLayout() throws {
+    @Test func baselinesFromLayout() throws {
         let text = Self.wrapped(.leading), layout = try TextLayout.lay(text, measured: FixedAdvances.measure(text))
         #expect(layout.lines.count == 2)
         let svg = try Self.export(text)
         for line in layout.lines { #expect(svg.contains("y=\"\(try SVGExporter.number(line.baseline))\""), "\(line)") }
     }
-    @Test(.disabled("waits on TE-7")) func alignmentAsTextAnchor() throws {
+    @Test func alignmentAsTextAnchor() throws {
         #expect(try Self.export(Self.wrapped(.center)).contains("text-anchor=\"middle\""))
         #expect(try Self.export(Self.wrapped(.trailing)).contains("text-anchor=\"end\""))
         #expect(!(try Self.export(Self.wrapped(.leading)).contains("text-anchor")))
     }
-    @Test(.disabled("waits on TE-7")) func justifiedLineHasExplicitXList() throws {
+    /// A middle or end anchor sits at the line's centre or end, trailing spaces unwritten.
+    @Test func anchoredXAtLineCentreAndEnd() throws {
+        for (alignment, share) in [(TextAlignment.center, 0.5), (.trailing, 1.0)] {
+            let text = Self.wrapped(alignment), layout = try TextLayout.lay(text, measured: FixedAdvances.measure(text))
+            let svg = try Self.export(text)
+            for line in layout.lines {
+                let x = try SVGExporter.number((line.x.first ?? 0) + line.width * share)
+                #expect(svg.contains("<tspan x=\"\(x)\" y=\"\(try SVGExporter.number(line.baseline))\">"), "\(alignment)")
+            }
+            #expect(svg.contains(">Bring the</tspan>") && !svg.contains("the </tspan>"))
+        }
+    }
+    @Test func justifiedLineHasExplicitXList() throws {
         let text = Self.wrapped(.justified), layout = try TextLayout.lay(text, measured: FixedAdvances.measure(text))
         let first = try #require(layout.lines.first)
         let xs = try first.x.map { try SVGExporter.number($0) }.joined(separator: " ")
@@ -48,7 +60,7 @@ import Testing
         #expect(svg.contains("x=\"\(xs)\""))
         #expect(Self.count("x=\"\(xs)\"", in: svg) == 1)
     }
-    @Test(.disabled("waits on TE-7")) func byteStableAndNonFiniteThrows() throws {
+    @Test func byteStableAndNonFiniteThrows() throws {
         let text = TextFixtures.text(TextFixtures.emoji + " " + TextFixtures.combining, runs: [TextRun(start: 0, length: 1, weight: 700)])
         #expect(try Self.export(text) == Self.export(text))
         var bad = text
