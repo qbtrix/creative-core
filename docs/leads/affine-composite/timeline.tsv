@@ -83,3 +83,4 @@ utc	stage	event	ref	note
 2026-10-19T15:20:15Z	4	pr-merged	#716	AC r5-b1 merged 13:57Z
 2026-10-19T15:21:38Z	4	round-start	r6	gate + critic panel on AC-z (round 3 of 4), verified
 2026-10-19T16:53:02Z	4	round-result	r6	88ed878: 0 major, 3 minor (F1 commit12MP backdrop check never runs, F2 walk step 4 canvas pixels uncompared, F3 partial-write rows untested), 4 refuted; #716 fix verified; mutate AffineTransform 10/10, CompositeAffine 16/16, CPUAffine 4/4
+2026-10-19T16:54:17Z	5	wave-start	AC-9	status line + waves row built, r6 F1-F3 folded

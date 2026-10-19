@@ -2,9 +2,9 @@
 
 Issue: #434 · Packet: docs/blueprints/core/features/affine-composite.md
 Run: act-1a1543c8a34-t9zw (previous act-1a150bfbcf7-sfwy / act-1a1511a1174-tlch) · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
-Stage: 4 round 6 done; wave C: AC-9 feature-done PR (with r6 minors)
+Stage: 5 wave C: AC-9 feature-done PR building
 Base: 4feaaf9fac3cc050901f8b459a0908515a927f54
-Next: AC-9 PR: status line built, r6 F1-F3 test tightenings
+Next: AC-9 PR opens; lane merge; feature-done CI run; AC-z Slice-Done + Mac-Finish-Wanted; contact sheet
 
 Line lead for #434, #433 and #432 (rule 19); one wave plan across the three
 features, bookkeeping per feature. Packet v3 (has a Slices table).
