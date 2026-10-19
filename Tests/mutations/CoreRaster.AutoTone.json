@@ -9,7 +9,7 @@
   {
     "note": "AutoTone averages an empty bright set, so an all-black buffer's white balance is NaN, caught by AutoToneTests.blackSuggestsIdentity",
     "file": "Sources/CoreRaster/Tone/AutoTone.swift",
-    "anchor": "guard !unclipped.isEmpty else { return (0, 0) }",
+    "anchor": "guard total > 0 else { return (0, 0) }",
     "replacement": "guard true else { return (0, 0) }",
     "filter": "AutoToneTests"
   },
@@ -23,8 +23,8 @@
   {
     "note": "AutoTone white balance keeps pixels with a channel at 0 or 1, so clamped bright highlights skew the balance, caught by AutoToneTests.clippedHighlightsIgnored",
     "file": "Sources/CoreRaster/Tone/AutoTone.swift",
-    "anchor": "guard rgb.min() > 0, rgb.max() < 1 else { continue }",
-    "replacement": "guard rgb.min() >= 0 else { continue }",
+    "anchor": "guard rgb.min() > 0, rgb.max() < 1 else { return nil }",
+    "replacement": "guard rgb.min() >= 0 else { return nil }",
     "filter": "AutoToneTests"
   },
   {
@@ -39,6 +39,20 @@
     "file": "Sources/CoreRaster/Tone/AutoTone.swift",
     "anchor": "return (Float(min(max(temperature, -100), 100)), Float(min(max(tint, -100), 100)))",
     "replacement": "return (Float(temperature), Float(tint))",
+    "filter": "AutoToneTests"
+  },
+  {
+    "note": "AutoTone white balance drops only the tint slider clamp, so a strong green cast suggests tint 400 that whiteBalance refuses, caught by AutoToneTests.extremeTintClampsToSliderRange",
+    "file": "Sources/CoreRaster/Tone/AutoTone.swift",
+    "anchor": "Float(min(max(tint, -100), 100)))",
+    "replacement": "Float(tint))",
+    "filter": "AutoToneTests"
+  },
+  {
+    "note": "AutoTone white balance averages the whole boundary luma bin instead of only the brightest pixels the bright set needs, caught by AutoToneTests.histogramBalanceMatchesFullSort",
+    "file": "Sources/CoreRaster/Tone/AutoTone.swift",
+    "anchor": "let bright = kept.prefix(take)",
+    "replacement": "let bright = kept[...]",
     "filter": "AutoToneTests"
   }
 ]
