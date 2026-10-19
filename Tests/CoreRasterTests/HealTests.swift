@@ -1,5 +1,5 @@
 // HealTests.swift: retouch-heal RH-3's acceptance, written first by RH-1
-// (docs/blueprints/core/features/retouch-heal.md). Disabled until RH-3 lands.
+// (docs/blueprints/core/features/retouch-heal.md); RH-3 turned it on.
 import CoreRaster
 import Testing
 
@@ -15,7 +15,7 @@ func expectSameOutside(_ a: PixelBuffer, _ b: PixelBuffer, cx: Int, cy: Int, r: 
 @Suite struct HealTests {
     static let tolerance: Float = 1 / 255
 
-    @Test(.disabled("waits on RH-3")) func reproducesField() throws {
+    @Test func reproducesField() throws {
         let field = try RetouchFixtures.gradientField(width: 64, height: 48)
         let mask = try RetouchFixtures.disc(width: 64, height: 48, centerX: 44, centerY: 24, radius: 8)
         let healed = try field.healed(offset: (dx: -24, dy: 2), through: mask)
@@ -28,7 +28,7 @@ func expectSameOutside(_ a: PixelBuffer, _ b: PixelBuffer, cx: Int, cy: Int, r: 
         }
     }
 
-    @Test(.disabled("waits on RH-3")) func matchesDestinationEdge() throws {
+    @Test func matchesDestinationEdge() throws {
         // The source half is the field lifted by 0.2: the same gradients, the
         // wrong tone. The edge comes from the destination, so no seam shows.
         var buffer = try RetouchFixtures.gradientField(width: 64, height: 48)
@@ -54,7 +54,7 @@ func expectSameOutside(_ a: PixelBuffer, _ b: PixelBuffer, cx: Int, cy: Int, r: 
         }
     }
 
-    @Test(.disabled("waits on RH-3")) func outsideBoundsUntouched() throws {
+    @Test func outsideBoundsUntouched() throws {
         let photo = try RetouchFixtures.spottedPhoto(width: 160, height: 96, seed: 31)
         let spot = try #require(photo.spots.last)
         let healed = try photo.spotted.healed(offset: (dx: -30, dy: 0), through: spot.hole)
@@ -63,20 +63,20 @@ func expectSameOutside(_ a: PixelBuffer, _ b: PixelBuffer, cx: Int, cy: Int, r: 
         #expect(healed != photo.spotted)
     }
 
-    @Test(.disabled("waits on RH-3")) func overMaxHealPixelsThrows() throws {
+    @Test func overMaxHealPixelsThrows() throws {
         let buffer = try PixelBuffer(width: 2001, height: 2000, fill: RGBA(r: 0.5, g: 0.5, b: 0.5, a: 1))
         let mask = try Mask(width: 2001, height: 2000, fill: 1)
         #expect(mask.area > Double(PixelBuffer.maxHealPixels))
         #expect(throws: RasterError.self) { try buffer.healed(offset: (dx: 0, dy: 0), through: mask) }
     }
 
-    @Test(.disabled("waits on RH-3")) func zeroOffsetFullMaskIsIdentity() throws {
+    @Test func zeroOffsetFullMaskIsIdentity() throws {
         let photo = try RetouchFixtures.spottedPhoto(width: 48, height: 32, seed: 5)
         let mask = try Mask(width: 48, height: 32, fill: 1)
         #expect(try photo.spotted.healed(offset: (dx: 0, dy: 0), through: mask) == photo.spotted)
     }
 
-    @Test(.disabled("waits on RH-3")) func offsetOffBufferThrows() throws {
+    @Test func offsetOffBufferThrows() throws {
         let field = try RetouchFixtures.gradientField(width: 64, height: 48)
         let mask = try RetouchFixtures.disc(width: 64, height: 48, centerX: 12, centerY: 24, radius: 8)
         for offset in [(dx: -15, dy: 0), (dx: 1000, dy: 0), (dx: 0, dy: 30), (dx: Int.min, dy: Int.max)] {
@@ -86,7 +86,7 @@ func expectSameOutside(_ a: PixelBuffer, _ b: PixelBuffer, cx: Int, cy: Int, r: 
         #expect(throws: RasterError.self) { try field.healed(offset: (dx: 0, dy: 0), through: small) }
     }
 
-    @Test(.disabled("waits on RH-3")) func fuzzedInputsThrowOrHeal() throws {
+    @Test func fuzzedInputsThrowOrHeal() throws {
         var rng = SplitMix64(seed: 0x4EA1)
         let field = try RetouchFixtures.gradientField(width: 32, height: 24)
         for _ in 0..<200 {
