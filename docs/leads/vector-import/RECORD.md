@@ -3,9 +3,9 @@
 Issue: #439 · Packet: docs/blueprints/core/features/vector-import.md
 Run: act-1a1511a1174-tlch (relaunch; earlier run act-1a14de006be-1kmq) · Started: 2026-10-18T22:40Z
 Line lead for: image-codecs (#562), preview-cache (#440), vector-import (#439)
-Stage: 4 round 3
-Base: 15e96dd47c720025f5ae49b3649608deb65ab216
-Next: R3-3 reader perf fixer (relaunched: the earlier one never pushed), then VI-9 feature-done
+Stage: 5 finish
+Base: 62a84e9 (origin/dev at relaunch resume)
+Next: VI-9 (part words, status line, feature-done) building; then the dev CI run that holds it, Belt-Slice-Done VI-z, contact sheet
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -86,3 +86,5 @@ Next: R3-3 reader perf fixer (relaunched: the earlier one never pushed), then VI
 - 20:22Z heartbeat: R3-3 reader perf fixer working; VI-9 waits on it
 - 20:45Z heartbeat: R3-3 editing Lottie/SVG readers (files touched 20:44); VI-9 waits on it
 - 22:40Z relaunch under act-1a1511a1174-tlch: branch rebased onto dev 15e96dd. R3-3 left no branch or PR; relaunching it (Lottie 5 MB ≤ 250 ms, SVG 2 MB ≤ 150 ms release). VI-9 follows it.
+
+- 2026-10-19T00:10Z: R3-3 done by #580 (c8a4086, merged 23:33Z; the earlier fixer did push after all). Release on dev 2d583a0, median of 3: SVG 69.4 ms (budget 150), Lottie 209.0 ms (budget 250). Mutate 3/3, 42/42 changed-since. The relaunched fixer's duplicate branch was not pushed. VI-9 launched.
