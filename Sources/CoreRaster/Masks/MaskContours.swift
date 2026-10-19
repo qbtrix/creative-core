@@ -34,25 +34,40 @@ extension Mask {
             for cx in -1..<w {
                 // Corners k = 0...3 are top-right, bottom-right, bottom-left, top-left;
                 // edge k (top, right, bottom, left) runs between corners k - 1 and k.
-                let v = [value(cx + 1, cy), value(cx + 1, cy + 1), value(cx, cy + 1), value(cx, cy)]
-                let inside = v.map { $0 >= level }
-                guard inside.contains(true), inside.contains(false) else { continue }
-                let edges = [(cx, cy, false), (cx + 1, cy, true), (cx, cy + 1, false), (cx, cy, true)]
-                let crossed = (0..<4).filter { inside[($0 + 3) % 4] != inside[$0] }
-                // A saddle: a centre on corner 0's side cuts off corners 1 and 3, else 0 and 2.
-                let centerInside = v.reduce(0, +) / 4 >= level
-                let pairs = crossed.count == 2 ? [(crossed[0], crossed[1])]
-                    : centerInside == inside[0] ? [(1, 2), (3, 0)] : [(0, 1), (2, 3)]
+                let v0 = value(cx + 1, cy), v1 = value(cx + 1, cy + 1), v2 = value(cx, cy + 1), v3 = value(cx, cy)
+                // Bit k of `cell` is set when corner k is inside.
+                let cell = (v0 >= level ? 1 : 0) | (v1 >= level ? 2 : 0) | (v2 >= level ? 4 : 0) | (v3 >= level ? 8 : 0)
+                guard cell != 0, cell != 15 else { continue }
+                func inside(_ k: Int) -> Bool { cell & (1 << k) != 0 }
+                func edge(_ k: Int) -> (Int, Int, Bool) {
+                    switch k {
+                    case 0: return (cx, cy, false)
+                    case 1: return (cx + 1, cy, true)
+                    case 2: return (cx, cy + 1, false)
+                    default: return (cx, cy, true)
+                    }
+                }
                 // From edge a to edge b the corner a (the first after a) is on the right,
                 // so an inside corner reverses the segment.
-                for (a, b) in pairs {
-                    let (from, to) = inside[a] ? (b, a) : (a, b)
-                    let (fx, fy, fv) = edges[from], (tx, ty, tv) = edges[to]
+                func segment(_ a: Int, _ b: Int) {
+                    let (from, to) = inside(a) ? (b, a) : (a, b)
+                    let (fx, fy, fv) = edge(from), (tx, ty, tv) = edge(to)
                     let start = key(fx, fy, vertical: fv), end = key(tx, ty, vertical: tv)
                     next[start] = end
                     starts.append(start)
                     if points[start] == nil { points[start] = crossing(fx, fy, vertical: fv) }
                     if points[end] == nil { points[end] = crossing(tx, ty, vertical: tv) }
+                }
+                if cell == 5 || cell == 10 {
+                    // A saddle: a centre on corner 0's side cuts off corners 1 and 3, else 0 and 2.
+                    let centerInside = (v0 + v1 + v2 + v3) / 4 >= level
+                    if centerInside == inside(0) { segment(1, 2); segment(3, 0) } else { segment(0, 1); segment(2, 3) }
+                } else {
+                    // Exactly two edges cross; join them in edge order.
+                    var first = -1
+                    for k in 0..<4 where inside((k + 3) % 4) != inside(k) {
+                        if first < 0 { first = k } else { segment(first, k) }
+                    }
                 }
             }
         }
