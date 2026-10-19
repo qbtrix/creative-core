@@ -96,7 +96,8 @@ import Testing
         }
     }
 
-    /// One random step, a paragraph or a path setting, valid or invalid, the paragraph sometimes coalesced as a drag.
+    /// Random steps: a paragraph or a path setting, valid or invalid, the paragraph sometimes
+    /// coalesced; and a drag of one paragraph field, so merges run among groups and other commands.
     static let undoSteps: [UndoStep] = [{ e, rng, _ in
         let layer = UndoPropertyTests.anyLayer(e, &rng)
         let index = TextCommandsTests.anyIndex(e, layer, &rng), clear = Int.random(in: 0..<6, using: &rng) == 0
@@ -109,6 +110,25 @@ import Testing
                                    tracking: Double(Int.random(in: 0...2, using: &rng)))
         try e.perform(SetParagraphStyle(owner: o, layerID: layer, textIndex: index, paragraph: clear ? nil : style),
                       coalesceKey: Bool.random(using: &rng) ? "paragraph-drag" : nil)
+    }, { e, rng, _ in
+        // A drag: 2-4 coalesced steps on one field of one text, so SetParagraphStyle.merge
+        // runs. A refused (out-of-range or non-finite) step partway leaves the run as it
+        // was, and about one later step in four lands on another text and must not fold in.
+        let layer = UndoPropertyTests.anyLayer(e, &rng), index = TextCommandsTests.anyIndex(e, layer, &rng)
+        let (field, range) = [(\ParagraphStyle.lineHeight, 0.0...5.0), (\.tracking, -5...5),
+                              (\.paragraphSpacing, -5...20)].randomElement(using: &rng) ?? (\.lineHeight, 0...5)
+        func drag(_ e: inout CommandEngine, _ rng: inout SplitMix64, at index: Int) throws {
+            let texts = e.document.scenes.first?.layers.first { $0.id == layer }?.texts ?? []
+            var style = (texts.indices.contains(index) ? texts[index].paragraph : nil) ?? ParagraphStyle()
+            style[keyPath: field] = UndoPropertyTests.anyNumber(in: range, &rng)
+            try e.perform(SetParagraphStyle(owner: o, layerID: layer, textIndex: index, paragraph: style),
+                          coalesceKey: "paragraph-drag")
+        }
+        try drag(&e, &rng, at: index)
+        for _ in 1..<Int.random(in: 2...4, using: &rng) {
+            let stray = Int.random(in: 0..<4, using: &rng) == 0
+            try? drag(&e, &rng, at: stray ? TextCommandsTests.anyIndex(e, layer, &rng) : index)
+        }
     }]
 
     @Test(arguments: 0..<100 as Range<UInt64>)

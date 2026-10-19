@@ -33,5 +33,12 @@
     "anchor": "        guard mine.count == 1, Self.changedFields(paragraph, set).isSubset(of: mine) else { return false }",
     "replacement": "        guard mine.count >= 1, Self.changedFields(paragraph, set).isSubset(of: mine) else { return false }",
     "filter": "TextParagraphCommandsTests.mergeOnlySameField"
+  },
+  {
+    "note": "paragraph drag merge in the undo property folds a stray step on another text",
+    "file": "Sources/FlareCore/TextStyleCommands+Paragraph.swift",
+    "anchor": "              (next.owner, next.layerID, next.textIndex) == (owner, layerID, textIndex) else { return false }",
+    "replacement": "              next.layerID == layerID else { return false }",
+    "filter": "TextParagraphCommandsTests.undoAllRestoresOriginal"
   }
 ]
