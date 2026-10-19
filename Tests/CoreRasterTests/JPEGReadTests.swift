@@ -208,6 +208,7 @@ import Foundation
         let dcScan = coded({ $0.put(dc, 3); $0.put(7, 3) }, { $0.put(dc, 3); $0.put(2, 3) })
         let acScan = coded({ $0.put(ac, 0x10); $0.put(0, 1) }, { $0.put(ac, 0x02); $0.put(3, 2); $0.put(ac, 0x00) })
         let head = F.header(f, sof: 0xC2, precision: 8, restart: 1, orientation: nil, littleEndian: false, ac: (F.acAll, F.acAll))
+        // Built as a list of parts: one long `+` chain times out the macOS type checker.
         let parts: [[UInt8]] = [head, F.sos([0], 0, 0, 0, 0), dcScan, F.sos([0], 1, 63, 0, 0), acScan, [0xFF, 0xD9]]
         let data = Data(Array(parts.joined()))
         #expect(try JPEG.read(data) == JPEG.read(F.baseline(f)))
