@@ -201,11 +201,14 @@ private func fill(_ w: Int, _ h: Int, _ r: Float, _ g: Float, _ b: Float, _ a: F
 
     @Test func w1FamiliesHaveEmptySetsAndOldFamiliesAreUnchanged() throws {
         for op in RenderOp.notOnMetalYet.subtracting([.affine]).sorted(by: { $0.rawValue < $1.rawValue }) {
-            #expect(try ParityHarness.sampleSet(for: op).isEmpty, "\(op) has no samples until its feature adds them")
+            let names = try ParityHarness.sampleSet(for: op).map(\.name)
+            // tone-pack filled `.color`: 11 colour cases on the four edge-case sources.
+            #expect(names.count == (op == .color ? 44 : 0), "\(op) has no samples until its feature adds them")
+            #expect(Set(names).count == names.count, "\(op): names are unique")
             #expect(try ParityHarness.sampleSet(for: op) == ParityHarness.sampleSet(for: op), "\(op)")
         }
-        #expect(ParityPack.all.count == 6 && ParityPack.all.map(\.name) == ["display-blur-adjust-retouch", "composite-blendSeparable",
-                                               "blendNonSeparable", "transform", "resample", "affine"])
+        #expect(ParityPack.all.count == 7 && ParityPack.all.map(\.name) == ["display-blur-adjust-retouch", "composite-blendSeparable",
+                                               "blendNonSeparable", "transform", "resample", "affine", "color"])
         // FNV-1a over each old family's names, calls and input Float bits: the goldens were cut from these.
         var counts: [String: Int] = [:], prints: [String: UInt64] = [:]
         for op in RenderOp.allCases where !RenderOp.notOnMetalYet.contains(op) {
