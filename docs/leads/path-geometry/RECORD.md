@@ -36,7 +36,7 @@ Next: P3 (measure) and P4 (boolean) open once their regates pass; PG-edit done (
 
 - P5 note for round 3: `combine` returns sliver and zero-area contours when many nearly collinear edges meet at one point (865 contours unioning per-segment rectangles of a flattened circle). P5 sidesteps it with one offset loop per subpath; round 3 must look at `combine` itself.
 
-- Round-2 path fixes: PR #741 (lead/path-geometry-r2-b1, head 23238e01, 25/25, 191 lines). Dash cut binary-searches its span (a 20k-point dash went from >300 s to <3 s); `combine` gains `maxBooleanWork = 50,000,000` (pair tests, cuts, ray steps) and throws tooComplex past it, while maxBooleanVertices stays 200,000; non-finite cross products throw nonFinite; smooth/symmetric convert leaves the anchor unchanged on non-finite arms; docs for tooComplex, dashed and open subpaths in combine.
+- Round-2 path fixes: PR #741 (lead/path-geometry-r2-b1, merged 21:11 as 4de35272, 25/25, 191 lines). Dash cut binary-searches its span (a 20k-point dash went from >300 s to <3 s); `combine` gains `maxBooleanWork = 50,000,000` (pair tests, cuts, ray steps) and throws tooComplex past it, while maxBooleanVertices stays 200,000; non-finite cross products throw nonFinite; smooth/symmetric convert leaves the anchor unchanged on non-finite arms; docs for tooComplex, dashed and open subpaths in combine.
 
 ## Decisions
 - Boolean time is bounded by a work cap, not a lower vertex cap (round 2): a real 2 x 100k input may hit the work cap first.
