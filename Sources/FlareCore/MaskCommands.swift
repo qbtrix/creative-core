@@ -47,7 +47,6 @@ public struct AddLayerMask: LayerParamsCommand {
         self.init(owner: owner, layerID: layerID, mask: params.mask, index: params.index)
     }
     public mutating func execute(_ document: inout Document) throws {
-        if Self.id.hasPrefix("mask") { throw CommandError.notBuilt(Self.id) }
         let (mask, index) = (mask, index)
         insertedAt = try document.withEditableLayer(owner, layer: layerID) { l in
             let at = index ?? l.masks.count
@@ -81,7 +80,6 @@ public struct SetLayerMask: LayerParamsCommand {
         self.init(owner: owner, layerID: layerID, index: params.index, mask: params.mask)
     }
     public mutating func execute(_ document: inout Document) throws {
-        if Self.id.hasPrefix("mask") { throw CommandError.notBuilt(Self.id) }
         let (index, mask) = (index, mask)
         oldMask = try document.withEditableLayer(owner, layer: layerID) { l in
             try l.masks.checkMaskIndex(index)
@@ -119,7 +117,6 @@ public struct RemoveLayerMask: LayerParamsCommand {
     var params: Params { Params(index: index) }
     init(owner: LayerOwner, layerID: String, params: Params) { self.init(owner: owner, layerID: layerID, index: params.index) }
     public mutating func execute(_ document: inout Document) throws {
-        if Self.id.hasPrefix("mask") { throw CommandError.notBuilt(Self.id) }
         let index = index
         removed = try document.withEditableLayer(owner, layer: layerID) { l in
             try l.masks.checkMaskIndex(index)
@@ -151,7 +148,6 @@ public struct MoveLayerMask: LayerParamsCommand {
         self.init(owner: owner, layerID: layerID, from: params.from, to: params.to)
     }
     public mutating func execute(_ document: inout Document) throws {
-        if Self.id.hasPrefix("mask") { throw CommandError.notBuilt(Self.id) }
         let (from, to) = (from, to)
         try document.withEditableLayer(owner, layer: layerID) { l in
             try l.masks.checkMaskIndex(from)
@@ -185,7 +181,6 @@ public struct SetTrackMatte: LayerParamsCommand {
     var params: Params { Params(matte: matte) }
     init(owner: LayerOwner, layerID: String, params: Params) { self.init(owner: owner, layerID: layerID, matte: params.matte) }
     public mutating func execute(_ document: inout Document) throws {
-        if Self.id.hasPrefix("mask") { throw CommandError.notBuilt(Self.id) }
         let matte = matte
         if let matte, let layers = document.layers(of: owner) {
             try Self.checkSource(matte.sourceLayerID, of: layerID, in: layers)

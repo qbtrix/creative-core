@@ -1,6 +1,6 @@
 // CommandRegistryTests.swift: every built-in command round-trips through the
 // {"id", "params"} envelope and behaves the same after decoding (the ids are
-// checked family by family against hand-written lists, 68 in all), and encode
+// checked family by family against hand-written lists, 73 in all), and encode
 // only their params, so a command decoded after execute is fresh; unknown ids
 // and malformed envelopes throw a CommandError, never crash (seeded fuzz).
 @testable import FlareCore
@@ -89,6 +89,7 @@ import Testing
         doc.stateMachines[0].inputs = [MachineInputCommandTests.on]
         TrackCommandsTests.addSampleTrack(&doc)
         TextStyleCommandsTests.addSampleRuns(&doc)
+        MaskCommandsTests.addSampleMasks(&doc)
         return doc
     }
 
@@ -132,7 +133,7 @@ import Testing
     }
 
     @Test func everyBuiltInCommandIsRegistered() {
-        #expect(Self.expectedIDs.count == 68)
+        #expect(Self.expectedIDs.count == 73)
         #expect(Set(Self.registry.ids) == Self.expectedIDs)
     }
 
@@ -149,11 +150,11 @@ import Testing
     }
 
     /// The W1 seams: mask, text style and track families are registered, last
-    /// and in that order; mask holds no command yet.
-    @Test func w1FamiliesAreRegisteredAndEmpty() {
+    /// and in that order.
+    @Test func w1FamiliesAreRegistered() {
         let ids = CommandRegistry.builtInFamilies.suffix(3).map { $0.map { $0.id } }
         #expect(ids == [MaskCommands.all, TextStyleCommands.all, TrackCommands.all].map { $0.map { $0.id } })
-        #expect(ids == [[], TextStyleCommandsTests.expectedIDs, TrackCommandsTests.expectedIDs])
+        #expect(ids == [MaskCommandsTests.expectedIDs, TextStyleCommandsTests.expectedIDs, TrackCommandsTests.expectedIDs])
     }
 
     @Test func samplesCoverEveryBuiltIn() {
