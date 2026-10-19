@@ -1,8 +1,9 @@
 // CompositeAffineTests.swift: affine-composite AC-5's acceptance for
-// `composite(_:through:...)` and `AffineMatrix.bounds`: through-composite
-// equals transform-then-composite within 1/255 (`==` for whole-pixel moves)
-// for every BlendMode, only the corner bounds widened by the filter's reach
-// are written, layers mapped off the backdrop change nothing, and bad input
+// `composite(_:through:...)`, `AffineMatrix.bounds` and `writeBounds`:
+// through-composite equals transform-then-composite within 1/255 (`==` for
+// whole-pixel moves) for every BlendMode, lanczos3 unlike bilinear on hard
+// edges, only `writeBounds` (the corner bounds widened by the filter's
+// reach) is written, layers mapped off the backdrop change nothing, and bad input
 // throws with the backdrop unchanged.
 import CoreRaster
 import Testing
@@ -109,6 +110,8 @@ import Darwin
         }
         #expect(AffineMatrix(a: .nan, b: 0, c: 0, d: 1, tx: 0, ty: 0).bounds(of: 4, 4) == nil)
         #expect(AffineMatrix(a: 1, b: 0, c: 0, d: 1, tx: .infinity, ty: 0).bounds(of: 4, 4) == nil)
+        #expect(AffineFixtures.singular.writeBounds(of: 4, 4, filter: .bilinear) == nil)
+        #expect(AffineMatrix(a: .nan, b: 0, c: 0, d: 1, tx: 0, ty: 0).writeBounds(of: 4, 4, filter: .lanczos3) == nil)
     }
 
     /// The packet's box: the corner bounds widened on every side by the
@@ -169,6 +172,8 @@ import Darwin
             for (filter, radius) in [(ResampleFilter.bilinear, 1.0), (.lanczos3, 3.0)] {
                 let want = try reachBox(m, w, h, radius: radius, backdrop: base)
                 #expect(want[0] > 0 && want[1] > 0 && want[2] < base.width && want[3] < base.height, "\(m) \(filter) \(want)")
+                let wide = try #require(m.writeBounds(of: w, h, filter: filter))
+                #expect([wide.x, wide.y, wide.x + wide.width, wide.y + wide.height] == want, "writeBounds \(m) \(filter)")
                 for mode in [BlendMode.normal, .multiply] {
                     var got = base
                     try got.composite(layer, through: m, mode: mode, opacity: 1, filter: filter)
@@ -277,9 +282,10 @@ import Darwin
     }
 
     /// A layer whose box covers a 400 x 300 backdrop (scaled up and turned,
-    /// the photo-layer case) is resampled one box row at a time, and the
-    /// result still matches transform-then-composite to a full-size copy.
-    @Test func noFullSizeIntermediate() throws {
+    /// the photo-layer case) still matches transform-then-composite to a
+    /// full-size copy. It measures no memory: that the walk never grows past
+    /// its box is `rowsOutsideBoundsAreUntouched`'s check.
+    @Test func largeBoxMatchesFullSizeReference() throws {
         let layer = try AffineFixtures.layer(seed: 525, width: 40, height: 30, border: 0)
         let base = try PixelBuffer(width: 400, height: 300, fill: RGBA(r: 0.2, g: 0.4, b: 0.6, a: 1))
         let t = Double.pi / 12
@@ -315,5 +321,44 @@ import Darwin
         guard case .invalid(let message) = try #require(error) else { return }
         #expect(message.contains("composite through \(m)") && message.contains("lanczos3"), "\(message)")
         #expect(got.components.allSatisfy { $0.isFinite })
+        // The throw leaves every pixel outside the write box, the rows and columns just past it included, as it was.
+        let wide = try #require(m.writeBounds(of: layer.width, layer.height, filter: .lanczos3))
+        if let written = try writtenBox(got, base) {
+            #expect(written[0] >= wide.x && written[1] >= wide.y, "\(written)")
+            #expect(written[2] <= wide.x + wide.width && written[3] <= wide.y + wide.height, "\(written)")
+        }
+    }
+
+    /// An opaque 2-pixel checker, hard edges everywhere, turned and scaled
+    /// up: lanczos3 rings past 0...1 where bilinear cannot, so the filters'
+    /// through-composites differ and lanczos3's still equals
+    /// transform-then-composite. On a -0.0 backdrop the written pixels are
+    /// exactly `writeBounds`, so the rows and columns just past the ringing
+    /// keep their bit patterns.
+    @Test func lanczos3ThroughIsNotBilinear() throws {
+        var layer = try PixelBuffer(width: 12, height: 10)
+        for y in 0..<10 {
+            for x in 0..<12 {
+                let v: Float = (x / 2 + y / 2).isMultiple(of: 2) ? 1 : 0
+                try layer.setPixel(x: x, y: y, RGBA(r: v, g: 1 - v, b: v, a: 1))
+            }
+        }
+        let zero = Float(sign: .minus, exponent: 0, significand: 0)
+        let base = try PixelBuffer(width: 60, height: 60, fill: RGBA(r: zero, g: zero, b: zero, a: zero))
+        let m = AffineMatrix(a: 1.5, b: 0.4, c: -0.4, d: 1.5, tx: 20.3, ty: 12.6)
+        var results: [PixelBuffer] = []
+        for filter in [ResampleFilter.bilinear, .lanczos3] {
+            var got = base
+            try got.composite(layer, through: m, mode: .normal, opacity: 1, filter: filter)
+            let want = try reference(base, layer, m, mode: .normal, opacity: 1, filter: filter)
+            #expect(try affineMaxDelta(got, want) <= 1 / 255, "\(filter)")
+            let wide = try #require(m.writeBounds(of: layer.width, layer.height, filter: filter))
+            let box = [wide.x, wide.y, wide.x + wide.width, wide.y + wide.height]
+            #expect(box[0] > 0 && box[1] > 0 && box[2] < base.width && box[3] < base.height, "\(filter) \(box)")
+            #expect(try writtenBox(got, base) == box, "\(filter)")
+            results.append(got)
+        }
+        #expect(results[1].components.contains { $0 > 1 || $0 < 0 }, "lanczos3 rings past 0...1")
+        #expect(try affineMaxDelta(results[0], results[1]) > 0.05)
     }
 }

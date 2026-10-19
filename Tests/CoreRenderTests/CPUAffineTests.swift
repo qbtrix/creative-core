@@ -115,6 +115,37 @@ private func rasterMessage(_ body: () throws -> Void) -> String {
         #expect(try cpu.read(s) == layer)
     }
 
+    /// A lanczos3 overshoot past Float's range throws `RenderError.raster`
+    /// after the walk began, as the contract says: `b` keeps its id and every
+    /// pixel outside `m.writeBounds` is as it was.
+    @Test
+    func overshootThrowsAndLeavesOutsideWriteBounds() throws {
+        var layer = try PixelBuffer(width: 12, height: 6)
+        for y in 0..<6 {
+            for x in 0..<12 {
+                let v = (x / 2).isMultiple(of: 2) ? Float.greatestFiniteMagnitude : -.greatestFiniteMagnitude
+                try layer.setPixel(x: x, y: y, RGBA(r: v, g: v, b: v, a: v))
+            }
+        }
+        let backdrop = try affineLayer(width: 30, height: 24, seed: 69)
+        let m = AffineMatrix(a: 1, b: 0, c: 0, d: 1, tx: 5.3, ty: 7)
+        let wide = try #require(m.writeBounds(of: 12, 6, filter: .lanczos3))
+        let s = try cpu.surface(layer)
+        var b = try cpu.surface(backdrop)
+        defer { cpu.release(s); cpu.release(b) }
+        let id = b.id
+        #expect(throws: RenderError.self) {
+            try cpu.composite(s, onto: &b, through: m, mode: .normal, opacity: 1, filter: .lanczos3)
+        }
+        let got = try cpu.read(b)
+        #expect(b.id == id)
+        for y in 0..<backdrop.height {
+            for x in 0..<backdrop.width where !(wide.x..<wide.x + wide.width ~= x && wide.y..<wide.y + wide.height ~= y) {
+                #expect(try got.pixel(x: x, y: y) == backdrop.pixel(x: x, y: y), "(\(x), \(y))")
+            }
+        }
+    }
+
     @Test
     func dispatcherRoutesAffineToCPU() throws {
         let fake = FakeBackend(supports: Set(RenderOp.allCases).subtracting([.affine]))
