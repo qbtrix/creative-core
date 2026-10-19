@@ -12,12 +12,19 @@ import Foundation
 
 /// What a JPEG's markers say, read without decoding any scan.
 public struct JPEGInfo: Hashable, Sendable {
-    /// Frame width and height in pixels (each 1...`JPEG.maxSide`) and the
-    /// component count (1 grey, 3 YCbCr).
+    /// Frame width and height in pixels (each 1...`JPEG.maxSide`) as stored
+    /// in SOF, before `orientation` is applied, and the component count
+    /// (1 grey, 3 YCbCr).
     public var width, height, components: Int
     /// True for a progressive frame (SOF2).
     public var progressive: Bool
-    /// The EXIF orientation, 1...8; 1 when there is no EXIF tag.
+    /// The EXIF (TIFF) Orientation, 1...8, saying how to turn the stored
+    /// pixels for display; 1 when there is no EXIF tag. 1 as stored, 2
+    /// mirrored left to right, 3 rotated 180 degrees, 4 flipped top to bottom;
+    /// 5 to 8 are transposed: 5 mirrored across the main diagonal, 6 rotate
+    /// 90 degrees clockwise to display, 7 mirrored across the other diagonal,
+    /// 8 rotate 90 degrees counter-clockwise. For 5...8 the displayed image
+    /// is `height` wide and `width` tall.
     public var orientation: Int
 }
 
@@ -96,14 +103,16 @@ struct JPEGDecoder {
     /// Reads marker segments up to the next SOS, returning its body, or nil at EOI or the end of the bytes.
     mutating func nextScan() throws -> [UInt8]? {
         while at + 1 < bytes.count {
-            guard bytes[at] == 0xFF else { throw CodecError.damaged("no marker at \(at)") }
-            let marker = bytes[at + 1]
+            guard bytes[at] == 0xFF else { throw CodecError.damaged("no marker (0xFF) at byte \(at)") }
+            let marker = bytes[at + 1], start = at
             at += marker == 0xFF ? 1 : 2
             if marker == 0xD9 { return nil }
             if marker == 0xFF || marker == 0x01 || (0xD0...0xD7).contains(marker) { continue }
-            guard at + 1 < bytes.count else { throw CodecError.damaged("marker \(marker) at the end") }
+            guard at + 1 < bytes.count else { throw CodecError.damaged("marker \(Self.hex(marker)) at byte \(start) has no length") }
             let length = Int(bytes[at]) << 8 | Int(bytes[at + 1])
-            guard length >= 2, length <= bytes.count - at else { throw CodecError.damaged("segment \(marker) past the end") }
+            guard length >= 2, length <= bytes.count - at else {
+                throw CodecError.damaged("segment \(Self.hex(marker)) at byte \(start) runs past the end (length \(length), \(bytes.count - at) bytes left)")
+            }
             let body = Array(bytes[(at + 2)..<(at + length)])
             at += length
             if marker == 0xDA { return body }
@@ -112,23 +121,29 @@ struct JPEGDecoder {
         return nil
     }
 
+    /// A marker as T.81 writes it, 0xFF then its code, in uppercase hex: hex(0xDB) is "0xFFDB".
+    static func hex(_ marker: UInt8) -> String { "0x" + String(0xFF00 | Int(marker), radix: 16, uppercase: true) }
+
+    /// A table's class or precision (high nibble) and id (low nibble) as two uppercase hex digits: 17 is "0x11".
+    static func nibbles(_ t: Int) -> String { "0x" + String(t >> 4, radix: 16, uppercase: true) + String(t & 15, radix: 16, uppercase: true) }
+
     mutating func segment(_ marker: UInt8, _ body: [UInt8]) throws {
         var r = ByteReader(body)
         switch marker {
         case 0xC0, 0xC1, 0xC2: frame = try Self.frame(&r, progressive: marker == 0xC2, seen: frame != nil)
         case 0xC3, 0xC5...0xC7, 0xC9...0xCB, 0xCD...0xCF:
-            throw CodecError.unsupported("SOF \(marker): lossless, hierarchical or arithmetic coding")
+            throw CodecError.unsupported("SOF \(Self.hex(marker)): lossless, hierarchical or arithmetic coding")
         case 0xC4:
             while r.remaining > 0 {
                 let t = Int(try r.u8()), counts = try r.bytes(16), values = try r.bytes(counts.reduce(0) { $0 + Int($1) })
-                guard t >> 4 <= 1, t & 15 <= 3, values.count <= 256 else { throw CodecError.damaged("DHT \(t)") }
+                guard t >> 4 <= 1, t & 15 <= 3, values.count <= 256 else { throw CodecError.damaged("DHT class/id \(Self.nibbles(t)) out of range (class 0...1, id 0...3)") }
                 let table = try JPEGHuffman(counts: counts, values: values)
                 if t >> 4 == 0 { dc[t & 15] = table } else { ac[t & 15] = table }
             }
         case 0xDB:
             while r.remaining > 0 {
                 let t = Int(try r.u8())
-                guard t >> 4 <= 1, t & 15 <= 3 else { throw CodecError.damaged("DQT \(t)") }
+                guard t >> 4 <= 1, t & 15 <= 3 else { throw CodecError.damaged("DQT precision/id \(Self.nibbles(t)) out of range (precision 0...1, id 0...3)") }
                 var q = [Float](repeating: 0, count: 64)
                 for k in 0..<64 { q[Self.zigzag[k]] = try Float(t >> 4 == 0 ? UInt16(r.u8()) : r.u16()) }
                 quant[t & 15] = q
@@ -151,7 +166,7 @@ struct JPEGDecoder {
         var parts: [(id: Int, h: Int, v: Int, tq: Int)] = []
         for _ in 0..<n {
             let id = Int(try r.u8()), hv = Int(try r.u8()), tq = Int(try r.u8())
-            guard (1...4).contains(hv >> 4), (1...4).contains(hv & 15), tq <= 3 else { throw CodecError.damaged("component \(id)") }
+            guard (1...4).contains(hv >> 4), (1...4).contains(hv & 15), tq <= 3 else { throw CodecError.damaged("SOF component \(id): sampling factors must be 1...4 and quant table 0...3") }
             parts.append((id, hv >> 4, hv & 15, tq))
         }
         let hmax = parts.map(\.h).max() ?? 1, vmax = parts.map(\.v).max() ?? 1
@@ -190,12 +205,14 @@ struct JPEGDecoder {
         var r = ByteReader(body), parts: [JPEGScan.Part] = []
         for _ in 0..<Int(try r.u8()) {
             let id = Int(try r.u8()), t = Int(try r.u8())
-            guard let i = f.components.firstIndex(where: { $0.id == id }) else { throw CodecError.damaged("scan component \(id)") }
+            guard let i = f.components.firstIndex(where: { $0.id == id }) else { throw CodecError.damaged("scan names component \(id), not in the frame") }
             guard quant[f.components[i].tq] != nil else { throw CodecError.damaged("no DQT \(f.components[i].tq)") }
             parts.append(JPEGScan.Part(index: i, dc: t >> 4 < 4 ? dc[t >> 4] : nil, ac: t & 15 < 4 ? ac[t & 15] : nil))
         }
         let units = parts.reduce(0) { $0 + f.components[$1.index].h * f.components[$1.index].v }
-        guard (1...4).contains(parts.count), parts.count == 1 || units <= 10 else { throw CodecError.damaged("scan of \(parts.count)") }
+        guard (1...4).contains(parts.count), parts.count == 1 || units <= 10 else {
+            throw CodecError.damaged("scan names \(parts.count) components (1...4 allowed) with \(units) blocks per MCU (10 at most interleaved, B.2.3)")
+        }
         let ss = Int(try r.u8()), se = Int(try r.u8()), a = Int(try r.u8())
         if coefficients.isEmpty {
             // Sides are at most maxSide, so the product cannot overflow.
