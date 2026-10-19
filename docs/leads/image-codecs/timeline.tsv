@@ -49,3 +49,4 @@ utc	stage	event	ref	note
 2026-10-19T08:26:18Z	3	heartbeat	891372e	panels wf_beae1052-850 wf_99f0475c-f22 running
 2026-10-19T08:27:48Z	4	fix-start	wf_63bfcf02-52b	IC-jpeg r3: 8 confirmed (1 major), one batch
 2026-10-19T08:31:14Z	4	fix-start	wf_5340cfcc-4ff	IC-png r2: 9 confirmed (3 major), two batches
+2026-10-19T08:47:37Z	4	heartbeat	891372e	fix batches wf_63bfcf02-52b (IC-jpeg r3) wf_5340cfcc-4ff (IC-png r2) running
