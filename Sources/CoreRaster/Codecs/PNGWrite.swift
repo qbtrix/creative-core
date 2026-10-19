@@ -19,9 +19,10 @@ extension PNG {
 
     /// `buffer` as an sRGB RGBA PNG with `bitsPerChannel` (8 or 16) bits per
     /// sample, one IDAT per 64 KiB, each row given the filter with the least
-    /// sum of absolute signed bytes (the spec's 12.8), compressed by
-    /// `Deflate.zlib` at `level` (0...9). Throws `unsupported` for another
-    /// depth, `tooLarge` for a side over `maxSide`.
+    /// sum of absolute signed bytes (the spec's 12.8, ties to the lower filter
+    /// type), compressed by `Deflate.zlib` at `level` (0...9; values outside
+    /// 0...9 act as the nearest end, as in `Deflate.zlib`). Throws
+    /// `unsupported` for another depth, `tooLarge` for a side over `maxSide`.
     public static func write(_ buffer: PixelBuffer, bitsPerChannel: Int = 8, level: Int = 6) throws -> Data {
         guard bitsPerChannel == 8 || bitsPerChannel == 16 else {
             throw CodecError.unsupported("PNG \(bitsPerChannel)-bit samples: only 8 or 16")
