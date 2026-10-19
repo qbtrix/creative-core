@@ -37,28 +37,38 @@ public enum ToneAdjustment: Equatable, Sendable {
     case highlightsShadows(highlights: Float, shadows: Float)
 
     // The W1 colour family (`.color`), one case per CoreRaster op the
-    // `tone-pack` feature adds; ranges are that op's, checked there.
+    // `tone-pack` feature adds. Ranges are that op's: vibrance, hueSaturation,
+    // posterize, threshold and gradientMap throw outside them; hsl,
+    // blackAndWhite, channelMixer and colorBalance clamp (a non-finite value
+    // throws everywhere).
     /// `PixelBuffer.vibrance(_:)`: a saturation boost that moves muted colours
     /// most; negative desaturates. -100...100.
     case vibrance(Float)
     /// `PixelBuffer.hueSaturation(hue:saturation:lightness:)`: `hue` in
-    /// degrees, `saturation` and `lightness` -100...100.
+    /// degrees -180...180, `saturation` and `lightness` -100...100; throws
+    /// outside them.
     case hueSaturation(hue: Float, saturation: Float, lightness: Float)
-    /// `PixelBuffer.hsl(_:)`: per-hue-band hue, saturation and lightness shifts.
+    /// `PixelBuffer.hsl(_:)`: per-hue-band hue, saturation and lightness
+    /// shifts, each percent clamped to -100...100 (hue 100 is +30°).
     case hsl(HSLAdjustment)
-    /// `PixelBuffer.blackAndWhite(_:)`: a gray mixed from the hue bands, tinted.
+    /// `PixelBuffer.blackAndWhite(_:)`: a gray mixed from the hue bands, tinted;
+    /// band weights in percent, clamped to -200...300.
     case blackAndWhite(GrayMix)
-    /// `PixelBuffer.channelMixer(_:)`: each channel a weighted sum plus a constant.
+    /// `PixelBuffer.channelMixer(_:)`: each channel a weighted sum plus a
+    /// constant; weights clamped to -2...2, the constant to -1...1.
     case channelMixer(ChannelMatrix)
-    /// `PixelBuffer.colorBalance(_:)`: shadow, midtone and highlight shifts.
+    /// `PixelBuffer.colorBalance(_:)`: shadow, midtone and highlight shifts,
+    /// each component clamped to -100...100.
     case colorBalance(ToneBalance)
-    /// `PixelBuffer.gradientMap(_:)`: luminance through 2...64 stops, sorted by offset.
+    /// `PixelBuffer.gradientMap(_:)`: Rec. 709 luma of the sRGB-encoded (not
+    /// linear) straight colour, 0...1, through 2...64 stops, sorted by offset.
     case gradientMap([GradientMapStop])
     /// `PixelBuffer.applying(_:)` of a `ColorLUT`: a trilinear 3D lookup.
     case lut(ColorLUT)
     /// `PixelBuffer.posterized(levels:)`: each channel in `levels` steps, 2...255.
     case posterize(levels: Int)
-    /// `PixelBuffer.thresholded(_:)`: white at or above the luma level
+    /// `PixelBuffer.thresholded(_:)`: white where the Rec. 709 luma of the
+    /// sRGB-encoded (not linear) straight colour is at least the level
     /// (0...1), black below.
     case threshold(Float)
     /// `PixelBuffer.inverted()`: each colour channel becomes 1 minus itself.

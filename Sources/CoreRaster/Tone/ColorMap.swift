@@ -11,7 +11,8 @@ extension PixelBuffer {
     /// The stop counts a gradient map accepts.
     private static let gradientStops = 2...64
 
-    /// Luma mapped through 2...64 stops, sorted by offset (equal offsets make a
+    /// Rec. 709 luma of the sRGB-encoded (not linear) straight colour, 0...1,
+    /// mapped through 2...64 stops, sorted by offset (equal offsets make a
     /// hard edge), each offset finite and in 0...1. Between two stops the
     /// encoded colour is interpolated linearly; below the first stop or above
     /// the last, that stop's colour holds. Stop colours are clamped to 0...1.

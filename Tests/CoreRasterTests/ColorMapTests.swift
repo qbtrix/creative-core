@@ -66,6 +66,18 @@ import Testing
         }
     }
 
+    /// The level is Rec. 709 luma of the sRGB-encoded values, not linear
+    /// luminance: a grey at linear 0.2 (encoded about 0.48) is white at 0.4
+    /// and black at 0.5; a linear-luminance threshold would make it black at 0.4.
+    @Test func thresholdIsOnEncodedLuma() throws {
+        let grey = try ToneCheck.row([RGBA(r: 0.2, g: 0.2, b: 0.2, a: 1)])
+        let at40 = try ToneCheck.pixels(grey.thresholded(0.4)).map(ToneCheck.encoded)
+        let at50 = try ToneCheck.pixels(grey.thresholded(0.5)).map(ToneCheck.encoded)
+        #expect(at40.count == 1 && at50.count == 1)
+        for e in at40 { #expect(ToneCheck.gap(e, [1, 1, 1]) <= 1e-6, "\(e)") }
+        for e in at50 { #expect(ToneCheck.gap(e, [0, 0, 0]) <= 1e-6, "\(e)") }
+    }
+
     /// Components on a 1/256 grid, so 1 − (1 − x) is exact in Float.
     @Test func invertTwiceIsIdentity() throws {
         var rng = SplitMix64(seed: 0xC2)
