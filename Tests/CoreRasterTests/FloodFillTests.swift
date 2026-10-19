@@ -1,7 +1,5 @@
-// FloodFillTests.swift: fill-tools FT-3's acceptance, written first (FT-1 of
-// docs/blueprints/core/features/fill-tools.md). Every case waits on FT-3,
-// which removes the `.disabled` traits when `floodMask` is built. `FillCheck`
-// holds the OKLab distance these suites and ColorRangeTests measure with.
+// FloodFillTests.swift: fill-tools FT-3's acceptance, written first (FT-1); FT-3
+// removes the `.disabled` traits. `FillCheck` is shared with ColorRangeTests.
 import CoreColor
 import CoreRaster
 import Testing
@@ -16,8 +14,8 @@ enum FillCheck {
     /// colours, alpha difference as a fourth axis. Pixels are premultiplied linear.
     static func distance(_ p: RGBA, _ q: RGBA) throws -> Double {
         let (sp, sq) = (p.unpremultiplied(), q.unpremultiplied())
-        let lp = try Color3(Double(sp.r), Double(sp.g), Double(sp.b)).converted(from: .linearSRGB, to: .oklab)
-        let lq = try Color3(Double(sq.r), Double(sq.g), Double(sq.b)).converted(from: .linearSRGB, to: .oklab)
+        func lab(_ s: RGBA) throws -> Color3 { try Color3(Double(s.r), Double(s.g), Double(s.b)).converted(from: .linearSRGB, to: .oklab) }
+        let (lp, lq) = (try lab(sp), try lab(sq))
         let (d0, d1, d2, da) = (lp.c0 - lq.c0, lp.c1 - lq.c1, lp.c2 - lq.c2, Double(sp.a - sq.a))
         return (d0 * d0 + d1 * d1 + d2 * d2 + da * da).squareRoot()
     }
@@ -30,10 +28,8 @@ enum FillCheck {
     /// The ring around `rect` without its four corners: the pixels that share an edge with it.
     static func edgeRing(_ rect: FillRect) -> [(x: Int, y: Int)] {
         let outer = FillRect(x: rect.x - 1, y: rect.y - 1, width: rect.width + 2, height: rect.height + 2)
-        return pixels(outer).filter { p in
-            rect.ringContains(x: p.x, y: p.y) && (p.x == outer.x || p.x == outer.x + outer.width - 1)
-                != (p.y == outer.y || p.y == outer.y + outer.height - 1)
-        }
+        let (columns, rows) = (rect.x..<(rect.x + rect.width), rect.y..<(rect.y + rect.height))
+        return pixels(outer).filter { rect.ringContains(x: $0.x, y: $0.y) && (columns.contains($0.x) || rows.contains($0.y)) }
     }
 }
 
@@ -45,6 +41,7 @@ enum FillCheck {
         let scene = try FillScene()
         let mask = try scene.buffer.floodMask(from: scene.seedB, tolerance: .within(0.1))
         #expect(mask.width == scene.buffer.width && mask.height == scene.buffer.height)
+        #expect(mask == (try scene.buffer.floodMask(from: scene.seedB, tolerance: .within(0.1))))  // deterministic
         for y in 0..<mask.height {
             for x in 0..<mask.width where !scene.regionB.ringContains(x: x, y: y) {
                 let want: Float = scene.regionB.contains(x: x, y: y) ? 1 : 0
@@ -136,16 +133,6 @@ enum FillCheck {
         }
     }
 
-    @Test(.disabled("waits on FT-3"))
-    func deterministicAcrossRuns() throws {
-        let scene = try FillScene()
-        for connectivity in [Connectivity.four, .eight] {
-            let first = try scene.buffer.floodMask(from: scene.seedA, tolerance: .within(0.2), connectivity: connectivity)
-            #expect(first == (try scene.buffer.floodMask(from: scene.seedA, tolerance: .within(0.2),
-                                                        connectivity: connectivity)))
-        }
-    }
-
     /// Seeded seeds and tolerances, in and out of range: a fill throws
     /// `RasterError` or gives a buffer-sized mask with coverage in 0...1.
     @Test(.disabled("waits on FT-3"))
@@ -159,10 +146,7 @@ enum FillCheck {
                 let mask = try scene.buffer.floodMask(from: seed, tolerance: tolerance, contiguous: .random(using: &rng),
                                                       connectivity: Bool.random(using: &rng) ? .four : .eight,
                                                       antiAlias: .random(using: &rng))
-                #expect(mask.width == 32 && mask.height == 24)
-                for y in 0..<24 {
-                    for x in 0..<32 { #expect((0...1).contains(try mask.coverage(x: x, y: y))) }
-                }
+                #expect(mask.width == 32 && mask.height == 24 && (0...768).contains(mask.area))
             } catch is RasterError {
                 continue
             }

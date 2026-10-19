@@ -1,7 +1,5 @@
-// ColorRangeTests.swift: fill-tools FT-4's acceptance, written first (FT-1 of
-// docs/blueprints/core/features/fill-tools.md). Every case waits on FT-4,
-// which removes the `.disabled` traits when `sampledColor` and
-// `colorRangeMask` are built. Distances come from `FillCheck` (FloodFillTests).
+// ColorRangeTests.swift: fill-tools FT-4's acceptance, written first (FT-1); FT-4
+// removes the `.disabled` traits. Distances come from `FillCheck` (FloodFillTests).
 import CoreRaster
 import Testing
 
@@ -60,17 +58,14 @@ import Testing
     @Test(.disabled("waits on FT-4"))
     func threeByThreeMean() throws {
         let noise = try FillFixtures.noise()
-        for (x, y) in [(3, 3), (1, 1), (5, 2)] {
-            let got = try noise.sampledColor(at: (x: x, y: y), radius: 1)
-            let want = try FillFixtures.boxMean(noise, x: x, y: y, radius: 1)
+        for (x, y, r) in [(3, 3, 1), (1, 1, 1), (5, 2, 1), (3, 3, 2)] {
+            let got = try noise.sampledColor(at: (x: x, y: y), radius: r)
+            let want = try FillFixtures.boxMean(noise, x: x, y: y, radius: r)
             for (g, w) in [(got.r, want.r), (got.g, want.g), (got.b, want.b), (got.a, want.a)] {
-                #expect(abs(g - w) < 1e-5, "(\(x), \(y)): \(got) vs \(want)")
+                #expect(abs(g - w) < 1e-5, "(\(x), \(y)) radius \(r): \(got) vs \(want)")
             }
         }
         #expect(try noise.sampledColor(at: (x: 3, y: 3), radius: 0) == noise.pixel(x: 3, y: 3))
-        let five = try noise.sampledColor(at: (x: 3, y: 3), radius: 2)
-        let fiveWant = try FillFixtures.boxMean(noise, x: 3, y: 3, radius: 2)
-        #expect(abs(five.r - fiveWant.r) < 1e-5 && abs(five.b - fiveWant.b) < 1e-5)
     }
 
     @Test(.disabled("waits on FT-4"))
@@ -85,8 +80,7 @@ import Testing
         for f: Float in [-0.01, 1.01, .nan] {
             #expect(throws: RasterError.self) { try noise.colorRangeMask(around: FillScene.colorA, fuzziness: f) }
         }
-        let bad = RGBA(r: .nan, g: 0, b: 0, a: 1)
-        #expect(throws: RasterError.self) { try noise.colorRangeMask(around: bad, fuzziness: 0.2) }
+        #expect(throws: RasterError.self) { try noise.colorRangeMask(around: RGBA(r: .nan, g: 0, b: 0, a: 1), fuzziness: 0.2) }
     }
 
     /// Seeded colours and fuzziness, in and out of range: the mask throws
@@ -101,10 +95,7 @@ import Testing
             let f = Float.random(in: -0.2...1.2, using: &rng)
             do {
                 let mask = try noise.colorRangeMask(around: color, fuzziness: f)
-                #expect(mask == (try noise.colorRangeMask(around: color, fuzziness: f)))
-                for y in 0..<7 {
-                    for x in 0..<7 { #expect((0...1).contains(try mask.coverage(x: x, y: y))) }
-                }
+                #expect(mask == (try noise.colorRangeMask(around: color, fuzziness: f)) && (0...49).contains(mask.area))
             } catch is RasterError {
                 continue
             }

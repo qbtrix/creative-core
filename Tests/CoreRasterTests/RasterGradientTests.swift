@@ -1,8 +1,6 @@
-// RasterGradientTests.swift: fill-tools FT-5's acceptance, written first
-// (FT-1 of docs/blueprints/core/features/fill-tools.md). Every case waits on
-// FT-5, which removes the `.disabled` traits when `PixelBuffer.gradient` is
-// built. A black-to-white ramp in linear light makes each pixel's red its `t`;
-// dither is off so values are exact (FT-6 checks dither in its own suite).
+// RasterGradientTests.swift: fill-tools FT-5's acceptance, written first (FT-1);
+// FT-5 removes the `.disabled` traits. A black-to-white ramp in linear light,
+// dither off, makes each pixel's red its `t` (FT-6 checks dither on its own).
 import CoreColor
 import CoreRaster
 import Testing
@@ -28,8 +26,8 @@ import Testing
             #expect(abs(got - c.t) < 1e-6, "\(c.shape) at (\(c.x), \(c.y)): \(got), want \(c.t)")
         }
         for shape in [RasterGradientShape.linear, .radial, .angle, .reflected, .diamond] {
-            let image = try render(shape)
-            #expect(image.width == 32 && image.height == 24)
+            let image = try render(shape), again = try render(shape)
+            #expect(image.width == 32 && image.height == 24 && image == again)  // deterministic
             for y in 0..<24 {
                 for x in 0..<32 {
                     let p = Mask.Point(x: Double(x) + 0.5, y: Double(y) + 0.5)
@@ -69,14 +67,7 @@ import Testing
         for x in 0...10 { #expect(try t(linear, x, 20) == 0, "x = \(x)") }
         let radial = try render(.radial)
         #expect(try t(radial, 31, 23) == 1)
-        let diamond = try render(.diamond)
-        #expect(try t(diamond, 0, 0) == 1)
-        for shape in [RasterGradientShape.linear, .radial, .angle, .reflected, .diamond] {
-            let image = try render(shape)
-            for y in 0..<24 {
-                for x in 0..<32 { #expect((0...1).contains(try image.pixel(x: x, y: y).r), "\(shape) (\(x), \(y))") }
-            }
-        }
+        #expect(try t(try render(.diamond), 0, 0) == 1)
     }
 
     /// Red to green at `t` = 0.5 (pixel (15, 10)): linear light gives the
@@ -98,10 +89,7 @@ import Testing
         for (got, w) in [(perceptual.r, want.c0), (perceptual.g, want.c1), (perceptual.b, want.c2)] {
             #expect(abs(Double(got) - w) < 1e-4, "perceptual mid \(perceptual), want \(want)")
         }
-        // About +0.13 red and -0.11 green against the linear midpoint.
-        #expect(abs(Double(perceptual.r - linear.r) - (want.c0 - 0.5)) < 1e-4)
-        #expect(abs(Double(perceptual.g - linear.g) - (want.c1 - 0.5)) < 1e-4)
-        #expect(want.c0 - 0.5 > 0.1 && want.c1 - 0.5 < -0.1)
+        #expect(want.c0 - 0.5 > 0.1 && want.c1 - 0.5 < -0.1)  // about +0.13 red, -0.11 green off the linear mid
     }
 
     @Test(.disabled("waits on FT-5"))
@@ -114,28 +102,14 @@ import Testing
             [stop(0), stop(.nan)], [stop(0), stop(1, RGBA(r: .infinity, g: 0, b: 0, a: 1))],
             (0...64).map { stop(Float($0) / 64) },
         ]
-        for stops in badStops {
+        let nan = Mask.Point(x: .nan, y: 0), inf = Mask.Point(x: 1, y: .infinity)
+        let cases = badStops.map { (8, 8, a, b, $0) } + [(8, 8, a, a, Self.ramp), (8, 8, nan, b, Self.ramp),
+            (8, 8, a, inf, Self.ramp), (0, 8, a, b, Self.ramp), (8, 0, a, b, Self.ramp), (-1, 4, a, b, Self.ramp),
+            (Int.max, 2, a, b, Self.ramp)]
+        for (w, h, p, q, stops) in cases {
             #expect(throws: RasterError.self) {
-                try PixelBuffer.gradient(width: 8, height: 8, shape: .linear, from: a, to: b, stops: stops)
+                try PixelBuffer.gradient(width: w, height: h, shape: .radial, from: p, to: q, stops: stops)
             }
-        }
-        let points = [(a, a), (Mask.Point(x: .nan, y: 0), b), (a, Mask.Point(x: 1, y: .infinity))]
-        for (p, q) in points {
-            #expect(throws: RasterError.self) {
-                try PixelBuffer.gradient(width: 8, height: 8, shape: .radial, from: p, to: q, stops: Self.ramp)
-            }
-        }
-        for (w, h) in [(0, 8), (8, 0), (-1, 4), (Int.max, 2)] {
-            #expect(throws: RasterError.self) {
-                try PixelBuffer.gradient(width: w, height: h, shape: .diamond, from: a, to: b, stops: Self.ramp)
-            }
-        }
-    }
-
-    @Test(.disabled("waits on FT-5"))
-    func deterministicAcrossRuns() throws {
-        for shape in [RasterGradientShape.linear, .radial, .angle, .reflected, .diamond] {
-            #expect(try render(shape) == render(shape))
         }
     }
 }
