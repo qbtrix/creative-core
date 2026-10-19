@@ -29,6 +29,7 @@ Next: P3 (measure) and P4 (boolean) building stacked on P2 (merged); PG-edit sli
 ## Rounds
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
 |---|---|---|---|---|---|---|---|---|
+| 1 | a658945b | builders' gates | per plan, all caught | 39279766862 | correctness, robustness, reuse, tests+mutation, first-use clarity | 0 blockers, 5 should-fix, 7 nits (across both features) | lead/path-geometry-r1-b1 | no |
 
 ## Decisions
 - One wave plan across masks-mattes and path-geometry (rule 19); layered-codecs was finished by the previous run (contact sheet on #438 at 2026-10-18T20:44Z), so this run only confirms it.
