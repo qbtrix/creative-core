@@ -26,5 +26,40 @@
     "anchor": "guard left == 0 || used <= 1 else { return }",
     "replacement": "guard left >= 0 || used <= 1 else { return }",
     "filter": "InflateTests"
+  },
+  {
+    "note": "literal/length codes 286 and 287 pass the length-code guard and index past the length tables, caught by InflateTests.damagedStreams",
+    "file": "Sources/CoreRaster/Codecs/Inflate.swift",
+    "anchor": "guard symbol < 286 else",
+    "replacement": "guard symbol < 288 else",
+    "filter": "InflateTests"
+  },
+  {
+    "note": "a literal grows the output with no limit check before it, caught by InflateTests.limitBeforeGrowth",
+    "file": "Sources/CoreRaster/Codecs/Inflate.swift",
+    "anchor": "guard out.count < limit else { throw tooLarge() }\n",
+    "replacement": "",
+    "filter": "InflateTests"
+  },
+  {
+    "note": "a code-length repeat may run past HLIT plus HDIST codes, caught by InflateTests.damagedStreams",
+    "file": "Sources/CoreRaster/Codecs/Inflate.swift",
+    "anchor": "guard times <= total - lengths.count else",
+    "replacement": "guard times <= total - lengths.count || true else",
+    "filter": "InflateTests"
+  },
+  {
+    "note": "a dynamic block with no end-of-block code is accepted by the table reader, caught by InflateTests.damagedStreams",
+    "file": "Sources/CoreRaster/Codecs/Inflate.swift",
+    "anchor": "guard lengths[256] != 0 else",
+    "replacement": "guard lengths[256] != 0 || true else",
+    "filter": "InflateTests"
+  },
+  {
+    "note": "HLIT over 286 or HDIST over 30 is accepted, caught by InflateTests.damagedStreams",
+    "file": "Sources/CoreRaster/Codecs/Inflate.swift",
+    "anchor": "guard hlit <= 286, hdist <= 30 else",
+    "replacement": "guard hlit <= 288, hdist <= 32 else",
+    "filter": "InflateTests"
   }
 ]

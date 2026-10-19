@@ -17,7 +17,7 @@ public enum Inflate {
     /// Throws `CodecError.damaged` on a bad header (method not 8, window over
     /// 32 KiB, failed check bits, a preset dictionary), a bad block, code or
     /// distance, early end of input, or a wrong Adler-32; `tooLarge` once the
-    /// output would pass `limit`.
+    /// output would pass `limit`. Bytes after the Adler-32 are ignored.
     public static func zlib(_ data: Data, limit: Int) throws -> Data {
         let bytes = [UInt8](data)
         guard bytes.count >= 2 else { throw bad("zlib header missing") }
@@ -36,10 +36,10 @@ public enum Inflate {
     /// `data` as bare DEFLATE blocks (stored, fixed and dynamic Huffman), with
     /// no wrapper or checksum, inflated to at most `limit` bytes.
     ///
-    /// Throws `CodecError.damaged` on a reserved block type, a stored length
-    /// whose complement disagrees, an over-subscribed or incomplete code, a
-    /// distance past the bytes written, or input that ends before the final
-    /// block; `tooLarge` once the output would pass `limit`.
+    /// Throws `CodecError.damaged` on a bad block header, Huffman code, length
+    /// or distance code, or a distance past the bytes written, or on input
+    /// that ends before the final block; `tooLarge` once the output would pass
+    /// `limit`. Bytes after the final block are ignored.
     public static func raw(_ data: Data, limit: Int) throws -> Data {
         var state = Inflater([UInt8](data), from: 0, limit: limit)
         _ = try state.run()
