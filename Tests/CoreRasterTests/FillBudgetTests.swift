@@ -2,18 +2,20 @@
 // 4000) `FillScene`, a flood fill of the background from its corner takes at
 // most 120 ms, a colour range around C at most 90 ms, and a dithered radial
 // gradient the size of the scene at most 60 ms. The packet's budgets are
-// release, reported: an optimized build gates on them (the Mac finisher runs
-// them there), and a debug build, which is what `scripts/ci` runs in its
-// parallel pass, only reports, so no wall-clock check can flake the gate.
+// release, reported (lead rule 15): an optimized build times the full 24 MP
+// op and checks it against its budget (the Mac finisher runs it there), and a
+// debug build, which is what `scripts/ci` runs in its parallel pass, only
+// reports, so no wall-clock check can flake the gate.
 // Debug also runs a quarter of each side: the loops are many times slower
 // there, and the debug run proves the path works and that its result is
 // right, not its speed. Times are wall-clock medians of `runs`, each run's
 // earlier result freed before the clock starts, printed as
 // `budget <row>: <ms> ms (budget <ms> ms)` or `(report only, debug)`.
 // All three missed in release on Linux (flood fill about 1250 ms, colour
-// range about 195 ms, gradient about 5200 ms), so each release run is
-// disabled as a bug in its op until that is fixed; debug still runs and
-// reports them.
+// range about 195 ms, gradient about 5200 ms). Each release run still times
+// and prints its op; a miss is recorded as a known issue naming the op's
+// bug, so the number reaches the finisher and FT-z stays not verified until
+// the op meets its budget, then the plain check takes over.
 import CoreColor
 import CoreRaster
 import Testing
@@ -42,11 +44,18 @@ private func median(free: () -> Void, _ body: () throws -> Void) throws -> Durat
     return wall.sorted()[runs / 2]
 }
 
-/// Prints `row` and, in an optimized build, expects `time` within `budget`.
-private func report(_ row: String, _ time: Duration, budget: Duration) {
+/// Prints `row` and, in an optimized build, checks `time` against `budget`.
+/// A miss is recorded as the known issue `bug` (the op's open bug), so the
+/// release run reports it without failing; within budget it passes plainly.
+private func report(_ row: String, _ time: Duration, budget: Duration, bug: String) {
     let suffix = optimized ? "budget \(milliseconds(budget)) ms" : "report only, debug; budget \(milliseconds(budget)) ms in release"
     print("budget \(row): \(milliseconds(time)) ms (\(suffix))")
-    if optimized { #expect(time <= budget, "\(row): median \(time) over \(budget)") }
+    guard optimized else { return }
+    if time <= budget { return }
+    print("budget \(row): OVER budget, not verified (\(bug))")
+    withKnownIssue(Comment(rawValue: bug)) {
+        Issue.record("\(row): median \(time) over \(budget)")
+    }
 }
 
 /// Serialized, so no two large runs share cores or memory bandwidth.
@@ -55,38 +64,37 @@ private func report(_ row: String, _ time: Duration, budget: Duration) {
     static let scale = optimized ? 1 : 4
     static let width = 6000 / scale, height = 4000 / scale
 
-    @Test(.disabled(if: optimized, "bug: floodMask measured 1250 ms for a 24 MP background fill in release (budget 120 ms)"))
-    func floodFill() throws {
+    @Test func flood24MP() throws {
         let scene = try FillScene(width: Self.width, height: Self.height)
         let empty = try Mask(width: 1, height: 1)
         var mask = empty
         let time = try median(free: { mask = empty }) {
             mask = try scene.buffer.floodMask(from: scene.seedA, tolerance: .within(0.1))
         }
-        report("flood fill \(Self.width)x\(Self.height) background", time, budget: .milliseconds(120))
+        report("flood fill \(Self.width)x\(Self.height) background", time, budget: .milliseconds(120),
+               bug: "bug: floodMask measured 1250 ms for a 24 MP background fill in release (budget 120 ms)")
         // The timed fill took the background and left B out.
         #expect(try mask.coverage(x: scene.seedA.x, y: scene.seedA.y) == 1)
         #expect(try mask.coverage(x: Self.width - 1, y: Self.height - 1) == 1)
         #expect(try mask.coverage(x: scene.seedB.x, y: scene.seedB.y) == 0)
     }
 
-    @Test(.disabled(if: optimized, "bug: colorRangeMask measured 195 ms on 24 MP in release (budget 90 ms)"))
-    func colorRange() throws {
+    @Test func colorRange() throws {
         let scene = try FillScene(width: Self.width, height: Self.height)
         let empty = try Mask(width: 1, height: 1)
         var mask = empty
         let time = try median(free: { mask = empty }) {
             mask = try scene.buffer.colorRangeMask(around: FillScene.colorC, fuzziness: 0.2)
         }
-        report("colour range \(Self.width)x\(Self.height)", time, budget: .milliseconds(90))
+        report("colour range \(Self.width)x\(Self.height)", time, budget: .milliseconds(90),
+               bug: "bug: colorRangeMask measured 195 ms on 24 MP in release (budget 90 ms)")
         // The timed range covered C and nothing of A or B.
         #expect(try mask.coverage(x: scene.seedC.x, y: scene.seedC.y) == 1)
         #expect(try mask.coverage(x: scene.seedA.x, y: scene.seedA.y) == 0)
         #expect(try mask.coverage(x: scene.seedB.x, y: scene.seedB.y) == 0)
     }
 
-    @Test(.disabled(if: optimized, "bug: PixelBuffer.gradient measured 5206 ms for a 24 MP dithered radial in release (budget 60 ms)"))
-    func gradient() throws {
+    @Test func gradient() throws {
         let (w, h) = (Self.width, Self.height)
         let a = Mask.Point(x: Double(w) / 2, y: Double(h) / 2), b = Mask.Point(x: Double(w) / 2 + Double(h) / 2, y: Double(h) / 2)
         let stops = [RasterGradientStop(offset: 0, color: FillScene.colorB),
@@ -96,7 +104,8 @@ private func report(_ row: String, _ time: Duration, budget: Duration) {
         let time = try median(free: { image = empty }) {
             image = try PixelBuffer.gradient(width: w, height: h, shape: .radial, from: a, to: b, stops: stops)
         }
-        report("radial gradient \(w)x\(h), dithered", time, budget: .milliseconds(60))
+        report("radial gradient \(w)x\(h), dithered", time, budget: .milliseconds(60),
+               bug: "bug: PixelBuffer.gradient measured 5206 ms for a 24 MP dithered radial in release (budget 60 ms)")
         // The timed gradient is full size and ends at C past its radius, within
         // the dither's half step of the sRGB encode.
         #expect(image.width == w && image.height == h)
