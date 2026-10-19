@@ -26,5 +26,19 @@
     "anchor": "carriedWidth == dab.width, carriedHeight == dab.height {",
     "replacement": "true {",
     "filter": "SmudgeTests.sizeChangeOnlyPicksUp"
+  },
+  {
+    "note": "smudge strength is not range-checked when the state is made, so a NaN or 1.5 strength builds a state, caught by SmudgeTests.strengthCheckedAtInit",
+    "file": "Sources/CoreRaster/Heal/Smudge.swift",
+    "anchor": "try ColorMath.check(\"smudge strength\", strength, in: 0...1)",
+    "replacement": "_ = 0",
+    "filter": "SmudgeTests.strengthCheckedAtInit"
+  },
+  {
+    "note": "the shared coverage mix drops the kept share of the old pixel, so feathered smudge and clone pixels go dark, caught by SmudgeTests.featherWeightsByCoverage",
+    "file": "Sources/CoreRaster/Retouch.swift",
+    "anchor": "let keep = 1 - t",
+    "replacement": "let keep: Float = 0",
+    "filter": "SmudgeTests.featherWeightsByCoverage"
   }
 ]

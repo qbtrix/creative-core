@@ -35,12 +35,20 @@ extension PixelBuffer {
             for x in x0..<x1 {
                 let c = try mask.coverage(x: x, y: y)
                 let s = try pixel(x: x + dx, y: y + dy)
-                let b = try pixel(x: x, y: y)
-                let keep = 1 - c
-                try result.setPixel(x: x, y: y, RGBA(r: s.r * c + b.r * keep, g: s.g * c + b.g * keep,
-                                                     b: s.b * c + b.b * keep, a: s.a * c + b.a * keep))
+                try result.setPixel(x: x, y: y, try pixel(x: x, y: y).mixed(toward: s, by: c))
             }
         }
         return result
+    }
+}
+
+extension RGBA {
+    /// This pixel moved toward `other` by `t`: `self * (1 - t) + other * t`
+    /// on every component, so 0 keeps it exactly and 1 gives `other`
+    /// exactly. The coverage mix that clone and smudge share.
+    func mixed(toward other: RGBA, by t: Float) -> RGBA {
+        let keep = 1 - t
+        return RGBA(r: r * keep + other.r * t, g: g * keep + other.g * t,
+                    b: b * keep + other.b * t, a: a * keep + other.a * t)
     }
 }

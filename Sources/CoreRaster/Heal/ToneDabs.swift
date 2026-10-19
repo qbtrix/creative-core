@@ -101,17 +101,24 @@ extension PixelBuffer {
         return w.r * p.r + w.g * p.g + w.b * p.b
     }
 
+    /// The buffer columns and rows under `dab` placed with its top-left at
+    /// (`x`, `y`), clipped to the buffer; nil when it lies wholly off it. The
+    /// placement guard keeps every sum in range for any `x`, `y`, so dab
+    /// cell (`column - x`, `row - y`) is in the mask for every pair in range.
+    /// Every dab op (tone dabs, smudge) walks this one rectangle.
+    func dabRect(_ dab: Mask, x: Int, y: Int) -> (columns: Range<Int>, rows: Range<Int>)? {
+        guard x < width, y < height, x > -dab.width, y > -dab.height else { return nil }
+        return (max(x, 0)..<min(x + dab.width, width), max(y, 0)..<min(y + dab.height, height))
+    }
+
     /// Hands `edit` each premultiplied pixel under the dab with nonzero
     /// coverage and positive alpha, then stores its colour clamped to
-    /// 0...alpha with alpha kept. Dab cells off the buffer are skipped; the
-    /// placement guards keep every sum below in range for any `x`, `y`.
+    /// 0...alpha with alpha kept. Dab cells off the buffer are skipped.
     private mutating func eachDabPixel(_ dab: Mask, x: Int, y: Int,
                                        _ edit: (inout RGBA, Float) -> Void) throws {
-        guard x < width, y < height, x > -dab.width, y > -dab.height else { return }
-        let x0 = max(x, 0), x1 = min(x + dab.width, width)
-        let y0 = max(y, 0), y1 = min(y + dab.height, height)
-        for row in y0..<y1 {
-            for column in x0..<x1 {
+        guard let area = dabRect(dab, x: x, y: y) else { return }
+        for row in area.rows {
+            for column in area.columns {
                 let coverage = try dab.coverage(x: column - x, y: row - y)
                 guard coverage > 0 else { continue }
                 var p = try pixel(x: column, y: row)

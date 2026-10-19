@@ -15,9 +15,11 @@ public struct SmudgeState: Hashable, Sendable {
     private var carriedHeight = 0
 
     /// A new stroke. `strength` is in 0...1: how much of the carried colour
-    /// each dab lays down; 0 changes nothing. `init` does not check it: a
-    /// strength outside 0...1, or NaN, makes every `dab` on this state throw.
-    public init(strength: Float) {
+    /// each dab lays down; 0 changes nothing. Throws `RasterError.invalid`
+    /// for a strength outside 0...1 or NaN, so a bad pressure or slider value
+    /// fails where the state is made, not mid-stroke.
+    public init(strength: Float) throws {
+        try ColorMath.check("smudge strength", strength, in: 0...1)
         self.strength = strength
     }
 
@@ -25,10 +27,8 @@ public struct SmudgeState: Hashable, Sendable {
     /// `x`, `y`) by strength times coverage, then picks up what is now under
     /// the dab. The first dab of a stroke only picks up, and so does a dab
     /// whose mask size differs from the last dab's: it lays nothing and starts
-    /// a new pick-up at its own size. Throws `RasterError.invalid` for a
-    /// strength outside 0...1 or NaN.
+    /// a new pick-up at its own size. Dab cells off the buffer are skipped.
     public mutating func dab(_ dab: Mask, x: Int, y: Int, on buffer: inout PixelBuffer) throws {
-        try ColorMath.check("smudge strength", strength, in: 0...1)
         if strength > 0, let patch = carried, carriedWidth == dab.width, carriedHeight == dab.height {
             try lay(patch, through: dab, x: x, y: y, on: &buffer)
         }
@@ -40,41 +40,30 @@ public struct SmudgeState: Hashable, Sendable {
     /// Blends each carried pixel onto the buffer pixel under it by strength
     /// times the dab's coverage there.
     private func lay(_ patch: [RGBA?], through dab: Mask, x: Int, y: Int, on buffer: inout PixelBuffer) throws {
-        for j in 0..<dab.height {
-            for i in 0..<dab.width {
-                let k = j * dab.width + i
-                guard let (bx, by) = Self.position(i, j, x: x, y: y, in: buffer), patch.indices.contains(k),
-                      let source = patch[k] else { continue }
+        guard let area = buffer.dabRect(dab, x: x, y: y) else { return }
+        for by in area.rows {
+            for bx in area.columns {
+                let i = bx - x, j = by - y, k = j * dab.width + i
+                guard patch.indices.contains(k), let source = patch[k] else { continue }
                 let t = strength * (try dab.coverage(x: i, y: j))
                 guard t > 0 else { continue }
-                let p = try buffer.pixel(x: bx, y: by), u = 1 - t
-                try buffer.setPixel(x: bx, y: by, RGBA(r: p.r * u + source.r * t, g: p.g * u + source.g * t,
-                                                       b: p.b * u + source.b * t, a: p.a * u + source.a * t))
+                try buffer.setPixel(x: bx, y: by, try buffer.pixel(x: bx, y: by).mixed(toward: source, by: t))
             }
         }
     }
 
-    /// The buffer's pixels under the dab, nil where the dab lies off it.
+    /// The buffer's pixels under the dab, row-major at its size, nil where
+    /// the dab lies off it.
     private static func pickUp(_ dab: Mask, x: Int, y: Int, from buffer: PixelBuffer) throws -> [RGBA?] {
-        var patch = [RGBA?]()
-        patch.reserveCapacity(dab.width * dab.height)
-        for j in 0..<dab.height {
-            for i in 0..<dab.width {
-                if let (bx, by) = position(i, j, x: x, y: y, in: buffer) {
-                    patch.append(try buffer.pixel(x: bx, y: by))
-                } else {
-                    patch.append(nil)
-                }
+        var patch = [RGBA?](repeating: nil, count: dab.width * dab.height)
+        guard let area = buffer.dabRect(dab, x: x, y: y) else { return patch }
+        for by in area.rows {
+            for bx in area.columns {
+                let k = (by - y) * dab.width + (bx - x)
+                guard patch.indices.contains(k) else { continue }
+                patch[k] = try buffer.pixel(x: bx, y: by)
             }
         }
         return patch
-    }
-
-    /// The buffer coordinate of dab pixel (`i`, `j`) placed at (`x`, `y`), or
-    /// nil when it is off the buffer or the sum would overflow.
-    private static func position(_ i: Int, _ j: Int, x: Int, y: Int, in buffer: PixelBuffer) -> (Int, Int)? {
-        let (bx, overX) = x.addingReportingOverflow(i), (by, overY) = y.addingReportingOverflow(j)
-        guard !overX, !overY, (0..<buffer.width).contains(bx), (0..<buffer.height).contains(by) else { return nil }
-        return (bx, by)
     }
 }

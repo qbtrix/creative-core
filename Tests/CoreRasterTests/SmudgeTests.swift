@@ -11,7 +11,7 @@ import Testing
     static func stroke(strength: Float, count: Int) throws -> (before: PixelBuffer, after: PixelBuffer) {
         let before = try RetouchFixtures.redEdge(width: 60, height: 20, edgeX: 20)
         var after = before
-        var state = SmudgeState(strength: strength)
+        var state = try SmudgeState(strength: strength)
         let dab = try RetouchFixtures.roundDab(radius: dabRadius)
         for i in 0..<count { try state.dab(dab, x: 14 + 2 * i, y: 6, on: &after) }
         return (before, after)
@@ -58,7 +58,7 @@ import Testing
         // A dab of a new size lays nothing: it starts a new pick-up, like the first dab.
         let before = try RetouchFixtures.redEdge(width: 30, height: 20, edgeX: 10)
         var after = before
-        var state = SmudgeState(strength: 1)
+        var state = try SmudgeState(strength: 1)
         try state.dab(Mask(width: 5, height: 5, fill: 1), x: 6, y: 6, on: &after)
         try state.dab(Mask(width: 7, height: 7, fill: 1), x: 8, y: 6, on: &after)
         #expect(after == before)
@@ -69,7 +69,7 @@ import Testing
     @Test func statesCompareByCarriedPatch() throws {
         let buffer = try RetouchFixtures.redEdge(width: 30, height: 20, edgeX: 10)
         let dab = try RetouchFixtures.roundDab(radius: 3)
-        var a = SmudgeState(strength: 0.5), b = SmudgeState(strength: 0.5)
+        var a = try SmudgeState(strength: 0.5), b = try SmudgeState(strength: 0.5)
         var bufferA = buffer, bufferB = buffer
         #expect(a == b)
         for x in [4, 6, 8] {
@@ -88,7 +88,7 @@ import Testing
         // (i, j) gets the colour from 2 px left, weighted by the dab's coverage.
         let before = try RetouchFixtures.redEdge(width: 60, height: 20, edgeX: 20)
         var after = before
-        var state = SmudgeState(strength: 1)
+        var state = try SmudgeState(strength: 1)
         let dab = try RetouchFixtures.roundDab(radius: 4, hardness: 0.5)
         try state.dab(dab, x: 14, y: 6, on: &after)
         try state.dab(dab, x: 16, y: 6, on: &after)
@@ -113,14 +113,17 @@ import Testing
         #expect(feathered > 0)
     }
 
-    /// Strength is range-checked by the shared colour-math check, so its
-    /// error reads like every other CoreRaster range error.
-    @Test func strengthErrorUsesSharedCheck() throws {
-        var buffer = try RetouchFixtures.redEdge(width: 8, height: 8, edgeX: 4)
-        var state = SmudgeState(strength: 1.5)
+    /// Strength is range-checked where the state is made, by the shared
+    /// colour-math check, so its error reads like every other CoreRaster
+    /// range error and never shows up mid-stroke.
+    @Test func strengthCheckedAtInit() throws {
+        #expect(throws: RasterError.self) { try SmudgeState(strength: .nan) }
         #expect(throws: RasterError.invalid("smudge strength 1.5: must be in 0.0...1.0")) {
-            try state.dab(try RetouchFixtures.roundDab(radius: 2), x: 0, y: 0, on: &buffer)
+            try SmudgeState(strength: 1.5)
         }
+        #expect(throws: RasterError.self) { try SmudgeState(strength: -0.1) }
+        #expect(throws: Never.self) { try SmudgeState(strength: 0) }
+        #expect(throws: Never.self) { try SmudgeState(strength: 1) }
     }
 
     @Test func fuzzedDabsThrowOrSmudge() throws {
@@ -130,12 +133,18 @@ import Testing
         for _ in 0..<40 {
             var buffer = try RetouchFixtures.redEdge(width: 24, height: 16, edgeX: 12)
             let strength = [Float.nan, .infinity, -0.1, 1.5, .random(in: 0...1, using: &rng)].randomElement(using: &rng) ?? 0
-            var state = SmudgeState(strength: strength)
+            var state: SmudgeState
+            do {
+                state = try SmudgeState(strength: strength)
+            } catch is RasterError {
+                #expect(!(0...1).contains(strength))
+                continue
+            }
             for _ in 0..<8 {
                 let x = positions.randomElement(using: &rng) ?? 0, y = positions.randomElement(using: &rng) ?? 0
                 do {
                     try state.dab(dab, x: x, y: y, on: &buffer)
-                    #expect((0...1).contains(strength) && buffer.width == 24 && buffer.height == 16)
+                    #expect(buffer.width == 24 && buffer.height == 16)
                 } catch is RasterError {
                 } catch {
                     Issue.record("unexpected error \(error)")
