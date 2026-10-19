@@ -1,0 +1,30 @@
+[
+  {
+    "note": "paragraph drag merge accepts a step on a different field",
+    "file": "Sources/FlareCore/TextStyleCommands+Paragraph.swift",
+    "anchor": "        guard mine.count == 1, Self.changedFields(paragraph, set).isSubset(of: mine) else { return false }",
+    "replacement": "        guard mine.count == 1, Self.changedFields(paragraph, set).count <= 1 else { return false }",
+    "filter": "TextParagraphCommandsTests.mergeOnlySameField"
+  },
+  {
+    "note": "paragraph lineHeight validation skipped, so lineHeight 5 is kept",
+    "file": "Sources/FlareCore/FlareFormat.swift",
+    "anchor": "                try check((0.5...4).contains(p.lineHeight), \"text \\(t): lineHeight \\(p.lineHeight) is outside 0.5...4\")",
+    "replacement": "                try check(p.lineHeight.isFinite, \"text \\(t): lineHeight \\(p.lineHeight) is outside 0.5...4\")",
+    "filter": "TextParagraphCommandsTests.lineHeightFiveRefused"
+  },
+  {
+    "note": "paragraph drag merge keeps the first value, so redo stops short of the drag's end",
+    "file": "Sources/FlareCore/TextStyleCommands+Paragraph.swift",
+    "anchor": "        paragraph = set\n",
+    "replacement": "        _ = set\n",
+    "filter": "TextParagraphCommandsTests.dragRedoesToLastValue"
+  },
+  {
+    "note": "paragraph drag merge ignores the text index, so a drag on another text folds in",
+    "file": "Sources/FlareCore/TextStyleCommands+Paragraph.swift",
+    "anchor": "              (next.owner, next.layerID, next.textIndex) == (owner, layerID, textIndex) else { return false }",
+    "replacement": "              (next.owner, next.layerID) == (owner, layerID) else { return false }",
+    "filter": "TextParagraphCommandsTests.dragRedoesToLastValue"
+  }
+]

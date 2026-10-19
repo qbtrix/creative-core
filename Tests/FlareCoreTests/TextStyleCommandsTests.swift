@@ -2,7 +2,7 @@
 // undo steps. A new text style command adds its id to `expectedIDs`, one sample to
 // `registrySamples()` and its random steps to `undoSteps` here;
 // CommandRegistryTests and UndoPropertyTests read all three, so neither shared
-// test file changes. The paragraph and path cases wait, disabled by name, on TE-4.
+// test file changes. The paragraph and path cases are in TextParagraphCommandsTests.
 @testable import FlareCore
 import Testing
 
@@ -14,14 +14,17 @@ import Testing
 
     /// The ids whose commands are still stubs that throw "not built"; each
     /// leaves this set when its task builds it and adds a registry sample.
-    static let notBuiltIDs: Set<String> = ["text.setParagraph", "text.setOnPath"]
+    static let notBuiltIDs: Set<String> = []
 
     /// One sample of every built text style command (not in `notBuiltIDs`), each valid on
     /// `CommandRegistryTests.sampleDocument()` (text "Hello" on the ball layer, "H" bold), in `expectedIDs` order.
     static func registrySamples() -> [any Command] {
         [ApplyTextStyle(owner: o, layerID: "ball", textIndex: 0, range: 1..<4, style: TextRunStyle(weight: 700, italic: true)),
          ClearTextStyle(owner: o, layerID: "ball", textIndex: 0, range: 0..<5),
-         EditTextString(owner: o, layerID: "ball", textIndex: 0, replacing: 1..<3, with: "é👍🏽")]
+         EditTextString(owner: o, layerID: "ball", textIndex: 0, replacing: 1..<3, with: "é👍🏽"),
+         SetParagraphStyle(owner: o, layerID: "ball", textIndex: 0, paragraph: ParagraphStyle(alignment: .center, boxWidth: 120)),
+         SetTextOnPath(owner: o, layerID: "ball", textIndex: 0,
+                       onPath: TextOnPath(path: Path(polyline: [Point(x: 0, y: 0), Point(x: 100, y: 0)], closed: false)))]
     }
 
     /// Makes "H" of the registry sample document's scene text bold, so the clear
@@ -165,41 +168,5 @@ import Testing
             let text = try #require(TextFixtures.ballText(engine.document))
             #expect(text.runs.allSatisfy { $0.start >= 0 && $0.length > 0 && $0.start + $0.length <= text.string.count })
         }
-    }
-}
-
-/// TE-4's paragraph and type-on-a-path command checks; TE-4 turns them on.
-@Suite struct TextParagraphCommandChecks {
-    static func paragraph(_ value: ParagraphStyle?) -> SetParagraphStyle {
-        SetParagraphStyle(owner: TextStyleCommandsTests.o, layerID: "ball", textIndex: 0, paragraph: value)
-    }
-    static func onPath(_ value: TextOnPath?) -> SetTextOnPath {
-        SetTextOnPath(owner: TextStyleCommandsTests.o, layerID: "ball", textIndex: 0, onPath: value)
-    }
-    @Test(.disabled("waits on TE-4")) func setChangeAndClearUndoExactly() throws {
-        let circle = TextOnPath(path: try PathBuilders.ellipse(in: Rect(minX: 0, minY: 0, maxX: 100, maxY: 100)), startOffset: 0.25)
-        let steps: [any Command] = [Self.paragraph(ParagraphStyle(boxWidth: 120)),
-                                    Self.paragraph(ParagraphStyle(alignment: .justified, boxWidth: 120)), Self.onPath(circle)]
-        let set = try TextStyleCommandsTests.run(steps)
-        #expect(set?.paragraph == ParagraphStyle(alignment: .justified, boxWidth: 120) && set?.onPath == circle)
-        let cleared = try TextStyleCommandsTests.run(steps + [Self.paragraph(nil), Self.onPath(nil)])
-        #expect(cleared?.paragraph == nil && cleared?.onPath == nil)
-    }
-    /// A drag of `lineHeight` folds into one command; a different field starts another.
-    @Test(.disabled("waits on TE-4")) func mergeOnlySameField() throws {
-        var engine = CommandEngine(document: TextFixtures.document())
-        for height in [1.3, 1.4, 1.5] {
-            try engine.perform(Self.paragraph(ParagraphStyle(lineHeight: height)), coalesceKey: "drag")
-        }
-        #expect(engine.undoStack.count == 1 && engine.undoStack.last?.commands.count == 1)
-        try engine.perform(Self.paragraph(ParagraphStyle(lineHeight: 1.5, tracking: 2)), coalesceKey: "drag")
-        #expect(engine.undoStack.last?.commands.count == 2)
-        try engine.undo()
-        #expect(engine.document == TextFixtures.document() && !engine.canUndo)
-    }
-    @Test(.disabled("waits on TE-4")) func lineHeightFiveRefused() {
-        var engine = CommandEngine(document: TextFixtures.document())
-        #expect(throws: CommandError.self) { try engine.perform(Self.paragraph(ParagraphStyle(lineHeight: 5))) }
-        #expect(engine.document == TextFixtures.document() && !engine.canUndo)
     }
 }
