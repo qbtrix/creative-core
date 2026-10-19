@@ -23,6 +23,11 @@ import Foundation
     /// 284 + extra 0 (length 227) distance 1, end: 478 bytes of 'x'.
     static let dynamic: [UInt8] = [0xE5, 0xC1, 0x81, 0x00, 0x00, 0x00, 0x00, 0x80, 0x20, 0xED, 0xF1, 0x07, 0xA9, 0x72, 0x01, 0x06]
     static let dynamicOut = [UInt8](repeating: 0x78, count: 478)
+    /// Dynamic block: HLIT 0, HDIST 0, HCLEN 14; the code-length code gives only symbols 1 and 18 length 2
+    /// (codes 00 and 01, two of four unused: incomplete). The rest would decode as an empty block: 18 + 127
+    /// and 18 + 107 (256 zeros), 1 for end of block, 1 for the distance code, then end of block (bit 0).
+    /// zlib rejects it as "invalid code lengths set".
+    static let incompleteLengthCode: [UInt8] = [0x05, 0xC0, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x20, 0xFF, 0xAE, 0x01]
 
     func raw(_ bytes: [UInt8], limit: Int = 1 << 20) throws -> [UInt8] { [UInt8](try Inflate.raw(Data(bytes), limit: limit)) }
     func zlib(_ bytes: [UInt8], limit: Int = 1 << 20) throws -> [UInt8] { [UInt8](try Inflate.zlib(Data(bytes), limit: limit)) }
@@ -64,6 +69,7 @@ import Foundation
         let rawCases: [(String, [UInt8])] = [
             ("distance 2 after one byte", [0x4B, 0x04, 0x42, 0x00]),
             ("over-subscribed code-length code", Array(Self.dynamic.prefix(8)) + [0x10] + Self.dynamic.dropFirst(9)),
+            ("incomplete code-length code", Self.incompleteLengthCode),
             ("reserved block type", [0x07]), ("LEN and NLEN disagree", [0x01, 0x03, 0x00, 0xFC, 0xFE, 0x61, 0x62, 0x63]),
             ("no final block", [0x00, 0x03, 0x00, 0xFC, 0xFF, 0x61, 0x62, 0x63]), ("cut mid-block", Array(Self.dynamic.prefix(12))),
         ]
@@ -97,7 +103,35 @@ import Foundation
         #expect(try Inflate.zlib(Deflate.zlib(big, level: 6), limit: big.count) == big)
     }
 
-    @Test func deflateDeterministic() {
+    /// The only earlier copy of the last 1,000 bytes sits 41,000 bytes back, past the 32 KiB window: a
+    /// match there would need a distance code 29 extra value over 13 bits and corrupt the stream.
+    @Test func deflateWindowLimit() throws {
+        var rng = SplitMix64(seed: 0x1C5)
+        let head = (0..<1_000).map { _ in UInt8.random(in: 0...255, using: &rng) }
+        let middle = (0..<40_000).map { _ in UInt8.random(in: 0...255, using: &rng) }
+        let data = Data(head + middle + head)
+        for level in [1, 9] { #expect(try Inflate.zlib(Deflate.zlib(data, level: level), limit: data.count) == data, "level \(level)") }
+    }
+
+    /// Higher levels search longer hash chains: on 20,000 seeded bytes over a 4-letter alphabet (every
+    /// 3-byte prefix recurs hundreds of times) level 9 finds longer matches than level 1.
+    @Test func deflateLevelsSearchLonger() throws {
+        var rng = SplitMix64(seed: 0x1C6)
+        let data = Data((0..<20_000).map { _ in UInt8.random(in: 0...3, using: &rng) })
+        let fast = Deflate.zlib(data, level: 1), best = Deflate.zlib(data, level: 9)
+        #expect(best.count < fast.count)
+        #expect(try Inflate.zlib(best, limit: data.count) == data)
+    }
+
+    /// Golden bytes, derived by hand from RFC 1951, 3.2.6 and checked against an independent zlib decoder:
+    /// header 78 01; fixed block 'a' 'b' 'c', length 9 (code 263) distance 3 (code 2), 'x' 'y' 'z', end; Adler-32.
+    /// A same-process comparison cannot catch output that depends on a per-process hash seed; this can.
+    static let goldenText = Data("abcabcabcabcxyz".utf8)
+    static let goldenZlib: [UInt8] = [0x78, 0x01, 0x4B, 0x4C, 0x4A, 0x86, 0xA3, 0x8A, 0xCA, 0x2A, 0x00, 0x2E, 0x7F, 0x06, 0x04]
+
+    @Test func deflateDeterministic() throws {
+        for level in [1, 6, 9] { #expect([UInt8](Deflate.zlib(Self.goldenText, level: level)) == Self.goldenZlib, "level \(level)") }
+        #expect(try zlib(Self.goldenZlib) == [UInt8](Self.goldenText))
         let text = Data((0..<5_000).map { UInt8(truncatingIfNeeded: ($0 % 97) * 3) })
         for level in 0...9 { #expect(Deflate.zlib(text, level: level) == Deflate.zlib(text, level: level)) }
         let fixed = [UInt8](Deflate.zlib(text, level: 6))

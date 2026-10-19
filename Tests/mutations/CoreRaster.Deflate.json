@@ -1,0 +1,16 @@
+[
+  {
+    "note": "the deflate 32 KiB window guard is dropped so matches reach past it, caught by InflateTests.deflateWindowLimit",
+    "file": "Sources/CoreRaster/Codecs/Deflate.swift",
+    "anchor": "while candidate >= 0, i - candidate <= 32_768, left > 0 {",
+    "replacement": "while candidate >= 0, left > 0 {",
+    "filter": "InflateTests"
+  },
+  {
+    "note": "the deflate hash chain is one step at every level, caught by InflateTests.deflateLevelsSearchLonger",
+    "file": "Sources/CoreRaster/Codecs/Deflate.swift",
+    "anchor": "chain: 4 << (min(level, 9) - 1)",
+    "replacement": "chain: 1",
+    "filter": "InflateTests"
+  }
+]
