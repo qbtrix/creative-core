@@ -22,8 +22,8 @@ Next: IC-jpeg r1 fix batch (3 PRs) merges, then IC-jpeg round 2; IC-png round on
 | IC-2 | 2 | seven suites disabled, spec-built fixtures | Tests/CoreRasterTests/{Inflate,PNGRead,PNGWrite,PNGFuzz,JPEGRead,JPEGWrite,JPEGFuzz}Tests, Fixtures/{PNG,JPEG}Fixtures | suites compile | – | #590, #592, #594, #599; macOS fix #607 | merged |
 | IC-3 | 3 | Inflate, Deflate bodies | Inflate.swift, Deflate.swift, InflateTests | InflateTests | CoreRaster.Inflate (3) | #625 (526da94) | merged |
 | IC-6 | 3 | JPEG info, baseline read | JPEG.swift, JPEGReadTests, JPEGFuzzTests | baseline half | CoreRaster.JPEG (2) | #627 (22a5fdd) | merged |
-| IC-4 | 4 | PNG info, read, decodePNG | PNG.swift, PNGReadTests, PNGFuzzTests | PNGReadTests | CoreRaster.PNG (3) | #637 (b4d80e2) | open, clean, waiting on lane |
-| IC-5 | 4 | PNG write, encodePNG | PNGWrite.swift, PNGWriteTests | PNGWriteTests | CoreRaster.PNGWrite (2) | #636 (48a0e61) | open, clean, waiting on lane |
+| IC-4 | 4 | PNG info, read, decodePNG | PNG.swift, PNGReadTests, PNGFuzzTests | PNGReadTests | CoreRaster.PNG (3) | #637 (b4d80e2) | merged 05:14Z |
+| IC-5 | 4 | PNG write, encodePNG | PNGWrite.swift, PNGWriteTests | PNGWriteTests | CoreRaster.PNGWrite (2) | #636 (48a0e61) | rebasing onto IC-4, enabling 4 round-trip tests |
 | IC-7 | 4 | progressive JPEG | JPEGProgressive.swift, JPEGReadTests | progressive half | CoreRaster.JPEGProgressive (1+) | #635 (a686651) | merged (dev 81ae63c) |
 | IC-8 | 4 | baseline JPEG write | JPEGWrite.swift, JPEGWriteTests | JPEGWriteTests | CoreRaster.JPEGWrite (2) | #634 (8e31fe9) | merged |
 | IC-9 | 5 | KJ-IC walk, budgets | ImageCodecWalkTests, ImageCodecBudgetTests | walk | – | | open |
