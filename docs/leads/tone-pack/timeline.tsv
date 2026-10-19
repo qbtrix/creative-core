@@ -102,3 +102,6 @@ utc	stage	event	ref	note
 2026-10-19T16:51Z	5	pr-opened	#727	packet build record, labels fast-lane + feature-done
 2026-10-19T16:51Z	5	pr-merged	#727	dev a77ab8c, feature-done
 2026-10-19T17:09Z	5	heartbeat	ci 39289117245	feature-done run in progress on a77ab8c
+2026-10-19T17:40Z	5	ci-green	39289117245	dev a77ab8c: Linux, macOS, Mutation green; main promoted
+2026-10-19T17:41Z	5	contact-sheet	#432	Belt-Slice-Done TP-z, Mac-Finish-Wanted TP-z, Belt-Contact-Sheet posted
+2026-10-19T17:42Z	5	done	-	all slices merged-done; Mac finisher verifies TP-z
