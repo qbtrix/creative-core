@@ -74,3 +74,4 @@ utc	stage	event	ref	note
 2026-10-19T11:30:14Z	IC-9	merged	#709	walk green; PNG encode 9.0 s and 1.41x over budget; IC-9b Deflate fix started (wf_66172218-06d)
 2026-10-19T11:30:52Z	IC-9b	heartbeat	wf_66172218-06d	IC-9b Deflate builder running; dev CI run 404 (8613770, without #702) still queued since 10:35Z
 2026-10-19T11:53:44Z	IC-9b	heartbeat	wf_66172218-06d	IC-9b Deflate builder still running; dev CI run 404 (8613770, without #702) in progress
+2026-10-19T13:02:28Z	IC-9b	resume	-	new lead run act-1a1543c8a34-t9zw; old IC-9b builder lost; IC-9b builder restarted on 0b5a641
