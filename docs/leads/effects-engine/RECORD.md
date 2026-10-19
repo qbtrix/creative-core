@@ -2,9 +2,9 @@
 
 Issue: #433 · Packet: docs/blueprints/core/features/effects-engine.md
 Run: act-1a150bfbcf7-sfwy · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
-Stage: 4 round 4 fixes running (wf_fe65728f-9d5: r4-b1..b3 fixes, r4-b4 builds FX-9)
+Stage: 4 round 5 gate + mutation running on 8613770 (all r4 fixes and FX-9 merged; FX-a, FX-blur at round cap, round 5 covers FX-alpha, FX-cpu, FX-z)
 Base: 4feaaf9fac3cc050901f8b459a0908515a927f54
-Next: r4 fixes merge; round 5 on dev; then FX-10 (feature-done), Belt-Slice-Done FX-z, Mac-Finish-Wanted FX-z
+Next: round 5 panel; then FX-10 (feature-done), Belt-Slice-Done FX-z, Mac-Finish-Wanted FX-z
 
 Line lead for #434, #433 and #432 (rule 19); one wave plan across the three
 features, bookkeeping per feature. Packet v3 (has a Slices table).
@@ -21,7 +21,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 | FX-6 | 4 | FX-alpha | `glowing`, `shadowed`; their cases | `Sources/CoreRaster/Effects/AlphaEffects+Light.swift`, `Tests/CoreRasterTests/AlphaEffectLightTests.swift`, `Tests/mutations/CoreRaster.AlphaEffects.json` | `AlphaEffectLightTests` | 2 (packet) | #605 | merged |
 | FX-7 | 5 | FX-cpu | `applying(_:)` over every case; the CPU body; turns on `CPUEffectTests` | `Sources/CoreRaster/Effects/Effects.swift`, `Sources/CoreRender/CPU/CPUBackend+Effect.swift`, `Tests/CoreRenderTests/CPUEffectTests.swift`, `Tests/mutations/CoreRenderCPUEffect.json` | `CPUEffectTests` | 2 (packet) | #611 | merged (77b74a1) |
 | FX-8 | 6 | FX-cpu | `Samples+Effect.swift` and CPU goldens | `Sources/CoreRender/Parity/Samples+Effect.swift`, `Tests/CoreRenderTests/Golden/effect/` | `CPUGoldenTests` | none: goldens | #640 | merged (2298d3f) |
-| FX-9 | 7 | FX-z | KJ-FX walk; `EffectBudgetTests` (release, `.serialized`, reported) | `Tests/CoreRenderTests/EffectWalkTests.swift`, `Tests/CoreRasterTests/EffectBudgetTests.swift` | `EffectWalkTests.walk` | none | r4-b4 (wf_fe65728f-9d5) | building |
+| FX-9 | 7 | FX-z | KJ-FX walk; `EffectBudgetTests` (release, `.serialized`, reported) | `Tests/CoreRenderTests/EffectWalkTests.swift`, `Tests/CoreRasterTests/EffectBudgetTests.swift` | `EffectWalkTests.walk` | none | #699 (8613770) | merged |
 | FX-10 | 8 | FX-z | Packet status line says built; `feature-done` | `docs/blueprints/core/features/effects-engine.md` | – | none | | planned |
 
 ## Acceptance (from the packet)
@@ -56,7 +56,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 | FX-a, FX-blur | 1 | 5ea5ae5 | PASS (try 5, budget retries under load) | 70/70 (BlurFamily 3/3) | - | clarity, contract, tests, robustness | 7 (2 major: motion blur not centred; box blur both-axes/three-pass untested; 5 minor), 1 refuted | #593 (r1-b1, merged; Mutate 9/9) | no |
 | FX-alpha, FX-blur, FX-a | 2 | 7d8af79 | PASS | 66/66 | - | clarity, contract, tests, robustness | 16 (4 major: LayerEffect radius unit differs per case; glow/shadow no fuzz; glow intensity and reach untested; clarity/denoise can store +inf; 12 minor), 1 refuted | r2-b1 #631 merged (be6cc41); r2-b2 #629 merged (e001b84); r2-b3 #639 merged (6199d27) | no |
 | FX-a, FX-blur, FX-alpha, FX-cpu | 3 | 2298d3f | PASS | 109/109 | - | clarity, contract, tests, robustness | 10 (1 major: denoise overflow guard has no test or mutation; 9 minor: error messages blame valid params, padded-size error, StrokePosition docs, packet glow/motion wording, diagonal edge offset untested, denoise working-set cap, parity applied path untested), 1 refuted | r3-b3 #652 merged (a672a6b), r3-b2 #653 merged (f67d23f), r3-b1 #655 merged (59275e0), r3-b4 #658 merged (e9fa096) | no |
-| FX-a, FX-blur, FX-alpha, FX-cpu | 4 | e9fa096 | PASS | 176/176 | - | clarity, contract, tests, robustness | 8 (3 major: FX-9 unbuilt; bilateral bands past 64 lines untested; shadow-inner sample is identity; 5 minor: glow/shadow remedy, maxDenoisePixels unseen, LayerEffect inner/intensity docs, sigma-0 branch untested, paddedWorkSize no mutation), 1 refuted | #685 merged (ef57810), r4-b3 #690 merged (37e5897), #691 merged (91bc56e); r4-b4 running (wf_fe65728f-9d5) | no |
+| FX-a, FX-blur, FX-alpha, FX-cpu | 4 | e9fa096 | PASS | 176/176 | - | clarity, contract, tests, robustness | 8 (3 major: FX-9 unbuilt; bilateral bands past 64 lines untested; shadow-inner sample is identity; 5 minor: glow/shadow remedy, maxDenoisePixels unseen, LayerEffect inner/intensity docs, sigma-0 branch untested, paddedWorkSize no mutation), 1 refuted | #685 merged (ef57810), r4-b3 #690 merged (37e5897), #691 merged (91bc56e), r4-b4 #699 merged (8613770) | no |
 
 ## Decisions
 - FX-5 (#588): stroke distance measured to the sub-pixel anti-aliased edge (Gustavson & Strand 2011 edge points over the exact EDT's nearest seed + 8 neighbours); field−0.5 missed the 1% ring test by +7.2%. Shape is alpha ≥ 0.5; off-buffer is transparent; level inclusive; width 0...1000.

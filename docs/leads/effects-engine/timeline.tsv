@@ -69,3 +69,5 @@ utc	stage	event	ref	note
 2026-10-19T09:41:13Z	4	heartbeat	-	r4: #685 merged (ef57810); 3 fixers still active (wf_fe65728f-9d5)
 2026-10-19T10:03:23Z	4	heartbeat	-	r4: #685 (ef57810), #690 (37e5897) merged; 2 fixers active (wf_fe65728f-9d5)
 2026-10-19T10:24:22Z	4	heartbeat	-	r4: #685, #690, #691 (91bc56e) merged; r4-b4 (FX-9) active
+2026-10-19T10:37:31Z	4	merged	#699	FX-9 walk + budgets merged (8613770); round 4 fixes all merged
+2026-10-19T10:37:31Z	4	round-start	8613770	round 5 (FX-alpha, FX-cpu, FX-z)
