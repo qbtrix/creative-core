@@ -139,9 +139,41 @@ import Testing
     }
     @Test func badParagraphNamesField() {
         #expect(Self.message { try Self.lay("ab", ParagraphStyle(boxWidth: 0)) }.contains("boxWidth"))
-        #expect(Self.message { try Self.lay("ab", ParagraphStyle(tracking: .nan)) }.contains("tracking"))
+        #expect(Self.message { try Self.lay("ab", ParagraphStyle(tracking: .nan)) }.hasPrefix("paragraph tracking"))
+        #expect(Self.message { try Self.lay("", ParagraphStyle(tracking: .nan)) }.hasPrefix("paragraph tracking"))
         #expect(Self.message { try Self.lay("ab", ParagraphStyle(lineHeight: -1)) }.contains("lineHeight"))
         #expect(Self.message { try Self.lay("ab", ParagraphStyle(paragraphSpacing: .nan)) }.contains("paragraphSpacing"))
+    }
+    @Test func trackingOverflowNamesEveryPart() {
+        let runs = [TextRun(start: 0, length: 2, tracking: 1e308)]
+        let message = Self.message { try Self.lay("ab", runs: runs, ParagraphStyle(tracking: 1e308)) }
+        #expect(message.contains("paragraph tracking 1e+308") && message.contains("run tracking 1e+308"))
+        #expect(message.contains("advance") && message.contains("overflows"))
+    }
+    @Test func metricsSetOutOfRangeAfterInitThrow() throws {
+        let text = TextFixtures.text("ab")
+        var backward = FixedAdvances.measure(text)
+        backward[0].advances[0] = -1
+        #expect(Self.message { try TextLayout.lay(text, measured: backward) }.contains("glyph advance 0"))
+        var nanAscent = FixedAdvances.measure(text)
+        nanAscent[0].ascent = .nan
+        #expect(Self.message { try TextLayout.lay(text, measured: nanAscent) }.contains("ascent"))
+    }
+    /// Seeded metrics edited after `init` to a NaN, infinite or negative value: `lay` throws.
+    @Test(arguments: 0..<30 as Range<UInt64>) func fuzzMetricsEditedAfterInit(seed: UInt64) {
+        var rng = SplitMix64(seed: seed)
+        let text = TextFixtures.text(String(repeating: "a b-", count: Int.random(in: 1...8, using: &rng)))
+        var measured = FixedAdvances.measure(text)
+        let bad: [Double] = [-1, -0.001, .nan, .infinity, -.infinity, -.greatestFiniteMagnitude]
+        let value = bad.randomElement(using: &rng) ?? -1
+        switch Int.random(in: 0...2, using: &rng) {
+        case 0:
+            let count = measured[0].advances.count
+            measured[0].advances[Int.random(in: 0..<count, using: &rng)] = value
+        case 1: measured[0].ascent = value
+        default: measured[0].descent = value
+        }
+        #expect(throws: ModelError.self) { try TextLayout.lay(text, measured: measured) }
     }
     /// The `ModelError.invalidText` message `body` throws, or "" for anything else.
     static func message(_ body: () throws -> Any) -> String {

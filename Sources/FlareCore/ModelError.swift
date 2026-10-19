@@ -16,7 +16,8 @@ public enum ModelError: Error, Equatable, Sendable {
     case layerLocked(String)
     /// A fill breaks an invariant listed in Fill.swift; the string says which.
     case invalidFill(String)
-    /// A text shape breaks an invariant listed beside `TextShape`.
+    /// A text shape breaks an invariant listed beside `TextShape`, or the metrics given to
+    /// `TextLayout.lay` / `GlyphRunMetrics.init` do not fit it; the string says which.
     case invalidText(String)
     /// A stroke breaks an invariant listed beside `Stroke`.
     case invalidStroke(String)

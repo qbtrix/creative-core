@@ -126,6 +126,20 @@
     "filter": "TextLayoutTests.badInputThrows"
   },
   {
+    "note": "text layout paragraph tracking guard removed",
+    "file": "Sources/FlareCore/TextLayout.swift",
+    "anchor": "        try need(style.tracking.isFinite, \"tracking\", style.tracking, \"finite\")\n",
+    "replacement": "",
+    "filter": "TextLayoutTests.badParagraphNamesField"
+  },
+  {
+    "note": "text layout trusts metrics edited after init",
+    "file": "Sources/FlareCore/TextLayout.swift",
+    "anchor": "            try GlyphRunMetrics.check(advances: metrics.advances, ascent: metrics.ascent, descent: metrics.descent)\n",
+    "replacement": "",
+    "filter": "TextLayoutTests.metricsSetOutOfRangeAfterInitThrow"
+  },
+  {
     "note": "text layout line gap takes the run with the tallest ascent plus descent",
     "file": "Sources/FlareCore/TextLayout.swift",
     "anchor": "(ascent, descent) = (max(ascent, measured[r].ascent), max(descent, measured[r].descent))",
