@@ -16,7 +16,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 | FX-2 | 1 | FX-a | Reference images (disc, 1 px line, noisy flat patch with an edge, glyph mask) and analytic expectations | `Tests/CoreRasterTests/EffectFixtures.swift` | fixtures build | none | #570 | merged |
 | FX-1 | 2 | FX-a | Checks first: five suites disabled by name | `Tests/CoreRasterTests/{BlurFamily,DenoiseClarity,AlphaEffect,DistanceField}Tests.swift`, `Tests/CoreRenderTests/CPUEffectTests.swift` | suites compile, disabled | none | #577 | merged |
 | FX-3 | 3 | FX-blur | `boxBlurred`, `motionBlurred`; turns on `BlurFamilyTests` | `Sources/CoreRaster/Effects/BlurFamily.swift`, its tests, `Tests/mutations/CoreRaster.BlurFamily.json` | `BlurFamilyTests` | 3 (packet) | #579 | merged |
-| FX-4 | 3 | FX-blur | `denoised`, `clarity`; turns on `DenoiseClarityTests` | `Sources/CoreRaster/Effects/DenoiseClarity.swift`, its tests, `Tests/mutations/CoreRaster.DenoiseClarity.json` | `DenoiseClarityTests` | 2 (packet) | | building |
+| FX-4 | 3 | FX-blur | `denoised`, `clarity`; turns on `DenoiseClarityTests` | `Sources/CoreRaster/Effects/DenoiseClarity.swift`, its tests, `Tests/mutations/CoreRaster.DenoiseClarity.json` | `DenoiseClarityTests` | 2 (packet) | #586 | open |
 | FX-5 | 3 | FX-alpha | `DistanceField`, `stroked`; turns on `DistanceFieldTests` and stroke cases | `Sources/CoreRaster/Effects/DistanceField.swift`, `Sources/CoreRaster/Effects/AlphaEffects.swift`, both tests, `Tests/mutations/CoreRaster.DistanceField.json` | `DistanceFieldTests`, `AlphaEffectTests` | 3 (packet) | | building |
 | FX-6 | 4 | FX-alpha | `glowing`, `shadowed`; their cases | `Sources/CoreRaster/Effects/AlphaEffects+Light.swift`, `Tests/CoreRasterTests/AlphaEffectLightTests.swift`, `Tests/mutations/CoreRaster.AlphaEffects.json` | `AlphaEffectLightTests` | 2 (packet) | | planned |
 | FX-7 | 5 | FX-cpu | `applying(_:)` over every case; the CPU body; turns on `CPUEffectTests` | `Sources/CoreRaster/Effects/Effects.swift`, `Sources/CoreRender/CPU/CPUBackend+Effect.swift`, `Tests/CoreRenderTests/CPUEffectTests.swift`, `Tests/mutations/CoreRenderCPUEffect.json` | `CPUEffectTests` | 2 (packet) | | planned |
@@ -55,6 +55,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 |---|---|---|---|---|---|---|---|---|---|
 
 ## Decisions
+- FX-4 (#586): `denoised` is a separable luma-guided bilateral (x then y; full 2-D would miss FX-9's budget), chroma at 2× spatial sigma; alpha kept, colour averaged premultiplied; `clarity` unsharp against `gaussianBlur` with sigma = radius/3 and the packet's midtone weight, no clamp at 1.
 - FX-3 (#579): motion blur takes ceil(d)+1 samples at step d/ceil(d) starting at the whole pixel floor(-d/2), so an axis-aligned integer distance covers exactly d+1 columns; odd d sits half a pixel off centre (d=9 covers -5...4). Blurs edge-extend; box blur is three running-sum passes; FX-3 removed its rows from EffectStubTests.
 - engine-contracts is satisfied on the base: `LayerEffect`, `StrokePosition`, the `effect` family, `CPUBackend+Effect.swift` and `Samples+Effect.swift` are in code at a8a08d25.
 - Added FX-0 (rule 18): the contract slice's signatures don't exist yet, so FX-1's suites couldn't compile; FX-0 declares them as stubs in the files the packet assigns, and FX-3..7 fill the bodies without changing signatures.

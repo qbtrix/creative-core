@@ -22,3 +22,4 @@ utc	stage	event	ref	note
 2026-10-18T23:57:38Z	4	slice-done	FX-a	Belt-Slice-Done on #433, run 39174242588
 2026-10-18T23:58:27Z	4	round-start	round-1	gate+mutate on 5ea5ae5 (covers merged slices)
 2026-10-18T23:58:27Z	3	building	FX-5	builder launched on 5ea5ae5
+2026-10-19T00:12:23Z	3	pr-open	#586	FX-4 head 3beae89, 2/2 mutants
