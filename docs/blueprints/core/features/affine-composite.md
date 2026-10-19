@@ -75,9 +75,11 @@ public extension AffineMatrix { func bounds(of width: Int, _ height: Int) -> (x:
   through `m.inverse` into the source; sample with the filter's kernel over
   premultiplied values; outside the source is transparent (zero).
   Fast paths: identity copies; a matrix that is a whole-pixel translation
-  copies rows; a scale-only matrix uses the separable `resampled` path.
-  A downscale below 0.5 widens the kernel by the scale (no aliasing), as
-  `resampled` does.
+  copies rows. A scale-only matrix has no separable fast path through
+  `resized(width:height:filter:)`, because `resized` reads clamp-to-edge
+  while `transformed` reads transparent outside the source.
+  Any scale below 1 widens the kernel by the scale (no aliasing), as
+  `resized(width:height:filter:)` does.
 - **flipped.** Row reversal (vertical) or per-row element reversal
   (horizontal); no filter.
 - **padded.** New buffer of the size, transparent; the old image placed at

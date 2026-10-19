@@ -9,9 +9,11 @@
 // `maxPixels`, so the size change and the offset fit in Int and in Double.
 
 extension PixelBuffer {
-    /// This image on a `width` x `height` canvas, placed at `anchor`; a
-    /// smaller size crops. Throws `RasterError.invalid` for a size
-    /// `validatedSize` rejects.
+    /// This image on a `width` x `height` canvas: grows with transparent
+    /// pixels, shrinks by cropping. The image's top-left moves by
+    /// (`width` - old width, `height` - old height) times the anchor's place
+    /// (0, 0.5 or 1 per axis), rounded down. Throws `RasterError.invalid` for
+    /// a size `validatedSize` rejects.
     public func padded(width newW: Int, height newH: Int, anchor: CanvasAnchor) throws -> PixelBuffer {
         _ = try Self.validatedSize(width: newW, height: newH)
         let (fx, fy) = anchor.place

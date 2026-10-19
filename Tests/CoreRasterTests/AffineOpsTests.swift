@@ -3,6 +3,10 @@
 // identity and whole-pixel translations are `==` copies, a quarter turn
 // equals `rotated(.degrees90)`, a 2x scale keeps edges within 0.5 px, outside
 // is exactly clear, bad matrices and sizes throw, and flips mirror exactly.
+// Round 1 adds the sampler's own contract: a shrink widens the kernel, filtered
+// values are normalised means that fade to clear at the edge, a huge whole
+// translation stays clear, a lanczos3 overshoot throws, and an extreme shrink
+// on a narrow axis costs only that axis's taps.
 import CoreRaster
 import Testing
 #if canImport(Glibc)
@@ -167,5 +171,112 @@ func affineMaxDelta(_ lhs: PixelBuffer, _ rhs: PixelBuffer) throws -> Float {
             }
         }
     }
-}
 
+    /// A 0.25 shrink of one-pixel stripes, columns then rows, is flat grey:
+    /// each output centre lands on a source centre (tx, ty 0.125), where a
+    /// kernel that did not widen along the stripes' axis would read one
+    /// pixel, 0 or 1. Stripes check each axis's widening on its own.
+    @Test
+    func downscaleWidensKernel() throws {
+        let white = RGBA(r: 1, g: 1, b: 1, a: 1)
+        var columns = try PixelBuffer(width: 64, height: 64, fill: RGBA(r: 0, g: 0, b: 0, a: 1))
+        var rows = columns
+        for y in 0..<64 {
+            for x in 0..<64 {
+                if x.isMultiple(of: 2) { try columns.setPixel(x: x, y: y, white) }
+                if y.isMultiple(of: 2) { try rows.setPixel(x: x, y: y, white) }
+            }
+        }
+        let shrink = AffineMatrix(a: 0.25, b: 0, c: 0, d: 0.25, tx: 0.125, ty: 0.125)
+        for (name, stripes) in [("columns", columns), ("rows", rows)] {
+            for filter in Self.filters {
+                let out = try stripes.transformed(shrink, width: 16, height: 16, filter: filter)
+                for y in 4..<12 {
+                    for x in 4..<12 {
+                        let p = try out.pixel(x: x, y: y)
+                        #expect(abs(p.r - 0.5) <= 1e-3 && abs(p.a - 1) <= 1e-3, "\(name) \(filter) (\(x), \(y)): \(p)")
+                    }
+                }
+            }
+        }
+    }
+
+    /// A half-pixel bilinear shift blends two neighbours, and column 0 blends
+    /// with clear outside; lanczos3 on a uniform opaque layer stays opaque
+    /// inside, because the weights are divided by their sum.
+    @Test
+    func halfPixelTranslationBlends() throws {
+        var rng = SplitMix64(seed: 310)
+        let (w, h) = (12, 9)
+        var layer = try PixelBuffer(width: w, height: h)
+        for y in 0..<h {
+            for x in 0..<w {
+                try layer.setPixel(x: x, y: y, RGBA(r: .random(in: 0...1, using: &rng), g: .random(in: 0...1, using: &rng),
+                                                     b: .random(in: 0...1, using: &rng), a: 1))
+            }
+        }
+        let out = try layer.transformed(AffineFixtures.translation(0.5, 0), width: w, height: h, filter: .bilinear)
+        for y in 0..<h {
+            let edge = try out.pixel(x: 0, y: y), src = try layer.pixel(x: 0, y: y)
+            #expect(abs(edge.a - 0.5) <= 1e-5 && abs(edge.r - src.r / 2) <= 1e-5, "column 0 row \(y): \(edge)")
+            for x in 1..<w {
+                let p = try out.pixel(x: x, y: y), l = try layer.pixel(x: x - 1, y: y), r = try layer.pixel(x: x, y: y)
+                #expect(abs(p.r - (l.r + r.r) / 2) <= 1e-5 && abs(p.a - 1) <= 1e-5, "(\(x), \(y)): \(p)")
+            }
+        }
+        let flat = try PixelBuffer(width: 20, height: 20, fill: RGBA(r: 0.25, g: 0.5, b: 0.75, a: 1))
+        let shifted = try flat.transformed(AffineFixtures.translation(0.5, 0.3), width: 20, height: 20, filter: .lanczos3)
+        for y in 4..<16 {
+            for x in 4..<16 {
+                let p = try shifted.pixel(x: x, y: y)
+                #expect(abs(p.a - 1) <= 1e-5 && abs(p.g - 0.5) <= 1e-5, "lanczos3 (\(x), \(y)): \(p)")
+            }
+        }
+    }
+
+    /// A whole translation too large for Int is not copied (Int(tx) would
+    /// trap); it samples nothing and comes back clear.
+    @Test
+    func hugeWholeTranslationIsClear() throws {
+        let layer = try AffineFixtures.layer(seed: 311, width: 9, height: 7)
+        let clear = try PixelBuffer(width: 10, height: 8)
+        for m in [AffineFixtures.translation(1e300, -1e300), AffineFixtures.translation(Double(Int.max) * 4, 0)] {
+            #expect(try layer.transformed(m, width: 10, height: 8, filter: .bilinear) == clear, "\(m)")
+        }
+    }
+
+    /// Column pairs of +greatestFiniteMagnitude then -greatestFiniteMagnitude
+    /// (period 4, matching lanczos3's lobes; plain alternation cancels)
+    /// through a 0.3 px shift overshoot by about 1.37x past Float's range: it
+    /// throws and names the cause.
+    @Test
+    func overshootThrows() throws {
+        let big = Float.greatestFiniteMagnitude
+        var layer = try PixelBuffer(width: 12, height: 6)
+        for y in 0..<6 {
+            for x in 0..<12 {
+                let v = (x / 2).isMultiple(of: 2) ? big : -big
+                try layer.setPixel(x: x, y: y, RGBA(r: v, g: v, b: v, a: v))
+            }
+        }
+        do {
+            _ = try layer.transformed(AffineFixtures.translation(0.3, 0), width: 12, height: 6, filter: .lanczos3)
+            Issue.record("a lanczos3 overshoot past Float's range returned")
+        } catch let RasterError.invalid(message) {
+            #expect(message.contains("lanczos3"), "\(message)")
+        }
+    }
+
+    /// A shrink of 1e7 on a 2-pixel-wide axis caps the kernel at 2 pixels
+    /// wide, not the 20000-pixel height, so it is quick and equals a 1e3 shrink.
+    @Test
+    func extremeShrinkOnNarrowAxisIsBounded() throws {
+        let layer = try AffineFixtures.layer(seed: 312, width: 2, height: 20_000, border: 0, block: 1)
+        let tiny = try layer.transformed(AffineMatrix(a: 1e-7, b: 0, c: 0, d: 1, tx: 0, ty: 0),
+                                         width: 4, height: 20_000, filter: .lanczos3)
+        let small = try layer.transformed(AffineMatrix(a: 1e-3, b: 0, c: 0, d: 1, tx: 0, ty: 0),
+                                          width: 4, height: 20_000, filter: .lanczos3)
+        #expect((tiny.width, tiny.height) == (4, 20_000))
+        #expect(tiny == small)
+    }
+}
