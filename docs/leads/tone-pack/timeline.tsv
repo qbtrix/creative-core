@@ -63,3 +63,4 @@ utc	stage	event	ref	note
 2026-10-19T07:14:47Z	4	fix-batches	wf_62790f68-535	round 4: 8 confirmed; 4 batches, r4-b4 builds TP-9
 2026-10-19T07:27:07Z	4	heartbeat	-	r4 fixes running (wf_62790f68-535), agents active
 2026-10-19T07:48:56Z	4	heartbeat	-	r4 fixers active (wf_62790f68-535); no PRs yet
+2026-10-19T08:11:54Z	4	heartbeat	-	r4: #670 (r4-b2) merged; r4-b1, b3, b4 fixers active
