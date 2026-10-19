@@ -40,5 +40,19 @@
     "anchor": "guard !reader.isAtEnd else { throw damaged(\"file ends before IEND\") }",
     "replacement": "",
     "filter": "PNGReadTests"
+  },
+  {
+    "note": "a palette index past PLTE is no longer checked, so the lookup reads past the palette, caught by PNGReadTests.damagedFilesThrow",
+    "file": "Sources/CoreRaster/Codecs/PNGRead.swift",
+    "anchor": "guard 4 * v < palette.count else",
+    "replacement": "guard true else",
+    "filter": "PNGReadTests"
+  },
+  {
+    "note": "PNG.info no longer refuses a pixel count over PixelBuffer.maxPixels, so info passes sizes read refuses, caught by PNGReadTests.refusesHuge",
+    "file": "Sources/CoreRaster/Codecs/PNGRead.swift",
+    "anchor": "guard (try? PixelBuffer.validatedSize(width: width, height: height)) != nil else {",
+    "replacement": "guard true else {",
+    "filter": "PNGReadTests"
   }
 ]

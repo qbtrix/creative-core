@@ -133,6 +133,8 @@ import Foundation
             ("filter method 1", F.signature + F.chunk("IHDR", filterMethod1) + end),
             ("tRNS longer than PLTE", [UInt8](file([[[0]]], 3, 1, extra: [F.chunk("tRNS", [0, 0, 0])]))),
             ("grey tRNS of 1 byte", [UInt8](file([[[7]]], 0, 8, extra: [F.chunk("tRNS", [7])]))),
+            // A 2-bit palette image may name index 3, but this PLTE holds only entries 0 and 1.
+            ("palette index past PLTE", [UInt8](F.png([[[3]]], depth: 2, colorType: 3, extra: [F.chunk("PLTE", [1, 2, 3, 4, 5, 6])]))),
         ]
         for (name, bytes) in cases { #expect(F.thrown { try PNG.read(Data(bytes)) } == "damaged", "\(name)") }
         let zzzz = F.png([[[1]]], depth: 8, colorType: 0, extra: [F.chunk("ZZZZ", [])])
@@ -156,6 +158,39 @@ import Foundation
         }
     }
 
+    /// Damaged and unsupported texts name the chunk and the values that were wrong.
+    @Test func messagesNameChunkAndValues() throws {
+        var bad = [UInt8](F.png([[[1], [2]], [[3], [4]]], depth: 8, colorType: 0))
+        bad[bad.count - 13] ^= 0x01  // the last byte of IDAT's CRC, before IEND's 12 bytes
+        #expect(message { try PNG.read(Data(bad)) } == "PNG: IDAT chunk CRC mismatch")
+        var methods = F.ihdr(1, 1, depth: 8, colorType: 0)
+        methods[11] = 1  // the filter method, with the chunk CRC computed over it
+        let filterMethod = F.signature + F.chunk("IHDR", methods) + F.chunk("IEND", [])
+        #expect(message { try PNG.info(Data(filterMethod)) }.contains("filter method 1,"))
+        let zzzz = F.png([[[1]]], depth: 8, colorType: 0, extra: [F.chunk("ZZZZ", [])])
+        #expect(message { try PNG.read(zzzz) } == "PNG: unknown critical chunk ZZZZ")
+        // A type that is not four ASCII letters is shown as hex, not as raw bytes.
+        var odd = F.chunk("ZZZZ", []), raw = [UInt8](F.png([[[1]]], depth: 8, colorType: 0))
+        odd.replaceSubrange(4..<8, with: [0x00, 0xFF, 0x41, 0x42])
+        odd.replaceSubrange(8..<12, with: F.be32(Int(ByteReader.crc32([0x00, 0xFF, 0x41, 0x42]))))
+        raw.insert(contentsOf: odd, at: 33)
+        #expect(message { try PNG.read(Data(raw)) } == "PNG: unknown critical chunk 0x00FF4142")
+    }
+
+    /// `PNGCodec` reports plain text that says it was reading, what kind of failure, and names PNG once.
+    @Test func pixelCodecTextIsPlain() throws {
+        func text(_ data: [UInt8]) -> String {
+            do { _ = try PNGCodec().decodePNG(Data(data)) } catch CodecError.pixelCodec(let t) { return t } catch {}
+            return ""
+        }
+        #expect(text([1, 2, 3]) == "PNG read: not a PNG")
+        var bad = [UInt8](F.png([[[1], [2]], [[3], [4]]], depth: 8, colorType: 0))
+        bad[32] ^= 0x01  // the last byte of IHDR's CRC
+        let damaged = text(bad)
+        #expect(damaged == "PNG read: damaged file: IHDR chunk CRC mismatch")
+        #expect(damaged.components(separatedBy: "PNG").count == 2 && !damaged.contains("(\""))
+    }
+
     /// The text of the `CodecError` that `body` throws, or "" when it returns or throws something else.
     func message(_ body: () throws -> Any) -> String {
         do { _ = try body() } catch let error as CodecError {
@@ -176,8 +211,9 @@ import Foundation
             #expect(F.thrown { try PNG.read(Data(bytes)) } == "tooLarge", "\(width)x\(height)")
             let limit = width > PNG.maxSide || height > PNG.maxSide ? "sides are at most 30000" : "PixelBuffer.maxPixels"
             #expect(message { try PNG.read(Data(bytes)) }.contains(limit), "\(width)x\(height)")
-            let overSide = width > PNG.maxSide || height > PNG.maxSide  // info refuses a side; only read refuses the area
-            #expect(F.thrown { try PNG.info(Data(bytes)) } == (overSide ? "tooLarge" : "returned"))
+            // info refuses what read refuses, so a file info passes is not refused for its size later.
+            #expect(F.thrown { try PNG.info(Data(bytes)) } == "tooLarge", "info \(width)x\(height)")
+            #expect(message { try PNG.info(Data(bytes)) }.contains(limit), "info \(width)x\(height)")
         }
         // 2 x 2 grey 8-bit implies 2 x (1 + 2) = 6 filtered bytes; a stream holding 1,006 must not decode.
         let bloated = F.signature + F.chunk("IHDR", F.ihdr(2, 2, depth: 8, colorType: 0))

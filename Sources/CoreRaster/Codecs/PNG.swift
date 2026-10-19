@@ -12,8 +12,9 @@ import Foundation
 
 /// What a PNG's IHDR chunk says, read without decoding any pixels.
 public struct PNGInfo: Hashable, Sendable {
-    /// Width and height in pixels (each 1...`PNG.maxSide`), and bits per
-    /// sample (1, 2, 4, 8 or 16, as IHDR allows for the colour type).
+    /// Width and height in pixels (each 1...`PNG.maxSide`, their product at
+    /// most `PixelBuffer.maxPixels`, so `PNG.read` will not refuse the size),
+    /// and bits per sample (1, 2, 4, 8 or 16, as IHDR allows for the colour type).
     public var width, height, bitDepth: Int
     /// The IHDR colour type: 0 grey, 2 RGB, 3 palette, 4 grey-alpha, 6 RGBA.
     public var colorType: Int
@@ -33,7 +34,9 @@ public enum PNG {
     /// `notThisFormat` without the signature; `damaged` when IHDR is not first,
     /// not 13 bytes, fails its CRC, has a zero width or height, pairs a bad
     /// depth and colour type, or names a compression or filter method other
-    /// than 0 or an interlace method past 1; `tooLarge` for a side over `maxSide`.
+    /// than 0 or an interlace method past 1; `tooLarge` for a side over
+    /// `maxSide` or a pixel count over `PixelBuffer.maxPixels`, the same sizes
+    /// `read` refuses.
     public static func info(_ data: Data) throws -> PNGInfo {
         try header(data).1
     }
@@ -46,11 +49,30 @@ public enum PNG {
     /// a file that ends before IEND, no IDAT, a type-3 image without a valid
     /// PLTE, a tRNS longer than PLTE or of the wrong length for grey or RGB, a
     /// palette index past PLTE, IDAT data that does not inflate to exactly the
-    /// bytes IHDR implies, or a bad filter type; `tooLarge` past `maxSide` or
-    /// `PixelBuffer.maxPixels` before allocating; `unsupported` for an unknown
+    /// bytes IHDR implies, or a bad filter type; `unsupported` for an unknown
     /// critical chunk.
     public static func read(_ data: Data) throws -> PixelBuffer {
         try decode(data)
+    }
+
+    /// The `CodecError.pixelCodec` text for `error` from `PNG.read` or
+    /// `PNG.write`: the direction, what kind of failure, then the reason
+    /// without its own "PNG" prefix, e.g. `PNG read: damaged file: IDAT chunk
+    /// CRC mismatch` or `PNG write: unsupported: 12-bit samples: only 8 or 16`.
+    static func pixelCodecText(_ error: any Error, writing: Bool) -> String {
+        let way = writing ? "PNG write: " : "PNG read: "
+        func reason(_ text: String) -> String {
+            for prefix in ["PNG: ", "PNG "] where text.hasPrefix(prefix) { return String(text.dropFirst(prefix.count)) }
+            return text
+        }
+        switch error as? CodecError {
+        case .notThisFormat?: return way + "not a PNG"
+        case .damaged(let text)?: return way + "damaged file: " + reason(text)
+        case .unsupported(let text)?: return way + "unsupported: " + reason(text)
+        case .tooLarge(let text)?: return way + "too large: " + reason(text)
+        case .compressedEntry(let text)?, .pixelCodec(let text)?: return way + reason(text)
+        case nil: return way + "\(error)"
+        }
     }
 }
 
@@ -65,8 +87,8 @@ public struct PNGCodec: PixelCodec {
     public init(level: Int = 6) { self.level = level }
 
     /// `data` through `PNG.read`. Throws `CodecError.pixelCodec` naming what
-    /// `PNG.read` refused, as `PixelCodec` asks.
+    /// `PNG.read` refused (`PNG.pixelCodecText`), as `PixelCodec` asks.
     public func decodePNG(_ data: Data) throws -> PixelBuffer {
-        do { return try PNG.read(data) } catch { throw CodecError.pixelCodec("PNG: \(error)") }
+        do { return try PNG.read(data) } catch { throw CodecError.pixelCodec(PNG.pixelCodecText(error, writing: false)) }
     }
 }

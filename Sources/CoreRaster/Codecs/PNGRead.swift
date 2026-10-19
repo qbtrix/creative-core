@@ -29,27 +29,41 @@ extension PNG {
     static func header(_ data: Data) throws -> (ByteReader, PNGInfo) {
         var reader = ByteReader(data)
         guard data.count >= 8, try reader.bytes(8) == signature else { throw CodecError.notThisFormat }
-        let (type, body) = try chunk(&reader)
+        let (type, _, body) = try chunk(&reader)
         guard type == "IHDR" else { throw damaged("IHDR is not the first chunk") }
         guard body.count == 13 else { throw damaged("IHDR holds \(body.count) bytes, not 13") }
         var r = ByteReader(body)
         let width = try r.length32(), height = try r.length32()
         let depth = Int(try r.u8()), colorType = Int(try r.u8())
-        let methods: [UInt8] = [try r.u8(), try r.u8()], interlace = try r.u8()
+        let compression = try r.u8(), filter = try r.u8(), interlace = try r.u8()
         guard width > 0, height > 0 else { throw damaged("size \(width)x\(height)") }
         guard width <= maxSide, height <= maxSide else { throw CodecError.tooLarge("PNG: \(width)x\(height) pixels: sides are at most \(maxSide)") }
+        guard (try? PixelBuffer.validatedSize(width: width, height: height)) != nil else {
+            throw CodecError.tooLarge("PNG: \(width)x\(height) pixels: over PixelBuffer.maxPixels (\(PixelBuffer.maxPixels))")
+        }
         guard depths[colorType]?.contains(depth) == true else { throw damaged("depth \(depth) with colour type \(colorType)") }
-        guard methods == [0, 0], interlace <= 1 else { throw damaged("compression, filter or interlace method") }
+        guard compression == 0, filter == 0, interlace <= 1 else {
+            throw damaged("compression method \(compression), filter method \(filter), interlace method \(interlace): only 0, 0 and 0 or 1")
+        }
         return (reader, PNGInfo(width: width, height: height, bitDepth: depth, colorType: colorType, interlaced: interlace == 1))
     }
 
-    /// The next chunk's type and body, its CRC checked.
-    static func chunk(_ reader: inout ByteReader) throws -> (String, [UInt8]) {
+    /// The next chunk's type as text (`typeName`), whether it is critical (5.4: bit 5 of its first
+    /// byte clear), and its body, its CRC checked.
+    static func chunk(_ reader: inout ByteReader) throws -> (String, Bool, [UInt8]) {
         let length = try reader.length32()
         guard length <= 0x7FFF_FFFF else { throw damaged("chunk length \(length)") }
         let typed = try reader.bytes(try ByteReader.adding(length, 4))
-        guard try reader.u32() == ByteReader.crc32(typed) else { throw damaged("chunk CRC") }
-        return (String(decoding: typed.prefix(4), as: UTF8.self), Array(typed.dropFirst(4)))
+        let type = typeName(typed.prefix(4))
+        guard try reader.u32() == ByteReader.crc32(typed) else { throw damaged("\(type) chunk CRC mismatch") }
+        return (type, typed.first.map { $0 & 0x20 == 0 } == true, Array(typed.dropFirst(4)))
+    }
+
+    /// A chunk type as text: its four letters when they are ASCII letters (5.4), else hex such as `0x00FF4142`.
+    static func typeName(_ bytes: ArraySlice<UInt8>) -> String {
+        guard !bytes.allSatisfy({ (0x41...0x5A).contains($0 & 0xDF) }) else { return String(decoding: bytes, as: UTF8.self) }
+        let digits = Array("0123456789ABCDEF")
+        return "0x" + String(bytes.flatMap { [digits[Int($0 >> 4)], digits[Int($0 & 0x0F)]] })
     }
 
     /// Pixels in a pass along a side of `size`, starting at `start` with `step`.
@@ -57,21 +71,18 @@ extension PNG {
 
     static func decode(_ data: Data) throws -> PixelBuffer {
         var (reader, info) = try header(data)
-        let pixels: Int
-        do { pixels = try PixelBuffer.validatedSize(width: info.width, height: info.height) } catch {
-            throw CodecError.tooLarge("PNG: \(info.width)x\(info.height) pixels: over PixelBuffer.maxPixels (\(PixelBuffer.maxPixels))")
-        }
+        let pixels = info.width * info.height  // `header` held it to `PixelBuffer.maxPixels`
         var palette: [UInt8] = [], alpha: [UInt8]?, stream: [UInt8] = []
         chunks: while true {
             guard !reader.isAtEnd else { throw damaged("file ends before IEND") }
-            let (type, body) = try chunk(&reader)
+            let (type, critical, body) = try chunk(&reader)
             switch type {
             case "IEND": break chunks
             case "IDAT": stream += body
             case "PLTE": palette = body
             case "tRNS": alpha = body
             case "IHDR": throw damaged("a second IHDR")
-            default: if type.utf8.first.map({ $0 & 0x20 == 0 }) == true { throw CodecError.unsupported("PNG chunk \(type)") }
+            default: if critical { throw CodecError.unsupported("PNG: unknown critical chunk \(type)") }
             }
         }
         guard !stream.isEmpty else { throw damaged("no IDAT chunk") }
