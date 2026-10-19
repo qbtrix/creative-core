@@ -25,3 +25,4 @@ utc	stage	event	ref	note
 2026-10-19T05:38:00Z	stage-4	panel	IC-jpeg r1	wf_d0c4b858-9f8: not clean, 5 major 7 minor, 1 refuted; fix batch wf_4cb93cd0-ecb launched (3 batches)
 2026-10-19T05:38:41Z	stage-3	pr-merged	#637	IC-4 PNG read merged; #636 dirty, builder rebasing and enabling the 4 waits-on-IC-4 tests
 2026-10-19T05:39:06Z	stage-4	heartbeat	IC-jpeg r1	fix batch wf_4cb93cd0-ecb running (3 fixers); #636 rebase builder running; #637 merged
+2026-10-19T05:58:50Z	stage-4	heartbeat	IC-jpeg r1	fixers still running (no fix PRs yet); #636 rebase builder still running
