@@ -89,3 +89,4 @@ utc	stage	event	ref	note
 2026-10-19T15:22Z	4	stage-start	r6-fix	one batch folded into TP-10 (feature-done)
 2026-10-19T15:39Z	4	pr-merged	#722	r6 fixes + TP-10, feature-done
 2026-10-19T15:39Z	4	stage-start	round 7	0b96aa5
+2026-10-19T15:43Z	4	heartbeat	run 39279766862	dev CI on 0b96aa5 queued; round 7 gate, mutation and panel running

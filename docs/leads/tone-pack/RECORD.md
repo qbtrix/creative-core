@@ -4,7 +4,7 @@ Issue: #432 · Packet: docs/blueprints/core/features/tone-pack.md
 Run: act-1a1543c8a5f-6y14 (relaunch; first run act-1a150bfbcf7-sfwy) · Started: 2026-10-18T20:45Z · Relaunched: 2026-10-19T13:05Z
 Stage: 4 round 7 (TP-cpu 4/4, TP-z 3/4) on 0b96aa5: gate, mutation and critic panel running
 Base: 0b96aa5c
-Next: read round 7 (scratchpad round-7 ci.log, mutate.log, critic panel); read the dev CI run the feature-done merge (#722) dispatched; if green and round clean: Belt-Slice-Done TP-z, Mac-Finish-Wanted TP-z, contact sheet; else gap issues for findings past the cap
+Next: (dev CI run 39279766862 on 0b96aa5, queued) read round 7 (scratchpad round-7 ci.log, mutate.log, critic panel); read the dev CI run the feature-done merge (#722) dispatched; if green and round clean: Belt-Slice-Done TP-z, Mac-Finish-Wanted TP-z, contact sheet; else gap issues for findings past the cap
 
 Line lead for #434, #433 and #432 (rule 19); one wave plan across the three
 features, bookkeeping per feature. Packet v3 (has a Slices table).
