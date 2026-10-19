@@ -3,7 +3,7 @@
 // FillBudgetTests). Everything is a fixed formula or seeded SplitMix64, so a
 // fixture is the same on every run and platform. The 100 MP buffer is a
 // builder, never a stored value: only the test that calls it allocates it.
-import CoreRaster
+@testable import CoreRaster
 import Testing
 #if canImport(Glibc)
 import Glibc
@@ -89,8 +89,30 @@ struct FillScene {
 }
 
 enum FillFixtures {
-    /// The 100 MP worst case for flood fill's memory bound: 10 000 x 10 000.
+    /// 10 000 x 10 000: the 100 MP size of flood fill's memory bound. One
+    /// colour at this size is the easy case for the seed stack (one span per
+    /// row); `comb` is the hard one.
     static let largeSide = 10_000
+
+    /// The side of the comb memory case: 64 MP, so its budget stands well
+    /// clear of other suites' transient allocations.
+    static let combSide = 8_000
+
+    /// A `side` x `side` comb of colour A whose odd rows alternate A (even x)
+    /// and B (odd x): every odd row is `side / 2` one-pixel runs that join the
+    /// full rows above and below under four-connectivity, the many-runs worst
+    /// case for a scanline fill's pending seeds.
+    /// Built a row at a time, so the large case stays quick in a debug build.
+    static func comb(side: Int) throws -> PixelBuffer {
+        _ = try PixelBuffer.validatedSize(width: side, height: side)
+        func row(_ color: (Int) -> RGBA) -> [Float] { (0..<side).flatMap { x in [color(x).r, color(x).g, color(x).b, color(x).a] } }
+        let full = row { _ in FillScene.colorA }
+        let teeth = row { $0 % 2 == 1 ? FillScene.colorB : FillScene.colorA }
+        var storage = [Float]()
+        storage.reserveCapacity(side * side * 4)
+        for y in 0..<side { storage.append(contentsOf: y % 2 == 1 ? teeth : full) }
+        return PixelBuffer(checkedWidth: side, height: side, storage: storage)
+    }
 
     /// One colour everywhere. Called with no size it allocates the 100 MP
     /// buffer (1.6 GB of Float storage), so only the budget test should.
