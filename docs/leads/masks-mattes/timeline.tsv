@@ -8,3 +8,4 @@ utc	stage	event	ref	note
 2026-10-19T14:12:46Z	heartbeat	builders running
 2026-10-19T14:30:53Z	heartbeat	builders running
 2026-10-19T14:49:00Z	heartbeat	builders running
+2026-10-19T15:21:04Z	stage3	M1 #718 and M4 #720 merged; container restart, wave 2 builders: M2+M3, M5+M6
