@@ -59,3 +59,4 @@ utc	stage	event	ref	note
 2026-10-19T07:30:35Z	4	fix-batches-done	wf_0fc6505d-5b3	r3 fixes built; dev unbuildable at b83a0bd (#644) blocked PRs; #661 fixed; finishers rebasing and opening 3 PRs
 2026-10-19T07:48:56Z	4	heartbeat	-	r3 finishers rebasing on dev and gating; no PRs yet
 2026-10-19T08:05:20Z	4	pr-opened	#669	r3-b3 PR open (bebb5a2), CI PASS, 1/1 CoreRenderCPUAffine
+2026-10-19T08:08:52Z	4	pr-opened	#672	r3-b1 PR open (e543755), CI PASS, 17/17 mutants
