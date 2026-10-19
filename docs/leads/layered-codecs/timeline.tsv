@@ -1,0 +1,71 @@
+utc	stage	event	ref	note
+2026-10-18T07:20Z	0	start	9d01972	lead run act-1a14de006be-1kmq on dev
+2026-10-18T07:22Z	2	plan	-	line wave plan across preview-cache, vector-import, layered-codecs
+2026-10-18T07:22Z	3	wave1-start	-	builders launched
+2026-10-18T07:23Z	1	base-gate	9d01972	scripts/ci CI: PASS on base (2m38s)
+2026-10-18T10:01Z	3	pr-merged	#446	LC-1 84d4b47
+2026-10-18T10:01Z	3	stage-start	wave2	LC-2 LC-3 LC-5 at 9e826ac
+2026-10-18T11:52Z	3	pr-merged	#474	LC-5 12e0d7a
+2026-10-18T11:52Z	3	pr-merged	#475	LC-2 33d046a
+2026-10-18T11:52Z	3	pr-merged	#472	LC-3 da9d377
+2026-10-18T11:52Z	3	slice-merged	LC-a	LC-1 LC-2
+2026-10-18T11:52Z	3	stage-start	wave3	LC-4 LC-6 at b80c087
+2026-10-18T11:56:24Z	3	builder-start	LC-4	under flock gate
+2026-10-18T11:56:24Z	3	builder-start	LC-6	under flock gate
+2026-10-18T11:56:59Z	3	heartbeat	-	wave 3 building; round-1 mutations running
+2026-10-18T11:59:58Z	4	gate	LC-a	round 1 on b80c087: CI PASS
+2026-10-18T11:59:58Z	4	critics-start	LC-a	round 1 lenses clarity,contract,undo,robustness,tests
+2026-10-18T12:09:47Z	4	verify	LC-a	round 1: 13 verifiers; not clean, confirmed majors routed
+2026-10-18T12:10:38Z	4	fix-start	R1-2	docs batch: read notes, RasterError header, PSD/ORA limits, write validation, ORA composite
+2026-10-18T12:18:42Z	4	heartbeat	-	wave 3 builders running, no wave-3 PR open yet; R1 fixers running
+2026-10-18T12:38:41Z	4	heartbeat	-	LC-4, LC-6 building; R1-2 running
+2026-10-18T12:41:00Z	5	pr	R1-2	#489 opened, head 58bee0b, CI PASS (packet: PSD maxTotalPixels, ORA limits+composite+mimetype, write validation, RasterError/CodecError split); forwarded to LC-4, LC-6
+2026-10-18T12:55:52Z	5	merge	R1-2	#489 merged 12:40Z
+2026-10-18T12:58:49Z	3	pr	LC-6	#492 opened, head 8137c10, CI PASS, mutate 9/9; ZipStore overlap total in (finding 7 closed); #489 ORA rules matched; edited CodecShapeTests stub line; may conflict with LC-4 on codecs.json
+2026-10-18T13:03:03Z	3	merge	LC-6	#492 merged 12:58Z
+2026-10-18T13:03:03Z	-	heartbeat	-	LC-4 gating; dev CI #359 Linux green (no LC slice fully merged)
+2026-10-18T13:04:06Z	3	pr	LC-4	#493 opened, head f33e8f3, CI PASS, mutate 11/11; R1 majors closed: PSD pixel budget, unbalanced dividers test, mask fields test; minors for round 2: Mask.init(checkedWidth:) added outside packet file list, mutation #2 note names groupsNest but maskAtOffset caught it
+2026-10-18T13:07:21Z	3	merge	LC-4	#493 merged 13:04Z
+2026-10-18T13:07:21Z	4	launch	LC-7	builder launched (PSD write)
+2026-10-18T13:09:50Z	-	anatomy	round-2	dev 8e258c5: gate+mutate running; critic panel launched (clarity, contract, undo, robustness, tests) on PC-a,PC-hash (r1), VI-a (r2), LC-a (r2), LC-psd, LC-ora (r1)
+2026-10-18T13:18:42Z	anatomy-r2	critics in (5 lenses, 17 majors incl. dups); verifiers running; gate 8e258c5 FAIL only EngineStressTests budget flake
+2026-10-18T13:25:39Z	heartbeat	dev CI run 360 (72fbef6) Linux success, macOS failure; holds all merged slices
+2026-10-18T13:44:23Z	anatomy-r2-routed	round 2: dev 8e258c5, gate PASS (EngineStress flake rerun), mutants 37/37, lenses 5, clean=no; majors n3/5/6/10/13/17 awaiting verifier
+2026-10-18T13:46:38Z	heartbeat	no new lead PRs; builders PC-3 LC-7 VI-5 VI-7 + R2 fixers running; Slice-Done held (open confirmed majors); no attribution footers
+2026-10-18T13:52:20Z	pr	LC-7 #497 opened (ac27b15, CI PASS, 7/7); stripped server footer
+2026-10-18T14:04:16Z	anatomy-r2-routed	round 2 LC verdicts: majors n3 StackXML abs trap, n5 ORA total budget, n13 golden unproven -> fixer lead/layered-codecs-R2-1; n6 PSD merged channels -> fixer lead/layered-codecs-R2-2; n10/17 downgraded minor (mask term test, R2-2)
+2026-10-18T14:09Z	heartbeat	#497 lost fast-lane at 405 lines; trim fixer launched; LC R2-1, R2-2 fixers building
+2026-10-18T14:24Z	merged	LC-7 #497 21824da
+2026-10-18T14:24Z	launch	LC-8
+2026-10-18T14:31Z	heartbeat	LC-8, LC R2-1, LC R2-2 building
+2026-10-18T14:54:08Z	heartbeat	agents running; CI run 364 queued
+2026-10-18T15:03:59Z	pr	LC R2-1 #513 opened cea5d91 (13/13; n3, n5, n13)
+2026-10-18T15:17:10Z	merged	LC R2-1 #513 merged 15:03Z; LC-8 #514 open; R2-3 stack-depth fixer launched
+2026-10-18T15:24:19Z	merged	LC-8 #514 merged 168c73d (11/11)
+2026-10-18T15:40Z	heartbeat	checking merges, dev CI, agents
+2026-10-18T15:43Z	incident	disk full (ENOSPC) at about 15:39Z; deleted .build caches of finished worktrees; told running agents to rerun failed gates
+2026-10-18T16:01Z	fix	#518 LC R2-2 rebased on 168c73d, head 342f910, CI PASS 1373, mutate 17/17; n6 n10/17 closed on merge
+2026-10-18T16:01Z	minor	PSD writer has no depth cap (reader maxDepth 256): round 3
+2026-10-18T16:05Z	heartbeat	checking merges, dev CI, agents
+2026-10-18T16:05Z	merge	#518 LC R2-2 merged 16:01Z as 035b7d8; n6 n10/17 closed
+2026-10-18T16:05Z	note	stack-depth SIGBUS fixed by Mac-side PRs #520 #521 #522 (not this lead); own fixer R2-3 stood down to avoid duplicates
+2026-10-18T16:27Z	merge	LC-9 #526 merged 16:25Z (walk + budgets); save 5.2-5.6s vs 2s budget MISS -> PSD.write perf fixer needed before LC-z verify; open 438-493ms/1500, peak 682MB/1300
+2026-10-18T16:28Z	launch	Round 3: fixer lead/layered-codecs-R3-1 launched for the PSD.write save budget (5.2 s vs 2 s). LC-10 feature-done waits on it. #520 ORA iterative merged 16:08Z. Dev CI run 370 queued.
+2026-10-18T16:51Z	heartbeat	Heartbeat. Dev CI 369 Linux green, macOS red only on a preview-cache budget test (fixer launched); ORA/PSD suites passed on macOS. R3-1 PSD save fixer running.
+16:54Z	slice-done	Belt-Slice-Done posted for LC-a, LC-psd, LC-ora and LC-write (#497 merged 14:21) on run 39143654502. LC-z waits on run 370 and feature-done.
+17:16Z	heartbeat	Heartbeat: run 370 (7fcd04d) has Linux green. macOS is red only on EngineStressTests (7.0 s vs 5 s), which is outside this lead; groupManyBudget passed. All round-3 agents are gating, queued on the CI lock. No new lead PRs since #525 and #526. LC-z waits on LC-10 (feature-done).
+17:38Z	heartbeat	Heartbeat: all five round-3 agents are gating, serialized on the CI lock. No lead PR is open. Dev run 373 (66bd163, #535 engine-stress perf) is queued. Disk: 17 GB free.
+18:00Z	heartbeat	Heartbeat: five agents, one CI-lock waiter each and no duplicates; LC R3-1 was resumed after stopping early. No lead PR is open. Dev run 373 is still queued. Disk: 17 GB free.
+18:21Z	heartbeat	heartbeat: 18G free; dev CI 373 (66bd163) green but predates #542-#544; no open lead PRs; LC R3-1 and PC R3-2 queued on gate, VI-8 building
+18:26Z	merge	#545 merged 18:25 (ff484f0): PSD saveDeep 5103->1353 ms (budget 2000), mutations 2/2
+18:26Z	launch	openDeep 1622 ms vs 1500 (regressed by #523, color-profiles); fixer R3-2 launched on lead/layered-codecs-R3-2; LC-10 waits on it
+18:43Z	heartbeat	heartbeat: 18G free; dev CI 374 (bd50d5b, has #544 #545 #546 #548) Linux running; no open lead PRs; VI-8 and LC R3-2 working
+19:00Z	heartbeat	heartbeat 18:59: run 374 Linux green; LC R3-2 (openDeep) working; LC-10 after it
+19:22Z	heartbeat	heartbeat: LC R3-2 committed 7e244f4 (openDeep perf) locally, gating; no PR yet
+19:44Z	resume	heartbeat: LC R3-2 idle since 18:42 with local 7e244f4, resumed with foreground-gate instruction
+20:01Z	relaunch	LC R3-2 still stalled at 20:00 (7e244f4 local); stopped and relaunched a finisher on the same worktree
+20:15Z	merge	#555 merged 20:14 (f9e6192 head): openDeep 1835->394 ms (budget 1500), pixels bit-identical (PSDDecodeTests pinned on old decoder), mutation 1/1
+20:15Z	launch	LC-10 builder launched on lead/layered-codecs-LC-10 (C4 parts, status line, packet text, feature-done)
+20:22Z	heartbeat	heartbeat: LC-10 builder gating (flock held, load 8); no open lead PRs
+20:33Z	merged	LC-10 #557 merged d715348 (feature-done; codecs C4 part, packet built); CI #375 run 39163834423 queued
+20:45Z	done	CI #375 (39163834423, d715348) Linux green. Posted on #438: Belt-Slice-Done LC-z, Mac-Finish-Wanted LC-z, Belt-Contact-Sheet (footers stripped, verified). layered-codecs complete.
