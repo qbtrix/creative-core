@@ -3,9 +3,9 @@
 Issue: #562 · Packet: docs/blueprints/core/features/image-codecs.md
 Run: act-1a1511a1174-tlch · Started: 2026-10-18T22:40Z
 Line lead for: image-codecs (#562), preview-cache (#440, already done), vector-import (#439, VI-z left)
-Stage: IC-png Anatomy round 3 (fix batch); IC-jpeg Anatomy round 4 (panel)
+Stage: IC-png Anatomy round 3 (fix batch); IC-jpeg Anatomy round 4 (fix batch, last round)
 Base: 9385de9 (wave 4)
-Next: r3-png-b1, r3-png-b2 PRs merge, then IC-png round 4 (last allowed); IC-jpeg r4 panel once its gate prints CI: PASS
+Next: r3-png-b1, r3-png-b2 PRs merge, then IC-png round 4 (last allowed); r4-jpeg-b1 PR merges, which ends IC-jpeg's Anatomy loop
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -62,3 +62,4 @@ Next: r3-png-b1, r3-png-b2 PRs merge, then IC-png round 4 (last allowed); IC-jpe
 | IC-jpeg | 3 | 891372e | 8 (1 major, 7 minor; 1 refuted) | fix batch r3-jpeg-b1 wf_63bfcf02-52b |
 | IC-png | 2 | 891372e | 9 (3 major, 6 minor; 0 refuted) | fix batches r2-png-b1, r2-png-b2 wf_5340cfcc-4ff |
 | IC-png | 3 | 124c35e | 7 (2 major, 5 minor; 1 refuted) | fix batches r3-png-b1, r3-png-b2 |
+| IC-jpeg | 4 | 3d9c151 | 9 (2 major, 7 minor; 0 refuted); gate: local budget test outside the feature flaked, dev Linux CI green on 8cd57c6 | fix batch r4-jpeg-b1 |
