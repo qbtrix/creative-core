@@ -2,7 +2,8 @@
 // written first (FX-1), on since FX-5 built it: exact Euclidean distance
 // on a 64 x 64 grid, alpha equal to `level` is inside, inside and outside are
 // complements, `inside` counts the transparent ring past the buffer's edge,
-// a bad level throws and stray lookups never crash.
+// an empty shape is infinitely far, a bad level throws and stray lookups
+// read as transparent.
 import CoreRaster
 import Testing
 
@@ -69,8 +70,17 @@ import Testing
             #expect(throws: RasterError.self) { try DistanceField(alpha: b, level: bad) }
         }
         let field = try DistanceField(alpha: b)
+        // Off the buffer is transparent: infinitely far from the shape, outside it.
         for (x, y) in [(-1, 0), (0, -1), (8, 0), (0, 8), (Int.min, Int.max)] {
-            #expect(!field.outside(x: x, y: y).isNaN && !field.inside(x: x, y: y).isNaN)
+            #expect(field.outside(x: x, y: y) == .infinity && field.inside(x: x, y: y) == 0, "(\(x), \(y))")
+        }
+    }
+
+    /// A shape with no pixels: every pixel is infinitely far from it and none is inside it.
+    @Test func emptyShapeIsInfinitelyFar() throws {
+        let field = try DistanceField(alpha: PixelBuffer(width: 8, height: 5))
+        for y in 0..<5 {
+            for x in 0..<8 { #expect(field.outside(x: x, y: y) == .infinity && field.inside(x: x, y: y) == 0, "(\(x), \(y))") }
         }
     }
 }

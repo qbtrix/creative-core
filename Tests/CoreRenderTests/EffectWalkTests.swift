@@ -1,6 +1,7 @@
 // EffectWalkTests.swift: effects-engine FX-9's Journey step KJ-FX. A white
-// 600 x 400 rounded rectangle on transparency, padded by 40 px (a 680 x 480
-// layer), styled through a `RenderDispatcher` over a fake without `.effect`:
+// 600 x 400 rounded rectangle on transparency, padded by 40 px with
+// `padded(width:height:anchor:)` (a 680 x 480 layer, the same as drawing the
+// shape 40 px in), styled through a `RenderDispatcher` over a fake without `.effect`:
 // drop shadow (dx 8, dy 8, blur 12, 50% black), a 4 px outside stroke in
 // blue, a 16 px outer glow, then `clarity(amount: 30, radius: 30)` on the
 // result. Every step falls back to the CPU and equals the direct CoreRaster
@@ -17,11 +18,12 @@ import Testing
     /// The shape's exclusive bottom-right corner: one past its last column and row.
     static var corner: (x: Int, y: Int) { (pad + shapeWidth, pad + shapeHeight) }
 
-    /// The padded layer: the white rounded rectangle (8-bit sRGB coverage), its rounded corners
-    /// anti-aliased by 4 x 4 supersampling, its straight edges on whole pixels.
-    static func layer() throws -> PixelBuffer {
-        let w = shapeWidth + 2 * pad, h = shapeHeight + 2 * pad, r = cornerRadius
-        let x0 = Double(pad), y0 = Double(pad), x1 = Double(corner.x), y1 = Double(corner.y)
+    /// The white rounded rectangle (8-bit sRGB coverage) drawn `margin` px in
+    /// from every side of its buffer, its rounded corners anti-aliased by
+    /// 4 x 4 supersampling, its straight edges on whole pixels.
+    static func layer(margin: Int) throws -> PixelBuffer {
+        let w = shapeWidth + 2 * margin, h = shapeHeight + 2 * margin, r = cornerRadius
+        let x0 = Double(margin), y0 = Double(margin), x1 = x0 + Double(shapeWidth), y1 = y0 + Double(shapeHeight)
         /// Whether the point (px, py) is inside the rounded rectangle.
         func inside(_ px: Double, _ py: Double) -> Bool {
             guard px >= x0, px < x1, py >= y0, py < y1 else { return false }
@@ -56,7 +58,11 @@ import Testing
     @Test func walk() throws {
         let fake = FakeBackend(supports: Set(RenderOp.allCases).subtracting([.effect]))
         let dispatcher = RenderDispatcher(preferred: fake, fallback: CPUBackend())
-        let start = try Self.layer()
+        // The 600 x 400 layer padded by the real canvas-size call: the shape
+        // drawn 40 px in from the edges of a 680 x 480 buffer.
+        let start = try Self.layer(margin: 0).padded(width: Self.shapeWidth + 2 * Self.pad,
+                                                     height: Self.shapeHeight + 2 * Self.pad, anchor: .center)
+        #expect(start == (try Self.layer(margin: Self.pad)))
         var expected = start, surface = try dispatcher.surface(start)
         var results: [PixelBuffer] = []
         for effect in Self.steps {
