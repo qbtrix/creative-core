@@ -1,11 +1,11 @@
 # path-geometry lead record
 
 Issue: #430 · Packet: docs/blueprints/core/features/path-geometry.md
-Run: act-1a1541f2193-03la · Session: https://claude.ai/code/session_01UoKtqjbgWBMsvLqfXb3f42 · Started: 2026-10-19T12:57Z
+Run: act-1a15685b8d2-jkm8 · Session: https://claude.ai/code/session_0155HiDB6qGDiNT4Jp56T1UA · Resumed: 2026-10-19T23:36Z on dev fb09fdc2 (previous run act-1a1541f2193-03la)
 Line lead for: layered-codecs (#438, already done by run act-1a14de006be-1kmq), masks-mattes (#431), path-geometry (#430)
-Stage: 4 round 2 on dev 305975a7: critics done, 18 findings confirmed, three fix batches building (masks raster, masks model and export, path geometry); remaining 59 mutants re-running
+Stage: 3 final slice PG-z: P6a #743 merged (fb09fdc2); P6b rebased onto dev as ced9dc1 (+207/-2), gating
 Base: 0b5a641be359e283625fa5c798b8d02872fad344
-Next: P3 (measure) and P4 (boolean) open once their regates pass; PG-edit done (run 39289117245)
+Next: open P6b with `feature-done` once scripts/ci passes; then Anatomy round 3 on dev; Slice-Done for PG-shape and PG-z on the CI run the feature-done merge dispatches
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |

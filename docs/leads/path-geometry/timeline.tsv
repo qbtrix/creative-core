@@ -56,3 +56,5 @@ utc	stage	event	ref	note
 2026-10-19T23:08:12Z	P6	split; #743 (P6a perf) opened; P6b waits on it
 2026-10-19T23:12:14Z	heartbeat	final slices P6 and M7 running
 2026-10-19T23:30:19Z	heartbeat	final slices P6 and M7 running
+2026-10-19T23:40:16Z	resume	run act-1a15685b8d2-jkm8 on dev fb09fdc2 (P6a #743 merged)
+2026-10-19T23:40:16Z	P6b	rebased onto dev as ced9dc1; gating
