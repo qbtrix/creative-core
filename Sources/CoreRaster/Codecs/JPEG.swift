@@ -46,13 +46,13 @@ public enum JPEG {
     /// or 4:2:0; restart markers) as premultiplied linear Float32 pixels with
     /// alpha 1, not rotated. Throws what `info` throws, `damaged` for a missing
     /// table, a bad Huffman code or a short scan, and `tooLarge` past `maxSide`
-    /// or `PixelBuffer.maxPixels` before allocating. Until IC-7 a progressive
-    /// frame throws `unsupported`.
+    /// or `PixelBuffer.maxPixels` before allocating; a progressive scan out of
+    /// Annex G's order or limits is `damaged`.
     public static func read(_ data: Data) throws -> PixelBuffer {
-        var d = try JPEGDecoder(data)
+        var d = try JPEGDecoder(data), coded: [[Int]] = []
         while let body = try d.nextScan() {
             let scan = try d.scanHeader(body)
-            if d.frame?.progressive == true { throw CodecError.unsupported("JPEG.read of a progressive frame waits on IC-7") }
+            if d.frame?.progressive == true { try d.progressiveScan(scan, d.entropy(), &coded); continue }
             try d.baselineScan(scan, d.entropy())
         }
         guard !d.coefficients.isEmpty else { throw CodecError.damaged("no scan") }
@@ -200,9 +200,11 @@ struct JPEGDecoder {
         if coefficients.isEmpty {
             // Sides are at most maxSide, so the product cannot overflow.
             guard f.width * f.height <= PixelBuffer.maxPixels else { throw CodecError.tooLarge("\(f.width)x\(f.height) pixels") }
-            // A sequential block takes at least a DC code and an EOB, two bits, so the bytes left bound the blocks.
+            // A sequential block takes at least a DC code and an EOB, two bits, so the bytes left bound the blocks. A
+            // progressive first scan is a DC first scan (G.1.1.1.1) of a component, a code of 1 bit or more per block,
+            // and with factors 1...4 no component has over 16 times another's blocks: 3 x 16 x 8 = 384 blocks a byte.
             let coded = f.components.reduce(0) { $0 + $1.blocksX * $1.blocksY }
-            guard f.progressive || coded <= 4 * (bytes.count - at) else { throw CodecError.damaged("\(coded) blocks in too few bytes") }
+            guard coded <= (f.progressive ? 384 : 4) * (bytes.count - at) else { throw CodecError.damaged("\(coded) blocks in too few bytes") }
             coefficients = f.components.map { [Int32](repeating: 0, count: $0.stride * $0.rows * 64) }
         }
         return JPEGScan(parts: parts, ss: ss, se: se, ah: a >> 4, al: a & 15)

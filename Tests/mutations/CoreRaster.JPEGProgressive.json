@@ -1,0 +1,5 @@
+[
+  {"note": "successive approximation AC refinement skipped, so the low bits and the new ±1s are lost, caught by JPEGReadTests.acRefinement", "file": "Sources/CoreRaster/Codecs/JPEGProgressive.swift", "anchor": "default: try bits.acRefine(table, scan, &eobrun, &store, base)", "replacement": "default: break", "filter": "JPEGReadTests"},
+  {"note": "the DC refinement bit is read but not OR'd in, so DC loses its low bit, caught by JPEGReadTests.progressiveMatchesBaseline", "file": "Sources/CoreRaster/Codecs/JPEGProgressive.swift", "anchor": "store[base] |= bits.bits(1) << scan.al; return", "replacement": "_ = bits.bits(1); return", "filter": "JPEGReadTests"},
+  {"note": "an AC first scan's EOBRUN is one too many, so the block after an EOB is skipped, caught by JPEGReadTests.progressiveMatchesBaseline", "file": "Sources/CoreRaster/Codecs/JPEGProgressive.swift", "anchor": "eobrun = (1 << r) - 1 + Int(bits(r)); return", "replacement": "eobrun = (1 << r) + Int(bits(r)); return", "filter": "JPEGReadTests"}
+]
