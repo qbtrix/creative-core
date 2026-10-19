@@ -3,9 +3,9 @@
 Issue: #562 · Packet: docs/blueprints/core/features/image-codecs.md
 Run: act-1a1543c8a34-t9zw (previous act-1a150bfbcf7-sfwy / act-1a1511a1174-tlch) · Started: 2026-10-18T22:40Z
 Line lead for: image-codecs (#562), preview-cache (#440, already done), vector-import (#439, VI-z left)
-Stage: 4 round 6 (IC-z, AC-z, FX-z) on 88ed878e
+Stage: 4 round 6 done; wave C: IC-10 feature-done PR (with r6 minors)
 Base: 9385de9 (wave 4)
-Next: round-6 gate + critics on IC-z; then IC-10 feature-done
+Next: IC-10 PR: waves.md built, codecs.json final, r6 F1-F3, encode-time gap
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
