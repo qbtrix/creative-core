@@ -10,7 +10,11 @@ import FoundationEssentials
 import Foundation
 #endif
 
-/// Sets text `textIndex`'s paragraph style; nil clears it.
+/// Sets text `textIndex`'s paragraph style; nil clears it. Through
+/// `CommandEngine.perform`, a value outside the format's range (lineHeight
+/// 0.5...4, boxWidth > 0) throws `CommandError.invalidDocument` naming the
+/// field; a locked layer throws `layerLocked` and a missing text
+/// `shapeNotFound`. Calling `execute` directly checks none of the values.
 public struct SetParagraphStyle: LayerParamsCommand {
     public static let id = "text.setParagraph"
     public var label: String { "Set Paragraph Style" }
@@ -51,7 +55,11 @@ public struct SetParagraphStyle: LayerParamsCommand {
     }
 }
 
-/// Sets the path text `textIndex` follows; nil puts it back on a straight baseline.
+/// Sets the path text `textIndex` follows; nil puts it back on a straight
+/// baseline. Through `CommandEngine.perform`, a startOffset outside 0...1
+/// throws `CommandError.invalidDocument` naming the field; a locked layer
+/// throws `layerLocked` and a missing text `shapeNotFound`. Calling `execute`
+/// directly checks none of the values.
 public struct SetTextOnPath: LayerParamsCommand {
     public static let id = "text.setOnPath"
     public var label: String { "Set Text on Path" }
