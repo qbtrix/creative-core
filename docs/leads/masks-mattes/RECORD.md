@@ -30,7 +30,7 @@ Next: M3 (CPU composite) and M6 (exporters) building stacked; rebase and open on
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
 |---|---|---|---|---|---|---|---|---|
 | 1 | a658945b | builders' gates | per plan, all caught | 39279766862 | correctness, robustness, reuse, tests+mutation, first-use clarity | 0 blockers, 5 should-fix, 7 nits (across both features) | lead/masks-mattes-r1-b1 | no |
-| 2 | 305975a7 | CI: PASS | 136/195, 59 re-running after an OOM kill | | first-use clarity, contract, undo, robustness, tests+mutation | 18 (8 major, 10 minor; 1 nit skipped) across both features | lead/masks-mattes-r2-b1, lead/masks-mattes-r2-b2, lead/path-geometry-r2-b1 | no |
+| 2 | 305975a7 | CI: PASS | 195/195 (136 + 59 re-run after an OOM kill) | | first-use clarity, contract, undo, robustness, tests+mutation | 18 (8 major, 10 minor; 1 nit skipped) across both features | lead/masks-mattes-r2-b1, lead/masks-mattes-r2-b2, lead/path-geometry-r2-b1 | no |
 
 - Round-1 masks fixes: PR #730 (lead/masks-mattes-r1-b1), merged 17:34.
 - Round-1 masks raster fix: PR #738 (lead/masks-mattes-r1-b2), merged 18:24 (305975a7).
