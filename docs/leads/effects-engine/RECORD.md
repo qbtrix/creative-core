@@ -2,9 +2,9 @@
 
 Issue: #433 · Packet: docs/blueprints/core/features/effects-engine.md
 Run: act-1a1543c8a34-t9zw (previous act-1a150bfbcf7-sfwy / act-1a1511a1174-tlch) · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
-Stage: 4 round 5 fixes r5-b1 building (run act-1a1543c8a34-t9zw, dev 0b5a641; old wf_a0fba459-99d pushed nothing). FX-alpha at its round cap; FX-cpu 3; FX-z 1
+Stage: 4 round 6 (IC-z, AC-z, FX-z) on 88ed878e
 Base: 4feaaf9fac3cc050901f8b459a0908515a927f54
-Next: r5-b1 PR merges; round 6 on FX-z; FX-10 (feature-done); Belt-Slice-Done FX-z; Mac-Finish-Wanted FX-z
+Next: round-6 gate + critics on FX-z; then FX-10 feature-done
 
 Line lead for #434, #433 and #432 (rule 19); one wave plan across the three
 features, bookkeeping per feature. Packet v3 (has a Slices table).
