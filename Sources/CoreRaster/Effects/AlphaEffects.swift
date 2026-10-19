@@ -18,16 +18,20 @@ extension PixelBuffer {
     static let maxStrokeWidth = 1_000.0
 
     /// This buffer with a `width`-pixel stroke of premultiplied `color` at
-    /// `position`. Width 0 returns the buffer unchanged. Throws
-    /// `RasterError.invalid` for a width that is not finite or not in
-    /// 0...1,000, a colour that is not finite, or a result that overflows.
+    /// `position` on the layer's edge, the boundary of its alpha >= 0.5 set:
+    /// `.outside` and `.inside` are `width` wide on one side, `.center` is
+    /// `width` wide in total, `width` / 2 each side (see `StrokePosition`).
+    /// Width 0 returns the buffer unchanged. Throws `RasterError.invalid` for
+    /// a width that is not finite or not in 0...1,000, a colour that is not
+    /// finite, a buffer too large to pad for the effect (its one-pixel
+    /// padded copy passes `maxPixels`), or a result that overflows.
     public func stroked(color: RGBA, width strokeWidth: Double, position: StrokePosition) throws -> PixelBuffer {
         guard strokeWidth.isFinite, strokeWidth >= 0, strokeWidth <= Self.maxStrokeWidth else {
             throw RasterError.invalid("stroke width \(strokeWidth): must be finite and in 0...\(Int(Self.maxStrokeWidth))")
         }
         guard color.isFinite else { throw RasterError.invalid("stroke color \(color): must be finite") }
         guard strokeWidth > 0 else { return self }
-        let distance = try edgeDistances()
+        let distance = try edgeDistances(cause: "stroke width \(strokeWidth)")
         let src = components, c = Self.channels
         var out = src
         let paint = [color.r, color.g, color.b, color.a]
@@ -61,12 +65,28 @@ extension PixelBuffer {
         return Float(t * t * (3 - 2 * t))
     }
 
+    /// The size of this buffer padded by `pad` pixels a side, the work buffer
+    /// of the effect `cause` names (e.g. "glow radius 1000.0"). Throws
+    /// `RasterError.invalid` naming the effect, the padded size and the fix
+    /// when the padded size passes `maxPixels`; `remedy` is what to reduce
+    /// besides the buffer ("radius", or nil when the padding is fixed).
+    static func paddedWorkSize(width: Int, height: Int, pad: Int, cause: String,
+                               remedy: String?) throws -> (width: Int, height: Int) {
+        let pw = width + 2 * pad, ph = height + 2 * pad
+        do { _ = try validatedSize(width: pw, height: ph) } catch {
+            let fix = remedy.map { "the \($0) or the buffer" } ?? "the buffer"
+            throw RasterError.invalid("\(cause) on \(width)x\(height): padded work buffer \(pw)x\(ph) "
+                + "exceeds \(maxPixels) pixels; reduce \(fix)")
+        }
+        return (pw, ph)
+    }
+
     /// Every pixel's distance to the anti-aliased alpha edge (+infinity when
     /// there is no edge), worked on a copy padded by one transparent pixel so
-    /// a shape touching the border has an edge there.
-    func edgeDistances() throws -> [Double] {
-        let pw = width + 2, ph = height + 2
-        _ = try Self.validatedSize(width: pw, height: ph)
+    /// a shape touching the border has an edge there. `cause` names the
+    /// effect in the error when that copy is too large.
+    func edgeDistances(cause: String) throws -> [Double] {
+        let (pw, ph) = try Self.paddedWorkSize(width: width, height: height, pad: 1, cause: cause, remedy: nil)
         let src = components, c = Self.channels
         var alpha = [Double](repeating: 0, count: pw * ph)
         for y in 0..<height {

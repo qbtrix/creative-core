@@ -4,8 +4,9 @@
 // shadow never changes an opaque pixel; intensity 0 and a clear shadow are
 // identity; intensity scales the glow; the glow reaches its radius; an offset
 // pulls in blur past the edge; bad inputs throw naming the field, a huge offset
-// reads as off the canvas, and seeded fuzz never crashes.
-import CoreRaster
+// reads as off the canvas, a buffer too large to pad names the effect, and
+// seeded fuzz never crashes.
+@testable import CoreRaster
 import Testing
 
 @Suite struct AlphaEffectLightTests {
@@ -155,6 +156,30 @@ import Testing
         let bad = RGBA(r: .nan, g: 0, b: 0, a: 1)
         #expect(throws: RasterError.self) { try disc.glowing(color: bad, radius: 2, intensity: 1, inner: false) }
         #expect(throws: RasterError.self) { try disc.shadowed(color: bad, dx: 0, dy: 0, blur: 2, inner: true) }
+    }
+
+    /// A valid buffer whose padded work copy passes `maxPixels` throws naming
+    /// the effect, its parameter, the padded size and the fix, not a size the
+    /// caller never passed.
+    @Test func tooLargeToPadNamesTheEffect() throws {
+        // 132,000 x 1 is small, but a 1,000 px blur and offset pad it 1,002 px a side.
+        let strip = try PixelBuffer(width: 132_000, height: 1)
+        #expect(throws: RasterError.invalid("shadow blur 1000.0 at offset (1000.0, 0.0) on 132000x1: padded work "
+            + "buffer 134004x2005 exceeds 268435456 pixels; reduce the blur, the offset or the buffer")) {
+            try strip.shadowed(color: shade, dx: 1_000, dy: 0, blur: 1_000, inner: false)
+        }
+        // A glow pads 2 px a side, a stroke 1: at the largest square buffer both pass the limit.
+        let side = 16_384
+        #expect(throws: RasterError.invalid("glow radius 1000.0 on 16384x16384: padded work buffer 16388x16388 "
+            + "exceeds 268435456 pixels; reduce the radius or the buffer")) {
+            try PixelBuffer.paddedWorkSize(width: side, height: side, pad: 2, cause: "glow radius 1000.0", remedy: "radius")
+        }
+        #expect(throws: RasterError.invalid("stroke width 4.0 on 16384x16384: padded work buffer 16386x16386 "
+            + "exceeds 268435456 pixels; reduce the buffer")) {
+            try PixelBuffer.paddedWorkSize(width: side, height: side, pad: 1, cause: "stroke width 4.0", remedy: nil)
+        }
+        let fits = try PixelBuffer.paddedWorkSize(width: 100, height: 50, pad: 2, cause: "glow", remedy: "radius")
+        #expect(fits.width == 104 && fits.height == 54)
     }
 
     @Test func hugeOffsetFallsOffTheCanvas() throws {
