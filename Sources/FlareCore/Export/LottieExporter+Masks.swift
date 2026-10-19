@@ -1,7 +1,7 @@
 // LottieExporter+Masks.swift: layer masks and track mattes (lottie-spec Mask, tt, td).
 //
-// Masks are `masksProperties` (mode a, s, i, f; inv; o times 100; one closed
-// path; x, the spec's expansion, 0) with `hasMask`. Lottie masks have no
+// Masks are `masksProperties` (mode a, s, i, f; inv; o times 100; one path,
+// written closed since an open mask subpath is implicitly closed; x, the spec's expansion, 0) with `hasMask`. Lottie masks have no
 // feather, so a feathered mask throws. A matted layer gets `tt` 1...4 and its
 // source sits directly above with `td: 1`: a hidden source already there and
 // used once is marked in place (unhidden), else a copy numbered after the
@@ -53,7 +53,8 @@ struct LottieMask: Encodable, Sendable {
         let opacity = try LottieExporter.finite(mask.opacity)
         guard try LottieExporter.finite(mask.feather) == 0 else { throw LottieExportError.unsupported("mask feather") }
         let paths = try LottieExporter.beziers(mask.path)
-        guard paths.count == 1, let path = paths.first else { throw LottieExportError.unsupported("mask path") }
+        guard paths.count == 1, var path = paths.first else { throw LottieExportError.unsupported("mask path") }
+        path.c = true // an open mask subpath is implicitly closed
         inv = mask.inverted
         mode = [.add: "a", .subtract: "s", .intersect: "i", .difference: "f"][mask.mode] ?? "a"
         o = LottieStatic(min(max(opacity, 0), 1) * 100)

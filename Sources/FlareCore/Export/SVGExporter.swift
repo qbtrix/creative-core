@@ -50,8 +50,11 @@ public enum SVGExporter {
     /// app's measured advances so the SVG wraps and justifies as the screen does.
     ///
     /// Throws `SVGExportError` (`nonFiniteValue`, `unresolvedSymbol`,
-    /// `sceneTooLarge`, or `unsupported("textPath")` for a visible layer with
-    /// type on a path), or `ModelError.invalidText` when the layout refuses a
+    /// `sceneTooLarge`, or `unsupported` with one of these reasons:
+    /// "textPath" for a visible layer with type on a path, "mask difference"
+    /// for a difference mask, "matte source" for a track matte whose source is
+    /// not in the same layer list, "nested matte" for a matte source that has
+    /// a matte of its own), or `ModelError.invalidText` when the layout refuses a
     /// text shape: a paragraph value out of range, metrics that do not match
     /// its runs, or more than `TextLayout.maxGraphemes` graphemes.
     public static func export(scene: Scene, frame: Double, symbols: [Symbol] = [],

@@ -124,7 +124,10 @@ public struct RenameSymbol: Command {
 /// Moves layers of a scene into a new symbol and puts one layer holding an
 /// instance of it where the topmost moved layer was. The symbol keeps the
 /// layers in scene order and takes the scene's duration. The new layer takes
-/// the first moved layer's id, so layer ids stay unique.
+/// the first moved layer's id, so layer ids stay unique. A track matte may not
+/// cross the symbol's edge: when a moved layer's matte source stays in the
+/// scene, or a staying layer's source moves, it throws `invalidDocument`
+/// before any change.
 public struct ConvertToSymbol: Command {
     public static let id = "symbol.convert"
     public var label: String { "Convert to Symbol" }
@@ -156,6 +159,11 @@ public struct ConvertToSymbol: Command {
         }
         guard !document.symbols.contains(where: { $0.id == symbolID }) else {
             throw CommandError.duplicateID(symbolID)
+        }
+        for layer in scene.layers {
+            guard let source = layer.matte?.sourceLayerID, seen.contains(layer.id) != seen.contains(source) else { continue }
+            let side = seen.contains(source) ? "would move into" : "would stay out of"
+            throw CommandError.invalidDocument("matte source \(source) of \(layer.id) \(side) symbol \(symbolID)")
         }
         let moved = scene.layers.filter { seen.contains($0.id) }
         guard let at = scene.layers.firstIndex(where: { seen.contains($0.id) }), let first = moved.first else {

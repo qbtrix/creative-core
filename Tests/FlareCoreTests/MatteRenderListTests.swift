@@ -98,6 +98,27 @@ import Testing
         #expect(list.items.first?.clips.map(\.feather) == [40])
     }
 
+    /// A 1e160 scale overflows the determinant; the feather still scales by it, and a zero feather stays 0.
+    @Test func featherSurvivesHugeScale() {
+        let face = Layer(id: "face", name: "Face", shapes: [Shape(points: [Point(x: 0, y: 0), Point(x: 4, y: 0)])],
+                         masks: [LayerMask(path: Self.square(0, 4)), LayerMask(path: Self.square(0, 4), feather: 1)])
+        let host = Layer(id: "host", name: "Host",
+                         instances: [Instance(symbolID: "badge", transform: Transform(scaleX: 1e160, scaleY: 1e160))])
+        let list = Scene(id: "s", name: "S", layers: [host]).renderList(at: 0, symbols: [Symbol(id: "badge", name: "Badge", layers: [face])])
+        #expect(list.items.first?.clips.map(\.feather) == [0, 1e160])
+    }
+
+    /// One matte level, as the exporters: a hidden matte source's own matte is not resolved, so the source's
+    /// items carry no matte and the layer behind it is not walked.
+    @Test func matteOnHiddenSourceIsNotResolved() throws {
+        var doc = try Self.fixture()
+        doc.scenes[0].layers[2].matte = TrackMatte(sourceLayerID: "deep")
+        doc.scenes[0].layers.append(Layer(id: "deep", name: "Deep", shapes: doc.scenes[0].layers[2].shapes, isVisible: false))
+        let list = Self.list(doc)
+        #expect(list.matteItems.map(\.address.layerID) == ["lumen"] && list.matteItems.map(\.matte) == [nil])
+        #expect(list.items.map(\.matte) == [nil, MatteLink(sourceItems: 0..<1, inMatteItems: true, kind: .luma)])
+    }
+
     /// A matte on a host layer reaches the items its instances expand; a matte nearer the item wins.
     @Test func hostMatteReachesInstanceItems() {
         let shape = Shape(points: [Point(x: 0, y: 0), Point(x: 1, y: 1)])

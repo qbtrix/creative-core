@@ -4,8 +4,9 @@
 // is one <clipPath> when every later mask only removes; the rest paint one
 // luminance <mask>, starting black when the first adds and white otherwise:
 // add paints white, subtract black, intersect black outside it, inverted swaps
-// the path and its outside (even-odd). Feather is a Gaussian blur of feather / 2
-// over the path's box widened by three deviations. Difference throws. A track
+// the path and its outside (even-odd). Feather is the blur radius: a Gaussian
+// blur of sigma feather / 3, the radius `Mask.feathered(radius:)` takes, over
+// the path's box widened by three deviations. Difference throws. A track
 // matte wraps the <g> in a <g mask> holding the source (ids as data-id), alpha
 // or luminance; the inverted kinds paint white, then the source through its
 // alpha or by difference blend. Defs share the exporter's id counter.
@@ -90,7 +91,7 @@ extension SVGExporter {
         if mask.opacity != 1 { out += " fill-opacity=\"\(try number(mask.opacity))\"" }
         if outside { out += " fill-rule=\"evenodd\"" }
         if mask.feather != 0 {
-            let sigma = mask.feather / 2
+            let sigma = mask.feather / 3
             let filter = nextID("f", &ids)
             var region = try regionAttributes()
             if !outside, let b = mask.path.bounds {

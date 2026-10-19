@@ -57,7 +57,10 @@ public struct RenderList: Sendable, Hashable {
     /// down the tree: what the stage draws and hit testing reads.
     public var items: [RenderItem]
     /// The items of hidden layers that a visible layer uses as a track
-    /// matte: read only through `MatteLink`, never drawn or hit.
+    /// matte: read only through `MatteLink`, never drawn or hit. Mattes are
+    /// one level deep, as in the exporters: a matte on a hidden matte source
+    /// is not resolved, so its items here have `matte` nil (they render
+    /// unmatted) and export refuses it as "nested matte".
     public var matteItems: [RenderItem] = []
     /// True when instance expansion stopped at `maxExpandedPoints`: the
     /// instances past the budget are `.unresolved` nodes with no items, even
@@ -124,7 +127,8 @@ public struct RenderItem: Sendable, Hashable {
     /// The masks of its layer and every host layer above it, in scene
     /// space, outermost host first and each layer's masks in order.
     public var clips: [ClippedPath] = []
-    /// The track matte of its nearest matted layer (its own or a host's).
+    /// The track matte of its nearest matted layer (its own or a host's);
+    /// always nil on an item in `matteItems`: one matte level only.
     public var matte: MatteLink?
     /// Whether some visible layer of its list uses its layer as a matte.
     public var isMatteSource = false
@@ -132,13 +136,16 @@ public struct RenderItem: Sendable, Hashable {
 
 /// One layer mask on the way down to an item, in scene space.
 public struct ClippedPath: Sendable, Hashable {
-    /// The mask's path through its layer's scene matrix.
+    /// The mask's path through its layer's scene matrix. An open subpath is
+    /// implicitly closed.
     public var path: Path
     /// How it combines with the masks before it on the same layer.
     public var mode: MaskMode
-    /// Edge softness in scene units: the mask's own feather times the
-    /// uniform scale of its layer's scene matrix, sqrt(|det|), the same
-    /// matrix `path` went through, so a feather of 10 under a 4x instance is 40.
+    /// The feather radius in scene units: renderers blur with sigma =
+    /// feather / 3, the same radius `Mask.feathered(radius:)` takes. It is the
+    /// mask's own feather times the uniform scale of its layer's scene matrix,
+    /// sqrt(|det|), the same matrix `path` went through, so a feather of 10
+    /// under a 4x instance is 40; a feather of 0 stays 0 under any matrix.
     public var feather: Double
     /// Mask strength, 0...1.
     public var opacity: Double
@@ -155,6 +162,7 @@ public struct ClippedPath: Sendable, Hashable {
 }
 
 /// An item's track matte: its source layer's items and what to read from them.
+/// One level only: a hidden source's own matte gets no link.
 public struct MatteLink: Sendable, Hashable {
     /// The source layer's items: positions in `RenderList.matteItems` when
     /// `inMatteItems` (a hidden source), else in `RenderList.items`.
@@ -206,6 +214,17 @@ public struct InstanceHost: Sendable, Hashable {
     public init(layerID: String, instanceIndex: Int) {
         self.layerID = layerID
         self.instanceIndex = instanceIndex
+    }
+}
+
+extension Matrix {
+    /// sqrt(|determinant|), the uniform scale of the linear part, without
+    /// overflow or underflow for finite entries: they are divided by the
+    /// largest first, so a 1e160 scale gives 1e160, not infinity.
+    var uniformScale: Double {
+        let k = Swift.max(abs(a), abs(b), abs(c), abs(d))
+        guard k > 0, k.isFinite else { return k }
+        return abs((a / k) * (d / k) - (b / k) * (c / k)).squareRoot() * k
     }
 }
 
@@ -288,7 +307,7 @@ extension RenderList {
                 let m = parent * t.matrix
                 let op = opacity * o
                 let lk = locked || layer.isLocked
-                let scale = abs(m.determinant).squareRoot()
+                let scale = m.uniformScale
                 let own = clips + layer.masks.map {
                     ClippedPath(path: $0.path.transformed(by: m), mode: $0.mode, feather: $0.feather * scale,
                                 opacity: $0.opacity, inverted: $0.inverted, depth: hosts.count)

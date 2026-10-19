@@ -57,6 +57,15 @@ public enum LottieExporter {
     public static let maxBakedKeys = 10_000
 
     /// `symbols` are the document's symbols, which the scene's instances name.
+    ///
+    /// Throws `LottieExportError`: `nonFiniteValue`, `unresolvedSymbol`, or
+    /// `unsupported` with one of these reasons: "text" for a layer with text,
+    /// "scale track" past `maxBakedKeys`, "shape track" for path keys with
+    /// different subpath counts, "mask path" for a mask that is not exactly
+    /// one subpath, "mask feather" for a feathered mask, "mask in symbol" for a
+    /// symbol layer with a mask or matte, "matte source" for a track matte whose
+    /// source is not in the scene, "nested matte" for a matte source that has a
+    /// matte of its own.
     public static func export(scene: Scene, symbols: [Symbol] = []) throws -> Data {
         let layers = try layers(of: scene, symbols: symbols)
         let root = LottieRoot(
