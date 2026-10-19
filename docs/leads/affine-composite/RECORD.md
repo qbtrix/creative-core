@@ -2,7 +2,7 @@
 
 Issue: #434 · Packet: docs/blueprints/core/features/affine-composite.md
 Run: act-1a150bfbcf7-sfwy · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
-Stage: 4 round 5 gate + mutation on 64bd637 (all r4 fixes and AC-8 merged; AC-a, AC-geo at round cap)
+Stage: 4 round 5 panel running (wf_8b368d65-964) on 64bd637: gate PASS (rerun after OOM kill), mutants 48/48
 Base: 4feaaf9fac3cc050901f8b459a0908515a927f54
 Next: round 5 panel; then AC-9 (feature-done), Belt-Slice-Done AC-z, Mac-Finish-Wanted AC-z
 
