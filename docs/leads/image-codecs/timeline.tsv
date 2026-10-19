@@ -30,3 +30,5 @@ utc	stage	event	ref	note
 2026-10-19T06:21:24Z	stage-3	pr-merged	#636	IC-5 merged 2e3ac14; IC-png slice built
 2026-10-19T06:21:24Z	stage-4	fix-prs	#645 #648 #651	IC-jpeg r1 fixes opened, all CI PASS; #645 merged
 2026-10-19T06:21:24Z	stage-4	round-start	IC-png r1	gate on c4baa59
+2026-10-19T06:27:43Z	stage-4	gate	IC-png r1	c4baa59 CI PASS (1789 tests); validate 792 OK; Inflate 3/3 PNG 3/3 PNGWrite 2/2
+2026-10-19T06:27:43Z	stage-4	panel	wf_e82f2b46-79e	IC-png r1 lenses clarity contract robustness tests

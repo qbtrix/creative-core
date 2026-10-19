@@ -3,7 +3,7 @@
 Issue: #562 · Packet: docs/blueprints/core/features/image-codecs.md
 Run: act-1a1511a1174-tlch · Started: 2026-10-18T22:40Z
 Line lead for: image-codecs (#562), preview-cache (#440, already done), vector-import (#439, VI-z left)
-Stage: 4 round 1 (IC-png) gate running on c4baa59; IC-jpeg r1 fixes #648 #651 waiting on lane (#645 merged)
+Stage: 4 round 1 (IC-png) panel wf_e82f2b46-79e on c4baa59; IC-jpeg r1 fixes #648 #651 waiting on lane (#645 merged)
 Base: 9385de9 (wave 4)
 Next: IC-png round 1 panel; IC-jpeg round 2 once #648 and #651 merge
 
