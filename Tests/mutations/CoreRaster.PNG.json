@@ -1,0 +1,23 @@
+[
+  {
+    "note": "the Paeth predictor breaks ties with strict comparisons, so a tie no longer goes to a then b, caught by PNGReadTests.paethTies",
+    "file": "Sources/CoreRaster/Codecs/PNGRead.swift",
+    "anchor": "return pa <= pb && pa <= pc ? a : (pb <= pc ? b : c)",
+    "replacement": "return pa < pb && pa < pc ? a : (pb < pc ? b : c)",
+    "filter": "PNGReadTests"
+  },
+  {
+    "note": "Adam7 pass 6 has its column and row offsets swapped, caught by PNGReadTests.adam7",
+    "file": "Sources/CoreRaster/Codecs/PNGRead.swift",
+    "anchor": "(1, 0, 2, 2)",
+    "replacement": "(0, 1, 2, 2)",
+    "filter": "PNGReadTests"
+  },
+  {
+    "note": "the sRGB transfer is skipped for samples up to 8 bits, caught by PNGReadTests.linearPixels",
+    "file": "Sources/CoreRaster/Codecs/PNGRead.swift",
+    "anchor": "PSD.linear[$0 * 255 / top]",
+    "replacement": "Float($0) / Float(top)",
+    "filter": "PNGReadTests"
+  }
+]

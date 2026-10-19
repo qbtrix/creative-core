@@ -1,6 +1,6 @@
 // PNG.swift: the Foundation-only PNG codec (W3C PNG specification, third
-// edition) and `PNGCodec`, the `PixelCodec` over it. Stubs until IC-4 (read)
-// and IC-5 (write), which keep these signatures. Invariants: sizes come from
+// edition) and `PNGCodec`, the `PixelCodec` over it; the reader is in
+// PNGRead.swift, write a stub until IC-5. Invariants: sizes come from
 // IHDR and are checked against `maxSide` and `PixelBuffer.maxPixels` before
 // any pixel buffer is made, and inflate is capped at the bytes IHDR implies;
 // pixels are premultiplied linear Float32 both ways, files are sRGB.
@@ -32,9 +32,9 @@ public enum PNG {
     /// The IHDR fields of `data`, with no image data decoded. Throws
     /// `notThisFormat` without the signature; `damaged` when IHDR is not first,
     /// not 13 bytes, fails its CRC or pairs a bad depth and colour type;
-    /// `tooLarge` for a side over `maxSide`. Until IC-4 it throws `unsupported`.
+    /// `tooLarge` for a side over `maxSide`.
     public static func info(_ data: Data) throws -> PNGInfo {
-        throw CodecError.unsupported("PNG.info waits on IC-4")
+        try header(data).1
     }
 
     /// `data` decoded (every colour type, depths 1 to 16, Adam7) as
@@ -42,10 +42,10 @@ public enum PNG {
     /// `DisplayBytes`' rules, gAMA, cHRM and iCCP ignored, alpha from tRNS or 1.
     /// Throws what `info` throws, `damaged` for a bad chunk CRC, a type-3 image
     /// without PLTE, bad IDAT data or a bad filter type, and `tooLarge` past
-    /// `maxSide` or `PixelBuffer.maxPixels` before allocating. Until IC-4 it
-    /// throws `unsupported`.
+    /// `maxSide` or `PixelBuffer.maxPixels` before allocating; `unsupported`
+    /// for an unknown critical chunk.
     public static func read(_ data: Data) throws -> PixelBuffer {
-        throw CodecError.unsupported("PNG.read waits on IC-4")
+        try decode(data)
     }
 
     /// `buffer` as an sRGB RGBA PNG with `bitsPerChannel` (8 or 16) bits per
@@ -69,10 +69,9 @@ public struct PNGCodec: PixelCodec {
     public init(level: Int = 6) { self.level = level }
 
     /// `data` through `PNG.read`. Throws `CodecError.pixelCodec` naming what
-    /// `PNG.read` refused, as `PixelCodec` asks. Until IC-4 it throws
-    /// `unsupported`.
+    /// `PNG.read` refused, as `PixelCodec` asks.
     public func decodePNG(_ data: Data) throws -> PixelBuffer {
-        throw CodecError.unsupported("PNGCodec.decodePNG waits on IC-4")
+        do { return try PNG.read(data) } catch { throw CodecError.pixelCodec("PNG: \(error)") }
     }
 
     /// `buffer` through `PNG.write` at `bitsPerChannel` (8 or 16) and this

@@ -2,7 +2,7 @@
 // PNGs built byte by byte from the W3C PNG specification (PNGFixtures):
 // every colour type and depth, the five filters and the Paeth ties, Adam7,
 // tRNS, 16-bit big-endian precision, the sRGB transfer undone, and damaged
-// or oversized files refused before decoding. Disabled until IC-4.
+// or oversized files refused before decoding.
 @testable import CoreRaster
 import CoreColor
 import Testing
@@ -28,13 +28,13 @@ import Foundation
         return F.png(pixels, depth: depth, colorType: colorType, interlaced: interlaced, extra: plte + extra)
     }
 
-    @Test(.disabled("waits on IC-4")) func infoReadsIHDR() throws {
+    @Test func infoReadsIHDR() throws {
         let info = try PNG.info(file(F.ramp(5, 3, channels: 4, depth: 16), 6, 16, interlaced: true))
         #expect(info == PNGInfo(width: 5, height: 3, bitDepth: 16, colorType: 6, interlaced: true))
         #expect(try PNG.info(file(F.ramp(30_000, 1, channels: 1, depth: 1), 0, 1)).width == PNG.maxSide)
     }
 
-    @Test(.disabled("waits on IC-4")) func everyColorTypeAndDepth() throws {
+    @Test func everyColorTypeAndDepth() throws {
         for (colorType, depth) in Self.pairs {
             // Width 5 leaves pad bits at the end of each 1-, 2- and 4-bit row.
             let pixels = F.ramp(5, 3, channels: F.channels(colorType), depth: depth)
@@ -43,7 +43,7 @@ import Foundation
         }
     }
 
-    @Test(.disabled("waits on IC-4")) func everyFilterUndone() throws {
+    @Test func everyFilterUndone() throws {
         let pixels = F.ramp(6, 5, channels: 3, depth: 8)
         for filter in 0...4 {
             let data = F.png(pixels, depth: 8, colorType: 2, filter: { ($0 + filter) % 5 })
@@ -53,15 +53,15 @@ import Foundation
 
     /// Paeth (9.4) prefers a, then b, then c on ties. Pixel (1, 1) has a 30, b 60, c 50: pa = pc = 10 < pb, so a.
     /// Pixel (3, 1) has a 60, b 30, c 50: pb = pc = 10 < pa, so b. Strict comparisons pick c for both.
-    @Test(.disabled("waits on IC-4")) func paethTies() throws {
+    @Test func paethTies() throws {
         let pixels = [[50, 60, 50, 30], [30, 100, 60, 90]].map { $0.map { [$0] } }
         #expect(F.paeth(30, 60, 50) == 30 && F.paeth(60, 30, 50) == 30)
         let read = try PNG.read(F.png(pixels, depth: 8, colorType: 0, filter: { $0 == 1 ? 4 : 0 }))
         #expect(try F.maxDifference(read, expected(pixels, 0, 8)) <= 1e-6)
     }
 
-    @Test(.disabled("waits on IC-4")) func adam7() throws {
-        // 9 x 9 fills every pass and starts a second block; 5 x 3 leaves passes 2 and 3 empty (no scanlines, 8.2).
+    @Test func adam7() throws {
+        // 9 x 9 fills every pass and starts a second block; 5 x 3 leaves pass 3 empty (no scanlines, 8.2); pass 2 holds pixel (4, 0).
         for (width, height, colorType, depth) in [(9, 9, 6, 8), (5, 3, 0, 1), (8, 8, 2, 16)] {
             let pixels = F.ramp(width, height, channels: F.channels(colorType), depth: depth)
             let interlaced = try PNG.read(file(pixels, colorType, depth, interlaced: true))
@@ -70,7 +70,7 @@ import Foundation
         }
     }
 
-    @Test(.disabled("waits on IC-4")) func paletteTRNSAlpha() throws {
+    @Test func paletteTRNSAlpha() throws {
         let pixels = [[0, 1, 2, 3]].map { $0.map { [$0] } }, alpha = [0, 128, 255]
         let read = try PNG.read(file(pixels, 3, 2, extra: [F.chunk("tRNS", alpha.map(UInt8.init))]))
         #expect(try F.maxDifference(read, expected(pixels, 3, 2, alpha: alpha)) <= 1e-6)
@@ -85,7 +85,7 @@ import Foundation
     }
 
     /// 16-bit samples are big-endian (7.1) and keep all 16 bits: 0x1234 and 0x1235 differ, 0x12 0x34 is not 0x3412.
-    @Test(.disabled("waits on IC-4")) func sixteenBitBigEndian() throws {
+    @Test func sixteenBitBigEndian() throws {
         let read = try PNG.read(F.png([[[0x1234], [0x1235], [0x3412]]], depth: 16, colorType: 0))
         let values = try (0..<3).map { try read.pixel(x: $0, y: 0).r }
         for (value, sample) in zip(values, [0x1234, 0x1235, 0x3412]) {
@@ -95,14 +95,14 @@ import Foundation
     }
 
     /// The sRGB transfer is undone and alpha premultiplied: encoded 128 is linear 0.21586 (IEC 61966-2-1), not 0.50196.
-    @Test(.disabled("waits on IC-4")) func linearPixels() throws {
+    @Test func linearPixels() throws {
         let read = try PNG.read(F.png([[[128, 128, 128, 255], [255, 128, 0, 128]]], depth: 8, colorType: 6))
         let grey = try read.pixel(x: 0, y: 0), half = try read.pixel(x: 1, y: 0)
         #expect(abs(grey.r - 0.215_861) <= 1e-5 && grey.r == grey.g && grey.g == grey.b && grey.a == 1)
         #expect(abs(half.a - 128 / 255) <= 1e-6 && abs(half.r - 128 / 255) <= 1e-5 && abs(half.g - 0.215_861 * 128 / 255) <= 1e-5 && half.b == 0)
     }
 
-    @Test(.disabled("waits on IC-4")) func ancillaryChunksAndSplitIDAT() throws {
+    @Test func ancillaryChunksAndSplitIDAT() throws {
         let pixels = F.ramp(7, 4, channels: 4, depth: 8)
         let gamma = F.chunk("gAMA", F.be32(100_000)), text = F.chunk("tEXt", Array("Comment\u{0}hi".utf8))
         let read = try PNG.read(F.png(pixels, depth: 8, colorType: 6, extra: [gamma, text], idats: 3))
@@ -110,7 +110,7 @@ import Foundation
         #expect(try PNGCodec().decodePNG(file(pixels, 6, 8)) == read)
     }
 
-    @Test(.disabled("waits on IC-4")) func damagedFilesThrow() throws {
+    @Test func damagedFilesThrow() throws {
         let good = [UInt8](F.png([[[1], [2]], [[3], [4]]], depth: 8, colorType: 0))
         let head = Array(good.prefix(8 + 25)), end = F.chunk("IEND", [])
         var badCRC = good, badIDATCRC = good
@@ -131,7 +131,7 @@ import Foundation
 
     /// Sizes come from IHDR and are refused before any pixel buffer or inflate: the IDATs here are far too short,
     /// so `tooLarge` (not `damaged`) shows the check came first. Extra inflated bytes past the size IHDR implies throw.
-    @Test(.disabled("waits on IC-4")) func refusesHuge() throws {
+    @Test func refusesHuge() throws {
         for (width, height) in [(PNG.maxSide + 1, 1), (1, PNG.maxSide + 1), (20_000, 20_000)] {
             let bytes = F.signature + F.chunk("IHDR", F.ihdr(width, height, depth: 8, colorType: 6)) + F.chunk("IDAT", F.stored([0])) + F.chunk("IEND", [])
             #expect(F.thrown { try PNG.read(Data(bytes)) } == "tooLarge", "\(width)x\(height)")
