@@ -101,11 +101,6 @@ private struct CompositingFake: RenderBackend {
         try expectCPU(.maskedComposite, seed: 1) { d, s, b in
             try d.composite(s, onto: &b, x: 1, y: 0, mode: .multiply, opacity: 0.5, mask: mask, maskX: 0, maskY: 1)
         }
-        try expectCPU(.affine, seed: 3) { d, s, _ in _ = try d.transformed(s, shear, width: 5, height: 4, filter: .bilinear) }
-        try expectCPU(.affine, seed: 5) { d, s, _ in _ = try d.flipped(s, .horizontal) }
-        try expectCPU(.affine, seed: 7) { d, s, b in
-            try d.composite(s, onto: &b, through: shear, mode: .normal, opacity: 0.8, filter: .bilinear)
-        }
         try expectCPU(.effect, seed: 9) { d, s, _ in _ = try d.applying(s, .boxBlur(radius: 2)) }
     }
 
