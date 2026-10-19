@@ -2,7 +2,7 @@
 
 Issue: #433 · Packet: docs/blueprints/core/features/effects-engine.md
 Run: act-1a150bfbcf7-sfwy · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
-Stage: 4 round 4 (gate and mutation on dev e9fa096, then the panel)
+Stage: 4 round 4 panel running on e9fa096 (gate PASS, 176/176 mutants)
 Base: 4feaaf9fac3cc050901f8b459a0908515a927f54
 Next: round 4 panel; then FX-9, FX-10 (FX-z), feature-done on the last PR
 
