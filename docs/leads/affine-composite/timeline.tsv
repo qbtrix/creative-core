@@ -72,3 +72,4 @@ utc	stage	event	ref	note
 2026-10-19T10:03:23Z	4	heartbeat	-	r4-b1..b3 fixers running gates (wf_f729ca1c-4f8)
 2026-10-19T10:24:22Z	4	heartbeat	-	r4-b1 #693 merged (3207e38); r4-b2, r4-b3 running
 2026-10-19T10:32:10Z	4	merged	#695	r4-b2 parity release + in-place composite tests (b94f827)
+2026-10-19T10:39:19Z	4	pr-open	#700	r4-b3 AC-8 walk + budgets (824c605), footer stripped
