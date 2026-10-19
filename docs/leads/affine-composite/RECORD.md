@@ -2,7 +2,7 @@
 
 Issue: #434 · Packet: docs/blueprints/core/features/affine-composite.md
 Run: act-1a150bfbcf7-sfwy · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
-Stage: 4 round 4 gate and mutation on dev 813d92d (r3 fixes all merged)
+Stage: 4 round 4 panel running on 813d92d (wf_9bfb2c20-426; gate PASS, affine plans 33/33)
 Base: 4feaaf9fac3cc050901f8b459a0908515a927f54
 Next: round 4 panel; then AC-8, AC-9 (AC-z), feature-done on the last PR
 
