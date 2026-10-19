@@ -67,6 +67,9 @@ import Foundation
             let interlaced = try PNG.read(file(pixels, colorType, depth, interlaced: true))
             #expect(try interlaced == PNG.read(file(pixels, colorType, depth)))
             #expect(try F.maxDifference(interlaced, expected(pixels, colorType, depth)) <= 1e-6, "\(width)x\(height)")
+            // Up, Average and Paeth on a pass's first row must see no prior row (8.2: each pass is its own image).
+            let filtered = F.png(pixels, depth: depth, colorType: colorType, interlaced: true, filter: { $0 % 5 })
+            #expect(try F.maxDifference(PNG.read(filtered), expected(pixels, colorType, depth)) <= 1e-6, "filtered \(width)x\(height)")
         }
     }
 
@@ -116,6 +119,8 @@ import Foundation
         var badCRC = good, badIDATCRC = good
         badCRC[32] ^= 0x01  // the last byte of IHDR's CRC (signature 8, then length, type, 13 bytes, CRC)
         badIDATCRC[good.count - 13] ^= 0x01  // the last byte of IDAT's CRC, before IEND's 12 bytes
+        var filterMethod1 = F.ihdr(1, 1, depth: 8, colorType: 0)
+        filterMethod1[11] = 1  // IHDR bytes 0-7 are the sides, then depth, colour type, compression, filter method
         let cases: [(String, [UInt8])] = [
             ("IHDR CRC", badCRC), ("IDAT CRC", badIDATCRC), ("truncated", Array(good.prefix(good.count - 30))),
             ("no IHDR", F.signature + F.chunk("IDAT", F.stored([0, 1])) + end),
@@ -123,24 +128,62 @@ import Foundation
             ("palette without PLTE", [UInt8](F.png([[[0]]], depth: 8, colorType: 3))),
             ("filter type 5", head + F.chunk("IDAT", F.stored([5, 1, 2, 0, 3, 4])) + end),
             ("IDAT too short", head + F.chunk("IDAT", F.stored([0, 1, 2, 0])) + end),
+            ("a second IHDR", [UInt8](F.png([[[1]]], depth: 8, colorType: 0, extra: [F.chunk("IHDR", F.ihdr(1, 1, depth: 8, colorType: 0))]))),
+            ("interlace 2", F.signature + F.chunk("IHDR", F.ihdr(1, 1, depth: 8, colorType: 0, interlace: 2)) + end),
+            ("filter method 1", F.signature + F.chunk("IHDR", filterMethod1) + end),
+            ("tRNS longer than PLTE", [UInt8](file([[[0]]], 3, 1, extra: [F.chunk("tRNS", [0, 0, 0])]))),
+            ("grey tRNS of 1 byte", [UInt8](file([[[7]]], 0, 8, extra: [F.chunk("tRNS", [7])]))),
         ]
         for (name, bytes) in cases { #expect(F.thrown { try PNG.read(Data(bytes)) } == "damaged", "\(name)") }
+        let zzzz = F.png([[[1]]], depth: 8, colorType: 0, extra: [F.chunk("ZZZZ", [])])
+        #expect(F.thrown { try PNG.read(zzzz) } == "unsupported", "an unknown critical chunk")
         #expect(F.thrown { try PNG.info(Data(good.dropFirst())) } == "notThisFormat")
         #expect(F.thrown { try PNGCodec().decodePNG(Data(badCRC)) } == "pixelCodec")
     }
 
+    /// The common broken files say they are PNG and what is missing, not a lower layer's offsets or "inflate:".
+    @Test func damagedMessagesNamePNG() throws {
+        let good = [UInt8](F.png([[[1], [2]], [[3], [4]]], depth: 8, colorType: 0))
+        let head = Array(good.prefix(8 + 25)), end = F.chunk("IEND", [])
+        let cases: [(String, [UInt8], String)] = [
+            ("IEND missing", Array(good.dropLast(12)), "IEND"),
+            ("no IDAT", head + end, "IDAT"),
+            ("bad zlib header", head + F.chunk("IDAT", [0x78, 0x02, 1, 2]) + end, "IDAT"),
+        ]
+        for (name, bytes, word) in cases {
+            let text = message { try PNG.read(Data(bytes)) }
+            #expect(F.thrown { try PNG.read(Data(bytes)) } == "damaged" && text.hasPrefix("PNG: ") && text.contains(word), "\(name): \(text)")
+        }
+    }
+
+    /// The text of the `CodecError` that `body` throws, or "" when it returns or throws something else.
+    func message(_ body: () throws -> Any) -> String {
+        do { _ = try body() } catch let error as CodecError {
+            switch error {
+            case .damaged(let t), .tooLarge(let t), .unsupported(let t): return t
+            default: return ""
+            }
+        } catch {}
+        return ""
+    }
+
     /// Sizes come from IHDR and are refused before any pixel buffer or inflate: the IDATs here are far too short,
-    /// so `tooLarge` (not `damaged`) shows the check came first. Extra inflated bytes past the size IHDR implies throw.
+    /// so `tooLarge` (not `damaged`) shows the check came first, and the message names the limit passed.
+    /// Extra inflated bytes past the size IHDR implies are `damaged`, refused once inflate reaches that size.
     @Test func refusesHuge() throws {
         for (width, height) in [(PNG.maxSide + 1, 1), (1, PNG.maxSide + 1), (20_000, 20_000)] {
             let bytes = F.signature + F.chunk("IHDR", F.ihdr(width, height, depth: 8, colorType: 6)) + F.chunk("IDAT", F.stored([0])) + F.chunk("IEND", [])
             #expect(F.thrown { try PNG.read(Data(bytes)) } == "tooLarge", "\(width)x\(height)")
+            let limit = width > PNG.maxSide || height > PNG.maxSide ? "sides are at most 30000" : "PixelBuffer.maxPixels"
+            #expect(message { try PNG.read(Data(bytes)) }.contains(limit), "\(width)x\(height)")
             let overSide = width > PNG.maxSide || height > PNG.maxSide  // info refuses a side; only read refuses the area
             #expect(F.thrown { try PNG.info(Data(bytes)) } == (overSide ? "tooLarge" : "returned"))
         }
         // 2 x 2 grey 8-bit implies 2 x (1 + 2) = 6 filtered bytes; a stream holding 1,006 must not decode.
         let bloated = F.signature + F.chunk("IHDR", F.ihdr(2, 2, depth: 8, colorType: 0))
             + F.chunk("IDAT", F.stored([0, 1, 2, 0, 3, 4] + [UInt8](repeating: 0, count: 1_000))) + F.chunk("IEND", [])
-        #expect(throws: CodecError.self) { try PNG.read(Data(bloated)) }
+        // Inflate stops at those 6 bytes (no decompression bomb), and the file is damaged, not over a size limit.
+        #expect(F.thrown { try PNG.read(Data(bloated)) } == "damaged")
+        #expect(message { try PNG.read(Data(bloated)) } == "PNG: image data inflates past the 6 bytes IHDR implies")
     }
 }

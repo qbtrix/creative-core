@@ -31,19 +31,24 @@ public enum PNG {
 
     /// The IHDR fields of `data`, with no image data decoded. Throws
     /// `notThisFormat` without the signature; `damaged` when IHDR is not first,
-    /// not 13 bytes, fails its CRC or pairs a bad depth and colour type;
-    /// `tooLarge` for a side over `maxSide`.
+    /// not 13 bytes, fails its CRC, has a zero width or height, pairs a bad
+    /// depth and colour type, or names a compression or filter method other
+    /// than 0 or an interlace method past 1; `tooLarge` for a side over `maxSide`.
     public static func info(_ data: Data) throws -> PNGInfo {
         try header(data).1
     }
 
     /// `data` decoded (every colour type, depths 1 to 16, Adam7) as
     /// premultiplied linear Float32 pixels: the sRGB transfer undone through
-    /// `DisplayBytes`' rules, gAMA, cHRM and iCCP ignored, alpha from tRNS or 1.
-    /// Throws what `info` throws, `damaged` for a bad chunk CRC, a type-3 image
-    /// without PLTE, bad IDAT data or a bad filter type, and `tooLarge` past
-    /// `maxSide` or `PixelBuffer.maxPixels` before allocating; `unsupported`
-    /// for an unknown critical chunk.
+    /// `DisplayBytes`' rules, gAMA, cHRM and iCCP ignored; alpha from the alpha
+    /// sample (colour types 4 and 6), from tRNS (types 0, 2 and 3), else 1.
+    /// Throws what `info` throws; `damaged` for a bad chunk CRC, a second IHDR,
+    /// a file that ends before IEND, no IDAT, a type-3 image without a valid
+    /// PLTE, a tRNS longer than PLTE or of the wrong length for grey or RGB, a
+    /// palette index past PLTE, IDAT data that does not inflate to exactly the
+    /// bytes IHDR implies, or a bad filter type; `tooLarge` past `maxSide` or
+    /// `PixelBuffer.maxPixels` before allocating; `unsupported` for an unknown
+    /// critical chunk.
     public static func read(_ data: Data) throws -> PixelBuffer {
         try decode(data)
     }
@@ -55,7 +60,8 @@ public struct PNGCodec: PixelCodec {
     /// The `Deflate` level used when writing, 0...9.
     let level: Int
 
-    /// A codec that writes at `level` (0 stores, 9 compresses hardest).
+    /// A codec that writes at `level` (0 stores, 9 compresses hardest); levels
+    /// outside 0...9 act as the nearest end, as `Deflate.zlib` does.
     public init(level: Int = 6) { self.level = level }
 
     /// `data` through `PNG.read`. Throws `CodecError.pixelCodec` naming what

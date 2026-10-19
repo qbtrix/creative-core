@@ -37,7 +37,7 @@ extension PNG {
         let depth = Int(try r.u8()), colorType = Int(try r.u8())
         let methods: [UInt8] = [try r.u8(), try r.u8()], interlace = try r.u8()
         guard width > 0, height > 0 else { throw damaged("size \(width)x\(height)") }
-        guard width <= maxSide, height <= maxSide else { throw CodecError.tooLarge("PNG: \(width)x\(height) pixels") }
+        guard width <= maxSide, height <= maxSide else { throw CodecError.tooLarge("PNG: \(width)x\(height) pixels: sides are at most \(maxSide)") }
         guard depths[colorType]?.contains(depth) == true else { throw damaged("depth \(depth) with colour type \(colorType)") }
         guard methods == [0, 0], interlace <= 1 else { throw damaged("compression, filter or interlace method") }
         return (reader, PNGInfo(width: width, height: height, bitDepth: depth, colorType: colorType, interlaced: interlace == 1))
@@ -59,10 +59,11 @@ extension PNG {
         var (reader, info) = try header(data)
         let pixels: Int
         do { pixels = try PixelBuffer.validatedSize(width: info.width, height: info.height) } catch {
-            throw CodecError.tooLarge("PNG: \(info.width)x\(info.height) pixels")
+            throw CodecError.tooLarge("PNG: \(info.width)x\(info.height) pixels: over PixelBuffer.maxPixels (\(PixelBuffer.maxPixels))")
         }
         var palette: [UInt8] = [], alpha: [UInt8]?, stream: [UInt8] = []
         chunks: while true {
+            guard !reader.isAtEnd else { throw damaged("file ends before IEND") }
             let (type, body) = try chunk(&reader)
             switch type {
             case "IEND": break chunks
@@ -73,6 +74,7 @@ extension PNG {
             default: if type.utf8.first.map({ $0 & 0x20 == 0 }) == true { throw CodecError.unsupported("PNG chunk \(type)") }
             }
         }
+        guard !stream.isEmpty else { throw damaged("no IDAT chunk") }
         let format = try PNGSamples(info, palette: palette, alpha: alpha)
         let passes: [PNGPass] = info.interlaced ? adam7 : [(0, 0, 1, 1)]
         let bitsPerPixel = format.channels * info.bitDepth
@@ -82,7 +84,11 @@ extension PNG {
             guard w > 0, h > 0 else { continue }
             total = try ByteReader.adding(total, try ByteReader.multiplying(h, 1 + (w * bitsPerPixel + 7) / 8))
         }
-        var raw = [UInt8](try Inflate.zlib(Data(stream), limit: total))
+        // Inflate names neither PNG nor IDAT, and its `tooLarge` here means damaged data, not a size limit.
+        var raw: [UInt8]
+        do { raw = [UInt8](try Inflate.zlib(Data(stream), limit: total)) } catch CodecError.tooLarge(_) {
+            throw damaged("image data inflates past the \(total) bytes IHDR implies")
+        } catch CodecError.damaged(let text) { throw damaged("IDAT " + text) }
         guard raw.count == total else { throw damaged("image data holds \(raw.count) bytes, not \(total)") }
         var storage = [Float](repeating: 0, count: pixels * PixelBuffer.channels)
         let bpp = max(1, bitsPerPixel / 8)
