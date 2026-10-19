@@ -3,7 +3,7 @@
 Issue: #431 · Packet: docs/blueprints/core/features/masks-mattes.md
 Run: act-1a1541f2193-03la · Session: https://claude.ai/code/session_01UoKtqjbgWBMsvLqfXb3f42 · Started: 2026-10-19T12:57Z
 Line lead for: layered-codecs (#438, already done), masks-mattes (#431), path-geometry (#430)
-Stage: 4 round 2 (dev f99bcc4e; gate and mutation running)
+Stage: 4 round 2 (restarted on dev 305975a7 so it holds #735, #737 and #738; gate and mutation running)
 Base: 0b5a641be359e283625fa5c798b8d02872fad344
 Next: M3 (CPU composite) and M6 (exporters) building stacked; rebase and open once their bases merged (both merged)
 
@@ -32,6 +32,7 @@ Next: M3 (CPU composite) and M6 (exporters) building stacked; rebase and open on
 | 1 | a658945b | builders' gates | per plan, all caught | 39279766862 | correctness, robustness, reuse, tests+mutation, first-use clarity | 0 blockers, 5 should-fix, 7 nits (across both features) | lead/masks-mattes-r1-b1 | no |
 
 - Round-1 masks fixes: PR #730 (lead/masks-mattes-r1-b1), merged 17:34.
+- Round-1 masks raster fix: PR #738 (lead/masks-mattes-r1-b2), merged 18:24 (305975a7).
 
 - For the next round (from M3 #737): the CPUGoldenTests header still says "133 samples in 8 goldens" (should be 145 in 9), left out for the 15-file cap. CoreRenderDispatcherW1#3 and #4 (the flipped and applying fallbacks) escape on dev, because eachNewMethodReachesTheCPU only checks the masked composite. Fold both into the next masks PR. M3 also edits ParitySamples, ParityPack and the four W1/dispatcher/parity/CPU suites, and repointed CoreRenderDispatcherW1#5.
 
