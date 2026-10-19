@@ -68,3 +68,4 @@ utc	stage	event	ref	note
 2026-10-19T10:44:34Z	IC-png r4	gate started	64bd637	#696 merged 10:28Z; last allowed round; r4-jpeg-b1 fixer still running
 2026-10-19T10:47:05Z	IC-jpeg r4	fix merged	#702	9/9 findings fixed, 61/61 caught; IC-jpeg Anatomy done at the 4-round cap
 2026-10-19T10:56:19Z	IC-png r4	gate pass	64bd637	CI: PASS; 922 anchors; Inflate 13/13, Deflate 3/3, PNG 11/11, PNGWrite 4/4; panel started
+2026-10-19T11:01:31Z	IC-png r4	panel clean	64bd637	0 blocker/major, 7 minor filed as #703 #704 #705; both slices Anatomy done; #702 not in run 39238594196
