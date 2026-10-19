@@ -72,3 +72,4 @@ utc	stage	event	ref	note
 2026-10-19T11:02:47Z	IC-9	build started	2436c3a	wave 5, one builder (build-wave-lead.js, run wf_0125facc-92b)
 2026-10-19T11:09:31Z	IC-9	heartbeat	wf_0125facc-92b	IC-9 builder running; dev CI run 404 (8613770, without #702) still queued
 2026-10-19T11:30:14Z	IC-9	merged	#709	walk green; PNG encode 9.0 s and 1.41x over budget; IC-9b Deflate fix started (wf_66172218-06d)
+2026-10-19T11:30:52Z	IC-9b	heartbeat	wf_66172218-06d	IC-9b Deflate builder running; dev CI run 404 (8613770, without #702) still queued since 10:35Z
