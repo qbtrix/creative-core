@@ -17,7 +17,7 @@
 // metrics `export`'s `measure` gives (0.5 em per grapheme by default). Type on a path is
 // not written yet: a visible layer with one throws `unsupported("textPath")`.
 // A render list that stopped expanding instances at its budget throws
-// `sceneTooLarge` before anything is written.
+// `sceneTooLarge` before anything is written. Masks: SVGExporter+Masks.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -65,8 +65,9 @@ public enum SVGExporter {
         var gradients = 0
         let list = scene.renderList(at: frame, symbols: symbols)
         if list.isTruncated { throw SVGExportError.sceneTooLarge }
+        let scope = Scope(layers: scene.layers, frame: frame, symbols: symbols)
         for node in sampled(list.nodes, layers: scene.layers, frame: frame, symbols: symbols) {
-            try emit(node, inSymbol: false, into: &lines, gradients: &gradients, measure: measure)
+            try emit(node, in: scope, into: &lines, gradients: &gradients, measure: measure)
         }
         lines.append("</svg>")
         return lines.joined(separator: "\n") + "\n"
@@ -74,9 +75,8 @@ public enum SVGExporter {
 
     /// Appends one render node: a layer as a <g> holding its children, a shape
     /// as a <path>, an instance as a nested <g> with the instance transform.
-    /// `inSymbol` is true below an instance, where layers repeat once per
-    /// instance, so only scene layers get an id.
-    static func emit(_ node: RenderNode, inSymbol: Bool, into lines: inout [String], gradients: inout Int,
+    /// `scope` is the model the node came from; only scene layers get an id.
+    static func emit(_ node: RenderNode, in scope: Scope, into lines: inout [String], gradients: inout Int,
                      measure: (TextShape) -> [GlyphRunMetrics]) throws {
         switch node {
         case .layer(let layer):
@@ -85,13 +85,15 @@ public enum SVGExporter {
                 if case .text(_, let text) = child, text.onPath != nil { throw SVGExportError.unsupported("textPath") }
             }
             let opacityAttr = layer.opacity == 1 ? "" : " opacity=\"\(try number(layer.opacity))\""
-            let idName = inSymbol ? "data-id" : "id"
+            let idName = scope.writesIDs ? "id" : "data-id"
             let ids = " \(idName)=\"\(escape(layer.id))\" data-name=\"\(escape(layer.name))\""
-            lines.append("<g\(ids)\(try matrix(layer.transform))\(opacityAttr)>")
+            let (masks, matte) = try maskDefs(for: layer.id, in: scope, into: &lines, ids: &gradients, measure: measure)
+            if let matte { lines.append("<g mask=\"url(#\(matte))\">") }
+            lines.append("<g\(ids)\(try matrix(layer.transform))\(opacityAttr)\(masks)>")
             for child in layer.children {
-                try emit(child, inSymbol: inSymbol, into: &lines, gradients: &gradients, measure: measure)
+                try emit(child, in: scope, into: &lines, gradients: &gradients, measure: measure)
             }
-            lines.append("</g>")
+            lines.append(matte == nil ? "</g>" : "</g>\n</g>")
         case .shape(_, let shape):
             let d = try pathData(shape.outline)
             if d.isEmpty { return }
@@ -107,10 +109,12 @@ public enum SVGExporter {
             lines.append("<path d=\"\(d)\"\(attr)\(try stroke(shape.stroke))/>")
         case .text(_, let text):
             lines.append(contentsOf: try textElement(text, gradients: &gradients, measure: measure))
-        case .instance(_, let instance, let symbolID, _, let children):
+        case .instance(_, let instance, let symbolID, let local, let children):
             lines.append("<g data-symbol=\"\(escape(symbolID))\"\(try matrix(instance.transform))>")
+            let inner = Scope(layers: scope.symbols.first { $0.id == symbolID }?.layers ?? [], frame: local,
+                              symbols: scope.symbols, path: scope.path + [symbolID], writesIDs: false)
             for child in children {
-                try emit(child, inSymbol: true, into: &lines, gradients: &gradients, measure: measure)
+                try emit(child, in: inner, into: &lines, gradients: &gradients, measure: measure)
             }
             lines.append("</g>")
         case .unresolved(_, let symbolID):

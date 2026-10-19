@@ -30,6 +30,7 @@
 // Bezier tangents are relative to their vertex; quads are raised to cubics.
 // A non-finite value, including one that overflows when scaled, throws.
 // Text is not written yet: a layer with text throws `unsupported("text")`.
+// Masks and track mattes: LottieExporter+Masks.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -57,9 +58,7 @@ public enum LottieExporter {
 
     /// `symbols` are the document's symbols, which the scene's instances name.
     public static func export(scene: Scene, symbols: [Symbol] = []) throws -> Data {
-        let layers = try scene.layers.enumerated().reversed().map { index, layer in
-            try LottieLayer(layer, index: index + 1, durationFrames: scene.durationFrames, symbols: symbols)
-        }
+        let layers = try layers(of: scene, symbols: symbols)
         let root = LottieRoot(
             v: version, fr: scene.fps, ip: 0, op: scene.durationFrames,
             w: try finite(scene.width), h: try finite(scene.height), nm: scene.name,
@@ -87,6 +86,7 @@ public enum LottieExporter {
                 throw LottieExportError.unresolvedSymbol(instance.symbolID)
             }
             let layers = try symbol.layers.reversed().filter(\.isVisible).map { inner in
+                guard inner.masks.isEmpty, inner.matte == nil else { throw LottieExportError.unsupported("mask in symbol") }
                 let (transform, opacity) = inner.placement(at: local)
                 let items = try content(of: inner, frame: local, symbols: symbols, path: path + [symbol.id])
                 return group(items + [try LottieItem.transform(transform, opacity: opacity)])
@@ -190,6 +190,10 @@ struct LottieLayer: Encodable, Sendable {
     var st = 0
     var sr = 1
     var hd: Bool
+    var hasMask: Bool? // masks and mattes: LottieExporter+Masks
+    var masksProperties: [LottieMask]?
+    var tt: Int?
+    var td: Int?
     var ks: LottieTransform
     var shapes: [LottieItem]
 
