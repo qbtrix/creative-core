@@ -3,8 +3,9 @@
 // 1/255 and a maximum of 4/255 of its A.3.3 reference: grey and YCbCr at
 // 4:4:4, 4:2:2 and 4:2:0, the zigzag order, restart intervals, the EXIF
 // orientation reported but not applied, and unsupported, oversized or
-// damaged files refused; progressive codings (Annex G) read as their baseline
-// ones do, and progressive scans out of Annex G's order or limits refused.
+// damaged files refused; progressive codings (Annex G, with EOB runs and
+// restart intervals) read as their baseline ones do, and progressive scans out
+// of Annex G's order or limits, or past the scan work budget, refused.
 @testable import CoreRaster
 import CoreColor
 import Testing
@@ -144,8 +145,8 @@ import Foundation
     }
 
     /// `f` coded progressive (JPEGFixtures.progressive) reads as its baseline coding does, within 1/255 per channel.
-    func sameAsBaseline(_ f: F.Frame, _ note: String) throws {
-        let data = F.progressive(f), a = try JPEG.read(data), b = try JPEG.read(F.baseline(f))
+    func sameAsBaseline(_ f: F.Frame, _ note: String, restart: Int = 0) throws {
+        let data = F.progressive(f, restart: restart), a = try JPEG.read(data), b = try JPEG.read(F.baseline(f))
         #expect(try JPEG.info(data).progressive)
         #expect(a.width == f.width && a.height == f.height, "\(note)")
         var worst = 0.0
@@ -176,6 +177,52 @@ import Foundation
         try sameAsBaseline(f, "refined")
     }
 
+    /// G.1.2.2 and G.1.2.3 end-of-band runs: 64 x 64 grey with AC only in every 5th block (blocks 16...58 none), so
+    /// first and refinement scans code EOB2 (+1) runs, with correction bits, and one EOB5 (+13) over the gap.
+    @Test func progressiveEOBRuns() throws {
+        let f = F.Frame(width: 64, height: 64, block: { _, x, y in
+            var q = [Int](repeating: 0, count: 64), k = y * 8 + x
+            q[0] = k - 32
+            guard k % 5 == 0, !(16...58).contains(k) else { return q }
+            for (z, v) in [(1, 5), (2, 1), (4, -3), (9, -1), (12, 2)] { q[F.zigzag[z]] = k % 2 == 0 ? v : -v }
+            return q
+        })
+        try sameAsBaseline(f, "EOB runs")
+    }
+
+    /// B.2.4.4 in a progressive frame: RSTm every n units of each scan ends the EOB run and resets the DC predictions.
+    @Test func progressiveRestart() throws {
+        for n in [1, 3] {
+            try sameAsBaseline(F.Frame(width: 80, height: 16, block: F.seeded(0x96)), "grey every \(n)", restart: n)
+            try sameAsBaseline(F.Frame(width: 48, height: 40, sampling: Self.samplings[2], block: F.seeded(0x97)), "4:2:0 every \(n)", restart: n)
+        }
+        // Two blocks, an interval each: block 0's EOB1 claims more blocks than its interval holds, yet the restart
+        // ends the run, so interval 1's DC (from prediction 0) and its coefficient 3 are read.
+        let f = F.Frame(width: 16, height: 8, block: { _, x, _ in (x == 0 ? [7, 0] : [-5, 3]) + [Int](repeating: 0, count: 62) })
+        func coded(_ a: (inout F.Bits) -> Void, _ b: (inout F.Bits) -> Void) -> [UInt8] {
+            var w = F.Bits()
+            a(&w); w.align(); w.bytes += [0xFF, 0xD0]; b(&w); w.align()
+            return w.bytes
+        }
+        let dc = F.huffman[0].dc, ac = F.codes(F.acAll)
+        let dcScan = coded({ $0.put(dc, 3); $0.put(7, 3) }, { $0.put(dc, 3); $0.put(2, 3) })
+        let acScan = coded({ $0.put(ac, 0x10); $0.put(0, 1) }, { $0.put(ac, 0x02); $0.put(3, 2); $0.put(ac, 0x00) })
+        let head = F.header(f, sof: 0xC2, precision: 8, restart: 1, orientation: nil, littleEndian: false, ac: (F.acAll, F.acAll))
+        let data = Data(head + F.sos([0], 0, 0, 0, 0) + dcScan + F.sos([0], 1, 63, 0, 0) + acScan + [0xFF, 0xD9])
+        #expect(try JPEG.read(data) == JPEG.read(F.baseline(f)))
+    }
+
+    /// `JPEGDecoder.passes`: an 8 x 8 grey SOF2 is one block, so a DC scan and 63 single-coefficient AC first scans
+    /// (one EOB each) are 64 visits and decode; one refinement scan more is `tooLarge`.
+    @Test func progressiveScanBudget() throws {
+        let f = F.Frame(width: 8, height: 8, block: F.seeded(0x98))
+        let head = F.header(f, sof: 0xC2, precision: 8, restart: 0, orientation: nil, littleEndian: false)
+        let firsts = (1...63).flatMap { (k: Int) -> [UInt8] in F.sos([0], k, k, 0, 1) + [0xAF] }
+        let scans = head + F.sos([0], 0, 0, 0, 0) + [UInt8](repeating: 0, count: 8) + firsts
+        #expect(PNGFixtures.thrown { try JPEG.read(Data(scans + [0xFF, 0xD9])) } == "returned")
+        #expect(PNGFixtures.thrown { try JPEG.read(Data(scans + F.sos([0], 1, 1, 1, 0) + [0xAF, 0xFF, 0xD9])) } == "tooLarge")
+    }
+
     /// B.2.3 and G.1.1.1 on an 8 x 8 grey SOF2: DC first, its refinement and an AC band (one EOB) decode; each bad scan
     /// after the DC first scan (or first, for AC before DC) is damaged.
     @Test func progressiveScanChecks() throws {
@@ -191,12 +238,19 @@ import Foundation
         ]
         for (name, scan) in bad { #expect(read(dc, scan + zeros) == "damaged", "\(name)") }
         #expect(read(F.sos([0], 1, 63, 0, 0) + zeros) == "damaged", "AC before DC")
+        // 8 x 8 YCbCr: after an interleaved DC first scan, an AC scan of all three (each block one EOB, 0xA0) is damaged.
+        let colour = F.Frame(width: 8, height: 8, sampling: Self.samplings[0], block: F.seeded(0x99))
+        let three = F.header(colour, sof: 0xC2, precision: 8, restart: 0, orientation: nil, littleEndian: false) + F.sos([0, 1, 2], 0, 0, 0, 0) + zeros
+        let acOf = { (cs: [Int]) in PNGFixtures.thrown { try JPEG.read(Data(three + F.sos(cs, 1, 63, 0, 0) + [0xA0, 0xFF, 0xD9])) } }
+        #expect(acOf([0]) == "returned")
+        #expect(acOf([0, 1, 2]) == "damaged", "interleaved AC scan")
     }
 
     /// Seeded mutations of progressive codings throw a CodecError or decode, never trap or hang.
     @Test func progressiveMutationsThrowOrDecode() {
         let seeds = [F.progressive(F.Frame(width: 19, height: 9, block: F.seeded(0x94))),
-                     F.progressive(F.Frame(width: 21, height: 17, sampling: Self.samplings[2], block: F.seeded(0x95)))]
+                     F.progressive(F.Frame(width: 21, height: 17, sampling: Self.samplings[2], block: F.seeded(0x95))),
+                     F.progressive(F.Frame(width: 24, height: 16, block: F.seeded(0x9A)), restart: 2)]
         fuzz(mutations(of: seeds, count: 600, seed: 0x1EA)) { _ = try JPEG.read($0) }
     }
 }
