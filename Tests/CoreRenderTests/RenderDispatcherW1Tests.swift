@@ -107,7 +107,6 @@ private struct CompositingFake: RenderBackend {
             try d.composite(s, onto: &b, through: shear, mode: .normal, opacity: 0.8, filter: .bilinear)
         }
         try expectCPU(.effect, seed: 9) { d, s, _ in _ = try d.applying(s, .boxBlur(radius: 2)) }
-        try expectCPU(.color, seed: 11) { d, s, _ in _ = try d.adjusted(s, .vibrance(0.3)) }
     }
 
     @Test func colorCasesFallBack() throws {
@@ -118,7 +117,7 @@ private struct CompositingFake: RenderBackend {
         #expect(d.lastFallback == nil)
         #expect(fake.calls.contains(.op(.adjust)))
         for color: ToneAdjustment in [.vibrance(0.3), .invert, .posterize(levels: 4), .threshold(0.5)] {
-            #expect(throws: RenderError.unsupported(.color)) { try d.adjusted(s, color) }
+            #expect(try d.adjusted(s, color).backend == d.fallback.name)  // built by tone-pack TP-7
             #expect(fallback(d) == "color \(RenderDispatcher.reasonUnsupported)")
         }
         #expect(fake.calls.filter { $0 == .op(.adjust) }.count == 1)

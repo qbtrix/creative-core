@@ -2,7 +2,7 @@
 // docs/blueprints/core/features/tone-pack.md). Each `.color` case on the CPU
 // backend equals its CoreRaster call, the LUT is applied once, and a
 // dispatcher over a fake with `.adjust` only sends colour to the CPU and
-// `contrast` to the fake. Disabled until TP-7 lands.
+// `contrast` to the fake.
 import CoreRaster
 import CoreRender
 import Testing
@@ -48,7 +48,7 @@ private func warmLUT() throws -> ColorLUT {
         ]
     }
 
-    @Test(.disabled("waits on TP-7")) func everyCaseEqualsDirect() throws {
+    @Test func everyCaseEqualsDirect() throws {
         let cpu = CPUBackend()
         let input = try seededBuffer(width: 12, height: 9, seed: 0xE1)
         let s = try cpu.surface(input)
@@ -61,7 +61,7 @@ private func warmLUT() throws -> ColorLUT {
         #expect(try cpu.read(s) == input)
     }
 
-    @Test(.disabled("waits on TP-7")) func lutOnce() throws {
+    @Test func lutOnce() throws {
         let cpu = CPUBackend()
         let input = try seededBuffer(width: 8, height: 8, seed: 0xE2)
         let lut = try warmLUT()
@@ -70,7 +70,7 @@ private func warmLUT() throws -> ColorLUT {
         #expect(out != (try input.applying(lut).applying(lut)))
     }
 
-    @Test(.disabled("waits on TP-7")) func dispatcherSendsColorToCPU() throws {
+    @Test func dispatcherSendsColorToCPU() throws {
         let fake = FakeBackend(supports: [.adjust])
         let d = RenderDispatcher(preferred: fake, fallback: CPUBackend())
         let input = try seededBuffer(width: 6, height: 5, seed: 0xE3)
