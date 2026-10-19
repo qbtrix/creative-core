@@ -2,8 +2,8 @@
   {
     "note": "the mask contour saddle is resolved by a fixed corner pairing instead of the cell mean, so a saddle whose centre joins the diagonal splits into two outlines, caught by MaskOpsTests.saddleFollowsMean",
     "file": "Sources/CoreRaster/Masks/MaskContours.swift",
-    "anchor": ": centerInside == inside[0] ? [(1, 2), (3, 0)] : [(0, 1), (2, 3)]",
-    "replacement": ": [(1, 2), (3, 0)]",
+    "anchor": "if centerInside == inside(0) { segment(1, 2); segment(3, 0) } else",
+    "replacement": "if true { segment(1, 2); segment(3, 0) } else",
     "filter": "MaskOpsTests"
   },
   {
@@ -16,7 +16,7 @@
   {
     "note": "the mask contour segments keep their edge order whatever side the inside corner is on, so outlines no longer chain into closed rings with the inside on their left, caught by MaskOpsTests.ringHasTwoClosedOutlinesOnItsCircles",
     "file": "Sources/CoreRaster/Masks/MaskContours.swift",
-    "anchor": "let (from, to) = inside[a] ? (b, a) : (a, b)",
+    "anchor": "let (from, to) = inside(a) ? (b, a) : (a, b)",
     "replacement": "let (from, to) = (a, b)",
     "filter": "MaskOpsTests"
   }
