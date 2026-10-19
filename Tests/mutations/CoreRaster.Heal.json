@@ -2,22 +2,43 @@
   {
     "note": "the heal's boundary condition comes from the source not the destination, so the clone keeps its own tone and a seam shows at the mask's edge, caught by HealTests.matchesDestinationEdge",
     "file": "Sources/CoreRaster/Heal/Heal.swift",
-    "anchor": "for k in 0..<4 { h[i * 4 + k] = Double(edge[k]) - Double(from[k]) }",
-    "replacement": "for k in 0..<4 { h[i * 4 + k] = Double(from[k]) - Double(from[k]) }",
+    "anchor": "solver.fix(gx, gy, vector(x, y) - src)",
+    "replacement": "solver.fix(gx, gy, src - src)",
     "filter": "HealTests.matchesDestinationEdge"
   },
   {
-    "note": "the heal's convergence test is flipped, > for <, so the solve stops after one sweep and the clone's tone is not matched, caught by HealTests.reproducesField",
-    "file": "Sources/CoreRaster/Heal/Heal.swift",
-    "anchor": "if largest < healTolerance { break }",
-    "replacement": "if largest > healTolerance { break }",
+    "note": "the heal's convergence test is flipped, > for <, so the solve stops after one V-cycle and the clone's tone is not matched, caught by HealTests.reproducesField",
+    "file": "Sources/CoreRaster/Heal/HealSolver.swift",
+    "anchor": "if vCycle(0) < tolerance { break }",
+    "replacement": "if vCycle(0) > tolerance { break }",
     "filter": "HealTests.reproducesField"
   },
   {
     "note": "the heal's bounds loop runs over the whole buffer instead of the mask's bounds, so a heal from an offset reads its source off the buffer and fails, caught by HealTests.outsideBoundsUntouched",
     "file": "Sources/CoreRaster/Heal/Heal.swift",
-    "anchor": "return (minX, minY, maxX, maxY)",
-    "replacement": "return (0, 0, mask.width - 1, mask.height - 1)",
+    "anchor": "guard let box = mask.coveredRect else { return }",
+    "replacement": "guard mask.coveredRect != nil else { return }; let box = TileRect(x: 0, y: 0, width: width, height: height)",
     "filter": "HealTests.outsideBoundsUntouched"
+  },
+  {
+    "note": "the heal's cap compares with < instead of <=, so covered bounds of exactly maxHealPixels throw, caught by HealTests.overMaxHealPixelsThrows",
+    "file": "Sources/CoreRaster/Heal/Heal.swift",
+    "anchor": "guard box.width * box.height <= Self.maxHealPixels else {",
+    "replacement": "guard box.width * box.height < Self.maxHealPixels else {",
+    "filter": "HealTests.overMaxHealPixelsThrows"
+  },
+  {
+    "note": "the heal's cap counts covered area, not covered bounds, so a sparse mask solves a huge box, caught by HealTests.sparseMaskOverBoxCapThrows",
+    "file": "Sources/CoreRaster/Heal/Heal.swift",
+    "anchor": "guard box.width * box.height <= Self.maxHealPixels else {",
+    "replacement": "guard mask.area <= Double(Self.maxHealPixels) else {",
+    "filter": "HealTests.sparseMaskOverBoxCapThrows"
+  },
+  {
+    "note": "the heal ignores a feathered mask's coverage and writes the solved result at full strength, caught by HealTests.featherBlendsByCoverage",
+    "file": "Sources/CoreRaster/Heal/Heal.swift",
+    "anchor": "let out = c >= 1 ? f : dest + (f - dest) * c",
+    "replacement": "let out = c >= 1 ? f : f + (dest - dest) * c",
+    "filter": "HealTests.featherBlendsByCoverage"
   }
 ]
