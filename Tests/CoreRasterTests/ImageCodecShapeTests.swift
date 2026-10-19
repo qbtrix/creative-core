@@ -35,7 +35,6 @@ import Foundation
         let buffer = try PixelBuffer(width: 1, height: 1, fill: RGBA(r: 0.5, g: 0.25, b: 0, a: 1))
         let bytes = Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
         let stubs: [(String, () throws -> Any)] = [
-            ("IC-3", { try Inflate.zlib(bytes, limit: 100) }), ("IC-3", { try Inflate.raw(bytes, limit: 100) }),
             ("IC-4", { try PNG.info(bytes) }), ("IC-4", { try PNG.read(bytes) }),
             ("IC-5", { try PNG.write(buffer) }), ("IC-5", { try PNG.write(buffer, bitsPerChannel: 16, level: 0) }),
             ("IC-4", { try PNGCodec().decodePNG(bytes) }), ("IC-5", { try PNGCodec().encodePNG(buffer, bitsPerChannel: 8) }),
