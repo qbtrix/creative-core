@@ -47,3 +47,4 @@ utc	stage	event	ref	note
 2026-10-19T08:03:55Z	3	gate-start	891372e	IC-png r2 + IC-jpeg r3 gate; #666 #667 #668 merged
 2026-10-19T08:16:36Z	3	panels-start	891372e	gate PASS; PNG 15/15, JPEG 41/41; panels wf_beae1052-850 wf_99f0475c-f22
 2026-10-19T08:26:18Z	3	heartbeat	891372e	panels wf_beae1052-850 wf_99f0475c-f22 running
+2026-10-19T08:27:48Z	4	fix-start	wf_63bfcf02-52b	IC-jpeg r3: 8 confirmed (1 major), one batch
