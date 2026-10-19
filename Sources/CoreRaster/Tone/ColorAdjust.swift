@@ -15,6 +15,7 @@ import Musl
 import Darwin
 #endif
 import CoreColor
+import Dispatch
 
 extension PixelBuffer {
     /// Saturation boost that moves low-saturation pixels most; `amount` in
@@ -87,12 +88,14 @@ extension PixelBuffer {
             return ColorMath.Shift(hue: clamped(r.hue) * 0.3, saturation: clamped(r.saturation),
                                    lightness: clamped(r.lightness))
         }
-        if shifts.allSatisfy(\.isZero) { return self }
+        // Only the ranges with a shift add to the sum (a zero one adds +0).
+        let active = shifts.indices.filter { !shifts[$0].isZero }.map { ($0, shifts[$0]) }
+        if active.isEmpty { return self }
         return try mappingStraight { p in
             let hsl = ColorMath.hsl(of: p)
             guard hsl.s > 0 else { return p }
             var sum = ColorMath.Shift(hue: 0, saturation: 0, lightness: 0)
-            for (i, shift) in shifts.enumerated() {
+            for (i, shift) in active {
                 let w = ColorMath.rangeWeight(i, hue: hsl.h)
                 sum = ColorMath.Shift(hue: sum.hue + w * shift.hue, saturation: sum.saturation + w * shift.saturation,
                                       lightness: sum.lightness + w * shift.lightness)
@@ -103,20 +106,54 @@ extension PixelBuffer {
 
     /// Maps each straight pixel with alpha above 0 through `transform`, which
     /// must keep alpha; alpha-0 pixels are copied as they are. Throws for a
-    /// non-finite result, as `setPixel` does.
-    func mappingStraight(_ transform: (RGBA) -> RGBA) throws -> PixelBuffer {
+    /// non-finite result, as `setPixel` does, naming the lowest bad index.
+    /// The rows run in `bands` contiguous bands at once (by default one per
+    /// `pixelsPerBand` pixels, at most `maxBands`); each band writes only its
+    /// own rows and the op is per pixel, so the result does not depend on the bands.
+    func mappingStraight(bands: Int? = nil, _ transform: @Sendable (RGBA) -> RGBA) throws -> PixelBuffer {
         var out = components
-        let n = Self.channels
-        for base in stride(from: 0, to: out.count, by: n) where out[base + 3] != 0 {
-            let q = transform(RGBA(r: out[base], g: out[base + 1], b: out[base + 2], a: out[base + 3]).unpremultiplied())
-                .premultiplied()
-            guard q.isFinite else {
-                throw RasterError.invalid("pixel \(q) at index \(base / n): components must be finite")
+        let rows = height, rowLength = width * Self.channels
+        let count = min(max(bands ?? width * height / Self.pixelsPerBand, 1), rows, Self.maxBands)
+        var failures = [(index: Int, pixel: RGBA)?](repeating: nil, count: count)
+        out.withUnsafeMutableBufferPointer { pixels in
+            failures.withUnsafeMutableBufferPointer { firsts in
+                let target = BandTarget(pixels: pixels, failures: firsts)
+                DispatchQueue.concurrentPerform(iterations: count) { band in
+                    let start = band * rows / count * rowLength, end = (band + 1) * rows / count * rowLength
+                    target.failures[band] = Self.mapStraight(target.pixels, from: start, to: end, transform)
+                }
             }
-            (out[base], out[base + 1], out[base + 2]) = (q.r, q.g, q.b)
+        }
+        // Bands hold ascending rows, so the first band that failed has the lowest index.
+        if let bad = failures.lazy.compactMap({ $0 }).first {
+            throw RasterError.invalid("pixel \(bad.pixel) at index \(bad.index): components must be finite")
         }
         return PixelBuffer(checkedWidth: width, height: height, storage: out)
     }
+
+    /// Pixels per band `mappingStraight` aims for, and the most bands it uses.
+    static let pixelsPerBand = 1 << 15
+    static let maxBands = 64
+
+    /// Maps the components `start..<end` of `pixels` (whole pixels) in place,
+    /// stopping at the first non-finite result: its pixel index and value, or nil.
+    private static func mapStraight(_ pixels: UnsafeMutableBufferPointer<Float>, from start: Int, to end: Int,
+                                    _ transform: (RGBA) -> RGBA) -> (index: Int, pixel: RGBA)? {
+        for base in stride(from: start, to: min(end, pixels.count) - 3, by: channels) where pixels[base + 3] != 0 {
+            let q = transform(RGBA(r: pixels[base], g: pixels[base + 1], b: pixels[base + 2], a: pixels[base + 3])
+                .unpremultiplied()).premultiplied()
+            guard q.isFinite else { return (base / channels, q) }
+            (pixels[base], pixels[base + 1], pixels[base + 2]) = (q.r, q.g, q.b)
+        }
+        return nil
+    }
+}
+
+/// The output storage and per-band first failures `mappingStraight` shares
+/// across its bands; each band writes only its own rows and its own slot.
+private struct BandTarget: @unchecked Sendable {
+    let pixels: UnsafeMutableBufferPointer<Float>
+    let failures: UnsafeMutableBufferPointer<(index: Int, pixel: RGBA)?>
 }
 
 /// The HSL arithmetic the colour adjustments share, in Double.
@@ -143,7 +180,11 @@ enum ColorMath {
     /// 0...1: hue in degrees 0..<360 (0 for a grey), saturation and lightness 0...1.
     static func hsl(of p: RGBA) -> (h: Double, s: Double, l: Double) {
         func enc(_ v: Float) -> Double { min(max(TransferCurve.encode(Double(v)), 0), 1) }
-        let c = SIMD3(enc(p.r), enc(p.g), enc(p.b))
+        return hsl(encoded: SIMD3(enc(p.r), enc(p.g), enc(p.b)))
+    }
+
+    /// Standard HSL of straight sRGB-encoded values already clamped to 0...1.
+    static func hsl(encoded c: SIMD3<Double>) -> (h: Double, s: Double, l: Double) {
         let hi = c.max(), lo = c.min(), l = (hi + lo) / 2, d = hi - lo
         guard d > 0 else { return (0, 0, l) }
         let sector = hi == c.x ? (c.y - c.z) / d : hi == c.y ? (c.z - c.x) / d + 2 : (c.x - c.y) / d + 4
