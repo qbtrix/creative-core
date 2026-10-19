@@ -20,10 +20,29 @@ public enum TextStyleCommands {
     ]
 }
 
-/// The style fields of a `TextRun`; nil leaves a field as it is.
+/// The style fields of a `TextRun`; nil leaves a field as it is. Fields mean
+/// what `TextRun`'s do: font family name, size in points, CSS weight
+/// (100...900), italic, fill, tracking and baseline shift in points.
+///
+/// To remove one field from a range, set it to the shape's own value (its
+/// font family, size or fill), or to weight 400, italic false, tracking 0 or
+/// baseline shift 0; the run drops it. `ClearTextStyle` removes every field.
 public struct TextRunStyle: Codable, Sendable, Hashable {
-    public var fontFamily: String?, fontSize: Double?, weight: Int?, italic: Bool?
-    public var fill: Fill?, tracking: Double?, baselineShift: Double?
+    /// The font family name; the shape's own family removes it.
+    public var fontFamily: String?
+    /// The font size in points; the shape's own size removes it.
+    public var fontSize: Double?
+    /// The CSS font weight, 100...900; 400 removes it.
+    public var weight: Int?
+    /// Whether the graphemes are italic; false removes it.
+    public var italic: Bool?
+    /// The fill; the shape's own fill removes it.
+    public var fill: Fill?
+    /// Extra space between graphemes, in points; 0 removes it.
+    public var tracking: Double?
+    /// The vertical offset from the baseline, in points; 0 removes it.
+    public var baselineShift: Double?
+    /// A style with the given fields set; every field left nil is unchanged when applied.
     public init(fontFamily: String? = nil, fontSize: Double? = nil, weight: Int? = nil, italic: Bool? = nil,
                 fill: Fill? = nil, tracking: Double? = nil, baselineShift: Double? = nil) {
         (self.fontFamily, self.fontSize, self.weight, self.italic) = (fontFamily, fontSize, weight, italic)
@@ -32,7 +51,11 @@ public struct TextRunStyle: Codable, Sendable, Hashable {
 }
 
 /// Sets `style`'s non-nil fields on graphemes `range` of text `textIndex`,
-/// splitting and merging runs so they never overlap.
+/// splitting and merging runs so they never overlap. A field set to the
+/// shape's own value (or weight 400, italic false, tracking/baselineShift 0)
+/// is removed from the range; see `TextRunStyle`. Throws `invalidIndex` when
+/// `range` is outside the string's graphemes (offsets count graphemes, not
+/// UTF-16 units), with the out-of-range bound as its number.
 public struct ApplyTextStyle: LayerParamsCommand {
     public static let id = "text.applyStyle"
     public var label: String { "Apply Text Style" }
@@ -56,7 +79,10 @@ public struct ApplyTextStyle: LayerParamsCommand {
 }
 
 /// Removes every run style from graphemes `range` of text `textIndex`, so
-/// they take the shape's own style.
+/// they take the shape's own style. To remove only one field, use
+/// `ApplyTextStyle` with that field set to the shape's own value. Throws
+/// `invalidIndex` when `range` is outside the string's graphemes, with the
+/// out-of-range bound as its number.
 public struct ClearTextStyle: LayerParamsCommand {
     public static let id = "text.clearStyle"
     public var label: String { "Clear Text Style" }
@@ -82,6 +108,10 @@ public struct ClearTextStyle: LayerParamsCommand {
 /// Replaces graphemes `replacing` of text `textIndex` with `with`, keeping
 /// every run on its graphemes: runs after the edit shift, a run the edit cuts
 /// shrinks, and inserted text takes the style of the grapheme before it.
+/// Throws `invalidIndex` when `replacing` is outside the string's graphemes,
+/// with the out-of-range bound as its number. Throws `invalidDocument` when
+/// `with` starts or ends with a mark that would join the grapheme beside the
+/// edit (a combining mark, a joiner); widen `replacing` to include that grapheme.
 public struct EditTextString: LayerParamsCommand {
     public static let id = "text.editString"
     public var label: String { "Edit Text" }
@@ -170,7 +200,8 @@ extension TextShape {
     /// keeps its start, else it moves past the inserted text; a run ending before
     /// the edit keeps its end, else the end moves with the string, so a run
     /// ending at the edit point takes the inserted text. Throws
-    /// `invalidDocument` when `with` would fuse with a neighbouring grapheme.
+    /// `invalidDocument`, naming the edit's grapheme offset, when `with` would
+    /// fuse with a neighbouring grapheme.
     mutating func replace(_ range: Range<Int>, with: String) throws {
         try checkGraphemes(range)
         let (lo, hi, count) = (range.lowerBound, range.upperBound, string.count)
@@ -178,7 +209,8 @@ extension TextShape {
         let edited = String(string[..<from]) + with + String(string[to...])
         let delta = with.count - (hi - lo)
         guard edited.count == count + delta else {
-            throw CommandError.invalidDocument("inserted text fuses with a neighbouring grapheme")
+            throw CommandError.invalidDocument(
+                "text inserted at grapheme \(lo) joins the grapheme beside it; include that grapheme in `replacing`")
         }
         string = edited
         runs = normalized(runs.map { run in

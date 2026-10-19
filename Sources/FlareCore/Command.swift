@@ -129,8 +129,10 @@ public enum CommandError: Error, Equatable, Sendable {
     /// (MoveGuide, RemoveGuide, AddGuide undo), a swatch position
     /// (RemoveSwatch undo), a transition index (UpdateTransition,
     /// RemoveTransition), a state machine position (RemoveStateMachine undo),
-    /// or 0 for an empty layer list (ConvertToSymbol). A shape or text index
-    /// missing from a layer throws `shapeNotFound` instead.
+    /// a grapheme offset outside a text's string, the range bound that is out
+    /// (ApplyTextStyle, ClearTextStyle, EditTextString), or 0 for an empty
+    /// layer list (ConvertToSymbol). A shape or text index missing from a
+    /// layer throws `shapeNotFound` instead.
     case invalidIndex(Int)
     /// `undo` was called on a command that never executed.
     case notExecuted
@@ -142,7 +144,9 @@ public enum CommandError: Error, Equatable, Sendable {
     case unknownCommand(String)
     /// A command envelope or its params could not be decoded or encoded.
     case malformedCommand(String)
-    /// The command would leave a document that fails `FlareFormat.validate`.
+    /// The command would leave a document that fails `FlareFormat.validate`,
+    /// or a text edit is refused because its inserted text would join a
+    /// neighbouring grapheme (EditTextString); the message says which.
     case invalidDocument(String)
     /// The command is registered but has no body yet; the message names the
     /// command id and the feature that will build it. The document is untouched.
