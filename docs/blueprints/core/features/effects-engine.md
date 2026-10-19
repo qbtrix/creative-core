@@ -50,7 +50,8 @@ styles (Halo, Photo, Library, Design) and its SuiteUI effects panel.
 ## Journey steps
 
 Engine only. KJ-FX (`EffectWalkTests.walk`, FX-9): a 600 × 400 layer with
-a white rounded-rectangle shape on transparency, padded by 40 px, then
+a white rounded-rectangle shape on transparency, padded by 40 px with
+`padded(width:height:anchor:)` (equal to drawing it 40 px in), then
 through a `RenderDispatcher` over a fake without `effect`: drop shadow (dx 8,
 dy 8, blur 12, 50% black), stroke 4 px outside in blue, outer glow 16 px,
 and `clarity(amount: 30, radius: 30)` on the result; each step equals the direct CoreRaster call,
@@ -78,7 +79,7 @@ extension PixelBuffer {
 extension PixelBuffer {
     public static let maxDenoisePixels: Int                                          // maxPixels / 8 (32 Mi px)
     public func denoised(strength: Double, detail: Double) throws -> PixelBuffer     // 0...1 each; at most maxDenoisePixels
-    public func clarity(amount: Double, radius: Double) throws -> PixelBuffer        // -100...100
+    public func clarity(amount: Double, radius: Double) throws -> PixelBuffer        // amount -100...100, radius 0...1,000
 }
 // Sources/CoreRaster/Effects/DistanceField.swift (FX-5)
 public struct DistanceField: Sendable { public let width: Int, height: Int
@@ -116,7 +117,10 @@ extension PixelBuffer {
 - **clarity.** `unsharpMask` with a large radius (no default; 30 px is the recommended value), its
   amount scaled by a mid-tone weight (luma 0.2...0.8 full, 0 at the ends) so
   shadows and highlights don't clip; negative amounts blend toward the
-  blurred copy.
+  blurred copy. Radius cap 0...1,000 px, inclusive: 1,000 is accepted and
+  anything past it (or not finite) throws `RasterError.invalid`; a radius
+  within the cap but past 2 × max(width, height) − 1 blurs as that radius,
+  so the kernel fits the clamped edge, and does not throw.
 - **DistanceField.** Exact squared Euclidean distance transform (two 1D
   lower-envelope passes) to the alpha ≥ level set and to its complement;
   the field is in pixels.

@@ -75,5 +75,19 @@
     "anchor": "more than maxDenoisePixels (\\(Self.maxDenoisePixels)) pixels; denoise it in tiles or downscale it\")",
     "replacement": "more than \\(Self.maxDenoisePixels) pixels\")",
     "filter": "DenoiseClarityTests"
+  },
+  {
+    "note": "the clarity radius cap is loosened to 1,001, so a radius just past 1,000 is accepted instead of throwing, caught by DenoiseClarityTests.clarityRadiusCapIsInclusive",
+    "file": "Sources/CoreRaster/Effects/DenoiseClarity.swift",
+    "anchor": "guard radius.isFinite, (0...1_000).contains(radius) else {",
+    "replacement": "guard radius.isFinite, (0...1_001).contains(radius) else {",
+    "filter": "DenoiseClarityTests"
+  },
+  {
+    "note": "clarity drops its kernel cap, so a radius past twice a small buffer's larger side throws from the blur instead of blurring as the cap, caught by DenoiseClarityTests.clarityRadiusCapIsInclusive",
+    "file": "Sources/CoreRaster/Effects/DenoiseClarity.swift",
+    "anchor": "try gaussianBlur(sigma: min(radius, Double(2 * max(width, height) - 1)) / 3)",
+    "replacement": "try gaussianBlur(sigma: radius / 3)",
+    "filter": "DenoiseClarityTests"
   }
 ]

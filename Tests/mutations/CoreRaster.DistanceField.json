@@ -33,5 +33,33 @@
     "anchor": "return Float(t * t * (3 - 2 * t))",
     "replacement": "return Float(t >= 0.5 ? 1 : 0)",
     "filter": "AlphaEffectTests"
+  },
+  {
+    "note": "the distance field drops its level guard, so a NaN level builds an empty field instead of throwing, caught by DistanceFieldTests.badLevelThrowsAndLookupsNeverCrash",
+    "file": "Sources/CoreRaster/Effects/DistanceField.swift",
+    "anchor": "guard level.isFinite else {",
+    "replacement": "guard level.isFinite || level.isNaN else {",
+    "filter": "DistanceFieldTests"
+  },
+  {
+    "note": "the envelope pass keeps a line with no finite site, so an empty shape reads as near instead of infinitely far, caught by DistanceFieldTests.emptyShapeIsInfinitelyFar",
+    "file": "Sources/CoreRaster/Effects/DistanceField.swift",
+    "anchor": "guard k >= 0 else { continue }",
+    "replacement": "k = max(k, 0)",
+    "filter": "DistanceFieldTests"
+  },
+  {
+    "note": "an outside lookup off the buffer reads 0, as if on the shape, instead of infinitely far, caught by DistanceFieldTests.badLevelThrowsAndLookupsNeverCrash",
+    "file": "Sources/CoreRaster/Effects/DistanceField.swift",
+    "anchor": "guard x >= 0, x < width, y >= 0, y < height else { return .infinity }",
+    "replacement": "guard x >= 0, x < width, y >= 0, y < height else { return 0 }",
+    "filter": "DistanceFieldTests"
+  },
+  {
+    "note": "an inside lookup off the buffer reads 1, as if inside the shape, instead of transparent, caught by DistanceFieldTests.badLevelThrowsAndLookupsNeverCrash",
+    "file": "Sources/CoreRaster/Effects/DistanceField.swift",
+    "anchor": "guard x >= 0, x < width, y >= 0, y < height else { return 0 }",
+    "replacement": "guard x >= 0, x < width, y >= 0, y < height else { return 1 }",
+    "filter": "DistanceFieldTests"
   }
 ]

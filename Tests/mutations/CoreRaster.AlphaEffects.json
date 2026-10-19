@@ -68,5 +68,33 @@
     "anchor": "guard reach + 3 < offset else { return (pad, effect + at, \"offset\") }",
     "replacement": "guard true else { return (pad, effect + at, \"offset\") }",
     "filter": "AlphaEffectLightTests"
+  },
+  {
+    "note": "the stroke skips the padded work size check, so a stroke whose padded copy passes the work limit allocates it instead of throwing, caught by AlphaEffectTests.strokePaddingPastTheLimitThrows",
+    "file": "Sources/CoreRaster/Effects/AlphaEffects.swift",
+    "anchor": "let (pw, ph) = try Self.paddedWorkSize(width: width, height: height, pad: 1, cause: \"stroke\", remedy: nil)",
+    "replacement": "let (pw, ph) = (width + 2, height + 2)",
+    "filter": "AlphaEffectTests"
+  },
+  {
+    "note": "the glow and shadow skip the padded work size check, so a mask whose padded copy passes the work limit is allocated instead of throwing, caught by AlphaEffectLightTests.glowPaddingPastTheLimitThrows and shadowPaddingPastTheLimitThrows",
+    "file": "Sources/CoreRaster/Effects/AlphaEffects+Light.swift",
+    "anchor": "let (pw, ph) = try Self.paddedWorkSize(width: width, height: height, pad: pad, cause: cause, remedy: remedy)",
+    "replacement": "let (pw, ph) = (width + 2 * pad, height + 2 * pad)",
+    "filter": "AlphaEffectLightTests/(glow|shadow)PaddingPastTheLimitThrows"
+  },
+  {
+    "note": "the padded work size limit is loosened by a row, so a stroke, glow or shadow copy one pixel past the limit passes, caught by the PaddingPastTheLimitThrows tests",
+    "file": "Sources/CoreRaster/Effects/AlphaEffects.swift",
+    "anchor": "guard !overflow, pixels <= limit else {",
+    "replacement": "guard !overflow, pixels <= limit + pw else {",
+    "filter": "PaddingPastTheLimitThrows"
+  },
+  {
+    "note": "the stroke's too-large error blames the width again, though its one-pixel padding is fixed and only the buffer sets it, caught by AlphaEffectTests.strokePaddingPastTheLimitThrows",
+    "file": "Sources/CoreRaster/Effects/AlphaEffects.swift",
+    "anchor": "pad: 1, cause: \"stroke\", remedy: nil)",
+    "replacement": "pad: 1, cause: \"stroke width\", remedy: \"width\")",
+    "filter": "AlphaEffectTests"
   }
 ]
