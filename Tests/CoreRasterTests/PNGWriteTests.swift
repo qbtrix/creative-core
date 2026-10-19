@@ -96,7 +96,16 @@ import Foundation
             let costs = (0...4).map { cost(F.filtered(row, prior: prior, filter: $0, bpp: 4)) }
             #expect(written[0] != 0 && written[0] <= 4, "row \(y)")
             #expect(written == F.filtered(row, prior: prior, filter: Int(min(written[0], 4)), bpp: 4) && cost(written) == costs.min())
+            // Row 0 ties Sub with Paeth, later rows tie Up with Paeth: the lower type wins.
+            #expect(Int(written[0]) == costs.indices.first { costs[$0] == costs.min() }, "row \(y)")
         }
+    }
+
+    @Test func levelOutsideRangeActsAsNearestEnd() throws {
+        let source = try Self.bytePixels(0x5EB, 9, 5)
+        #expect(try PNG.write(source, level: 12) == PNG.write(source, level: 9))
+        #expect(try PNG.write(source, level: -1) == PNG.write(source, level: 0))
+        #expect(try PNG.write(source, level: 0) != PNG.write(source, level: 9))
     }
 
     @Test func oraRoundTripThroughPNGCodec() throws {

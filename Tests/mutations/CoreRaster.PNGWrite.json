@@ -12,5 +12,12 @@
     "anchor": "for filter in 1..<5 where costs[filter] < costs[best] { best = filter }",
     "replacement": "for filter in 1..<5 where costs[filter] < costs[best] && filter < 0 { best = filter }",
     "filter": "PNGWriteTests"
+  },
+  {
+    "note": "a filter cost tie goes to the higher type, caught by PNGWriteTests.adaptiveFilterSmaller",
+    "file": "Sources/CoreRaster/Codecs/PNGWrite.swift",
+    "anchor": "for filter in 1..<5 where costs[filter] < costs[best] { best = filter }",
+    "replacement": "for filter in 1..<5 where costs[filter] <= costs[best] { best = filter }",
+    "filter": "PNGWriteTests"
   }
 ]
