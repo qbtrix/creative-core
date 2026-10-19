@@ -12,5 +12,12 @@
     "anchor": "guard count > 0 else { return (0, 0) }",
     "replacement": "guard count >= 0 else { return (0, 0) }",
     "filter": "AutoToneTests"
+  },
+  {
+    "note": "AutoTone inverts the levels gamma ratio, so a median at a quarter of the span gets gamma 0.5 instead of 2, caught by AutoToneTests.levelsStretchAndCentreMedian",
+    "file": "Sources/CoreRaster/Tone/AutoTone.swift",
+    "anchor": "log(t) / log(0.5)",
+    "replacement": "log(0.5) / log(t)",
+    "filter": "AutoToneTests"
   }
 ]

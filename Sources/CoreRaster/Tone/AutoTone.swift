@@ -13,9 +13,27 @@ import Musl
 import Darwin
 #endif
 
+/// A suggested auto tone for a buffer: a white balance and linear levels.
+/// Apply it as `buffer.whiteBalance(temperature:tint:)` first, then
+/// `.levels(inBlack:inWhite:gamma:outBlack: 0, outWhite: 1)` on that result;
+/// the levels are read after the white balance, so the order matters.
 public struct AutoTone: Hashable, Sendable {
-    public var inBlack: Float, inWhite: Float, gamma: Float, temperature: Float, tint: Float
+    /// The levels black point: linear luma in 0...1 that maps to 0.
+    public var inBlack: Float
+    /// The levels white point: linear luma in 0...1 that maps to 1, above `inBlack`.
+    public var inWhite: Float
+    /// The levels midtone exponent, applied as t^(1/gamma) to t in 0...1:
+    /// 1 is identity, over 1 brightens; in 0.1...10.
+    public var gamma: Float
+    /// The `whiteBalance` temperature in slider units -100...100 (0 is
+    /// neutral, positive warms).
+    public var temperature: Float
+    /// The `whiteBalance` tint in slider units -100...100 (0 is neutral,
+    /// positive pushes toward magenta).
+    public var tint: Float
 
+    /// A suggestion with the given parts, each in its field's units; the
+    /// identity is `AutoTone(inBlack: 0, inWhite: 1, gamma: 1, temperature: 0, tint: 0)`.
     public init(inBlack: Float, inWhite: Float, gamma: Float, temperature: Float, tint: Float) {
         self.inBlack = inBlack
         self.inWhite = inWhite
@@ -40,7 +58,10 @@ public struct AutoTone: Hashable, Sendable {
     /// are read after that white balance. Neutral parts: temperature and tint
     /// 0 when no pixel is in that bright set (an empty, black or blown-out
     /// buffer); levels 0, 1, 1 when every pixel is transparent or the black
-    /// and white points are under 1/256 apart. Never throws for a buffer.
+    /// and white points are under 1/256 apart; none of these throws. Throws
+    /// `RasterError.invalid` only when the suggested white balance is not
+    /// neutral and applying it gives a non-finite pixel (the buffer holds a
+    /// non-finite component).
     public static func suggest(for buffer: PixelBuffer) throws -> AutoTone {
         let balance = try whiteBalance(for: buffer)
         let balanced = try buffer.whiteBalance(temperature: balance.temperature, tint: balance.tint)
