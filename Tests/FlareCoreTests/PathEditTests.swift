@@ -21,7 +21,7 @@ private func cubicOf(_ e: PathElement, from p0: Point) -> (Point, Point, Point, 
 /// Exact signed area of a path of lines and cubics: half the integral of
 /// x dy - y dx, by 3-point Gauss-Legendre, exact for these degree-5 terms.
 private func exactArea(_ path: Path) -> Double {
-    let nodes = [(0.5 - 0.15.squareRoot() / 2, 5.0 / 18), (0.5, 8.0 / 18), (0.5 + 0.15.squareRoot() / 2, 5.0 / 18)]
+    let nodes = [(0.5 - 0.15.squareRoot(), 5.0 / 18), (0.5, 8.0 / 18), (0.5 + 0.15.squareRoot(), 5.0 / 18)]
     var total = 0.0
     var pen = pt(0, 0), start = pen
     for e in path.elements {

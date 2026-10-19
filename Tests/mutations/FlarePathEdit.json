@@ -1,0 +1,30 @@
+[
+  {
+    "note": "split uses t for both halves, so the second half of a split cubic leaves the curve and the shape moves, caught by insertKeepsShape",
+    "file": "Sources/FlareCore/PathOps/PathEdit.swift",
+    "anchor": ".cubic(control1: p123, control2: p23, to: to)",
+    "replacement": ".cubic(control1: p12, control2: p23, to: to)",
+    "filter": "PathEditTests.insertKeepsShape"
+  },
+  {
+    "note": "symmetric keeps lengths, so converting to symmetric only lines the handles up, caught by symmetricEqualizes",
+    "file": "Sources/FlareCore/PathOps/PathEdit.swift",
+    "anchor": "kind == .symmetric ? ((lengthIn + lengthOut) / 2, (lengthIn + lengthOut) / 2) : (lengthIn, lengthOut)",
+    "replacement": "(lengthIn, lengthOut)",
+    "filter": "PathEditTests.symmetricEqualizes"
+  },
+  {
+    "note": "index check <= for <, so an anchor index equal to the count gets past the guard, caught by badIndexThrows",
+    "file": "Sources/FlareCore/PathOps/PathEdit.swift",
+    "anchor": "index < cs[contour].anchors.count",
+    "replacement": "index <= cs[contour].anchors.count",
+    "filter": "PathEditTests.badIndexThrows"
+  },
+  {
+    "note": "a curve closing onto its start keeps a duplicate anchor instead of folding it into the first, caught by anchorsViewRoundTripsEveryFixture",
+    "file": "Sources/FlareCore/PathOps/PathEdit.swift",
+    "anchor": "anchors[0].handleIn = handle\n            anchors.removeLast()",
+    "replacement": "anchors[0].handleIn = nil",
+    "filter": "PathEditTests.anchorsViewRoundTripsEveryFixture"
+  }
+]
