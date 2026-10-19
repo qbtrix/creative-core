@@ -61,3 +61,4 @@ utc	stage	event	ref	note
 2026-10-19T09:44:36Z	anatomy	gate	3d9c151	IC-jpeg r4 rerun: same budget test failed again in the gate (2.33s); run alone it passes in 0.3s on 124c35e and 3d9c151 (CoreAsset unchanged between them); contention with panel agents. Rerun the gate after the IC-png panel ends
 2026-10-19T09:47:00Z	anatomy	panel	124c35e	IC-png r3 panel wf_46d81785-e47: 7 confirmed (2 major tests: Inflate long-code walk, single distance code), 1 refuted; fix batches r3-png-b1, r3-png-b2 started
 2026-10-19T09:59:44Z	anatomy	gate	3d9c151	IC-jpeg r4: local budget test ThumbnailStoreRecoveryTests failed 3x only inside full local scripts/ci (passes alone and in the serial budget pass on both heads); dev ci.yml run 39230628738 Linux green on 8cd57c6 (holds #681); panel started
+2026-10-19T10:00:06Z	heartbeat	status	3d9c151	IC-png r3 fix batch wf_10264d50-8f5 running; IC-jpeg r4 panel wf_65826713-fae running
