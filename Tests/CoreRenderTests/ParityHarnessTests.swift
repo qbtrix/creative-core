@@ -6,7 +6,7 @@ import Foundation
 #endif
 import CoreColor
 import CoreRaster
-import CoreRender
+@testable import CoreRender
 import Testing
 
 /// 3x2 opaque sRGB bytes 5, 150, 200 with pixel (2, 1)'s red `5 + delta`. Red
@@ -21,7 +21,58 @@ private func compare(_ delta: UInt8, _ tolerance: ParityTolerance) throws -> Par
 
 private func fill(_ w: Int, _ h: Int, _ r: Float, _ g: Float, _ b: Float, _ a: Float) throws -> PixelBuffer { try PixelBuffer(width: w, height: h, fill: RGBA(r: r, g: g, b: b, a: a)) }
 
+/// A CPU backend for effects only that counts its live surfaces: `surface` and
+/// `applying` add one, `release` removes it. Every other op is NullBackend's.
+private struct CountingBackend: RenderBackend {
+    let cpu = CPUBackend(), null = NullBackend(), ids = Locked<Set<UUID>>([])
+    let name = "counting", supports: Set<RenderOp> = [.effect], isHealthy = true
+    var live: Int { ids.withLock { $0.count } }
+
+    private func track(_ s: RenderSurface) -> RenderSurface { ids.withLock { _ = $0.insert(s.id) }; return s }
+    func surface(_ buffer: PixelBuffer) throws -> RenderSurface { track(try cpu.surface(buffer)) }
+    func read(_ surface: RenderSurface) throws -> PixelBuffer { try cpu.read(surface) }
+    func release(_ surface: RenderSurface) { ids.withLock { _ = $0.remove(surface.id) }; cpu.release(surface) }
+    func applying(_ s: RenderSurface, _ effect: LayerEffect) throws -> RenderSurface { track(try cpu.applying(s, effect)) }
+    func display(_ s: RenderSurface, colorSpace: ColorSpace) throws -> [UInt8] { try null.display(s, colorSpace: colorSpace) }
+    func composite(_ s: RenderSurface, onto b: inout RenderSurface, x: Int, y: Int, mode: BlendMode, opacity: Float) throws {
+        try null.composite(s, onto: &b, x: x, y: y, mode: mode, opacity: opacity)
+    }
+    func cropped(_ s: RenderSurface, x: Int, y: Int, width: Int, height: Int) throws -> RenderSurface {
+        try null.cropped(s, x: x, y: y, width: width, height: height)
+    }
+    func rotated(_ s: RenderSurface, _ turn: QuarterTurn) throws -> RenderSurface { try null.rotated(s, turn) }
+    func resampled(_ s: RenderSurface, width: Int, height: Int, filter: ResampleFilter) throws -> RenderSurface {
+        try null.resampled(s, width: width, height: height, filter: filter)
+    }
+    func gaussianBlur(_ s: RenderSurface, sigma: Double) throws -> RenderSurface { try null.gaussianBlur(s, sigma: sigma) }
+    func unsharpMask(_ s: RenderSurface, amount: Double, sigma: Double, threshold: Double) throws -> RenderSurface {
+        try null.unsharpMask(s, amount: amount, sigma: sigma, threshold: threshold)
+    }
+    func adjusted(_ s: RenderSurface, _ adjustment: ToneAdjustment) throws -> RenderSurface { try null.adjusted(s, adjustment) }
+    func cloned(_ s: RenderSurface, offset: (dx: Int, dy: Int), through mask: Mask) throws -> RenderSurface {
+        try null.cloned(s, offset: offset, through: mask)
+    }
+}
+
 @Suite struct ParityHarnessTests {
+    @Test func appliedReleasesAndRejectsEmpty() throws {
+        let source = try fill(3, 2, 0.2, 0.4, 0.6, 1)
+        let sample = { (name: String, effects: [LayerEffect]) in
+            ParitySample(name: name, call: .applied(effects), source: source, backdrop: nil)
+        }
+        #expect(throws: RenderError.raster("effect sample 'empty' has no effects")) {
+            try ParityHarness.render(sample("empty", []), on: CPUBackend())
+        }
+        let backend = CountingBackend()
+        let blurs: [LayerEffect] = [.boxBlur(radius: 1), .boxBlur(radius: 0.5), .boxBlur(radius: 2)]
+        let result = try ParityHarness.render(sample("three", blurs), on: backend)
+        #expect(result.width == 3 && backend.live == 0, "every surface of a 3-effect stack is released: \(backend.live) live")
+        #expect(throws: RenderError.self) {
+            try ParityHarness.render(sample("bad-last", Array(blurs.prefix(2)) + [.boxBlur(radius: -1)]), on: backend)
+        }
+        #expect(backend.live == 0, "a stack whose last effect throws releases every surface: \(backend.live) live")
+    }
+
     @Test func byteBoundsHoldExactly() throws {
         let same = try compare(0, .standard)
         #expect(same.passed && same.worstByteDelta == 0 && same.worstLinearDelta == 0)
