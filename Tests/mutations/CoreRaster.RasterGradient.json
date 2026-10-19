@@ -1,0 +1,23 @@
+[
+  {
+    "note": "the reflected gradient is not mirrored at a, so pixels behind a clamp to 0 instead of repeating the ramp, caught by RasterGradientTests.reflectedMirrors",
+    "file": "Sources/CoreRaster/Fill/RasterGradient.swift",
+    "anchor": "case .reflected: return abs(along)",
+    "replacement": "case .reflected: return along",
+    "filter": "RasterGradientTests.reflectedMirrors"
+  },
+  {
+    "note": "the angle gradient measures from the x axis not from the direction a to b, so angle 0 points along +x whatever b is, caught by RasterGradientTests.angleStartsAtB",
+    "file": "Sources/CoreRaster/Fill/RasterGradient.swift",
+    "anchor": "let turn = (atan2(dy, dx) - atan2(vy, vx)) / (2 * Double.pi)",
+    "replacement": "let turn = atan2(dy, dx) / (2 * Double.pi)",
+    "filter": "RasterGradientTests.angleStartsAtB"
+  },
+  {
+    "note": "the ramp's t is not clamped to the last stop, so past b the colour extrapolates beyond its last stop, caught by RasterGradientTests.clampsPastEnd",
+    "file": "Sources/CoreRaster/Fill/RasterGradient.swift",
+    "anchor": "let t = min(max(t, offsets[0]), offsets[last])",
+    "replacement": "let t = max(t, offsets[0])",
+    "filter": "RasterGradientTests.clampsPastEnd"
+  }
+]

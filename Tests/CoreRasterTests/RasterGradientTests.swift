@@ -1,5 +1,5 @@
 // RasterGradientTests.swift: fill-tools FT-5's acceptance, written first (FT-1);
-// FT-5 removes the `.disabled` traits. A black-to-white ramp in linear light,
+// enabled by FT-5. A black-to-white ramp in linear light,
 // dither off, makes each pixel's red its `t` (FT-6 checks dither on its own).
 import CoreColor
 import CoreRaster
@@ -19,7 +19,7 @@ import Testing
 
     private func t(_ image: PixelBuffer, _ x: Int, _ y: Int) throws -> Double { Double(try image.pixel(x: x, y: y).r) }
 
-    @Test(.disabled("waits on FT-5"))
+    @Test
     func shapesMatchAnalyticT() throws {
         for c in FillFixtures.gradientCases {
             let got = try t(try render(c.shape), c.x, c.y)
@@ -38,7 +38,7 @@ import Testing
         }
     }
 
-    @Test(.disabled("waits on FT-5"))
+    @Test
     func reflectedMirrors() throws {
         let image = try render(.reflected)
         for k in 1...9 {
@@ -49,7 +49,7 @@ import Testing
     }
 
     /// With `b` straight below `a`, angle 0 points down, not along +x.
-    @Test(.disabled("waits on FT-5"))
+    @Test
     func angleStartsAtB() throws {
         let a = FillFixtures.gradientA, b = Mask.Point(x: 10.5, y: 20.5)
         let image = try render(.angle, from: a, to: b)
@@ -60,7 +60,7 @@ import Testing
         }
     }
 
-    @Test(.disabled("waits on FT-5"))
+    @Test
     func clampsPastEnd() throws {
         let linear = try render(.linear)
         for x in 20..<32 { #expect(try t(linear, x, 3) == 1, "x = \(x)") }
@@ -72,7 +72,7 @@ import Testing
 
     /// Red to green at `t` = 0.5 (pixel (15, 10)): linear light gives the
     /// plain mean; perceptual gives the OKLab midpoint, which CoreColor states.
-    @Test(.disabled("waits on FT-5"))
+    @Test
     func stopsInterpolateInOKLab() throws {
         let red = RGBA(r: 1, g: 0, b: 0, a: 1), green = RGBA(r: 0, g: 1, b: 0, a: 1)
         let stops = [RasterGradientStop(offset: 0, color: red), RasterGradientStop(offset: 1, color: green)]
@@ -92,7 +92,28 @@ import Testing
         #expect(want.c0 - 0.5 > 0.1 && want.c1 - 0.5 < -0.1)  // about +0.13 red, -0.11 green off the linear mid
     }
 
-    @Test(.disabled("waits on FT-5"))
+    /// Three stops with a hard edge at 0.5 and a fading alpha: each segment
+    /// mixes only its own two stops, the edge takes the later stop, and the
+    /// output is premultiplied.
+    @Test
+    func stopsSegmentAndPremultiply() throws {
+        let stops = [RasterGradientStop(offset: 0.2, color: RGBA(r: 1, g: 0, b: 0, a: 1)),
+                     RasterGradientStop(offset: 0.5, color: RGBA(r: 0, g: 1, b: 0, a: 1)),
+                     RasterGradientStop(offset: 0.5, color: RGBA(r: 0, g: 0, b: 1, a: 1)),
+                     RasterGradientStop(offset: 1, color: RGBA(r: 0, g: 0, b: 1, a: 0))]
+        let image = try PixelBuffer.gradient(width: 32, height: 24, shape: .linear, from: FillFixtures.gradientA,
+                                             to: FillFixtures.gradientB, stops: stops, space: .linear, dither: false)
+        let cases: [(Int, RGBA)] = [(10, RGBA(r: 1, g: 0, b: 0, a: 1)), (11, RGBA(r: 1, g: 0, b: 0, a: 1)),
+                                    (13, RGBA(r: 2.0 / 3, g: 1.0 / 3, b: 0, a: 1)), (15, RGBA(r: 0, g: 0, b: 1, a: 1)),
+                                    (18, RGBA(r: 0, g: 0, b: 0.4, a: 0.4)), (25, .clear)]
+        for (x, want) in cases {
+            let got = try image.pixel(x: x, y: 10)
+            #expect(abs(got.r - want.r) < 1e-6 && abs(got.g - want.g) < 1e-6 && abs(got.b - want.b) < 1e-6
+                        && abs(got.a - want.a) < 1e-6, "x = \(x): \(got), want \(want)")
+        }
+    }
+
+    @Test
     func badStopsPointsOrSizeThrow() {
         let (a, b) = (FillFixtures.gradientA, FillFixtures.gradientB)
         let red = RGBA(r: 1, g: 0, b: 0, a: 1)
