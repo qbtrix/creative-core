@@ -16,13 +16,20 @@ import Testing
         }
     }
 
-    /// The warm 33³ table holds the hand values at lattice points, red index fastest.
+    /// The warm 33³ table holds the hand values at lattice points, red index
+    /// fastest, and `applying` gives them back at those 8 lattice inputs.
     @Test func redFastest() throws {
         let lut = try CubeLUT.parse(ToneFixtures.warm33)
         #expect(lut.size == 33)
         let points = [(0, 0, 0), (32, 0, 0), (0, 32, 0), (0, 0, 32), (5, 17, 29), (31, 2, 11), (16, 16, 16), (32, 32, 32)]
         for (r, g, b) in points {
             #expect(lut.table[r + 33 * g + 33 * 33 * b] == ToneFixtures.warmLattice(r, g, b), "\(r), \(g), \(b)")
+        }
+        let c = { (i: Int) in Double(ToneFixtures.coordinate(i, size: 33)) }
+        let row = try ToneCheck.row(points.map { ToneCheck.pixel([c($0.0), c($0.1), c($0.2)]) })
+        for ((r, g, b), q) in zip(points, try ToneCheck.pixels(row.applying(lut))) {
+            let want = SIMD3<Double>(ToneFixtures.warmLattice(r, g, b))
+            #expect(ToneCheck.gap(ToneCheck.encoded(q), want) <= 1e-5, "applied \(r), \(g), \(b)")
         }
     }
 
@@ -42,6 +49,28 @@ import Testing
     @Test func damagedFilesThrow() {
         for d in ToneFixtures.damaged {
             #expect(throws: RasterError.self, "\(d.label)") { try CubeLUT.parse(d.text) }
+        }
+    }
+
+    /// A table longer than n³ is refused at its first extra line, and a size
+    /// outside 2...65 at its LUT_3D_SIZE line, before ColorLUT sees either.
+    @Test func longTableRefusedAtLine() {
+        func message(_ label: String) -> String {
+            guard let d = ToneFixtures.damaged.first(where: { $0.label == label }) else { return "no fixture" }
+            do {
+                _ = try CubeLUT.parse(d.text)
+                return "parsed"
+            } catch let RasterError.invalid(why) {
+                return why
+            } catch {
+                return "\(error)"
+            }
+        }
+        let long = message("long table")
+        #expect(long.contains(".cube line \(ToneFixtures.headerLines + 9)") && long.contains("more than 8 entries"), "\(long)")
+        for label in ["LUT_3D_SIZE 1", "LUT_3D_SIZE 66"] {
+            let why = message(label)
+            #expect(why.contains(".cube line 3") && why.contains("LUT_3D_SIZE"), "\(label): \(why)")
         }
     }
 

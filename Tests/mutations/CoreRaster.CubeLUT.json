@@ -1,6 +1,6 @@
 [
   {
-    "note": "LUT apply steps the table blue index fastest instead of red, so a lookup reads the transposed entry, caught by ColorLUTTests.midpointsTrilinear and identityWithinTolerance",
+    "note": "LUT apply steps the table blue index fastest instead of red, so a lookup reads the transposed entry, caught by ColorLUTTests.redFastest, midpointsTrilinear and identityWithinTolerance",
     "file": "Sources/CoreRaster/Tone/ColorMap.swift",
     "anchor": "let step = SIMD3(1, n, n * n)",
     "replacement": "let step = SIMD3(n * n, n, 1)",
@@ -18,6 +18,20 @@
     "file": "Sources/CoreRaster/Tone/ColorMap.swift",
     "anchor": "let f = x - SIMD3(Double(i.x), Double(i.y), Double(i.z))",
     "replacement": "let f = (x - SIMD3(Double(i.x), Double(i.y), Double(i.z))).rounded(.toNearestOrAwayFromZero)",
+    "filter": "ColorLUTTests"
+  },
+  {
+    "note": "the cube parser drops the n cubed table guard, so a long table is refused only later by ColorLUT and not at its line, caught by ColorLUTTests.longTableRefusedAtLine",
+    "file": "Sources/CoreRaster/Tone/CubeLUT.swift",
+    "anchor": "guard table.count < n * n * n else { throw fail(\"more than \\(n * n * n) entries\") }",
+    "replacement": "",
+    "filter": "ColorLUTTests"
+  },
+  {
+    "note": "the cube parser skips the LUT_3D_SIZE range check, so size 66 is refused only later by ColorLUT and not at its line, caught by ColorLUTTests.longTableRefusedAtLine",
+    "file": "Sources/CoreRaster/Tone/CubeLUT.swift",
+    "anchor": "let n = Int(tokens[1]), (2...65).contains(n) else {",
+    "replacement": "let n = Int(tokens[1]), n > 0 else {",
     "filter": "ColorLUTTests"
   }
 ]

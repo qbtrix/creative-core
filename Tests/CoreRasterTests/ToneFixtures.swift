@@ -1,7 +1,7 @@
 // ToneFixtures.swift: the shared inputs of the tone-pack checks (TP-2 of
 // docs/blueprints/core/features/tone-pack.md). Reference colours with
 // hand-computed values, `.cube` texts built in code (an identity 17³, a warm
-// look 33³ and five damaged files), and a seeded "cast photo". The `.cube`
+// look 33³ and six damaged files), and a seeded "cast photo". The `.cube`
 // texts are generated, not checked in: a 33³ table is about 36,000 lines, and
 // test resources would need a Package.swift edit. Everything here is
 // deterministic: the same call gives the same value on every platform.
@@ -107,7 +107,7 @@ enum ToneFixtures {
         let lineCount: Int
     }
 
-    /// Five damaged files: each breaks exactly one rule of the format.
+    /// Six damaged files: each breaks exactly one rule of the format.
     static let damaged: [Damaged] = {
         let identity2 = identityEntry(size: 2)
         return [
@@ -117,6 +117,8 @@ enum ToneFixtures {
                     lineCount: headerLines + 66 * 66 * 66),
             Damaged(label: "short table", text: cube(title: "short", size: 2, entries: 7, entry: identity2),
                     lineCount: headerLines + 7),
+            Damaged(label: "long table", text: cube(title: "long", size: 2, entries: 9, entry: identity2),
+                    lineCount: headerLines + 9),
             Damaged(label: "NaN entry", text: cube(title: "nan", size: 2) { r, g, b in
                 r == 1 && g == 0 && b == 1 ? "1.0 nan 1.0" : identity2(r, g, b)
             }, lineCount: headerLines + 8),
@@ -188,7 +190,7 @@ private func lineCount(_ text: String) -> Int {
         #expect(lineCount(d.text) == d.lineCount, "\(d.label)")
     }
     #expect(ToneFixtures.damaged.map(\.label)
-        == ["LUT_3D_SIZE 1", "LUT_3D_SIZE 66", "short table", "NaN entry", "DOMAIN_MAX 2"])
+        == ["LUT_3D_SIZE 1", "LUT_3D_SIZE 66", "short table", "long table", "NaN entry", "DOMAIN_MAX 2"])
     #expect(ToneFixtures.identity17.split(separator: "\n")[5] == "0.0 0.0 0.0")
     #expect(ToneFixtures.warm33.split(separator: "\n")[5] == "0.08 0.03 0.0")
 }
