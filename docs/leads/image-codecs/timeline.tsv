@@ -58,3 +58,4 @@ utc	stage	event	ref	note
 2026-10-19T09:25:13Z	anatomy	gate	124c35e	IC-png r3 gate CI: PASS, 871 anchors, mutate 24/24 (Inflate 9/9, Deflate 3/3, PNG 8/8, PNGWrite 4/4); panel started
 2026-10-19T09:30:57Z	heartbeat	status	3d9c151	fix batches done (#676, #680, #681 merged); IC-png r3 panel wf_46d81785-e47 running; IC-jpeg r4 gate running
 2026-10-19T09:39:13Z	anatomy	gate	3d9c151	IC-jpeg r4 gate: 881 anchors, mutate 51/51 (JPEG 18/18, JPEGProgressive 20/20, JPEGWrite 7/7, JPEGDecode 6/6); CI FAIL on budget ThumbnailStoreRecoveryTests.fuzzedIndexThrowsOrRecovers 2.04s vs 1s (not a codec file, panel load); one rerun
+2026-10-19T09:44:36Z	anatomy	gate	3d9c151	IC-jpeg r4 rerun: same budget test failed again in the gate (2.33s); run alone it passes in 0.3s on 124c35e and 3d9c151 (CoreAsset unchanged between them); contention with panel agents. Rerun the gate after the IC-png panel ends
