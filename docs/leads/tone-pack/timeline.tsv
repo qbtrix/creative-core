@@ -26,3 +26,4 @@ utc	stage	event	ref	note
 2026-10-18T23:58:27Z	4	round-start	round-1	gate+mutate on 5ea5ae5 (covers merged slices)
 2026-10-19T00:00:40Z	3	pr-open	#585	TP-5 head 19e7674, 5/5 mutants
 2026-10-19T00:00:40Z	3	building	TP-6	builder launched
+2026-10-19T00:04:03Z	3	merged	#585	TP-5 squash 62a84e9
