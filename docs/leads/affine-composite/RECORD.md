@@ -2,9 +2,9 @@
 
 Issue: #434 · Packet: docs/blueprints/core/features/affine-composite.md
 Run: act-1a150bfbcf7-sfwy · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
-Stage: 4 round 3 fixes: branches r3-b1..b3 built; PRs being finished after dev build break (#644, fixed by #661)
+Stage: 4 round 4 gate and mutation on dev 813d92d (r3 fixes all merged)
 Base: 4feaaf9fac3cc050901f8b459a0908515a927f54
-Next: merge r3 fixes; round 4 panel on dev; then AC-8, AC-9 (AC-z), feature-done on the last PR
+Next: round 4 panel; then AC-8, AC-9 (AC-z), feature-done on the last PR
 
 Line lead for #434, #433 and #432 (rule 19); one wave plan across the three
 features, bookkeeping per feature. Packet v3 (has a Slices table).
@@ -52,7 +52,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 |---|---|---|---|---|---|---|---|---|---|
 | AC-a, AC-geo | 1 | 5ea5ae5 | PASS (try 5, budget retries under load) | 70/70 | - | clarity, contract, tests, robustness | 9 (3 major: downscale widening, `/ total` normalisation and exactCopy limit guard untested; 6 minor), 0 refuted | #598 (r1-b1, merged; 9/9) | no |
 | AC-comp | 2 | 7d8af79 | PASS | 66/66 | - | clarity, contract, tests, robustness | 5 (2 major: through-composite misses kernel reach past bounds on hard edges; ±2^52 clamp untested; 3 minor), 0 refuted | #621 merged (f31d178), 5/5 mutate | no |
-| AC-a, AC-geo, AC-comp | 3 | 77b74a1 | PASS | 133/133 | - | clarity, contract, tests, robustness | 8 (2 major: reach formula mutants escape on anisotropic/sheared upscales; rows-outside test blind to clip removal; 6 minor: matrix direction docs, split singular/non-finite errors, padded doc, packet reach wording, opacity guard mutation, CPU affine bad input), 0 refuted | r3-b1 (10aa4b7), r3-b2 (a240d6d), r3-b3 (a2248b6) built; held by dev red at b83a0bd; finishing PRs | no |
+| AC-a, AC-geo, AC-comp | 3 | 77b74a1 | PASS | 133/133 | - | clarity, contract, tests, robustness | 8 (2 major: reach formula mutants escape on anisotropic/sheared upscales; rows-outside test blind to clip removal; 6 minor: matrix direction docs, split singular/non-finite errors, padded doc, packet reach wording, opacity guard mutation, CPU affine bad input), 0 refuted | r3-b1 #672 merged (c53dfcf), r3-b2 #674 merged (813d92d), r3-b3 #669 merged (13a82ad); round 3 fixes all merged | no |
 
 ## Decisions
 - AC-4 (#584): `padded` places the source with whole-pixel `transformed` at floor offsets per anchor; `CanvasSizeTests.swift` was created (packet lists it, file did not exist).

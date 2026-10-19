@@ -61,3 +61,4 @@ utc	stage	event	ref	note
 2026-10-19T08:05:20Z	4	pr-opened	#669	r3-b3 PR open (bebb5a2), CI PASS, 1/1 CoreRenderCPUAffine
 2026-10-19T08:08:52Z	4	pr-opened	#672	r3-b1 PR open (e543755), CI PASS, 17/17 mutants
 2026-10-19T08:11:54Z	4	heartbeat	-	r3: #669, #672 merged; r3-b2 finisher still gating
+2026-10-19T08:16:08Z	4	round-start	813d92d	r3 fixes all merged (#669, #672, #674); round 4 gate and mutation started
