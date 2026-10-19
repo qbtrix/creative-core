@@ -98,10 +98,11 @@ extension PixelBuffer {
   and distance caps: 0...1,000 px; strength and amount ranges as in the
   signatures; anything else throws `RasterError.invalid`.
 - **boxBlurred.** Separable running sums of radius `r`, three passes (the
-  result approaches a Gaussian); premultiplied, so colour doesn't bleed from
-  transparent pixels.
+  result approaches a Gaussian), so it reaches 3 × `r` px in total;
+  premultiplied, so colour doesn't bleed from transparent pixels.
 - **motionBlurred.** Average of samples along the angle, `distance` long,
-  bilinear, centred; the sample count is `ceil(distance)` + 1, capped at
+  bilinear, centred; an integer distance starts on the whole pixel
+  floor(−distance / 2), so an odd one sits 1/2 px toward −angle; the sample count is `ceil(distance)` + 1, capped at
   1,001.
 - **denoised.** A bilateral filter: spatial sigma 1 + 4 × strength px,
   range sigma (1 − detail) × 0.2 in linear luma; chroma smoothed at twice the
@@ -124,7 +125,9 @@ extension PixelBuffer {
   under the layer for outside, over it for inside and centre (clipped to the
   layer for inside).
 - **glowing / shadowed.** Outer: the layer's alpha (offset for a shadow),
-  Gaussian blurred by `radius` or `blur`, tinted, scaled by intensity or
+  blurred by three box passes of radius `radius`/3 (or `blur`/3), so it
+  reaches `radius` (or `blur`) px in total (about a Gaussian of sigma
+  `radius`/3), tinted, scaled by intensity or
   opacity, composited under the layer. Inner: the inverted alpha, blurred,
   offset, clipped by the layer's alpha, composited over it. `RGBA`
   colours are linear premultiplied like the buffers.
