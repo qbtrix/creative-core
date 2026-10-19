@@ -5,7 +5,7 @@ Run: act-1a1511a1174-tlch · Started: 2026-10-18T22:40Z
 Line lead for: image-codecs (#562), preview-cache (#440, already done), vector-import (#439, VI-z left)
 Stage: 4 — IC-png r1 fix batch wf_9d39d94a-8d4; IC-jpeg r2 fix batch wf_a005f679-d21
 Base: 9385de9 (wave 4)
-Next: dev b83a0bd (#644) does not build (FillFromSurroundings.swift: no relaxHeal, channelsOf; not ours, no dev-red issue yet); fix PRs wait for a building dev, then open (r1-png-b2 pushed at cafb8f3, PR pending)
+Next: dev builds again (#661, 5142795). #663 (r2-jpeg-b1) merged 07:35Z. Lead rebases and gates r1-png-b1 (2b7f53b) and r1-png-b2 (cafb8f3), then opens their PRs; r1-png-b3 and r2-jpeg-b2 still running
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |

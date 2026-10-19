@@ -41,3 +41,5 @@ utc	stage	event	ref	note
 2026-10-19T06:54:20Z	stage-4	fix-batch	wf_a005f679-d21	IC-jpeg r2: b1 header/writer, b2 progressive/entropy
 2026-10-19T07:01:18Z	stage-4	heartbeat	-	fix batches wf_9d39d94a-8d4 (IC-png r1) and wf_a005f679-d21 (IC-jpeg r2) running; no image-codecs PR open to dev yet
 2026-10-19T07:23:47Z	stage-4	blocked	b83a0bd	dev build broken by #644 (Heal/FillFromSurroundings.swift), not ours; r1-png-b2 branch pushed cafb8f3 with no PR; other fixers running
+2026-10-19T07:42:57Z	stage-4	merged	#663	r2-jpeg-b1 merged 07:35Z (7403174), 16\/16
+2026-10-19T07:42:57Z	stage-4	unblocked	5142795	dev builds again (#661); rebasing r1-png-b1, r1-png-b2 for PRs
