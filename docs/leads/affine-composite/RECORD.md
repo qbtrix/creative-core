@@ -2,9 +2,9 @@
 
 Issue: #434 · Packet: docs/blueprints/core/features/affine-composite.md
 Run: act-1a1543c8a34-t9zw (previous act-1a150bfbcf7-sfwy / act-1a1511a1174-tlch) · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
-Stage: 5 feature-done merged
+Stage: 7 contact sheet posted
 Base: 4feaaf9fac3cc050901f8b459a0908515a927f54
-Next: green Linux on https://github.com/qbtrix/creative-core/actions/runs/39300831435, then done lines and contact sheet
+Next: Mac finish (budgets/parity) on run 39300831435
 
 Line lead for #434, #433 and #432 (rule 19); one wave plan across the three
 features, bookkeeping per feature. Packet v3 (has a Slices table).
@@ -21,7 +21,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 | AC-6 | 5 | AC-comp | CPU bodies for the three `affine` calls; turns on `CPUAffineTests` | `Sources/CoreRender/CPU/CPUBackend+Affine.swift`, `Tests/CoreRenderTests/CPUAffineTests.swift`, `Tests/mutations/CoreRenderCPUAffine.json` | `CPUAffineTests` | 2 (packet) | #610 | merged |
 | AC-7 | 6 | AC-z | `Samples+Affine.swift` and CPU goldens | `Sources/CoreRender/Parity/Samples+Affine.swift`, `Tests/CoreRenderTests/Golden/affine/` | `CPUGoldenTests` | none: goldens | #633 | merged |
 | AC-8 | 7 | AC-z | KJ-AC walk; `AffineBudgetTests` (release, `.serialized`, reported) | `Tests/CoreRenderTests/AffineWalkTests.swift`, `Tests/CoreRasterTests/AffineBudgetTests.swift` | `AffineWalkTests.walk` | none | #700 (64bd637) | merged |
-| AC-9 | 8 | AC-z | Packet status line says built; `feature-done` | `docs/blueprints/core/features/affine-composite.md` | – | none | | planned |
+| AC-9 | 8 | AC-z | Packet status line says built; `feature-done` | `docs/blueprints/core/features/affine-composite.md` | – | none | #736 (17c7cf57) | merged |
 
 ## Acceptance (from the packet)
 - AC-3 `AffineOpsTests`: identity and a (7, −3) translation are `==` copies; 90° about the centre equals `rotated(.degrees90)`; 2× scale of a checkerboard keeps edges within 0.5 px; outside exactly 0; singular throws; `flipped` twice `==`, once mirrors (0, 0) to (w − 1, 0). Mutations: centre sampling → `ninetyEqualsRotated`; forward map → `scaleKeepsEdges`; translation off by one → `translationIsExact`; vertical flip reverses columns → `flipMirrorsRows`.
@@ -45,7 +45,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 | AC-a | AC-0, AC-1, AC-2 | engine-contracts:EC-a (merged on base) | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39174242588 | |
 | AC-geo | AC-3, AC-4 | AC-a | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39180267199 | |
 | AC-comp | AC-5, AC-6 | AC-geo; engine-contracts:EC-b (merged on base) | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39201658156 | |
-| AC-z | AC-7, AC-8, AC-9 | AC-comp | open | | wanted (budgets) |
+| AC-z | AC-7, AC-8, AC-9 | AC-comp | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39300831435 | wanted (budgets, parity), https://github.com/qbtrix/creative-core/actions/runs/39300831435 |
 
 ## Rounds
 | slice | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
@@ -55,6 +55,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 | AC-a, AC-geo, AC-comp | 3 | 77b74a1 | PASS | 133/133 | - | clarity, contract, tests, robustness | 8 (2 major: reach formula mutants escape on anisotropic/sheared upscales; rows-outside test blind to clip removal; 6 minor: matrix direction docs, split singular/non-finite errors, padded doc, packet reach wording, opacity guard mutation, CPU affine bad input), 0 refuted | r3-b1 #672 merged (c53dfcf), r3-b2 #674 merged (813d92d), r3-b3 #669 merged (13a82ad); round 3 fixes all merged | no |
 | AC-comp, AC-z | 4 | 813d92d | PASS | 33/33 (affine plans) | - | clarity, contract, tests, robustness | 9 (3 major: box-sized intermediate in composite(through:); AC-8 unbuilt; 2^52 reach clamp untested; 6 minor), 0 refuted | r4-b1 #693 merged (3207e38), r4-b2 #695 merged (b94f827); r4-b3 #700 merged (64bd637) | no |
 | AC-comp, AC-z | 5 | 64bd637 | PASS (rerun after OOM kill) | 48/48 | - | clarity, contract, tests, robustness | 5 (1 major: the only lanczos3 composite-through golden uses an alpha-zero source, so a fixed filter passes every test; 4 minor: partial-write on throw undocumented at backend level, widened write box not public, noFullSizeIntermediate measures no memory, overshoot rows-untouched unchecked), 1 refuted | r5-b1, r5-b2 queued (RAM) | no |
+| AC-z | 6 | 88ed878 | PASS | affine plans caught | - | clarity, contract, tests, robustness | 3 minor, 0 major | F1-F3 folded into AC-9 #736 (CompositeAffine 16/16, AffineTransform 10/10, CoreRenderCPUAffine 4/4) | yes |
 
 ## Decisions
 - AC-4 (#584): `padded` places the source with whole-pixel `transformed` at floor offsets per anchor; `CanvasSizeTests.swift` was created (packet lists it, file did not exist).
@@ -68,3 +69,5 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 ## Open
 - AC-5 must add the composite bad-input test (throws, backdrop unchanged); AC-1 (#574) dropped it to fit the 400-line cap.
 - none
+
+- 2026-10-19T18:46Z: AC-9 #736 merged (17c7cf57); run 39300831435 Linux and Mutation green, macOS queued. Posted AC-z Belt-Slice-Done, Mac-Finish-Wanted and Belt-Contact-Sheet on #434 (comment 6274656231). Feature complete on Linux; Mac finish wanted for budgets and parity.
