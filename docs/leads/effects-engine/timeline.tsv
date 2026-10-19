@@ -76,3 +76,4 @@ utc	stage	event	ref	note
 2026-10-19T11:13:13Z	4	heartbeat	wf_375316d3-50a	round-5 panel running on 8613770
 2026-10-19T11:15:03Z	4	panel	wf_375316d3-50a	round 5: 5 confirmed (1 major), 0 refuted; fixes queued
 2026-10-19T11:25:17Z	4	fix-start	wf_a0fba459-99d	round 5 fixes r5-b1..b3
+2026-10-19T11:35:02Z	4	heartbeat	wf_a0fba459-99d	r5 fixers building, no PR yet
