@@ -52,7 +52,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 |---|---|---|---|---|---|---|---|---|---|
 | AC-a, AC-geo | 1 | 5ea5ae5 | PASS (try 5, budget retries under load) | 70/70 | - | clarity, contract, tests, robustness | 9 (3 major: downscale widening, `/ total` normalisation and exactCopy limit guard untested; 6 minor), 0 refuted | #598 (r1-b1, merged; 9/9) | no |
 | AC-comp | 2 | 7d8af79 | PASS | 66/66 | - | clarity, contract, tests, robustness | 5 (2 major: through-composite misses kernel reach past bounds on hard edges; ±2^52 clamp untested; 3 minor), 0 refuted | #621 merged (f31d178), 5/5 mutate | no |
-| AC-a, AC-geo, AC-comp | 3 | 77b74a1 | PASS | see round-3 mutate log | - | clarity, contract, tests, robustness | 8 (2 major: reach formula mutants escape on anisotropic/sheared upscales; rows-outside test blind to clip removal; 6 minor: matrix direction docs, split singular/non-finite errors, padded doc, packet reach wording, opacity guard mutation, CPU affine bad input), 0 refuted | r3-b1, r3-b2, r3-b3 running (wf_0fc6505d-5b3) | no |
+| AC-a, AC-geo, AC-comp | 3 | 77b74a1 | PASS | 133/133 | - | clarity, contract, tests, robustness | 8 (2 major: reach formula mutants escape on anisotropic/sheared upscales; rows-outside test blind to clip removal; 6 minor: matrix direction docs, split singular/non-finite errors, padded doc, packet reach wording, opacity guard mutation, CPU affine bad input), 0 refuted | r3-b1, r3-b2, r3-b3 running (wf_0fc6505d-5b3) | no |
 
 ## Decisions
 - AC-4 (#584): `padded` places the source with whole-pixel `transformed` at floor offsets per anchor; `CanvasSizeTests.swift` was created (packet lists it, file did not exist).
