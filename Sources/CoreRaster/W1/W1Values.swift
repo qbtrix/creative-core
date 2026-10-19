@@ -232,9 +232,15 @@ public enum StrokePosition: Hashable, Sendable {
 }
 
 /// How close a color must be to the seed for a fill to take it: exactly
-/// equal, or within a distance in 0...1 in OKLab.
+/// equal, or within a distance in 0...1, measured in OKLab with alpha as a
+/// fourth axis between the unpremultiplied colours. A fill given a distance
+/// outside 0...1 (or not finite) throws `RasterError.invalid`.
 public enum FillTolerance: Hashable, Sendable {
+    /// Only pixels equal to the seed colour (distance 0); same as `.within(0)`,
+    /// spelled out for the common "same colour only" fill.
     case exact
+    /// Distance at most `t`, in 0...1 (an OKLab plus alpha distance of the
+    /// unpremultiplied colours); other values throw.
     case within(Float)
 }
 
