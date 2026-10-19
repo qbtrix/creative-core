@@ -136,7 +136,9 @@ public struct ClippedPath: Sendable, Hashable {
     public var path: Path
     /// How it combines with the masks before it on the same layer.
     public var mode: MaskMode
-    /// Edge softness in the mask's layer's points.
+    /// Edge softness in scene units: the mask's own feather times the
+    /// uniform scale of its layer's scene matrix, sqrt(|det|), the same
+    /// matrix `path` went through, so a feather of 10 under a 4x instance is 40.
     public var feather: Double
     /// Mask strength, 0...1.
     public var opacity: Double
@@ -286,8 +288,9 @@ extension RenderList {
                 let m = parent * t.matrix
                 let op = opacity * o
                 let lk = locked || layer.isLocked
+                let scale = abs(m.determinant).squareRoot()
                 let own = clips + layer.masks.map {
-                    ClippedPath(path: $0.path.transformed(by: m), mode: $0.mode, feather: $0.feather,
+                    ClippedPath(path: $0.path.transformed(by: m), mode: $0.mode, feather: $0.feather * scale,
                                 opacity: $0.opacity, inverted: $0.inverted, depth: hosts.count)
                 }
                 func item(_ outline: Path, _ fill: Fill?, _ stroke: Stroke?, shape: Int?, text: Int?) -> RenderItem {
