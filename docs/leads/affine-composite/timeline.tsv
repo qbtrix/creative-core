@@ -38,3 +38,4 @@ utc	stage	event	ref	note
 2026-10-19T02:07:06Z	3	pr-open	#610	AC-6 gate passed after restart; fast-lane
 2026-10-19T02:11:47Z	4	round-2	7d8af79	gate PASS, mutate 66/66; critic panel launched (clarity, contract, tests, robustness)
 2026-10-19T02:30:16Z	4	round-2	AC-comp	panel 5 confirmed (2 major); fix batch r2-b1 running
+2026-10-19T03:13:34Z	4	fix-merged	#621	r2-b1 merged f31d178; AC-6 #610 rebased on it, re-gating
