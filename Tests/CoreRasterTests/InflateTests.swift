@@ -1,7 +1,7 @@
 // InflateTests.swift: Inflate against DEFLATE streams derived by hand from
 // RFC 1951 (stored, fixed and dynamic Huffman blocks; the bit layouts are in
 // the comments) and zlib wrappers from RFC 1950; damaged streams and the
-// output limit; Deflate then Inflate on seeded buffers. Disabled until IC-3.
+// output limit; Deflate then Inflate on seeded buffers.
 @testable import CoreRaster
 import Testing
 #if canImport(FoundationEssentials)
@@ -27,7 +27,7 @@ import Foundation
     func raw(_ bytes: [UInt8], limit: Int = 1 << 20) throws -> [UInt8] { [UInt8](try Inflate.raw(Data(bytes), limit: limit)) }
     func zlib(_ bytes: [UInt8], limit: Int = 1 << 20) throws -> [UInt8] { [UInt8](try Inflate.zlib(Data(bytes), limit: limit)) }
 
-    @Test(.disabled("waits on IC-3")) func storedBlocks() throws {
+    @Test func storedBlocks() throws {
         #expect(try raw([0x00, 0x02, 0x00, 0xFD, 0xFF, 0x61, 0x62, 0x01, 0x01, 0x00, 0xFE, 0xFF, 0x63]) == Array("abc".utf8))
         #expect(try zlib([0x78, 0x01, 0x01, 0x03, 0x00, 0xFC, 0xFF, 0x61, 0x62, 0x63, 0x02, 0x4D, 0x01, 0x27]) == Array("abc".utf8))
         #expect(try zlib(F.stored([])).isEmpty)
@@ -35,25 +35,25 @@ import Foundation
         #expect(try zlib(F.stored(long)) == long, "two stored blocks, the first 65,535 bytes")
     }
 
-    @Test(.disabled("waits on IC-3")) func fixedBlocks() throws {
+    @Test func fixedBlocks() throws {
         #expect(try raw(Self.fixedA) == [0x61])
         #expect(try raw(Self.fixedRepeats) == Self.repeatsOut)
         #expect(try zlib(F.zlib(Self.fixedRepeats, of: Self.repeatsOut)) == Self.repeatsOut)
     }
 
-    @Test(.disabled("waits on IC-3")) func dynamicBlocks() throws {
+    @Test func dynamicBlocks() throws {
         #expect(try raw(Self.dynamic) == Self.dynamicOut)
         #expect(try zlib(F.zlib(Self.dynamic, of: Self.dynamicOut)) == Self.dynamicOut)
     }
 
-    @Test(.disabled("waits on IC-3")) func adlerChecked() throws {
+    @Test func adlerChecked() throws {
         var bytes = F.zlib(Self.dynamic, of: Self.dynamicOut)
         bytes[bytes.count - 1] ^= 0x01
         #expect(F.thrown { try zlib(bytes) } == "damaged")
         #expect(F.thrown { try zlib(Array(bytes.dropLast(4))) } == "damaged", "the checksum missing")
     }
 
-    @Test(.disabled("waits on IC-3")) func damagedStreams() throws {
+    @Test func damagedStreams() throws {
         let a = F.zlib(Self.fixedA, of: [0x61])
         let zlibCases: [(String, [UInt8])] = [
             ("method 9", [0x79, 0x18] + a.dropFirst(2)), ("window over 32 KiB", [0x88, 0x1C] + a.dropFirst(2)),
@@ -72,7 +72,7 @@ import Foundation
 
     /// The limit is checked before the output grows: a 6-byte stored block then a reserved block type
     /// throws `tooLarge` at limit 5 (not `damaged` after the bytes were kept), `damaged` at limit 6.
-    @Test(.disabled("waits on IC-3")) func limitBeforeGrowth() throws {
+    @Test func limitBeforeGrowth() throws {
         let six: [UInt8] = [0x00, 0x06, 0x00, 0xF9, 0xFF] + Array("abcdef".utf8) + [0x07]
         #expect(F.thrown { try raw(six, limit: 5) } == "tooLarge")
         #expect(F.thrown { try raw(six, limit: 6) } == "damaged")
@@ -82,7 +82,7 @@ import Foundation
         #expect(F.thrown { try zlib(F.stored([UInt8](repeating: 1, count: 1_000)), limit: 999) } == "tooLarge")
     }
 
-    @Test(.disabled("waits on IC-3")) func deflateRoundTrip() throws {
+    @Test func deflateRoundTrip() throws {
         var rng = SplitMix64(seed: 0x1C3)
         for i in 0..<1_000 {
             var bytes: [UInt8] = []
@@ -97,7 +97,7 @@ import Foundation
         #expect(try Inflate.zlib(Deflate.zlib(big, level: 6), limit: big.count) == big)
     }
 
-    @Test(.disabled("waits on IC-3")) func deflateDeterministic() {
+    @Test func deflateDeterministic() {
         let text = Data((0..<5_000).map { UInt8(truncatingIfNeeded: ($0 % 97) * 3) })
         for level in 0...9 { #expect(Deflate.zlib(text, level: level) == Deflate.zlib(text, level: level)) }
         let fixed = [UInt8](Deflate.zlib(text, level: 6))
@@ -105,7 +105,7 @@ import Foundation
         #expect(fixed.count < Deflate.zlib(text, level: 0).count)
     }
 
-    @Test(.disabled("waits on IC-3")) func fuzzed() {
+    @Test func fuzzed() {
         let seeds = [F.zlib(Self.dynamic, of: Self.dynamicOut), F.zlib(Self.fixedRepeats, of: Self.repeatsOut), F.stored(Array("abcdef".utf8), block: 2)]
         let cases = mutations(of: seeds.map { Data($0) }, count: 1_000, seed: 0x1C4)
         fuzz(cases) { _ = try Inflate.zlib($0, limit: 1 << 16) }

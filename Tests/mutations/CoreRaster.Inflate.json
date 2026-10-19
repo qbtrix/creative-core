@@ -1,0 +1,23 @@
+[
+  {
+    "note": "the length base for code 284 is 228, one past 227, caught by InflateTests.dynamicBlocks",
+    "file": "Sources/CoreRaster/Codecs/Inflate.swift",
+    "anchor": "131, 163, 195, 227, 258]",
+    "replacement": "131, 163, 195, 228, 258]",
+    "filter": "InflateTests"
+  },
+  {
+    "note": "the zlib Adler-32 is read but never compared, caught by InflateTests.adlerChecked",
+    "file": "Sources/CoreRaster/Codecs/Inflate.swift",
+    "anchor": "guard Deflate.adler32(state.out) == check else",
+    "replacement": "guard Deflate.adler32(state.out) == check || true else",
+    "filter": "InflateTests"
+  },
+  {
+    "note": "a stored block grows the output with no limit check before it, caught by InflateTests.limitBeforeGrowth",
+    "file": "Sources/CoreRaster/Codecs/Inflate.swift",
+    "anchor": "try room(length)\n        out += bytes[pos..<(pos + length)]",
+    "replacement": "out += bytes[pos..<(pos + length)]",
+    "filter": "InflateTests"
+  }
+]
