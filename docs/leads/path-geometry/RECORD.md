@@ -30,7 +30,7 @@ Next: P3 (measure) and P4 (boolean) open once their regates pass; PG-edit done (
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
 |---|---|---|---|---|---|---|---|---|
 | 1 | a658945b | builders' gates | per plan, all caught | 39279766862 | correctness, robustness, reuse, tests+mutation, first-use clarity | 0 blockers, 5 should-fix, 7 nits (across both features) | lead/path-geometry-r1-b1 | no |
-| 2 | 305975a7 | CI: PASS | 136/195, 59 re-running after an OOM kill | | first-use clarity, contract, undo, robustness, tests+mutation | 18 (8 major, 10 minor; 1 nit skipped) across both features | lead/masks-mattes-r2-b1, lead/masks-mattes-r2-b2, lead/path-geometry-r2-b1 | no |
+| 2 | 305975a7 | CI: PASS | 195/195 (136 + 59 re-run after an OOM kill) | | first-use clarity, contract, undo, robustness, tests+mutation | 18 (8 major, 10 minor; 1 nit skipped) across both features | lead/masks-mattes-r2-b1, lead/masks-mattes-r2-b2, lead/path-geometry-r2-b1 | no |
 
 - Round-1 path fixes: PR #733 (lead/path-geometry-r1-b1, 5/5 FlarePathEdit, 95 lines). Fixed the quad and closing-segment insert test, the curved removeAnchor test, closest via cubicAt plus a 1e-9 stop, and the docs; Wang's step count moved to a shared `Path.cubicSegments`. The `<=` index-mutant finding is answered: the remove traps before any error, so the run still fails and the mutant counts as caught; its note is reworded.
 
