@@ -52,3 +52,5 @@ utc	stage	event	ref	note
 2026-10-19T05:52:42Z	-	heartbeat	-	dev CI still run 390 (a71eed2); waiting on next dev run for merged-done
 2026-10-19T06:21Z	4	panel-resumed	wf_d696b0be-df8	round 3 panel stalled at 05:26, resumed (wr1gut1o4)
 2026-10-19T06:42Z	4	heartbeat	wf_d696b0be-df8	round 3 panel resumed, verifiers running
+2026-10-19T06:51:21Z	4	round 3 panel	77b74a1	8 confirmed (2 major), 0 refuted; not clean
+2026-10-19T06:51:21Z	4	fix batches	wf_0fc6505d-5b3	r3-b1 r3-b2 r3-b3 launched

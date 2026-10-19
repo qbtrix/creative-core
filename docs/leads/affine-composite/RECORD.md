@@ -2,9 +2,9 @@
 
 Issue: #434 · Packet: docs/blueprints/core/features/affine-composite.md
 Run: act-1a150bfbcf7-sfwy · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
-Stage: 3 wave 6 done (AC-7 merged) + 4 round 3 gating on 77b74a1
+Stage: 3 wave 6 done (AC-7 #633 merged) + 4 round 3 fixes running (r3-b1 docs/errors, r3-b2 composite reach tests + packet, r3-b3 CPU bad input)
 Base: 4feaaf9fac3cc050901f8b459a0908515a927f54
-Next: round 3 panel on 77b74a1; then AC-8
+Next: merge r3 fixes; round 4 panel on dev; then AC-8, AC-9 (AC-z), feature-done on the last PR
 
 Line lead for #434, #433 and #432 (rule 19); one wave plan across the three
 features, bookkeeping per feature. Packet v3 (has a Slices table).
@@ -19,7 +19,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 | AC-4 | 3 | AC-geo | `padded` around nine anchors; its cases in `CanvasSizeTests` | `Sources/CoreRaster/Affine/CanvasSize.swift`, `Tests/CoreRasterTests/CanvasSizeTests.swift`, `Tests/mutations/CoreRaster.CanvasSize.json` | `CanvasSizeTests` | 2 (packet) | #584 | merged |
 | AC-5 | 4 | AC-comp | `composite(through:)`, `AffineMatrix.bounds`; turns on `CompositeAffineTests` | `Sources/CoreRaster/Compositing/CompositeAffine.swift`, `Tests/CoreRasterTests/CompositeAffineTests.swift`, `Tests/mutations/CoreRaster.CompositeAffine.json` | `CompositeAffineTests` | 2 (packet) | #603 | merged |
 | AC-6 | 5 | AC-comp | CPU bodies for the three `affine` calls; turns on `CPUAffineTests` | `Sources/CoreRender/CPU/CPUBackend+Affine.swift`, `Tests/CoreRenderTests/CPUAffineTests.swift`, `Tests/mutations/CoreRenderCPUAffine.json` | `CPUAffineTests` | 2 (packet) | #610 | merged |
-| AC-7 | 6 | AC-z | `Samples+Affine.swift` and CPU goldens | `Sources/CoreRender/Parity/Samples+Affine.swift`, `Tests/CoreRenderTests/Golden/affine/` | `CPUGoldenTests` | none: goldens | | building |
+| AC-7 | 6 | AC-z | `Samples+Affine.swift` and CPU goldens | `Sources/CoreRender/Parity/Samples+Affine.swift`, `Tests/CoreRenderTests/Golden/affine/` | `CPUGoldenTests` | none: goldens | #633 | merged |
 | AC-8 | 7 | AC-z | KJ-AC walk; `AffineBudgetTests` (release, `.serialized`, reported) | `Tests/CoreRenderTests/AffineWalkTests.swift`, `Tests/CoreRasterTests/AffineBudgetTests.swift` | `AffineWalkTests.walk` | none | | planned |
 | AC-9 | 8 | AC-z | Packet status line says built; `feature-done` | `docs/blueprints/core/features/affine-composite.md` | – | none | | planned |
 
@@ -52,6 +52,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 |---|---|---|---|---|---|---|---|---|---|
 | AC-a, AC-geo | 1 | 5ea5ae5 | PASS (try 5, budget retries under load) | 70/70 | - | clarity, contract, tests, robustness | 9 (3 major: downscale widening, `/ total` normalisation and exactCopy limit guard untested; 6 minor), 0 refuted | #598 (r1-b1, merged; 9/9) | no |
 | AC-comp | 2 | 7d8af79 | PASS | 66/66 | - | clarity, contract, tests, robustness | 5 (2 major: through-composite misses kernel reach past bounds on hard edges; ±2^52 clamp untested; 3 minor), 0 refuted | #621 merged (f31d178), 5/5 mutate | no |
+| AC-a, AC-geo, AC-comp | 3 | 77b74a1 | PASS | see round-3 mutate log | - | clarity, contract, tests, robustness | 8 (2 major: reach formula mutants escape on anisotropic/sheared upscales; rows-outside test blind to clip removal; 6 minor: matrix direction docs, split singular/non-finite errors, padded doc, packet reach wording, opacity guard mutation, CPU affine bad input), 0 refuted | r3-b1, r3-b2, r3-b3 running (wf_0fc6505d-5b3) | no |
 
 ## Decisions
 - AC-4 (#584): `padded` places the source with whole-pixel `transformed` at floor offsets per anchor; `CanvasSizeTests.swift` was created (packet lists it, file did not exist).
