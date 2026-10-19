@@ -19,7 +19,10 @@ import Testing
             guard let s = steps.randomElement(using: &rng) else { return }
             try s(&e, &rng, &nextID)
         }
-        let rounds = 120
+        // Layer-scoped steps keep the total but never set it, so each family of
+        // them lowers the known share; enough rounds keep the 1-in-8 floor off
+        // the edge of one seed's luck.
+        let rounds = 240
         for _ in 0..<rounds {
             switch Int.random(in: 0..<16, using: &rng) {
             case 0, 1: try? engine.group("Batch") { e in
