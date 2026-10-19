@@ -111,9 +111,10 @@ private func lumaStats(_ buffer: PixelBuffer, under mask: Mask) throws -> (mean:
         let one = try photo.spotted.filledFromSurroundings(spot.hole, seed: 4, patchRadius: 1)
         let three = try photo.spotted.filledFromSurroundings(spot.hole, seed: 4, patchRadius: 3)
         #expect(one != three)
-        // Radii past the cap act as the cap.
-        #expect(try photo.spotted.filledFromSurroundings(spot.hole, seed: 4, patchRadius: 8)
-            == photo.spotted.filledFromSurroundings(spot.hole, seed: 4, patchRadius: 64))
+        // Radii past the cap act as the cap, 8 as the doc states.
+        let eight = try photo.spotted.filledFromSurroundings(spot.hole, seed: 4, patchRadius: 8)
+        #expect(try photo.spotted.filledFromSurroundings(spot.hole, seed: 4, patchRadius: 12) == eight)
+        #expect(try photo.spotted.filledFromSurroundings(spot.hole, seed: 4, patchRadius: 64) == eight)
     }
 
     @Test func fullMaskThrowsWithReason() throws {
@@ -157,6 +158,86 @@ private func lumaStats(_ buffer: PixelBuffer, under mask: Mask) throws -> (mean:
             let inHole = try lumaStats(filled, under: hole), around = try lumaStats(filled, under: ring)
             #expect(abs(inHole.variance - around.variance) <= 0.5 * around.variance,
                     "seed \(seed): hole variance \(inHole.variance), ring variance \(around.variance)")
+        }
+    }
+
+    @Test func keepsStructureAcrossHole() throws {
+        // 0.2 above y = 40 and 0.8 below, with seeded grain; a disc over the edge
+        // fills with the edge, not a ramp between the two levels.
+        var rng = SplitMix64(seed: 0xED6E)
+        var buffer = try PixelBuffer(width: 120, height: 80)
+        for y in 0..<80 {
+            for x in 0..<120 {
+                let v = (y < 40 ? 0.2 : 0.8) + Float.random(in: -0.02...0.02, using: &rng)
+                try buffer.setPixel(x: x, y: y, RGBA(r: v, g: v, b: v, a: 1))
+            }
+        }
+        let hole = try RetouchFixtures.disc(width: 120, height: 80, centerX: 60, centerY: 40, radius: 14)
+        let filled = try buffer.filledFromSurroundings(hole, seed: 1)
+        for y in 0..<80 where y < 36 || y >= 44 {
+            for x in 0..<120 where try hole.coverage(x: x, y: y) > 0 {
+                let level: Float = y < 40 ? 0.2 : 0.8, v = try filled.pixel(x: x, y: y).g
+                #expect(abs(v - level) <= 0.06, "(\(x), \(y)) fills \(v), its side is \(level)")
+            }
+        }
+    }
+
+    @Test func featherBlendsByCoverage() throws {
+        // A soft disc fills its support as the hard support does, blended by coverage.
+        let photo = try RetouchFixtures.spottedPhoto(width: 64, height: 48, seed: 5)
+        let soft = try RetouchFixtures.disc(width: 64, height: 48, centerX: 32, centerY: 24, radius: 8, hardness: 0.5)
+        var hard = try Mask(width: 64, height: 48), partial = 0
+        for y in 0..<48 {
+            for x in 0..<64 where try soft.coverage(x: x, y: y) > 0 {
+                try hard.add(Mask.rectangle(width: 64, height: 48, x: Double(x), y: Double(y), w: 1, h: 1))
+            }
+        }
+        let a = try photo.spotted.filledFromSurroundings(soft, seed: 6)
+        let b = try photo.spotted.filledFromSurroundings(hard, seed: 6)
+        for y in 0..<48 {
+            for x in 0..<64 {
+                let c = try soft.coverage(x: x, y: y)
+                guard c > 0, c < 1 else { continue }
+                partial += 1
+                let d = try photo.spotted.pixel(x: x, y: y), h = try b.pixel(x: x, y: y), s = try a.pixel(x: x, y: y)
+                for (dv, hv, sv) in [(d.r, h.r, s.r), (d.g, h.g, s.g), (d.b, h.b, s.b), (d.a, h.a, s.a)] {
+                    #expect(abs(sv - (dv + (hv - dv) * c)) <= 1e-5, "(\(x), \(y)) at coverage \(c)")
+                }
+            }
+        }
+        #expect(partial > 20)
+    }
+
+    @Test func workScalesWithMaskNotBuffer() throws {
+        // The same 16 x 16 spot on a 1 MP and a 12 MP buffer: the search window
+        // is the same, so the fill's time past a heal of the same spot (which
+        // shares its per-buffer bounds scan and result copy) stays flat.
+        let clock = ContinuousClock()
+        func time(_ width: Int, _ height: Int) throws -> Duration {
+            let buffer = try PixelBuffer(width: width, height: height, fill: RGBA(r: 0.4, g: 0.5, b: 0.6, a: 1))
+            let spot = try Mask.rectangle(width: width, height: height, x: 500, y: 400, w: 16, h: 16)
+            var runs: [Duration] = []
+            for _ in 0..<3 {
+                let heal = try clock.measure { _ = try buffer.healed(offset: (dx: 40, dy: 0), through: spot) }
+                runs.append(try clock.measure { _ = try buffer.filledFromSurroundings(spot, seed: 1) } - heal)
+            }
+            return runs.sorted()[1]
+        }
+        let small = try time(1000, 1000), large = try time(4000, 3000)
+        #expect(large < small * 3 + .milliseconds(300), "1 MP \(small), 12 MP \(large)")
+    }
+
+    @Test func capCountsBoundsForHealAndWindowForFill() throws {
+        // Two dots in opposite corners: covered bounds of exactly maxHealPixels
+        // (2000 x 2000), covered area 2. The heal takes them; the fill's
+        // search window adds the buffer's spare column and goes over.
+        let buffer = try PixelBuffer(width: 2001, height: 2000, fill: RGBA(r: 0.5, g: 0.5, b: 0.5, a: 1))
+        var mask = try Mask.rectangle(width: 2001, height: 2000, x: 0, y: 0, w: 1, h: 1)
+        try mask.add(Mask.rectangle(width: 2001, height: 2000, x: 1999, y: 1999, w: 1, h: 1))
+        #expect(mask.area == 2)
+        #expect(try buffer.healed(offset: (dx: 1, dy: 0), through: mask) == buffer)
+        #expect { try buffer.filledFromSurroundings(mask, seed: 1) } throws: { error in
+            "\(error)".contains("search window") && "\(error)".contains("4002000")
         }
     }
 

@@ -7,7 +7,7 @@
     "filter": "FillFromSurroundingsTests.neverCopiesFromHole"
   },
   {
-    "note": "the fill skips the heal step and keeps the ring's mean tone flat across the hole, so the fill does not meet the ring where its tone varies, caught by FillFromSurroundingsTests.toneMeetsRing",
+    "note": "the fill skips the heal step and keeps each match's raw tone, so the fill does not meet the ring where its tone varies, caught by FillFromSurroundingsTests.toneMeetsRing",
     "file": "Sources/CoreRaster/Heal/FillFromSurroundings.swift",
     "anchor": "solver.solve(tolerance: Self.healTolerance, maxCycles: Self.healMaxCycles)",
     "replacement": "_ = solver",
@@ -28,10 +28,38 @@
     "filter": "FillFromSurroundingsTests.picksBestMatch"
   },
   {
-    "note": "the fill's size limit on the mask's bounds lets twice maxHealPixels through, so a sparse mask over the cap is searched and healed instead of throwing, caught by FillFromSurroundingsTests.sparseMaskOverCapThrowsEarly",
+    "note": "the fill's size limit on its search window lets twice maxHealPixels through, so a sparse mask over the cap is searched and healed instead of throwing, caught by FillFromSurroundingsTests.sparseMaskOverCapThrowsEarly",
     "file": "Sources/CoreRaster/Heal/FillFromSurroundings.swift",
-    "anchor": "guard gridPixels <= Self.maxHealPixels else {",
-    "replacement": "guard gridPixels <= 2 * Self.maxHealPixels else {",
+    "anchor": "guard windowPixels <= Self.maxHealPixels else {",
+    "replacement": "guard windowPixels <= 2 * Self.maxHealPixels else {",
     "filter": "FillFromSurroundingsTests.sparseMaskOverCapThrowsEarly"
+  },
+  {
+    "note": "the fill ignores a feathered mask's coverage and writes the full fill on partly covered pixels, caught by FillFromSurroundingsTests.featherBlendsByCoverage",
+    "file": "Sources/CoreRaster/Heal/FillFromSurroundings.swift",
+    "anchor": "c = min(cover[i], 1)",
+    "replacement": "c = Float(1)",
+    "filter": "FillFromSurroundingsTests.featherBlendsByCoverage"
+  },
+  {
+    "note": "the fill's heal guides by the filled source's own steps instead of its matches' steps, so the seams between matches of different tone stay in the fill, caught by FillFromSurroundingsTests.toneMeetsRing",
+    "file": "Sources/CoreRaster/Heal/FillFromSurroundings.swift",
+    "anchor": "var step = g(x, y) - g(s % w + dx, s / w + dy)",
+    "replacement": "var step = g(x, y) - g(x + dx, y + dy)",
+    "filter": "FillFromSurroundingsTests.toneMeetsRing"
+  },
+  {
+    "note": "the fill's heal drops the structure step and heals every seam away, so an edge the matches carry across the hole is smoothed into a ramp, caught by FillFromSurroundingsTests.keepsStructureAcrossHole",
+    "file": "Sources/CoreRaster/Heal/FillFromSurroundings.swift",
+    "anchor": "step.replace(with: own, where: own * own .> SIMD4(repeating: edge * edge))",
+    "replacement": "_ = own",
+    "filter": "FillFromSurroundingsTests.keepsStructureAcrossHole"
+  },
+  {
+    "note": "the fill's search window ignores the mask's bounds and spans the whole buffer, so a small spot's work grows with the photo, caught by FillFromSurroundingsTests.workScalesWithMaskNotBuffer",
+    "file": "Sources/CoreRaster/Heal/FillFromSurroundings.swift",
+    "anchor": "let margin = r + max(Self.fillContext, max(box.width, box.height) / 2)",
+    "replacement": "let margin = max(width, height)",
+    "filter": "FillFromSurroundingsTests.workScalesWithMaskNotBuffer"
   }
 ]

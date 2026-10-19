@@ -13,8 +13,10 @@
 // dab speed on any photo; the solve is `HealSolver`'s multigrid.
 
 extension PixelBuffer {
-    /// The most pixels a heal mask's covered bounds may hold (they bound its
-    /// work, and its covered area); larger bounds throw.
+    /// The most pixels the bounding rectangle of a mask's covered pixels may
+    /// hold for `heal` and `healed` (width × height, not the covered count);
+    /// `filledFromSurroundings` counts its whole search window around that
+    /// rectangle instead. Larger throws.
     public static let maxHealPixels = 4_000_000
 
     /// The solve stops once no correction moves by this much in a V-cycle.
@@ -43,7 +45,7 @@ extension PixelBuffer {
         }
         guard let box = mask.coveredRect else { return }
         guard box.width * box.height <= Self.maxHealPixels else {
-            throw RasterError.invalid("heal mask's covered bounds \(box.width)x\(box.height) hold more than \(Self.maxHealPixels) pixels")
+            throw RasterError.invalid("heal mask's covered bounds \(box.width)x\(box.height) hold more than \(Self.maxHealPixels) pixels; heal a smaller area")
         }
         try checkHealSource(box, offset: offset)
         let (dx, dy) = offset
@@ -98,12 +100,6 @@ extension PixelBuffer {
                 }
             }
         }
-    }
-
-    /// The smallest rectangle holding every pixel `mask` covers, or nil for
-    /// an empty mask.
-    static func coveredBounds(of mask: Mask) throws -> (minX: Int, minY: Int, maxX: Int, maxY: Int)? {
-        mask.coveredRect.map { ($0.x, $0.y, $0.x + $0.width - 1, $0.y + $0.height - 1) }
     }
 
     /// Throws unless the source of every pixel in `box`, shifted by

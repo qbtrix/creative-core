@@ -55,6 +55,8 @@ struct HealSolver {
     init(width: Int, height: Int) { levels = [Level(width: width, height: height)] }
     mutating func free(_ x: Int, _ y: Int) { levels[0].free(x, y) }
     mutating func fix(_ x: Int, _ y: Int, _ value: SIMD4<Float>) { levels[0].u[levels[0].index(x, y)] = value }
+    /// Sets a free cell's right-hand side (0 until set).
+    mutating func load(_ x: Int, _ y: Int, rhs: SIMD4<Float>) { levels[0].rhs[levels[0].index(x, y)] = rhs }
     func value(_ x: Int, _ y: Int) -> SIMD4<Float> { levels[0].u[levels[0].index(x, y)] }
 
     /// V-cycles until one's last sweep moves no cell by `tolerance`, at most
