@@ -29,9 +29,11 @@ public enum CubeLUT {
             case "TITLE":
                 continue
             case "LUT_3D_SIZE":
-                guard size == nil, tokens.count == 2, let n = Int(tokens[1]), (2...65).contains(n) else {
-                    throw fail("LUT_3D_SIZE must be given once, in 2...65")
+                guard size == nil else { throw fail("LUT_3D_SIZE given twice") }
+                guard tokens.count == 2, let n = Int(tokens[1]) else {
+                    throw fail("LUT_3D_SIZE needs one integer, got '\(tokens.dropFirst().joined(separator: " "))'")
                 }
+                guard (2...65).contains(n) else { throw fail("LUT_3D_SIZE \(n) is outside 2...65") }
                 size = n
                 table.reserveCapacity(n * n * n)
             case "DOMAIN_MIN", "DOMAIN_MAX":

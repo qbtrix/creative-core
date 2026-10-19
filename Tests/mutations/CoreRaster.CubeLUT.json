@@ -30,8 +30,15 @@
   {
     "note": "the cube parser skips the LUT_3D_SIZE range check, so size 66 is refused only later by ColorLUT and not at its line, caught by ColorLUTTests.longTableRefusedAtLine",
     "file": "Sources/CoreRaster/Tone/CubeLUT.swift",
-    "anchor": "let n = Int(tokens[1]), (2...65).contains(n) else {",
-    "replacement": "let n = Int(tokens[1]), n > 0 else {",
+    "anchor": "guard (2...65).contains(n) else {",
+    "replacement": "guard n > 0 else {",
+    "filter": "ColorLUTTests"
+  },
+  {
+    "note": "the cube parser lets a second LUT_3D_SIZE line replace the first, so the duplicate is never named, caught by ColorLUTTests.sizeErrorNamesValue",
+    "file": "Sources/CoreRaster/Tone/CubeLUT.swift",
+    "anchor": "guard size == nil else { throw fail(\"LUT_3D_SIZE given twice\") }",
+    "replacement": "",
     "filter": "ColorLUTTests"
   }
 ]
