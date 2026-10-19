@@ -3,9 +3,9 @@
 Issue: #562 · Packet: docs/blueprints/core/features/image-codecs.md
 Run: act-1a1511a1174-tlch · Started: 2026-10-18T22:40Z
 Line lead for: image-codecs (#562), preview-cache (#440, already done), vector-import (#439, VI-z left)
-Stage: IC-png and IC-jpeg Anatomy done (4 rounds each); waiting on a dev CI run holding #702 for Belt-Slice-Done; IC-9 next
+Stage: wave 5 (IC-9 builder running, base 2436c3a); IC-png and IC-jpeg Anatomy done; waiting on a dev CI run holding #702 for Belt-Slice-Done
 Base: 9385de9 (wave 4)
-Next: IC-9 (walk and budgets, Mac-Finish-Wanted for IC-z), gaps.md entries for #703-#705, then IC-10 feature-done; Belt-Slice-Done for IC-png and IC-jpeg once a dev ci.yml run holding 2436c3a (#702) has a green Linux job (run 39238594196 on 8613770 holds #692 and #696 but not #702)
+Next: IC-9 PR merges; Mac-Finish-Wanted for IC-z; IC-10 feature-done (also carries the docs/gaps.md entries for #703-#705); Belt-Slice-Done for IC-png and IC-jpeg once a dev ci.yml run holding 2436c3a (#702) has a green Linux job (run 39238594196 on 8613770 holds #692 and #696 but not #702)
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
