@@ -3,7 +3,7 @@
 Issue: #430 · Packet: docs/blueprints/core/features/path-geometry.md
 Run: act-1a1541f2193-03la · Session: https://claude.ai/code/session_01UoKtqjbgWBMsvLqfXb3f42 · Started: 2026-10-19T12:57Z
 Line lead for: layered-codecs (#438, already done by run act-1a14de006be-1kmq), masks-mattes (#431), path-geometry (#430)
-Stage: 3 wave 2
+Stage: 4 round 2 (dev f99bcc4e; gate and mutation running)
 Base: 0b5a641be359e283625fa5c798b8d02872fad344
 Next: P3 (measure) and P4 (boolean) open once their regates pass; PG-edit done (run 39289117245)
 
