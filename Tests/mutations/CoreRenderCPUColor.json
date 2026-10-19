@@ -1,0 +1,8 @@
+[
+  {"note": "cpu color threshold mapped to posterized", "filter": "CPUColorTests.everyCaseEqualsDirect", "file": "Sources/CoreRender/CPU/CPUBackend+Color.swift",
+   "anchor": "try buffer.thresholded(level)",
+   "replacement": "try buffer.posterized(levels: 2)"},
+  {"note": "cpu color lut applied twice", "filter": "CPUColorTests.lutOnce", "file": "Sources/CoreRender/CPU/CPUBackend+Color.swift",
+   "anchor": "try buffer.applying(lut)",
+   "replacement": "try buffer.applying(lut).applying(lut)"}
+]
