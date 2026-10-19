@@ -87,16 +87,17 @@ import Foundation
         #expect(text?.contains("blocks in too few bytes") == true, "\(text ?? "no damaged")")
     }
 
-    /// The bound at its edge: 64 grey blocks pass with 8 bytes left in SOF2 (1 bit a block) and 16 in baseline
-    /// (2 bits a block), and one byte fewer is refused, so the multipliers are exactly 8 and 4.
+    /// The bound at its edge: 128 grey blocks pass with 16 bytes left in SOF2 (1 bit a block) and 32 in baseline
+    /// (2 bits a block), and one byte fewer is refused; 128 blocks over 15 or 31 bytes would pass 9 or 5 a byte, so
+    /// the multipliers are exactly 8 and 4.
     @Test func blockBoundAtEdge() {
-        let f = F.Frame(width: 64, height: 64, block: F.seeded(0))
-        for (sof, se, left) in [(UInt8(0xC2), 0, 8), (UInt8(0xC0), 63, 16)] {
+        let f = F.Frame(width: 128, height: 64, block: F.seeded(0))
+        for (sof, se, left) in [(UInt8(0xC2), 0, 16), (UInt8(0xC0), 63, 32)] {
             let head = F.header(f, sof: sof, precision: 8, restart: 0, orientation: nil, littleEndian: false) + F.sos([0], 0, se, 0, 0)
             for (bytes, refused) in [(left, false), (left - 1, true)] {
                 let data = Data(head + [UInt8](repeating: 0, count: bytes - 2) + [0xFF, 0xD9])
                 let text = error { try JPEG.read(data) }.map { "\($0)" } ?? "returned"
-                #expect(text.contains("64 blocks in too few bytes") == refused, "SOF \(sof) \(bytes) left: \(text)")
+                #expect(text.contains("128 blocks in too few bytes") == refused, "SOF \(sof) \(bytes) left: \(text)")
             }
         }
     }
