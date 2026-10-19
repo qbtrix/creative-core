@@ -19,5 +19,12 @@
     "anchor": "try room(length)\n        out += bytes[pos..<(pos + length)]",
     "replacement": "out += bytes[pos..<(pos + length)]",
     "filter": "InflateTests"
+  },
+  {
+    "note": "an incomplete Huffman code with two or more symbols is accepted, caught by InflateTests.damagedStreams",
+    "file": "Sources/CoreRaster/Codecs/Inflate.swift",
+    "anchor": "guard left == 0 || used <= 1 else { return }",
+    "replacement": "guard left >= 0 || used <= 1 else { return }",
+    "filter": "InflateTests"
   }
 ]
