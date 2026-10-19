@@ -8,3 +8,7 @@ utc	stage	event	ref	note
 2026-10-19T03:19Z	3	stage-start	080366a	wave 3: IC-3, IC-6
 2026-10-19T03:21Z	3	slice-done	IC-a	dev ci run 384 (641739b) Linux green; Belt-Slice-Done posted #562 comment 6258931257
 2026-10-19T03:21Z	3	agent-launched	IC-3,IC-6	builders on lead/image-codecs-IC-3, lead/image-codecs-IC-6; IC-a R1 critic
+2026-10-19T04:04Z	3	pr-merged	#625	IC-3 inflate, deflate
+2026-10-19T04:04Z	3	pr-merged	#627	IC-6 baseline JPEG read
+2026-10-19T04:04Z	4	round-clean	IC-a R1	0 blocker/major, 3 minor routed to IC-4, IC-8
+2026-10-19T04:04Z	3	stage-start	9385de9	wave 4: IC-4, IC-5, IC-7, IC-8
