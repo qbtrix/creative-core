@@ -23,7 +23,7 @@ Next: M3 (CPU composite) and M6 (exporters) building stacked; rebase and open on
 | M3 | MM-raster | MM-5 | CPUBackend+MaskedComposite, Samples+MaskedComposite, CPUMaskedCompositeTests, goldens | CPUMaskedCompositeTests | CoreRenderCPUMaskedComposite | | building, stacked on M2 |
 | M4 | MM-a + MM-vector | MM-2 (commands share, fixture), MM-6 | MaskCommands.swift, MaskCommandsTests, UndoPropertyTests, Fixtures/masks.flare | MaskCommandsTests | FlareMaskCommands | #720 | merged |
 | M5 | MM-vector | MM-7 | RenderList.swift, MatteRenderListTests | MatteRenderListTests | FlareMatteRenderList | #724 | merged |
-| M6 | MM-vector | MM-8 | Export/SVGExporter+Masks, Export/LottieExporter+Masks, both suites | both | FlareMaskExport | | building, stacked on M5 |
+| M6 | MM-vector | MM-8 | Export/SVGExporter+Masks, Export/LottieExporter+Masks, both suites | both | FlareMaskExport | #729 | in lane (9/9, 400 lines) |
 | M7 | MM-z | MM-9, MM-10 | MaskWalkTests, MaskBudgetTests, geometry.json, packet | walk | none | | waits all + path-geometry P6 |
 
 ## Rounds
@@ -35,6 +35,8 @@ Next: M3 (CPU composite) and M6 (exporters) building stacked; rebase and open on
 - Rule 20: MM-1 and MM-2 (disabled checks) are not their own PRs; each slice PR adds its own failing suite as its first commit. MM-a is slice-done once M1 and M4 (which carry the fixtures) merge.
 - MM-10 edits `geometry.json`, which path-geometry's last PR also edits, so M7 runs after path-geometry's P6 merges.
 - Builder branches are `lead/masks-mattes-<pr id>`.
+
+- Lottie mask `x` is Expand in the Lottie spec, not feather (the packet said feather). M6 writes `x: 0` and refuses feather as `unsupported("mask feather")`; SVG difference masks and nested mattes are refused too. Packet note to fix in M7.
 
 ## Open
 - none
