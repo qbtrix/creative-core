@@ -2,9 +2,9 @@
 
 Issue: #432 · Packet: docs/blueprints/core/features/tone-pack.md
 Run: act-1a150bfbcf7-sfwy · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
-Stage: 3 wave 6 (TP-8) + 4 round 2 fixes merged
+Stage: 3 wave 6 done (TP-8 merged) + 4 round 3 gating
 Base: 4feaaf9fac3cc050901f8b459a0908515a927f54
-Next: TP-8 building (wave 6); round 3 of TP-mix/TP-map after; TP-cpu merged-done once TP-8 is in a green dev Linux run
+Next: round 3 panel of TP-mix/TP-map; TP-cpu merged-done once a green dev Linux run holds 52b0fdc; then TP-9
 
 Line lead for #434, #433 and #432 (rule 19); one wave plan across the three
 features, bookkeeping per feature. Packet v3 (has a Slices table).
@@ -20,7 +20,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 | TP-5 | 3 | TP-map | `gradientMap`, LUT apply, `CubeLUT.parse` + fuzz, `posterized`, `thresholded`, `inverted`; turns on `ColorMapTests`, `ColorLUTTests` | `Sources/CoreRaster/Tone/ColorMap.swift`, `Sources/CoreRaster/Tone/CubeLUT.swift`, both tests, `Tests/mutations/CoreRaster.ColorMap.json`, `Tests/mutations/CoreRaster.CubeLUT.json` | `ColorMapTests`, `ColorLUTTests` | 5 (packet) | #585 | merged |
 | TP-6 | 3 | TP-map | `AutoTone.suggest`; turns on `AutoToneTests` | `Sources/CoreRaster/Tone/AutoTone.swift`, its tests, `Tests/mutations/CoreRaster.AutoTone.json` | `AutoToneTests` | 2 (packet) | #600 | merged |
 | TP-7 | 5 | TP-cpu | `CPUBackend+Color.swift` body; turns on `CPUColorTests` | `Sources/CoreRender/CPU/CPUBackend+Color.swift`, `Tests/CoreRenderTests/CPUColorTests.swift`, `Tests/mutations/CoreRenderCPUColor.json` | `CPUColorTests` | 2 (packet) | #609 | merged |
-| TP-8 | 6 | TP-cpu | `Samples+Color.swift` and CPU goldens | `Sources/CoreRender/Parity/Samples+Color.swift`, `Tests/CoreRenderTests/Golden/color/` | `CPUGoldenTests` | none: goldens | | building |
+| TP-8 | 6 | TP-cpu | `Samples+Color.swift` and CPU goldens | `Sources/CoreRender/Parity/Samples+Color.swift`, `Tests/CoreRenderTests/Golden/color/` | `CPUGoldenTests` | none: goldens | | #638 | merged (52b0fdc) |
 | TP-9 | 7 | TP-z | KJ-TP walk; `ToneBudgetTests` (release, `.serialized`, reported) | `Tests/CoreRenderTests/ToneWalkTests.swift`, `Tests/CoreRasterTests/ToneBudgetTests.swift` | `ToneWalkTests.walk` | none | | planned |
 | TP-10 | 8 | TP-z | Packet status line says built; `feature-done` | `docs/blueprints/core/features/tone-pack.md` | – | none | | planned |
 
