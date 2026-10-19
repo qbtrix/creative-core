@@ -42,3 +42,4 @@ utc	stage	event	ref	note
 2026-10-19T20:29:17Z	heartbeat	round 2 and builders running
 2026-10-19T20:39:16Z	round 2	mutation 195/195 caught
 2026-10-19T20:44:01Z	round 2	fix PR #740 open (model and export)
+2026-10-19T20:44:21Z	round 2	#740 merged 758f0c7a
