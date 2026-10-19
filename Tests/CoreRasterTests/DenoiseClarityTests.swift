@@ -87,6 +87,40 @@ import Testing
         #expect(throws: RasterError.self) { try b.clarity(amount: 100, radius: 30) }
     }
 
+    @Test func clarityOverflowNamesTheSource() throws {
+        // The amount is valid; the overflow comes from the source's huge components.
+        var b = try PixelBuffer(width: 61, height: 61, fill: RGBA(r: -3e38, g: 0, b: 0, a: 0.01))
+        try b.setPixel(x: 30, y: 30, RGBA(r: 0.5, g: 0.5, b: 0.5, a: 1))
+        let error = #expect(throws: RasterError.self) { try b.clarity(amount: 100, radius: 30) }
+        guard case .invalid(let why) = try #require(error) else { return }
+        #expect(why.contains("source pixel components") && !why.contains("amount 100"), "\(why)")
+    }
+
+    @Test func denoiseOverflowThrows() throws {
+        // Opaque black among pixels of alpha 1/128, premultiplied red 3e38 and
+        // luma exactly 0, so every guide is 0 and they all weigh in: the
+        // centre's straight red averages toward 3e38 x 128, past Float's range.
+        let w = Histogram.luminanceWeights, r: Float = 3e38, g = -(w.r * r) / w.g
+        var blue = -(w.r * r + w.g * g) / w.b
+        for _ in 0..<4_096 where w.r * r + w.g * g + w.b * blue != 0 {
+            blue = w.r * r + w.g * g + w.b * blue > 0 ? blue.nextDown : blue.nextUp
+        }
+        try #require(w.r * r + w.g * g + w.b * blue == 0)
+        var b = try PixelBuffer(width: 15, height: 15, fill: RGBA(r: r, g: g, b: blue, a: 1.0 / 128))
+        try b.setPixel(x: 7, y: 7, RGBA(r: 0, g: 0, b: 0, a: 1))
+        let error = #expect(throws: RasterError.self) { try b.denoised(strength: 1, detail: 1) }
+        guard case .invalid(let why) = try #require(error) else { return }
+        #expect(why.contains("source pixel components"), "\(why)")
+    }
+
+    @Test func denoiseOverItsPixelCapThrows() throws {
+        // One row one pixel past the cap: cheap to build, refused before denoise allocates.
+        let b = try PixelBuffer(width: PixelBuffer.maxDenoisePixels + 1, height: 1)
+        let error = #expect(throws: RasterError.self) { try b.denoised(strength: 0.5, detail: 0.5) }
+        guard case .invalid(let why) = try #require(error) else { return }
+        #expect(why.contains("\(PixelBuffer.maxDenoisePixels + 1)x1"), "\(why)")
+    }
+
     @Test func extremeValuesThrowOrStayFinite() throws {
         // Components anywhere in Float's range, alphas from 1e-30 to 1.
         var rng = SplitMix64(seed: 0xE7_7E3E)

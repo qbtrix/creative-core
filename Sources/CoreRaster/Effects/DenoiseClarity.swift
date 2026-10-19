@@ -13,6 +13,8 @@
 // a negative amount blends toward the blurred copy. Alpha is kept.
 // Invariants: strength and detail are finite and in 0...1, amount in
 // -100...100, radius in 0...1,000; zero strength, amount or radius is identity.
+// Denoise's scratch is about 17 times the buffer, so it takes at most
+// `maxDenoisePixels`; a result past Float's range throws instead of storing inf.
 #if canImport(Glibc)
 import Glibc
 #elseif canImport(Musl)
@@ -23,15 +25,25 @@ import Darwin
 import Dispatch
 
 extension PixelBuffer {
+    /// The most pixels `denoised` takes: its Double planes and bilateral
+    /// passes need about 280 bytes a pixel, so a sixteenth of `maxPixels`
+    /// (16 Mi px, about 4.7 GB of scratch) instead of 70 GB at full size.
+    public static let maxDenoisePixels = maxPixels / 16
+
     /// This buffer denoised by a bilateral filter: `strength` (0...1) widens
     /// the smoothing, `detail` (0...1) narrows the luma difference it smooths
     /// across, so edges stay. Strength 0 returns the buffer unchanged. Throws
-    /// `RasterError.invalid` for a parameter that is not finite or not in 0...1.
+    /// `RasterError.invalid` for a parameter that is not finite or not in 0...1,
+    /// a buffer over `maxDenoisePixels`, or a result that overflows (source
+    /// components too large).
     public func denoised(strength: Double, detail: Double) throws -> PixelBuffer {
         for (value, name) in [(strength, "strength"), (detail, "detail")] where !(value.isFinite && (0...1).contains(value)) {
             throw RasterError.invalid("denoise \(name) \(value): must be finite and in 0...1")
         }
         guard strength > 0 else { return self }
+        guard width * height <= Self.maxDenoisePixels else {
+            throw RasterError.invalid("denoise size \(width)x\(height): more than \(Self.maxDenoisePixels) pixels")
+        }
         let src = components, c = Self.channels, n = width * height, w = Histogram.luminanceWeights
         // Per pixel, lumaAlpha is (luma, alpha, 0, 0), chromaAlpha (r, g, b minus luma, alpha).
         var lumaAlpha = [SIMD4<Double>](repeating: .zero, count: n), chromaAlpha = lumaAlpha
@@ -55,7 +67,7 @@ extension PixelBuffer {
             }
         }
         guard out.allSatisfy(\.isFinite) else {
-            throw RasterError.invalid("denoise strength \(strength): result overflows")
+            throw RasterError.invalid("denoise: result overflows Float; source pixel components are too large")
         }
         return PixelBuffer(checkedWidth: width, height: height, storage: out)
     }
@@ -64,7 +76,8 @@ extension PixelBuffer {
     /// lowered (negative), -100...100, against a blur of `radius` px
     /// (0...1,000; 30 is typical). Amount or radius 0 returns the buffer
     /// unchanged. Throws `RasterError.invalid` for a parameter that is not
-    /// finite or out of range.
+    /// finite or out of range, or a result that overflows (source components
+    /// too large).
     public func clarity(amount: Double, radius: Double) throws -> PixelBuffer {
         guard amount.isFinite, (-100...100).contains(amount) else {
             throw RasterError.invalid("clarity amount \(amount): must be finite and in -100...100")
@@ -88,7 +101,7 @@ extension PixelBuffer {
             }
         }
         guard out.allSatisfy(\.isFinite) else {
-            throw RasterError.invalid("clarity amount \(amount): result overflows")
+            throw RasterError.invalid("clarity: result overflows Float; source pixel components are too large")
         }
         return PixelBuffer(checkedWidth: width, height: height, storage: out)
     }
