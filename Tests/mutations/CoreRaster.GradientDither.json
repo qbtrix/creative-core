@@ -1,0 +1,16 @@
+[
+  {
+    "note": "the gradient dither amplitude is 0, so a dithered dark ramp bands like an undithered one, caught by GradientDitherTests.breaksBanding",
+    "file": "Sources/CoreRaster/Fill/GradientDither.swift",
+    "anchor": "static let amplitude = 1.0 / 255",
+    "replacement": "static let amplitude = 0.0",
+    "filter": "GradientDitherTests.breaksBanding"
+  },
+  {
+    "note": "the gradient dither matrix is indexed by x only, so every row repeats the first and a column never varies, caught by GradientDitherTests.usesBothAxes",
+    "file": "Sources/CoreRaster/Fill/GradientDither.swift",
+    "anchor": "let index = matrix[(y & 7) * 8 + (x & 7)]",
+    "replacement": "let index = matrix[x & 7]",
+    "filter": "GradientDitherTests.usesBothAxes"
+  }
+]
