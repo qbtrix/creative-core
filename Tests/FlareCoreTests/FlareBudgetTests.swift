@@ -194,4 +194,18 @@ import Testing
         #expect(bytes > 0)
         #expect(median < Self.lottieBudget, "lottie export median \(median) over \(Self.lottieBudget)")
     }
+
+    /// SVG text from a file-sized worst case stays linear in lines plus runs:
+    /// 50,000 one-grapheme lines under 100,000 resolved runs (alternating
+    /// italic) used to walk every run on every line, 5e9 steps.
+    @Test func svgTextManyLinesAndRunsWithinBudget() throws {
+        let runs = (0..<50_000).map { TextRun(start: 2 * $0, length: 1, italic: $0 % 2 == 0) }
+        let text = TextFixtures.text(String(repeating: "a\n", count: 50_000), runs: runs)
+        let scene = Scene(id: "s", name: "S", width: 200, height: 100, layers: [Layer(id: "t", name: "T", texts: [text])])
+        let clock = ContinuousClock(), start = clock.now
+        let svg = try SVGExporter.export(scene: scene, frame: 0)
+        let elapsed = clock.now - start
+        #expect(svg.components(separatedBy: "font-style=\"italic\"").count - 1 == 25_000)
+        #expect(elapsed < .seconds(5), "svg text export took \(elapsed)")
+    }
 }

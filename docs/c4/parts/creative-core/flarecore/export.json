@@ -1,7 +1,7 @@
 {
   "id": "export",
   "name": "Export",
-  "description": "Exporters that turn a scene into other formats: one frame as an SVG document, a scene as a Lottie JSON document with animated position, scale, rotation and opacity, and gradient stop alpha, and the frame plan (numbers, times, pixel sizes, file names) for a numbered PNG sequence. Output is byte-stable and throws on non-finite values. W1 writers fill one seam file each: SVGExporter+Style (paint at the frame), SVGExporter+Text (each text shape as one <text>: runs as tspans with their font properties, lines at their layout baselines, alignment as text-anchor, justified lines as x lists), SVGExporter+Masks and LottieExporter+Masks (layer masks and track mattes), LottieExporter+Tracks (animated properties, including colour, width and shape keys).",
+  "description": "Exporters that turn a scene into other formats: one frame as an SVG document, a scene as a Lottie JSON document with animated position, scale, rotation and opacity, and gradient stop alpha, and the frame plan (numbers, times, pixel sizes, file names) for a numbered PNG sequence. Output is byte-stable and throws on non-finite values. W1 writers fill one seam file each: SVGExporter+Style (paint at the frame), SVGExporter+Text (each text shape as one <text>, laid out over the metrics the caller measures, FixedAdvances by default: runs as tspans with their font properties, lines at their layout baselines, alignment as text-anchor, justified lines as x lists), SVGExporter+Masks and LottieExporter+Masks (layer masks and track mattes), LottieExporter+Tracks (animated properties, including colour, width and shape keys).",
   "technology": "Swift 6, Foundation",
   "paths": [
     "Sources/FlareCore/Export/*.swift"
