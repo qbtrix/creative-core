@@ -10,12 +10,6 @@ import Testing
 
     /// (expected name, call) for every stubbed entry point.
     static let stubs: [(String, @Sendable () throws -> Void)] = [
-        ("length(tolerance:)", { _ = try square.length(tolerance: 0.1) }),
-        ("sample(atLength:tolerance:)", { _ = try square.sample(atLength: 5, tolerance: 0.1) }),
-        ("trimmed(start:end:offset:mode:tolerance:)", {
-            _ = try square.trimmed(start: 0, end: 0.5, offset: 0, mode: .together, tolerance: 0.1)
-        }),
-        ("dashed(_:phase:tolerance:)", { _ = try square.dashed([10, 5], phase: 0, tolerance: 0.1) }),
         ("outlined(width:join:cap:miterLimit:tolerance:)", {
             _ = try square.outlined(width: 4, join: .round, cap: .butt, miterLimit: 4, tolerance: 0.1)
         }),
