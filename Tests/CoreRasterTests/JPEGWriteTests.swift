@@ -71,6 +71,10 @@ import Foundation
         }
         #expect(PNGFixtures.thrown { try JPEG.write(PixelBuffer(width: JPEG.maxSide + 1, height: 1), quality: 90) } == "tooLarge")
         #expect(PNGFixtures.thrown { try JPEG.write(PixelBuffer(width: 1, height: JPEG.maxSide + 1), quality: 90) } == "tooLarge")
+        do { _ = try JPEG.write(PixelBuffer(width: JPEG.maxSide + 1, height: 1), quality: 90); Issue.record("wrote") } catch {
+            guard case CodecError.tooLarge(let text) = error else { Issue.record("\(error)"); return }
+            #expect(text.contains("\(JPEG.maxSide)") && text.hasPrefix("JPEG"), "\(text)")
+        }
     }
 
     /// B.2.1 and JFIF 1.02: SOI, then APP0 "JFIF\0"; the frame is baseline SOF0, Y at 2x2 and Cb, Cr at 1x1 (4:2:0).

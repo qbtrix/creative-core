@@ -3,7 +3,9 @@
 // (0xFFDB), the refuse-before-allocate block bound names itself for baseline
 // and progressive stubs, a SOF with height 0 (height from DNL) is
 // unsupported, an interleaved scan of over 10 blocks per MCU (B.2.3) is
-// damaged, and seeded cuts of the marker segments always throw.
+// damaged, a second SOF and a scan cut short are named, an EXIF Orientation
+// outside 1...8 reads as 1, a size refusal names its limit, and seeded cuts
+// of the marker segments always throw.
 @testable import CoreRaster
 import Testing
 #if canImport(FoundationEssentials)
@@ -54,6 +56,53 @@ import Foundation
         for (name, data) in [("baseline", baseline), ("SOF2", progressive)] {
             let text = damagedText { try JPEG.read(data) }
             #expect(text?.contains("blocks in too few bytes") == true, "\(name): \(text ?? "no damaged")")
+        }
+    }
+
+    /// 1024 x 1024 at 4:4:4 is 49,152 blocks; each DC first block is 1 bit or more, so 1,000 bytes cannot code them.
+    @Test func progressiveBlockBoundTight() {
+        let f = F.Frame(width: 1024, height: 1024, sampling: [(1, 1), (1, 1), (1, 1)], block: F.seeded(0))
+        let head = F.header(f, sof: 0xC2, precision: 8, restart: 0, orientation: nil, littleEndian: false)
+        let data = Data(head + F.sos([0, 1, 2], 0, 0, 0, 0) + [UInt8](repeating: 0, count: 1_000) + [0xFF, 0xD9])
+        let text = damagedText { try JPEG.read(data) }
+        #expect(text?.contains("blocks in too few bytes") == true, "\(text ?? "no damaged")")
+    }
+
+    /// An 8 x 8 baseline scan, then a SOF for 64 x 64: the store was sized for the first frame, so the second is refused.
+    @Test func secondSOF() {
+        let first = [UInt8](F.baseline(F.Frame(width: 8, height: 8, block: F.seeded(0x2F))).dropLast(2))
+        let sof = F.segment(0xC0, [8] + F.be16(64) + F.be16(64) + [1, 1, 0x11, 0])
+        let data = Data(first + sof + F.sos([0], 0, 63, 0, 0) + [0x12, 0x34, 0xFF, 0xD9])
+        let text = damagedText { try JPEG.read(data) }
+        #expect(text?.contains("a second SOF") == true, "\(text ?? "no damaged")")
+    }
+
+    /// DC and AC tables of two 1-bit codes, both value 0, decode a whole block from padding 1-bits alone, so only the
+    /// overrun check refuses a scan with no entropy bytes.
+    @Test func shortScanNamed() {
+        let f = F.Frame(width: 8, height: 8, block: F.seeded(0))
+        let two = F.Huffman(bits: [2] + [Int](repeating: 0, count: 15), values: [0, 0])
+        let sof = F.segment(0xC0, [8] + F.be16(8) + F.be16(8) + [1, 1, 0x11, 0])
+        let head = [0xFF, 0xD8] + F.dqt(0, f.tables[0]) + sof + F.dht(0, 0, two) + F.dht(1, 0, two)
+        let text = damagedText { try JPEG.read(Data(head + F.sos([0], 0, 63, 0, 0) + [0xFF, 0xD9])) }
+        #expect(text?.contains("scan ends at MCU 0") == true, "\(text ?? "no damaged")")
+    }
+
+    /// JPEGInfo.orientation is 1...8: an EXIF Orientation of 0 or 9 is no usable tag, so 1.
+    @Test func exifOrientationOutOfRange() throws {
+        let f = F.Frame(width: 13, height: 7, sampling: [(1, 1), (1, 1), (1, 1)], block: F.seeded(0x0E))
+        for value in [0, 9] {
+            #expect(try JPEG.info(F.baseline(f, orientation: value, littleEndian: false)).orientation == 1, "\(value)")
+        }
+    }
+
+    /// Each size refusal names the limit it hit: a side over `maxSide`, or a pixel count over `PixelBuffer.maxPixels`.
+    @Test func tooLargeNamesLimit() {
+        for (width, height, limit) in [(JPEG.maxSide + 1, 1, JPEG.maxSide), (1, JPEG.maxSide + 1, JPEG.maxSide),
+                                       (20_000, 20_000, PixelBuffer.maxPixels)] {
+            let data = F.stub(F.Frame(width: width, height: height, block: F.seeded(0)))
+            guard case .tooLarge(let text) = error({ try JPEG.read(data) }) else { Issue.record("\(width)x\(height) not tooLarge"); continue }
+            #expect(text.hasPrefix("JPEG \(width)x\(height)") && text.contains("\(limit)"), "\(text)")
         }
     }
 
