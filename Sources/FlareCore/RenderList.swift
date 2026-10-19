@@ -51,6 +51,9 @@ public struct RenderList: Sendable, Hashable {
     /// The leaves in paint order, matrices and opacity already multiplied
     /// down the tree: what the stage draws and hit testing reads.
     public var items: [RenderItem]
+    /// The items of hidden layers that a visible layer uses as a track
+    /// matte: read only through `MatteLink`, never drawn or hit.
+    public var matteItems: [RenderItem] = []
     /// True when instance expansion stopped at `maxExpandedPoints`: the
     /// instances past the budget are `.unresolved` nodes with no items, even
     /// though their symbols exist.
@@ -113,6 +116,50 @@ public struct RenderItem: Sendable, Hashable {
     public var isLocked: Bool
     /// Whether the item is a text, which has no outline, fill or stroke.
     public var isText: Bool
+    /// The masks of its layer and every host layer above it, in scene
+    /// space, outermost host first and each layer's masks in order.
+    public var clips: [ClippedPath] = []
+    /// The track matte of its nearest matted layer (its own or a host's).
+    public var matte: MatteLink?
+    /// Whether some visible layer of its list uses its layer as a matte.
+    public var isMatteSource = false
+}
+
+/// One layer mask on the way down to an item, in scene space.
+public struct ClippedPath: Sendable, Hashable {
+    /// The mask's path through its layer's scene matrix.
+    public var path: Path
+    /// How it combines with the masks before it on the same layer.
+    public var mode: MaskMode
+    /// Edge softness in the mask's layer's points.
+    public var feather: Double
+    /// Mask strength, 0...1.
+    public var opacity: Double
+    /// Whether it keeps what lies outside `path`.
+    public var inverted: Bool
+    /// The number of instances above the mask's layer; masks combine by
+    /// mode only within one layer, and each layer's result intersects.
+    public var depth: Int
+
+    public init(path: Path, mode: MaskMode, feather: Double, opacity: Double, inverted: Bool, depth: Int) {
+        (self.path, self.mode, self.feather, self.opacity, self.inverted, self.depth) =
+            (path, mode, feather, opacity, inverted, depth)
+    }
+}
+
+/// An item's track matte: its source layer's items and what to read from them.
+public struct MatteLink: Sendable, Hashable {
+    /// The source layer's items: positions in `RenderList.matteItems` when
+    /// `inMatteItems` (a hidden source), else in `RenderList.items`.
+    public var sourceItems: Range<Int>
+    /// Whether `sourceItems` index `matteItems` rather than `items`.
+    public var inMatteItems: Bool
+    /// Which of the source's values limits the item.
+    public var kind: MatteKind
+
+    public init(sourceItems: Range<Int>, inMatteItems: Bool, kind: MatteKind) {
+        (self.sourceItems, self.inMatteItems, self.kind) = (sourceItems, inMatteItems, kind)
+    }
 }
 
 /// Where an item lives in the document.
