@@ -50,6 +50,9 @@ extension PixelBuffer {
     }
 
     /// Trilinear lookup on the encoded values; the result is clamped to 0...1.
+    /// The `ColorLUT` is validated when it is made and the result is clamped,
+    /// so this throws `RasterError.invalid` only for a non-finite result, which
+    /// a valid buffer and LUT cannot produce.
     public func applying(_ lut: ColorLUT) throws -> PixelBuffer {
         let n = lut.size, table = lut.table
         // Table offset of one step along red, green and blue: red fastest.
@@ -100,14 +103,14 @@ extension PixelBuffer {
     }
 
     /// Each linear colour channel inverted against its own alpha (a − c on
-    /// premultiplied components), so inverting twice gives the input back and
-    /// an alpha-0 pixel stays clear. An a − c that overflows a finite input
+    /// premultiplied components), so inverting twice gives the input back. An
+    /// alpha-0 pixel passes through untouched, whatever colour it stores. An a − c that overflows a finite input
     /// is clamped to the largest finite Float, so the result stays finite.
     public func inverted() -> PixelBuffer {
         var out = components
         let big = Float.greatestFiniteMagnitude
         func invert(_ a: Float, _ c: Float) -> Float { min(max(a - c, -big), big) }
-        for base in stride(from: 0, to: out.count, by: Self.channels) {
+        for base in stride(from: 0, to: out.count, by: Self.channels) where out[base + 3] != 0 {
             let a = out[base + 3]
             (out[base], out[base + 1], out[base + 2]) = (invert(a, out[base]), invert(a, out[base + 1]), invert(a, out[base + 2]))
         }
