@@ -100,3 +100,5 @@ utc	stage	event	ref	note
 2026-10-19T16:28Z	4	round-findings	round 8	panel clean: 0 findings; gate and mutation running; final feature-done PR (packet build record) drafted
 2026-10-19T16:45Z	4	round-result	round 8	clean: gate PASS 1984 tests, 50/50 mutants, 0 findings; second clean round, loop done
 2026-10-19T16:51Z	5	pr-opened	#727	packet build record, labels fast-lane + feature-done
+2026-10-19T16:51Z	5	pr-merged	#727	dev a77ab8c, feature-done
+2026-10-19T17:09Z	5	heartbeat	ci 39289117245	feature-done run in progress on a77ab8c

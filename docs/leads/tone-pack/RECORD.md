@@ -2,7 +2,7 @@
 
 Issue: #432 · Packet: docs/blueprints/core/features/tone-pack.md
 Run: act-1a1543c8a5f-6y14 (relaunch; first run act-1a150bfbcf7-sfwy) · Started: 2026-10-18T20:45Z · Relaunched: 2026-10-19T13:05Z
-Stage: 5 finish: #727 (packet build record, feature-done) open on the lane; waiting for its dev ci.yml run
+Stage: 5 finish: #727 merged (dev a77ab8c); feature-done ci.yml run 39289117245 in progress
 Base: a2157a4c
 Next: once #727 merges, find the dispatched ci.yml run on dev; when Linux, macOS and Mutation are green, post Belt-Slice-Done TP-z, Mac-Finish-Wanted TP-z and Belt-Contact-Sheet on #432, mark TP-z merged-done, then Next: Mac finisher verifies TP-z. If it is red in feature files, file gap issues (round budget spent)
 
