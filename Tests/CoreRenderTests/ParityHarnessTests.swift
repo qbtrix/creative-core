@@ -268,6 +268,14 @@ private struct CountingBackend: RenderBackend {
         #expect(hue.contains("mode-hue") && hue.contains("mode-luminosity") && !hue.contains("mode-multiply"))
     }
 
+    /// A golden equal to its input pins nothing: the effect could be removed and still pass.
+    @Test func everyEffectSampleChangesItsInput() throws {
+        let cpu = CPUBackend()
+        for sample in try ParityHarness.sampleSet(for: .effect) {
+            #expect(try ParityHarness.render(sample, on: cpu) != sample.source, "effect/\(sample.name) leaves its input unchanged")
+        }
+    }
+
     @Test func w1FamiliesHaveEmptySetsAndOldFamiliesAreUnchanged() throws {
         for op in RenderOp.notOnMetalYet.subtracting([.affine, .effect]).sorted(by: { $0.rawValue < $1.rawValue }) {
             let names = try ParityHarness.sampleSet(for: op).map(\.name)

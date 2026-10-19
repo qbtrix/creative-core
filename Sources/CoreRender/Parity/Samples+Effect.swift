@@ -30,7 +30,7 @@ enum EffectSamples {
                 sample("glow-outer", [.glow(color: warm, radius: 2, intensity: 0.75, inner: false)], s[3]),
                 sample("glow-inner", [.glow(color: warm, radius: 1.5, intensity: 0.5, inner: true)], s[0]),
                 sample("shadow-drop", [.shadow(color: shade, dx: 2, dy: 1.5, blur: 1.5, inner: false)], s[3]),
-                sample("shadow-inner", [.shadow(color: dusk, dx: -1, dy: 1, blur: 1, inner: true)], s[1]),
+                sample("shadow-inner", [.shadow(color: dusk, dx: -1, dy: 1, blur: 1, inner: true)], s[0]),
                 sample("stroke-outside", [.stroke(color: line, width: 1.5, position: .outside)], s[3]),
                 sample("stroke-inside", [.stroke(color: line, width: 1, position: .inside)], s[0]),
                 sample("stroke-center", [.stroke(color: line, width: 2, position: .center)], s[2]),
