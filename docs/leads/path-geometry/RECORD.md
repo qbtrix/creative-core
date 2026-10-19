@@ -5,7 +5,7 @@ Run: act-1a1541f2193-03la · Session: https://claude.ai/code/session_01UoKtqjbgW
 Line lead for: layered-codecs (#438, already done by run act-1a14de006be-1kmq), masks-mattes (#431), path-geometry (#430)
 Stage: 3 wave 2
 Base: 0b5a641be359e283625fa5c798b8d02872fad344
-Next: P2 (PG-edit) PR opening after rebase; P3 (measure) stacked on P2; P4 (boolean) building; P5, P6 wait
+Next: P3 (measure) and P4 (boolean) building stacked on P2 (merged); PG-edit slice-done waits a green ci.yml run holding #723
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -20,7 +20,7 @@ Next: P2 (PG-edit) PR opening after rebase; P3 (measure) stacked on P2; P4 (bool
 | pr id | slice | tasks | files (owned) | test | mutation plan | PR | state |
 |---|---|---|---|---|---|---|---|
 | P1 | PG-a | PG-1, PG-7 | PathOps/{PathOps,PathEdit,PathMeasure,PathOutline,PathBoolean}.swift, Geometry.swift, PathOpsShapeTests, PathAreaSupport, geometry.json | PathOpsShapeTests | none (declarations) | #713 | merged |
-| P2 | PG-edit | PG-3, PG-4 | PathEdit.swift, PathFixtures, PathEditTests | PathEditTests | FlarePathEdit | | rebasing onto dev |
+| P2 | PG-edit | PG-3, PG-4 | PathEdit.swift, PathFixtures, PathEditTests | PathEditTests | FlarePathEdit | #723 | merged |
 | P3 | PG-measure | PG-5, PG-6 | PathMeasure.swift, PathPropertySupport, PathMeasureTests, PathTrimDashTests | both | FlarePathMeasure | | building, stacked on P2 |
 | P4 | PG-shape | PG-9, PG-10 | PathBoolean.swift, PathBooleanTests, PathBooleanFuzzTests | both | FlarePathBoolean | | building |
 | P5 | PG-shape | PG-8 | PathOutline.swift, PathOutlineTests | PathOutlineTests | FlarePathOutline | | waits P4 |
