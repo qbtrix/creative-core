@@ -65,8 +65,8 @@
   {
     "note": "text layout returns overflowed non-finite values",
     "file": "Sources/FlareCore/TextLayout.swift",
-    "anchor": "guard [box.minX, box.maxX, box.maxY].allSatisfy(\\.isFinite),",
-    "replacement": "guard true || [box.minX, box.maxX, box.maxY].allSatisfy(\\.isFinite),",
+    "anchor": "        guard finite else {",
+    "replacement": "        guard true else {",
     "filter": "TextLayoutTests.badInputThrows"
   },
   {

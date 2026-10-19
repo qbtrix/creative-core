@@ -124,8 +124,9 @@ public struct TextLayout: Sendable, Hashable {
         let pieces = breakLines(chars, adv, box: style.boxWidth)
         let layout = place(pieces, chars: chars, adv: adv, runOf: runOf, runs: runs, measured: measured, style: style)
         let box = layout.bounds
-        guard [box.minX, box.maxX, box.maxY].allSatisfy(\.isFinite),
-              layout.lines.allSatisfy({ $0.width.isFinite && $0.baseline.isFinite && $0.x.allSatisfy(\.isFinite) }) else {
+        let finite = [box.minX, box.maxX, box.maxY].allSatisfy(\.isFinite)
+            && layout.lines.allSatisfy { $0.width.isFinite && $0.baseline.isFinite && $0.x.allSatisfy(\.isFinite) }
+        guard finite else {
             throw ModelError.invalidText("layout overflows: an x, width, baseline or bound is not finite")
         }
         return layout
