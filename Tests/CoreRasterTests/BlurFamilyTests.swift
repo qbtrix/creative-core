@@ -1,7 +1,8 @@
 // BlurFamilyTests.swift: effects-engine FX-3's acceptance, written first (FX-1),
 // on since FX-3 built `boxBlurred` and `motionBlurred`: zero is identity,
-// energy is kept, motion runs along its angle in degrees, transparency never
-// tints an edge, bad parameters throw. `EffectFuzz` serves every effects suite.
+// energy is kept, box blur runs three passes on both axes, motion runs centred
+// along its angle in degrees, edges extend, transparency never tints an edge,
+// bad parameters throw. `EffectFuzz` serves every effects suite.
 import CoreRaster
 import Testing
 
@@ -53,6 +54,48 @@ enum EffectFuzz {
             let blurred = try disc.boxBlurred(radius: radius)
             #expect(abs(try EffectFixtures.alphaSum(blurred) - before) / before <= 1e-4)
             #expect(try EffectFixtures.occupied(blurred).columns.count > EffectFixtures.occupied(disc).columns.count)
+            #expect(try EffectFixtures.occupied(blurred).rows.count > EffectFixtures.occupied(disc).rows.count)
+        }
+    }
+
+    @Test func boxSpreadsBothAxesThreePasses() throws {
+        let blurred = try dot().boxBlurred(radius: 1)
+        let o = try EffectFixtures.occupied(blurred, threshold: 0)
+        #expect(o.rows == Set(13...19) && o.columns == Set(13...19))
+        // The three-pass kernel is [1, 3, 6, 7, 6, 3, 1] / 27 per axis.
+        #expect(abs(Double(try blurred.pixel(x: 16, y: 16).a) - (7.0 / 27) * (7.0 / 27)) <= 1e-6)
+    }
+
+    @Test func boxReachesThreeRadii() throws {
+        let blurred = try dot().boxBlurred(radius: 2)
+        for (x, y) in [(22, 16), (10, 16), (16, 22), (16, 10)] { #expect(try blurred.pixel(x: x, y: y).a > 0) }
+        for (x, y) in [(23, 16), (9, 16), (16, 23), (16, 9)] { #expect(try blurred.pixel(x: x, y: y).a == 0) }
+    }
+
+    @Test func opaqueEdgesStayOpaque() throws {
+        var flat = try PixelBuffer(width: 12, height: 12)
+        for y in 0..<12 { for x in 0..<12 { try flat.setPixel(x: x, y: y, red) } }
+        for blurred in [try flat.boxBlurred(radius: 3), try flat.motionBlurred(degrees: 0, distance: 7)] {
+            for y in 0..<12 {
+                for x in 0..<12 {
+                    let p = try blurred.pixel(x: x, y: y)
+                    #expect(abs(p.r - 1) <= 1e-6 && abs(p.g) <= 1e-6 && abs(p.b) <= 1e-6 && abs(p.a - 1) <= 1e-6, "(\(x), \(y))")
+                }
+            }
+        }
+    }
+
+    @Test func motionIsCentred() throws {
+        for distance in [0.4, 2.5, 9] {
+            var centres: [Double] = []
+            for degrees in [0.0, 180] {
+                let c = try EffectFixtures.centroid(dot().motionBlurred(degrees: degrees, distance: distance))
+                #expect(c.map { abs($0.x - 16) <= 0.5 + 1e-9 && abs($0.y - 16) <= 1e-9 } == true, "\(distance) at \(degrees)")
+                if let c { centres.append(c.x) }
+            }
+            // Only an integer distance may sit off-centre (1/2 px toward -angle when odd).
+            let tolerance = distance == distance.rounded() ? 1 + 1e-9 : 1e-6
+            if centres.count == 2 { #expect(abs(centres[0] - centres[1]) <= tolerance, "\(distance)") }
         }
     }
 
@@ -71,6 +114,12 @@ enum EffectFuzz {
             let o = try EffectFixtures.occupied(dot().motionBlurred(degrees: degrees, distance: 9))
             #expect(alongX ? o.rows == [16] && o.columns.count == 10 : o.columns == [16] && o.rows.count == 10, "\(degrees)")
         }
+        // The cos/sin residue at right angles would leak ~1e-16 into the next
+        // row or column where samples straddle 0 (here the sample 2 px along
+        // the blur, which the residue moves just past column or row 0); the
+        // snap keeps it exactly 0.
+        #expect(try dot(x: 1, y: 18).motionBlurred(degrees: 90, distance: 9).pixel(x: 0, y: 16).a == 0)
+        #expect(try dot(x: 14, y: 1).motionBlurred(degrees: 180, distance: 9).pixel(x: 16, y: 0).a == 0)
     }
 
     @Test func noBleedFromTransparent() throws {
@@ -93,6 +142,9 @@ enum EffectFuzz {
             #expect(throws: RasterError.self) { try b.motionBlurred(degrees: 0, distance: bad) }
         }
         #expect(throws: RasterError.self) { try b.motionBlurred(degrees: .nan, distance: 3) }
+        // The cap is inclusive: exactly 1,000 is accepted.
+        #expect(try b.boxBlurred(radius: 1_000).width == 8)
+        #expect(try b.motionBlurred(degrees: 0, distance: 1_000).width == 8)
     }
 
     @Test func fuzzNeverCrashes() throws {

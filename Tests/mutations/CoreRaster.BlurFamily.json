@@ -19,5 +19,47 @@
     "anchor": "let radians = degrees * .pi / 180",
     "replacement": "let radians = degrees",
     "filter": "BlurFamilyTests"
+  },
+  {
+    "note": "motion blur floors its first sample offset at every distance, so a 0.4 px blur shifts the layer 0.8 px instead of blurring it in place, caught by BlurFamilyTests.motionIsCentred",
+    "file": "Sources/CoreRaster/Effects/BlurFamily.swift",
+    "anchor": "let start = distance == steps ? (-distance / 2).rounded(.down) : -distance / 2",
+    "replacement": "let start = (-distance / 2).rounded(.down)",
+    "filter": "BlurFamilyTests"
+  },
+  {
+    "note": "box blur skips its vertical pass, so it only spreads along rows, caught by BlurFamilyTests.boxSpreadsBothAxesThreePasses",
+    "file": "Sources/CoreRaster/Effects/BlurFamily.swift",
+    "anchor": "data = Self.boxPass(data, lines: width, length: height, along: width * c, across: c, radius: radius)",
+    "replacement": "_ = width",
+    "filter": "BlurFamilyTests"
+  },
+  {
+    "note": "box blur runs one pass per axis instead of three, so it reaches radius px not 3 radius, caught by BlurFamilyTests.boxSpreadsBothAxesThreePasses",
+    "file": "Sources/CoreRaster/Effects/BlurFamily.swift",
+    "anchor": "for _ in 0..<3 {",
+    "replacement": "for _ in 0..<1 {",
+    "filter": "BlurFamilyTests"
+  },
+  {
+    "note": "box blur pads before the start of a line with zeros instead of the edge pixel, so opaque edges darken, caught by BlurFamilyTests.opaqueEdgesStayOpaque",
+    "file": "Sources/CoreRaster/Effects/BlurFamily.swift",
+    "anchor": "if j <= 0 { return Double(j) * value(0, k) }",
+    "replacement": "if j <= 0 { return 0 }",
+    "filter": "BlurFamilyTests"
+  },
+  {
+    "note": "motion blur keeps the cos residue at 90 degrees, so a vertical blur leaks a 1e-16 weight into the next column, caught by BlurFamilyTests.horizontalSpreadsColumns",
+    "file": "Sources/CoreRaster/Effects/BlurFamily.swift",
+    "anchor": "let ux = abs(cos(radians)) < 1e-12 ? 0 : cos(radians)",
+    "replacement": "let ux = cos(radians)",
+    "filter": "BlurFamilyTests"
+  },
+  {
+    "note": "blur reach check excludes its upper bound, so radius or distance 1,000 throws, caught by BlurFamilyTests.overCapThrows",
+    "file": "Sources/CoreRaster/Effects/BlurFamily.swift",
+    "anchor": "value <= maxBlurReach",
+    "replacement": "value < maxBlurReach",
+    "filter": "BlurFamilyTests"
   }
 ]

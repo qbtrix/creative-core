@@ -3,9 +3,10 @@
 // running-sum passes per axis (the result approaches a Gaussian); a fractional
 // radius weights the two outer taps by its fraction. Motion blur averages
 // ceil(distance) + 1 bilinear samples one step (distance / ceil(distance), at
-// most 1 px) apart along the angle, starting on a whole pixel, so an integer
-// distance on an axis lands on whole pixels and spreads over distance + 1 of
-// them. Both read past the edge as the nearest edge pixel. Invariants: radius
+// most 1 px) apart along the angle, centred on the pixel; an integer distance
+// starts on a whole pixel instead, so on an axis it lands on whole pixels and
+// spreads over distance + 1 of them (an odd one sits 1/2 px toward -angle).
+// Both read past the edge as the nearest edge pixel. Invariants: radius
 // and distance are finite and in 0...1,000 (0 is identity), degrees finite;
 // every weight set sums to 1, so the output is a convex mix of the input.
 #if canImport(Glibc)
@@ -21,7 +22,11 @@ extension PixelBuffer {
     static let maxBlurReach = 1_000.0
 
     /// This buffer box-blurred by `radius` pixels: three box passes along
-    /// each axis. Radius 0 returns the buffer unchanged. Throws
+    /// each axis. Each pass averages a 2·radius+1 px window, so colour spreads
+    /// up to 3·radius px; the result approximates a Gaussian of sigma ≈
+    /// sqrt(radius·(radius+1)). Pad by 3·radius to keep the full blur. The
+    /// buffer reads past its edge as the nearest edge pixel. Radius 0 returns
+    /// the buffer unchanged. Throws
     /// `RasterError.invalid` for a radius that is not finite or not in 0...1,000.
     public func boxBlurred(radius: Double) throws -> PixelBuffer {
         try Self.checkReach(radius, "box blur radius")
@@ -36,7 +41,13 @@ extension PixelBuffer {
     }
 
     /// This buffer blurred `distance` pixels along `degrees` (0 is +x, 90 is
-    /// +y). Distance 0 returns the buffer unchanged. Throws
+    /// +y). The blur is centred, so only the axis matters: each pixel averages
+    /// ceil(distance)+1 samples from -distance/2 to +distance/2 px along the
+    /// angle. An integer distance starts on the whole pixel floor(-distance/2)
+    /// so its samples land on whole pixels; for an odd one the window sits
+    /// 1/2 px toward -angle, so degrees and degrees+180 differ by 1 px. The
+    /// buffer reads past its edge as the nearest edge pixel. Distance 0
+    /// returns the buffer unchanged. Throws
     /// `RasterError.invalid` for a non-finite angle, or a distance that is not
     /// finite or not in 0...1,000.
     public func motionBlurred(degrees: Double, distance: Double) throws -> PixelBuffer {
@@ -53,7 +64,9 @@ extension PixelBuffer {
         let steps = distance.rounded(.up)
         let count = Int(steps) + 1
         let step = distance / steps
-        let start = (-distance / 2).rounded(.down)
+        // Centred exactly; an integer distance snaps down to a whole pixel so
+        // it spreads over distance + 1 whole pixels instead of distance + 2.
+        let start = distance == steps ? (-distance / 2).rounded(.down) : -distance / 2
         let src = components, c = Self.channels
         var out = [Float](repeating: 0, count: src.count)
         var r = 0.0, g = 0.0, b = 0.0, a = 0.0
