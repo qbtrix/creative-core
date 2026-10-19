@@ -101,7 +101,6 @@ private struct CompositingFake: RenderBackend {
         try expectCPU(.maskedComposite, seed: 1) { d, s, b in
             try d.composite(s, onto: &b, x: 1, y: 0, mode: .multiply, opacity: 0.5, mask: mask, maskX: 0, maskY: 1)
         }
-        try expectCPU(.effect, seed: 9) { d, s, _ in _ = try d.applying(s, .boxBlur(radius: 2)) }
     }
 
     @Test func colorCasesFallBack() throws {

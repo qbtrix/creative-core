@@ -1,6 +1,6 @@
-// CPUEffectTests.swift: effects-engine FX-7's acceptance, written first (FX-1),
-// disabled until FX-7 fills both `applying`s: every `LayerEffect` case on the
-// CPU backend `==` CoreRaster's, a stroke keeps its position, and a dispatcher
+// CPUEffectTests.swift: effects-engine FX-7's acceptance: every `LayerEffect`
+// case on the CPU backend `==` CoreRaster's `applying` and the op it names
+// directly, a stroke keeps its position, and a dispatcher
 // over a fake without `.effect` sends every case to the CPU.
 import CoreRaster
 import CoreRender
@@ -31,19 +31,34 @@ import Testing
         return try PixelBuffer(rgba8: bytes, width: 24, height: 20)
     }
 
-    @Test(.disabled("waits on FX-7")) func everyCaseEqualsDirect() throws {
+    /// `effect` through the CoreRaster op it names, not through `applying`, so
+    /// a case routed to the wrong op or flag shows up against it.
+    func direct(_ input: PixelBuffer, _ effect: LayerEffect) throws -> PixelBuffer {
+        switch effect {
+        case .boxBlur(let r): try input.boxBlurred(radius: r)
+        case let .motionBlur(deg, dist): try input.motionBlurred(degrees: deg, distance: dist)
+        case let .denoise(s, d): try input.denoised(strength: s, detail: d)
+        case let .clarity(a, r): try input.clarity(amount: a, radius: r)
+        case let .glow(c, r, i, inner): try input.glowing(color: c, radius: r, intensity: i, inner: inner)
+        case let .shadow(c, dx, dy, b, inner): try input.shadowed(color: c, dx: dx, dy: dy, blur: b, inner: inner)
+        case let .stroke(c, w, p): try input.stroked(color: c, width: w, position: p)
+        }
+    }
+
+    @Test func everyCaseEqualsDirect() throws {
         let cpu = CPUBackend()
         let input = try layer()
         for effect in everyCase {
             let s = try cpu.surface(input)
             let out = try cpu.read(cpu.applying(s, effect))
             #expect(out == (try input.applying(effect)), "\(effect)")
+            #expect(out == (try direct(input, effect)), "\(effect)")
             #expect(out.width == input.width && out.height == input.height)
             #expect(try cpu.read(s) == input, "\(effect) changed its input")
         }
     }
 
-    @Test(.disabled("waits on FX-7")) func strokeKeepsPosition() throws {
+    @Test func strokeKeepsPosition() throws {
         let cpu = CPUBackend()
         let input = try layer(seed: 0x57_80CE)
         var results: [PixelBuffer] = []
@@ -56,7 +71,7 @@ import Testing
         #expect(results.count == 3 && results[0] != results[1] && results[1] != results[2] && results[0] != results[2])
     }
 
-    @Test(.disabled("waits on FX-7")) func dispatcherFallsBackToCPU() throws {
+    @Test func dispatcherFallsBackToCPU() throws {
         let fake = FakeBackend(supports: Set(RenderOp.allCases).subtracting([.effect]))
         let dispatcher = RenderDispatcher(preferred: fake, fallback: CPUBackend())
         let input = try layer()
