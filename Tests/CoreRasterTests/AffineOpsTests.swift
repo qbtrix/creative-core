@@ -6,7 +6,8 @@
 // Round 1 adds the sampler's own contract: a shrink widens the kernel, filtered
 // values are normalised means that fade to clear at the edge, a huge whole
 // translation stays clear, a lanczos3 overshoot throws, and an extreme shrink
-// on a narrow axis costs only that axis's taps.
+// on a narrow axis costs only that axis's taps. Round 3: a singular and a
+// non-finite matrix throw messages that name which one happened.
 import CoreRaster
 import Testing
 #if canImport(Glibc)
@@ -264,6 +265,30 @@ func affineMaxDelta(_ lhs: PixelBuffer, _ rhs: PixelBuffer) throws -> Float {
             Issue.record("a lanczos3 overshoot past Float's range returned")
         } catch let RasterError.invalid(message) {
             #expect(message.contains("lanczos3"), "\(message)")
+        }
+    }
+
+    /// A singular matrix and a non-finite one throw different messages, from
+    /// `transformed` and from `composite(_:through:)` alike: "singular" with
+    /// the determinant and how to fix it, or "non-finite".
+    @Test
+    func badMatrixMessagesNameTheFault() throws {
+        let layer = try AffineFixtures.layer(seed: 313, width: 4, height: 4)
+        let cases: [(AffineMatrix, String, String)] = [
+            (AffineMatrix(a: 0, b: 0, c: 0, d: 1, tx: 0, ty: 0), "singular", "non-finite"),
+            (AffineMatrix(a: .nan, b: 0, c: 0, d: 1, tx: 0, ty: 0), "non-finite", "singular"),
+        ]
+        for (m, wanted, unwanted) in cases {
+            var backdrop = try PixelBuffer(width: 4, height: 4)
+            let calls: [() throws -> Void] = [
+                { _ = try layer.transformed(m, width: 4, height: 4, filter: .bilinear) },
+                { try backdrop.composite(layer, through: m, mode: .normal, opacity: 1, filter: .bilinear) },
+            ]
+            for call in calls {
+                let error = #expect(throws: RasterError.self) { try call() }
+                guard case .invalid(let message) = try #require(error) else { continue }
+                #expect(message.contains(wanted) && !message.contains(unwanted), "\(m): \(message)")
+            }
         }
     }
 

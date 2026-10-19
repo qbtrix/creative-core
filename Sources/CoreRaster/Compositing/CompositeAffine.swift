@@ -17,13 +17,15 @@
 extension PixelBuffer {
     /// Composites `src` mapped through `m` onto this buffer in place, sampled
     /// with `filter` as `transformed` samples and blended with `mode` at
-    /// `opacity` as `composite(_:x:y:mode:opacity:)` blends. Only the
-    /// pixels inside `m.bounds(of: src.width, src.height)`, widened on every
+    /// `opacity` as `composite(_:x:y:mode:opacity:)` blends. `m` maps `src`'s
+    /// pixel coordinates to this buffer's (forward, as in the RenderBackend
+    /// contract); pixel (x, y) is sampled at its centre (x + 0.5, y + 0.5).
+    /// Only the pixels inside `m.bounds(of: src.width, src.height)`, widened on every
     /// side by how far `filter`'s kernel reaches in this buffer's pixels, are
     /// visited; a layer mapped wholly off this buffer changes nothing. Throws
     /// `RasterError.invalid`, with this buffer unchanged, for an opacity
-    /// outside 0...1 or not finite, a matrix with a non-finite entry or no
-    /// finite inverse, or a matrix that maps a corner of `src` outside the
+    /// outside 0...1 or not finite, a matrix with a non-finite entry or a
+    /// singular one (`checkedInverse` says which), or a matrix that maps a corner of `src` outside the
     /// finite range; a result that overflows to infinity throws as the offset
     /// composite does.
     public mutating func composite(_ src: PixelBuffer, through m: AffineMatrix, mode: BlendMode, opacity: Float,
@@ -31,9 +33,7 @@ extension PixelBuffer {
         guard (0...1).contains(opacity) else {
             throw RasterError.invalid("opacity \(opacity): must be a finite value in 0...1")
         }
-        guard [m.a, m.b, m.c, m.d, m.tx, m.ty].allSatisfy(\.isFinite), let inv = m.inverse else {
-            throw RasterError.invalid("composite through \(m): the matrix must be finite and invertible")
-        }
+        let inv = try m.checkedInverse(for: "composite through \(m)")
         guard let box = m.bounds(of: src.width, src.height) else {
             throw RasterError.invalid("composite through \(m): the layer's \(src.width)x\(src.height) corners map outside the finite range; reduce the matrix's scale")
         }

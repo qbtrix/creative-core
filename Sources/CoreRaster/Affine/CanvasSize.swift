@@ -9,8 +9,8 @@
 // `maxPixels`, so the size change and the offset fit in Int and in Double.
 
 extension PixelBuffer {
-    /// This image on a `width` x `height` canvas: grows with transparent
-    /// pixels, shrinks by cropping. The image's top-left moves by
+    /// Pads or crops this image to `width` x `height` around `anchor`: a
+    /// larger canvas grows with transparent pixels, a smaller one crops. The image's top-left moves by
     /// (`width` - old width, `height` - old height) times the anchor's place
     /// (0, 0.5 or 1 per axis), rounded down. Throws `RasterError.invalid` for
     /// a size `validatedSize` rejects.

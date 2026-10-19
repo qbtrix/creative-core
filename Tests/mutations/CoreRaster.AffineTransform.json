@@ -61,5 +61,12 @@
     "anchor": ".squareRoot(), 1), Double(width))",
     "replacement": ".squareRoot(), 1), Double(max(width, height)))",
     "filter": "AffineOpsTests"
+  },
+  {
+    "note": "the non-finite guard is dropped so a NaN matrix is reported as singular, caught by AffineOpsTests.badMatrixMessagesNameTheFault",
+    "file": "Sources/CoreRaster/Affine/AffineTransform.swift",
+    "anchor": "guard [a, b, c, d, tx, ty].allSatisfy(\\.isFinite) else {",
+    "replacement": "guard true else {",
+    "filter": "AffineOpsTests"
   }
 ]
