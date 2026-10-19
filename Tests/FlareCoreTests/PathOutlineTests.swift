@@ -32,8 +32,9 @@ import Testing
     }
 
     @Test func roundCapAddsADisk() throws {
-        #expect(Self.near(try Self.area(Self.line, cap: .round), 1_000 + 25 * Double.pi, 5e-3))
-        #expect(Self.near(try Self.area(Self.line, cap: .round), 1_000 + 25 * Double.pi, 1e-4))
+        // Chords within 0.01 of the arc: inscribed, so a little under the disk.
+        let area = try Self.area(Self.line, cap: .round)
+        #expect(Self.near(area, 1_000 + 25 * Double.pi, 5e-4) && area <= 1_000 + 25 * Double.pi)
     }
 
     @Test func roundJoinArea() throws {
@@ -75,6 +76,7 @@ import Testing
     @Test func circleOutlineIsAnAnnulus() throws {
         let circle = try PathBuilders.ellipse(in: Rect(minX: 0, minY: 0, maxX: 100, maxY: 100))
         let area = try circle.outlined(width: 10, join: .round, cap: .butt, miterLimit: 4, tolerance: 0.001)
+        #expect(try area.flattened(tolerance: 0.001).count == 2)
         #expect(Self.near(-(try PathArea.signedArea(area)), 20 * Double.pi * 50, 2e-3))
     }
 
