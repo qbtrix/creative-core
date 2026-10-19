@@ -1,0 +1,23 @@
+[
+  {
+    "note": "the mask contour saddle is resolved by a fixed corner pairing instead of the cell mean, so a saddle whose centre joins the diagonal splits into two outlines, caught by MaskOpsTests.saddleFollowsMean",
+    "file": "Sources/CoreRaster/Masks/MaskContours.swift",
+    "anchor": "pairs = centerInside == inside[0] ? [(1, 2), (3, 0)] : [(0, 1), (2, 3)]",
+    "replacement": "pairs = [(1, 2), (3, 0)]",
+    "filter": "MaskOpsTests"
+  },
+  {
+    "note": "the mask covered bounds treat the last covered row as exclusive, so a 10 x 4 block reads 3 rows tall, caught by MaskOpsTests.boundsAreExact",
+    "file": "Sources/CoreRaster/Mask.swift",
+    "anchor": "return TileRect(x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1)",
+    "replacement": "return TileRect(x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY)",
+    "filter": "MaskOpsTests"
+  },
+  {
+    "note": "the mask contour segments keep their edge order whatever side the inside corner is on, so outlines no longer chain into closed rings with the inside on their left, caught by MaskOpsTests.ringHasTwoClosedOutlinesOnItsCircles",
+    "file": "Sources/CoreRaster/Masks/MaskContours.swift",
+    "anchor": "let (from, to) = inside[a] ? (b, a) : (a, b)",
+    "replacement": "let (from, to) = (a, b)",
+    "filter": "MaskOpsTests"
+  }
+]

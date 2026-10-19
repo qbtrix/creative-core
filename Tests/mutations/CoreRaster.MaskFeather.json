@@ -1,0 +1,16 @@
+[
+  {
+    "note": "the mask feather uses sigma = radius instead of radius / 3, so the edge fades three times too far and the first pixel inside reads well under 0.6, caught by MaskOpsTests.edgeIsHalfAtTheEdge",
+    "file": "Sources/CoreRaster/Masks/MaskFeather.swift",
+    "anchor": "PixelBuffer.gaussianKernel(sigma: radius / 3, width: width, height: height)",
+    "replacement": "PixelBuffer.gaussianKernel(sigma: radius, width: width, height: height)",
+    "filter": "MaskOpsTests"
+  },
+  {
+    "note": "the mask feather's vertical pass clamps its taps to the row length instead of the column length, so a tall mask no longer feathers like its transpose, caught by MaskOpsTests.tallMaskFeathersLikeItsTranspose",
+    "file": "Sources/CoreRaster/Masks/MaskFeather.swift",
+    "anchor": "tap: PixelBuffer.taps(kernel, length: h))",
+    "replacement": "tap: PixelBuffer.taps(kernel, length: w))",
+    "filter": "MaskOpsTests"
+  }
+]
