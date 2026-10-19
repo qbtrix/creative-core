@@ -88,7 +88,7 @@ extension Deflate {
     }
 
     /// 3.2.7's header: HLIT, HDIST, HCLEN, the code-length code, then both codes' lengths run-length coded,
-    /// each run a symbol | extra << 5. `bits` counts the header and block type bits.
+    /// each run a symbol | extra << 5. `bits` counts this header only; `block` adds the 3 BFINAL and BTYPE bits.
     struct DynamicHeader {
         var hlit = 286, hdist = 30, hclen = 19, runs: [Int] = [], codeLengths: [UInt8] = [], bits = 0
         static func extraBits(_ symbol: Int) -> Int { symbol < 16 ? 0 : symbol == 16 ? 2 : symbol == 17 ? 3 : 7 }

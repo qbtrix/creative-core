@@ -181,5 +181,11 @@ enum DynamicDeflate {
         let time = try timed(free: { read = empty }) { read = try JPEG.read(data) }
         reported("JPEG decode \(w)x\(h) baseline 4:2:0", time, budget: .milliseconds(2000))
         #expect(try read.width == w && read.height == h && !JPEG.info(data).progressive)
+        // Untimed: the seeded blocks depend only on position, so the timed decode's top-left whole MCUs are a small
+        // frame's decode, and that one is within 1/255 mean and 4/255 max of A.3.3 (the full reference takes ~30 s in debug).
+        let part = JPEGFixtures.Frame(width: 64, height: 48, sampling: frame.sampling, block: frame.block)
+        let e = try JPEGFixtures.error(JPEGFixtures.baseline(part), part)
+        #expect(e.mean <= 1 && e.max <= 4, "the reference crop: mean \(e.mean), max \(e.max) levels")
+        #expect(try read.cropped(x: 0, y: 0, width: 64, height: 48) == JPEG.read(JPEGFixtures.baseline(part)), "the timed decode is the picture")
     }
 }

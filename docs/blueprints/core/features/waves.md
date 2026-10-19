@@ -32,7 +32,7 @@ features; the source issues carry their own labels (#220 to #225 and #228 are
 | 6 | Styled runs, paragraphs, type on a path, layout from measured advances, SVG text | `text-engine.md` | E8 (core half) | p1 | engine-contracts, path-geometry | creative-apps `shell-text`, S21, every app's text tool | file when ready | planned |
 | 6 | Colour, stroke and shape-morph keys, their sampling and export | `animate-properties.md` | E14 | p2 | engine-contracts, path-geometry | S16; Flare's inspector keys | file when ready | planned |
 | 6 | ICC profiles (new `corecolor/icc-profiles`), assign and convert, 16-bit PSD and ORA | `color-profiles.md` | E13 | p2 | layered-codecs | Photo's profiles and 16-bit documents | file when ready | planned |
-| 5 | PNG and JPEG on Foundation alone (pure-Swift inflate and deflate) in `coreraster/codecs` | `image-codecs.md` | beta-80 W0 (AI-accessible first): Linux headless I/O | p0 | nothing | creative-apps `adopt-command-catalog` AC-p2 and AC-l3 (Photo and Library headless), the `afterglow` CLI's pixel expectations and the real-jobs suites on Linux | #562 | planned |
+| 5 | PNG and JPEG on Foundation alone (pure-Swift inflate and deflate) in `coreraster/codecs` | `image-codecs.md` | beta-80 W0 (AI-accessible first): Linux headless I/O | p0 | nothing | creative-apps `adopt-command-catalog` AC-p2 and AC-l3 (Photo and Library headless), the `afterglow` CLI's pixel expectations and the real-jobs suites on Linux | #562 | built |
 
 What the apps wait on, mapped to the task that closes each issue:
 
