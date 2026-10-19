@@ -28,3 +28,5 @@ utc	stage	event	ref	note
 2026-10-19T00:31:01Z	4	round-gate	round-1	scripts/ci PASS on 5ea5ae5 (try 5, budget retries under load); mutate 70/70 caught incl. all feature plans; critic panel launched (clarity, contract, tests, robustness)
 2026-10-19T00:33:38Z	round-1	critic panel	wf_4fc5e11b-aa6	not clean: 7 confirmed (2 major, 5 minor), 1 refuted; all in BlurFamily; fix batch r1-b1 launched (wf_748c0f84-546)
 2026-10-19T00:41:41Z	3	merged	#588	FX-5 distance field and alpha strokes merged; FX-6 unblocked
+2026-10-19T00:42:44Z	4	slice-done	FX-blur	Belt-Slice-Done posted on #433 (https://github.com/qbtrix/creative-core/actions/runs/39180267199, dev 789025a)
+2026-10-19T00:42:44Z	3	build	FX-6	builder launched (glow, shadow)
