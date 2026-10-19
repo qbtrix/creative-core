@@ -1,8 +1,5 @@
-// MaskCommandsTests.swift: the mask family's registry ids, registry samples and
-// undo steps. A new mask command adds its id to `expectedIDs`, one sample to
-// `registrySamples()` and its random steps to `undoSteps` here;
-// CommandRegistryTests and UndoPropertyTests read all three, so neither shared
-// test file changes. Then the MM-6 cases on Fixtures/masks.flare.
+// MaskCommandsTests.swift: the mask family's ids, registry samples and undo steps
+// (CommandRegistryTests and UndoPropertyTests read all three), then the MM-6 cases on Fixtures/masks.flare.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -81,11 +78,8 @@ import Testing
         try assertUndoRestoresDocument(seed: seed, steps: Self.undoSteps)
     }
 
-    @Test func familyListsExactlyItsIDs() {
+    @Test func familyAndSamplesListExactlyItsIDs() {
         #expect(MaskCommands.all.map { $0.id } == Self.expectedIDs)
-    }
-
-    @Test func samplesListExactlyItsIDs() {
         #expect(Self.registrySamples().map { type(of: $0).id } == Self.expectedIDs)
     }
 
@@ -193,22 +187,20 @@ import Testing
         let start = try Self.fixture()
         var locked = start
         try locked.withLayer(Self.m, layer: "card") { $0.isLocked = true }
-        let lockedCommands: [any Command] = [
+        for command in [
             AddLayerMask(owner: Self.m, layerID: "card", mask: Self.mask(20)),
             SetLayerMask(owner: Self.m, layerID: "card", index: 0, mask: Self.mask(20)),
             RemoveLayerMask(owner: Self.m, layerID: "card", index: 0),
             MoveLayerMask(owner: Self.m, layerID: "card", from: 0, to: 1),
             SetTrackMatte(owner: Self.m, layerID: "card", matte: TrackMatte(sourceLayerID: "lumen")),
-        ]
-        for command in lockedCommands { Self.expectRefused(command, on: locked) }
-        let badIndex: [any Command] = [
+        ] as [any Command] { Self.expectRefused(command, on: locked) }
+        for command in [
             AddLayerMask(owner: Self.m, layerID: "card", mask: Self.mask(20), index: 3),
             AddLayerMask(owner: Self.m, layerID: "card", mask: Self.mask(20), index: -1),
             SetLayerMask(owner: Self.m, layerID: "card", index: 2, mask: Self.mask(20)),
             RemoveLayerMask(owner: Self.m, layerID: "photo", index: 0),
             MoveLayerMask(owner: Self.m, layerID: "card", from: 0, to: 2),
             MoveLayerMask(owner: Self.m, layerID: "card", from: -1, to: 0),
-        ]
-        for command in badIndex { Self.expectRefused(command, on: start) }
+        ] as [any Command] { Self.expectRefused(command, on: start) }
     }
 }
