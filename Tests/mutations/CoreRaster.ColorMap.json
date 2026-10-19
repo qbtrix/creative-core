@@ -40,5 +40,12 @@
     "anchor": "for base in stride(from: 0, to: out.count, by: Self.channels) where out[base + 3] != 0 {",
     "replacement": "for base in stride(from: 0, to: out.count, by: Self.channels) {",
     "filter": "ColorMapTests"
+  },
+  {
+    "note": "gradientMap stop check drops the upper bound, so a stop at offset 1.5 is accepted instead of throwing for stop 1, caught by ColorMapTests.gradientMapNamesTheFailingStop",
+    "file": "Sources/CoreRaster/Tone/ColorMap.swift",
+    "anchor": "guard s.offset.isFinite, (0...1).contains(s.offset) else {",
+    "replacement": "guard s.offset.isFinite, s.offset >= 0 else {",
+    "filter": "ColorMapTests"
   }
 ]

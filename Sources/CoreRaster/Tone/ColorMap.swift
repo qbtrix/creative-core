@@ -20,13 +20,16 @@ extension PixelBuffer {
         guard Self.gradientStops.contains(stops.count) else {
             throw RasterError.invalid("gradientMap with \(stops.count) stops: needs \(Self.gradientStops)")
         }
-        var last: Float = 0
-        for s in stops {
-            guard s.offset.isFinite, s.offset >= last, s.offset <= 1 else {
-                throw RasterError.invalid("gradientMap offset \(s.offset): must be sorted in 0...1")
+        // Each error names the failing stop by its index in `stops`.
+        for (i, s) in stops.enumerated() {
+            guard s.offset.isFinite, (0...1).contains(s.offset) else {
+                throw RasterError.invalid("gradientMap stop \(i) offset \(s.offset): must be in 0...1")
             }
-            try Self.checkFinite("gradientMap colour", [s.color.r, s.color.g, s.color.b])
-            last = s.offset
+            if i > 0, s.offset < stops[i - 1].offset {
+                throw RasterError.invalid("gradientMap stop \(i) offset \(s.offset): below stop \(i - 1) offset "
+                    + "\(stops[i - 1].offset), stops must be sorted by offset")
+            }
+            try Self.checkFinite("gradientMap stop \(i) colour", [s.color.r, s.color.g, s.color.b])
         }
         let offsets = stops.map(\.offset)
         let colors = stops.map {

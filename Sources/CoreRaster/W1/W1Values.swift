@@ -58,8 +58,12 @@ public enum MatteSource: Hashable, Sendable { case alpha, luminance }
 /// degrees; saturation and lightness are percent. Each component is in
 /// -100...100; 0 changes nothing. The tone ops clamp a value outside that range.
 public struct HSLShift: Hashable, Sendable {
+    /// `hue` in percent of ±30° (not degrees), `saturation` and `lightness`
+    /// in percent; each -100...100, 0 changes nothing.
     public var hue, saturation, lightness: Float
 
+    /// A shift with `hue` in percent of ±30° (not degrees) and `saturation`,
+    /// `lightness` in percent, each -100...100; the defaults change nothing.
     public init(hue: Float = 0, saturation: Float = 0, lightness: Float = 0) {
         self.hue = hue
         self.saturation = saturation
@@ -73,8 +77,10 @@ public struct HSLShift: Hashable, Sendable {
 /// each band fades out by a raised cosine at its neighbours' centres.
 /// The default changes nothing.
 public struct HSLAdjustment: Hashable, Sendable {
+    /// The shift for each band, named by its centre hue on the sRGB-encoded colour.
     public var reds, oranges, yellows, greens, aquas, blues, purples, magentas: HSLShift
 
+    /// Per-band shifts; a band left out keeps `HSLShift()`, which changes nothing.
     public init(reds: HSLShift = HSLShift(), oranges: HSLShift = HSLShift(), yellows: HSLShift = HSLShift(),
                 greens: HSLShift = HSLShift(), aquas: HSLShift = HSLShift(), blues: HSLShift = HSLShift(),
                 purples: HSLShift = HSLShift(), magentas: HSLShift = HSLShift()) {
@@ -98,9 +104,14 @@ public struct HSLAdjustment: Hashable, Sendable {
 /// sRGB-encoded color, as a color picker gives it; its alpha is the tint's
 /// strength in 0...1 (0 leaves the gray untinted, 1 applies it fully).
 public struct GrayMix: Hashable, Sendable {
+    /// Each band's weight in the gray, in percent, -200...300.
     public var reds, yellows, greens, cyans, blues, magentas: Float
+    /// A straight-alpha, sRGB-encoded tint whose alpha is its strength in
+    /// 0...1; nil leaves the gray untinted.
     public var tint: RGBA?
 
+    /// Band weights in percent (-200...300) and an optional straight-alpha,
+    /// sRGB-encoded tint; the defaults are the 40, 60, 40, 60, 20, 80 mix untinted.
     public init(reds: Float = 40, yellows: Float = 60, greens: Float = 40, cyans: Float = 60, blues: Float = 20,
                 magentas: Float = 80, tint: RGBA? = nil) {
         self.reds = reds
@@ -119,9 +130,15 @@ public struct GrayMix: Hashable, Sendable {
 /// (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0) changes nothing. When `monochrome`
 /// is set, `red` alone makes a gray written to all three channels.
 public struct ChannelMatrix: Hashable, Sendable {
+    /// Each output channel's (r, g, b, constant) on linear values: weights as
+    /// fractions in -2...2 (1 is 100%), the constant in -1...1.
     public var red, green, blue: SIMD4<Float>
+    /// When set, `red` alone makes a gray written to all three channels.
     public var monochrome: Bool
 
+    /// Rows of (r, g, b, constant) on linear values, weights as fractions in
+    /// -2...2 and the constant in -1...1; identity is (1, 0, 0, 0),
+    /// (0, 1, 0, 0), (0, 0, 1, 0) with `monochrome` false.
     public init(red: SIMD4<Float>, green: SIMD4<Float>, blue: SIMD4<Float>, monochrome: Bool) {
         self.red = red
         self.green = green
@@ -135,9 +152,13 @@ public struct ChannelMatrix: Hashable, Sendable {
 /// whether the result keeps each pixel's luminosity. The tone ops clamp a value
 /// outside that range.
 public struct ToneBalance: Hashable, Sendable {
+    /// Each tone range's (r, g, b) shift, each component in -100...100.
     public var shadows, midtones, highlights: SIMD3<Float>
+    /// Whether the result keeps each pixel's luminosity.
     public var preserveLuminosity: Bool
 
+    /// Per-range (r, g, b) shifts, each component in -100...100 (zero changes
+    /// nothing), and whether each pixel keeps its luminosity.
     public init(shadows: SIMD3<Float>, midtones: SIMD3<Float>, highlights: SIMD3<Float>, preserveLuminosity: Bool) {
         self.shadows = shadows
         self.midtones = midtones
@@ -152,9 +173,13 @@ public struct ToneBalance: Hashable, Sendable {
 /// sRGB-encoded RGB in 0...1, the space the map runs in; its alpha is
 /// ignored and each pixel keeps its own alpha.
 public struct GradientMapStop: Hashable, Sendable {
+    /// Rec. 709 luma of the sRGB-encoded (not linear) straight colour, 0...1.
     public var offset: Float
+    /// Straight-alpha, sRGB-encoded RGB in 0...1; its alpha is ignored.
     public var color: RGBA
 
+    /// A stop at `offset` (sRGB-encoded luma, 0...1) mapping to `color`
+    /// (straight-alpha, sRGB-encoded RGB in 0...1, alpha ignored).
     public init(offset: Float, color: RGBA) {
         self.offset = offset
         self.color = color

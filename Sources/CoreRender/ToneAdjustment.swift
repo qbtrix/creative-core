@@ -7,7 +7,12 @@
 // from before W1 are `.adjust`, the W1 colour cases are `.color` (CPU first).
 import CoreRaster
 
-/// One tone adjustment, as CoreRaster's `Adjustments.swift` defines it.
+/// One tone adjustment: each case is the CoreRaster `PixelBuffer` method its
+/// doc names, with that method's parameters, units and working space. The
+/// `.adjust` cases run on linear values (`levels` and `curves` on sRGB-encoded
+/// ones with `.sRGB`) and live in CoreRaster's `Adjustments.swift`; the
+/// `.color` cases live under its `Tone/`, and the comment above `vibrance`
+/// names each one's space.
 public enum ToneAdjustment: Equatable, Sendable {
     /// `PixelBuffer.exposure(stops:)`: multiplies every linear color value by
     /// 2^`stops`.
@@ -40,7 +45,11 @@ public enum ToneAdjustment: Equatable, Sendable {
     // `tone-pack` feature adds. Ranges are that op's: vibrance, hueSaturation,
     // posterize, threshold and gradientMap throw outside them; hsl,
     // blackAndWhite, channelMixer and colorBalance clamp (a non-finite value
-    // throws everywhere).
+    // throws everywhere). Working space: hueSaturation, hsl, blackAndWhite,
+    // colorBalance, gradientMap, lut, posterize and threshold read straight
+    // sRGB-encoded values; vibrance scales linear chroma (reading hue and
+    // saturation on the encoded values), channelMixer runs on straight linear
+    // values and invert on linear premultiplied ones.
     /// `PixelBuffer.vibrance(_:)`: a saturation boost that moves muted colours
     /// most; negative desaturates. -100...100.
     case vibrance(Float)
@@ -49,7 +58,8 @@ public enum ToneAdjustment: Equatable, Sendable {
     /// outside them.
     case hueSaturation(hue: Float, saturation: Float, lightness: Float)
     /// `PixelBuffer.hsl(_:)`: per-hue-band hue, saturation and lightness
-    /// shifts, each percent clamped to -100...100 (hue 100 is +30°).
+    /// shifts on the sRGB-encoded colour's hue, each percent clamped to
+    /// -100...100 (hue 100 is +30°).
     case hsl(HSLAdjustment)
     /// `PixelBuffer.blackAndWhite(_:)`: a gray mixed from the hue bands, tinted;
     /// band weights in percent, clamped to -200...300.
@@ -63,15 +73,19 @@ public enum ToneAdjustment: Equatable, Sendable {
     /// `PixelBuffer.gradientMap(_:)`: Rec. 709 luma of the sRGB-encoded (not
     /// linear) straight colour, 0...1, through 2...64 stops, sorted by offset.
     case gradientMap([GradientMapStop])
-    /// `PixelBuffer.applying(_:)` of a `ColorLUT`: a trilinear 3D lookup.
+    /// `PixelBuffer.applying(_:)` of a `ColorLUT`: a trilinear 3D lookup on
+    /// sRGB-encoded (not linear) straight colour, 0...1.
     case lut(ColorLUT)
-    /// `PixelBuffer.posterized(levels:)`: each channel in `levels` steps, 2...255.
+    /// `PixelBuffer.posterized(levels:)`: each sRGB-encoded (not linear)
+    /// straight channel in `levels` steps, 2...255.
     case posterize(levels: Int)
     /// `PixelBuffer.thresholded(_:)`: white where the Rec. 709 luma of the
     /// sRGB-encoded (not linear) straight colour is at least the level
     /// (0...1), black below.
     case threshold(Float)
-    /// `PixelBuffer.inverted()`: each colour channel becomes 1 minus itself.
+    /// `PixelBuffer.inverted()`: on linear premultiplied components, each
+    /// colour channel becomes alpha minus itself (1 minus the straight
+    /// colour); alpha is kept and an alpha-0 pixel passes through untouched.
     case invert
 }
 
