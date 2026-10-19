@@ -81,3 +81,4 @@ utc	stage	event	ref	note
 2026-10-19T13:02:35Z	4	fix-start	-	new lead run act-1a1543c8a34-t9zw; round 5 fixes (5 findings) in one batch r5-b1 on 0b5a641
 2026-10-19T15:20:18Z	4	pr-merged	#719	FX r5-b1 merged 14:22Z
 2026-10-19T15:21:41Z	4	round-start	r6	gate + critic panel on FX-z (round 2 of 4), verified
+2026-10-19T16:53:05Z	4	round-result	r6	88ed878: clean, 0 major, 1 minor (public docs name internal maxWorkPixels), 8 refuted; #719 fix verified; mutate AlphaEffects 14/14, DenoiseClarity 13/13, DistanceField 9/9, CPUEffect 2/2
