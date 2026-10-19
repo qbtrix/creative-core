@@ -1,11 +1,11 @@
 # masks-mattes lead record
 
 Issue: #431 · Packet: docs/blueprints/core/features/masks-mattes.md
-Run: act-1a1541f2193-03la · Session: https://claude.ai/code/session_01UoKtqjbgWBMsvLqfXb3f42 · Started: 2026-10-19T12:57Z
+Run: act-1a15685b8d2-jkm8 · Session: https://claude.ai/code/session_0155HiDB6qGDiNT4Jp56T1UA · Resumed: 2026-10-19T23:36Z on dev fb09fdc2 (previous run act-1a1541f2193-03la)
 Line lead for: layered-codecs (#438, already done), masks-mattes (#431), path-geometry (#430)
-Stage: 4 round 2 on dev 305975a7: critics done, 18 findings confirmed, three fix batches building (masks raster, masks model and export, path geometry); remaining 59 mutants re-running
+Stage: 3 final slice MM-z: M7 (623 lines) split into M7a (feather, 268), M7a2 (contours, composite skip, 24 MP budgets, 240) and M7b (walk and docs, 204, `feature-done`), stacked on dev fb09fdc2; gating
 Base: 0b5a641be359e283625fa5c798b8d02872fad344
-Next: M3 (CPU composite) and M6 (exporters) building stacked; rebase and open once their bases merged (both merged)
+Next: open M7a and M7a2 once gated; M7b after P6b (#path-geometry PG-z) merges (both edit geometry.json); then Anatomy round 3 on dev
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -24,7 +24,9 @@ Next: M3 (CPU composite) and M6 (exporters) building stacked; rebase and open on
 | M4 | MM-a + MM-vector | MM-2 (commands share, fixture), MM-6 | MaskCommands.swift, MaskCommandsTests, UndoPropertyTests, Fixtures/masks.flare | MaskCommandsTests | FlareMaskCommands | #720 | merged |
 | M5 | MM-vector | MM-7 | RenderList.swift, MatteRenderListTests | MatteRenderListTests | FlareMatteRenderList | #724 | merged |
 | M6 | MM-vector | MM-8 | Export/SVGExporter+Masks, Export/LottieExporter+Masks, both suites | both | FlareMaskExport | #729 | merged 17:06 (ccd78ae6) |
-| M7 | MM-z | MM-9, MM-10 | MaskWalkTests, MaskBudgetTests, geometry.json, packet | walk | none | | waits all + path-geometry P6 |
+| M7a | MM-z | MM-9 (feather) | Blur, Masks/MaskFeather, MaskFeatherBoxTests | MaskFeatherBoxTests | CoreRaster.MaskFeather | | gating |
+| M7a2 | MM-z | MM-9 (contours, composite, budgets) | Composite, CompositeMasked, Masks/MaskContours, MaskBudgetTests | MaskBudgetTests, MaskOpsTests | CoreRaster.MaskContours, CoreRaster.CompositeMasked | | gating, stacked on M7a |
+| M7b | MM-z | MM-10 | MaskWalkTests (FlareCore, CoreRender), mask-walk.flare, geometry.json, packet, waves.md | MaskWalkTests | none | | waits M7a2 + path-geometry P6b |
 
 ## Rounds
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
