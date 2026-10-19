@@ -81,21 +81,49 @@ public struct AutoTone: Hashable, Sendable {
     /// set's mean grey: gains 2^(T/200), 2^(−M/200), 2^(−T/200) times one
     /// norm, so T = 100·log2(b/r) and M = 100·log2(g²/(r·b)), clamped to the
     /// slider range.
+    /// The bright set is chosen without sorting every pixel: pass one counts
+    /// the unclipped pixels' luma into `bins` bins and finds the boundary bin
+    /// where the count from the top reaches the set's size; pass two keeps
+    /// only pixels in that bin or above (by index) and stable-sorts them, so
+    /// the set, its ties and its summing order equal a stable sort of all of
+    /// them. Extra memory is the histogram plus 16 bytes per kept pixel.
     static func whiteBalance(for buffer: PixelBuffer) -> (temperature: Float, tint: Float) {
         // The bright set is the top `brightShare` of the non-clipped pixels
         // alone, so blown highlights can neither fill nor shrink it.
-        let c = buffer.components, w = Histogram.luminanceWeights
-        var unclipped = [(luma: Float, rgb: SIMD3<Double>)]()
-        for i in stride(from: 0, to: c.count, by: PixelBuffer.channels) where c[i + 3] != 0 {
+        let c = buffer.components, w = Histogram.luminanceWeights, n = PixelBuffer.channels
+        /// The straight rgb and luma of the pixel at component `i`, nil when
+        /// it is transparent or has a channel at 0 or 1.
+        func unclipped(_ i: Int) -> (luma: Float, rgb: SIMD3<Double>)? {
+            guard c[i + 3] != 0 else { return nil }
             let s = RGBA(r: c[i], g: c[i + 1], b: c[i + 2], a: c[i + 3]).unpremultiplied()
             let rgb = SIMD3<Double>(Double(s.r), Double(s.g), Double(s.b))
-            guard rgb.min() > 0, rgb.max() < 1 else { continue }
-            unclipped.append((w.r * s.r + w.g * s.g + w.b * s.b, rgb))
+            guard rgb.min() > 0, rgb.max() < 1 else { return nil }
+            return (w.r * s.r + w.g * s.g + w.b * s.b, rgb)
         }
-        guard !unclipped.isEmpty else { return (0, 0) }
-        let take = max(1, Int((brightShare * Double(unclipped.count)).rounded(.up)))
-        let bright = unclipped.sorted { $0.luma > $1.luma }.prefix(take)
-        let mean = bright.reduce(SIMD3<Double>.zero) { $0 + $1.rgb } / Double(bright.count)
+        // Monotonic in luma, so a higher bin never holds a dimmer pixel.
+        func bin(_ luma: Float) -> Int { min(max(Int(luma * Float(bins)), 0), bins - 1) }
+        var counts = [Int](repeating: 0, count: bins), total = 0
+        for i in stride(from: 0, to: c.count, by: n) {
+            guard let p = unclipped(i) else { continue }
+            counts[bin(p.luma)] += 1
+            total += 1
+        }
+        guard total > 0 else { return (0, 0) }
+        let take = max(1, Int((brightShare * Double(total)).rounded(.up)))
+        var boundary = bins - 1, above = 0
+        while boundary > 0, above + counts[boundary] < take {
+            above += counts[boundary]
+            boundary -= 1
+        }
+        var kept = [(luma: Float, index: Int)]()
+        kept.reserveCapacity(above + counts[boundary])
+        for i in stride(from: 0, to: c.count, by: n) {
+            guard let p = unclipped(i), bin(p.luma) >= boundary else { continue }
+            kept.append((p.luma, i))
+        }
+        kept.sort { $0.luma > $1.luma }
+        let bright = kept.prefix(take)
+        let mean = bright.reduce(SIMD3<Double>.zero) { $0 + (unclipped($1.index)?.rgb ?? .zero) } / Double(bright.count)
         let temperature = 100 * log2(mean.z / mean.x)
         let tint = 100 * log2(mean.y * mean.y / (mean.x * mean.z))
         return (Float(min(max(temperature, -100), 100)), Float(min(max(tint, -100), 100)))

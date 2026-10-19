@@ -1,8 +1,15 @@
 // AutoToneTests.swift: tone-pack TP-6's acceptance, written first (TP-1 of
 // docs/blueprints/core/features/tone-pack.md): `AutoTone.suggest`. A suggestion
 // is applied as `whiteBalance` then `levels` (linear, output 0...1).
-import CoreRaster
+@testable import CoreRaster
 import Testing
+#if canImport(Glibc)
+import Glibc
+#elseif canImport(Musl)
+import Musl
+#elseif canImport(Darwin)
+import Darwin
+#endif
 
 @Suite struct AutoToneTests {
     static func expectIdentity(_ t: AutoTone, _ name: String) {
@@ -141,6 +148,67 @@ import Testing
         let t = try AutoTone.suggest(for: b)
         #expect(t.temperature == -100, "\(t)")
         #expect(abs(t.tint) <= 100, "\(t)")
+    }
+
+    /// A green cast far past the tint slider (bright-set gains 0.5, 2, 0.5,
+    /// so M = 100·log2(4/0.25) = 400) suggests tint 100, and the magenta
+    /// mirror (2, 0.5, 2) suggests -100; `whiteBalance` accepts both.
+    @Test func extremeTintClampsToSliderRange() throws {
+        for (gains, expected) in [(SIMD3<Float>(0.5, 2, 0.5), Float(100)), (SIMD3<Float>(2, 0.5, 2), -100)] {
+            var b = try PixelBuffer(width: 16, height: 16)
+            for y in 0..<16 {
+                for x in 0..<16 {
+                    let c = SIMD3(repeating: 0.1 + 0.2 * Float(x) / 15) * gains
+                    try b.setPixel(x: x, y: y, RGBA(r: c.x, g: c.y, b: c.z, a: 1))
+                }
+            }
+            let t = try AutoTone.suggest(for: b)
+            #expect(t.tint == expected, "\(gains): \(t)")
+            #expect(throws: Never.self) { try b.whiteBalance(temperature: t.temperature, tint: t.tint) }
+        }
+    }
+
+    /// The bright-set white balance before the histogram selection: every
+    /// unclipped pixel, stable-sorted by luma, the top 5% averaged.
+    static func referenceBalance(_ buffer: PixelBuffer) -> (temperature: Float, tint: Float) {
+        let c = buffer.components, w = Histogram.luminanceWeights
+        var unclipped = [(luma: Float, rgb: SIMD3<Double>)]()
+        for i in stride(from: 0, to: c.count, by: PixelBuffer.channels) where c[i + 3] != 0 {
+            let s = RGBA(r: c[i], g: c[i + 1], b: c[i + 2], a: c[i + 3]).unpremultiplied()
+            let rgb = SIMD3<Double>(Double(s.r), Double(s.g), Double(s.b))
+            guard rgb.min() > 0, rgb.max() < 1 else { continue }
+            unclipped.append((w.r * s.r + w.g * s.g + w.b * s.b, rgb))
+        }
+        guard !unclipped.isEmpty else { return (0, 0) }
+        let take = max(1, Int((0.05 * Double(unclipped.count)).rounded(.up)))
+        let bright = unclipped.sorted { $0.luma > $1.luma }.prefix(take)
+        let mean = bright.reduce(SIMD3<Double>.zero) { $0 + $1.rgb } / Double(bright.count)
+        let temperature = 100 * log2(mean.z / mean.x)
+        let tint = 100 * log2(mean.y * mean.y / (mean.x * mean.z))
+        return (Float(min(max(temperature, -100), 100)), Float(min(max(tint, -100), 100)))
+    }
+
+    /// Seeded buffers (smooth, quantised with many luma ties, some clipped
+    /// and transparent pixels, premultiplied alpha): the histogram-selected
+    /// white balance is bit-identical to the full stable sort.
+    @Test func histogramBalanceMatchesFullSort() throws {
+        var rng = SplitMix64(seed: 0xA070)
+        for round in 0..<12 {
+            let width = Int.random(in: 1...64, using: &rng), height = Int.random(in: 1...64, using: &rng)
+            let levels = round % 3 == 0 ? 6 : 0
+            var b = try PixelBuffer(width: width, height: height)
+            for y in 0..<height {
+                for x in 0..<width {
+                    var v = SIMD3<Float>((0..<3).map { _ in Float.random(in: 0...1, using: &rng) })
+                    if levels > 0 { v = (v * Float(levels)).rounded(.down) / Float(levels) }
+                    let a: Float = Int.random(in: 0..<10, using: &rng) == 0 ? 0 : Float.random(in: 0.2...1, using: &rng)
+                    try b.setPixel(x: x, y: y, RGBA(r: v.x * a, g: v.y * a, b: v.z * a, a: a))
+                }
+            }
+            let got = AutoTone.whiteBalance(for: b), want = Self.referenceBalance(b)
+            #expect(got.temperature.bitPattern == want.temperature.bitPattern, "round \(round): \(got) vs \(want)")
+            #expect(got.tint.bitPattern == want.tint.bitPattern, "round \(round): \(got) vs \(want)")
+        }
     }
 
     /// A finite component so large that the balance's gain overflows it
