@@ -97,3 +97,4 @@ utc	stage	event	ref	note
 2026-10-19T16:21Z	4	ci-green	run 39279766862	dev 0b96aa5 green (Linux, macOS, Mutation); round 7 clean; r7 fixer still running
 2026-10-19T16:23Z	4	pr-merged	#725	r7 fixes (walk covers every colour op; alpha-0 guard mutation)
 2026-10-19T16:23Z	4	stage-start	round 8	a2157a4, TP-z last round
+2026-10-19T16:28Z	4	round-findings	round 8	panel clean: 0 findings; gate and mutation running; final feature-done PR (packet build record) drafted
