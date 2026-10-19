@@ -241,6 +241,46 @@ private func lumaStats(_ buffer: PixelBuffer, under mask: Mask) throws -> (mean:
         }
     }
 
+    @Test func searchWindowGrowsWithHole() throws {
+        // Dots at the corners of a 1500 x 1500 box centred on a 4000 x 4000
+        // buffer. Bounds plus a one-pixel ring (1502 x 1502) and bounds plus
+        // r + 32 (1570 x 1570) are both under maxHealPixels; the window, with
+        // r + half the longer side (753) on each side, is 3006 x 3006 and throws.
+        let buffer = try PixelBuffer(width: 4000, height: 4000, fill: RGBA(r: 0.5, g: 0.5, b: 0.5, a: 1))
+        var mask = try Mask.rectangle(width: 4000, height: 4000, x: 1250, y: 1250, w: 1, h: 1)
+        try mask.add(Mask.rectangle(width: 4000, height: 4000, x: 2749, y: 2749, w: 1, h: 1))
+        #expect(1502 * 1502 < PixelBuffer.maxHealPixels && 1570 * 1570 < PixelBuffer.maxHealPixels)
+        #expect { try buffer.filledFromSurroundings(mask, seed: 1) } throws: { error in
+            "\(error)".contains("search window") && "\(error)".contains("\(3006 * 3006)")
+        }
+    }
+
+    @Test func fillsWhenOnlyAThinFrameRemains() throws {
+        // A one-pixel frame is all the mask leaves: dilating the hole by 3
+        // covers the buffer, so the sources fall back to the frame itself.
+        let photo = try RetouchFixtures.spottedPhoto(width: 16, height: 12, seed: 3)
+        let mask = try Mask.rectangle(width: 16, height: 12, x: 1, y: 1, w: 14, h: 10)
+        let filled = try photo.spotted.filledFromSurroundings(mask, seed: 1, patchRadius: 3)
+        var low = SIMD4<Float>(repeating: .infinity), high = SIMD4<Float>(repeating: -.infinity), changed = 0
+        for y in 0..<12 {
+            for x in 0..<16 where try mask.coverage(x: x, y: y) == 0 {
+                let p = try photo.spotted.pixel(x: x, y: y), v = SIMD4(p.r, p.g, p.b, p.a)
+                low = pointwiseMin(low, v)
+                high = pointwiseMax(high, v)
+            }
+        }
+        for y in 0..<12 {
+            for x in 0..<16 where try mask.coverage(x: x, y: y) == 1 {
+                let p = try filled.pixel(x: x, y: y), v = SIMD4(p.r, p.g, p.b, p.a)
+                if try p != photo.spotted.pixel(x: x, y: y) { changed += 1 }
+                // The heal follows the sources' steps, so it may pass the frame's extremes a little.
+                let slack = (high - low) / 4
+                #expect(all(v .>= low - slack) && all(v .<= high + slack), "(\(x), \(y)) \(v) outside the frame's \(low)...\(high)")
+            }
+        }
+        #expect(changed > 0)
+    }
+
     @Test func fuzzedInputsThrowOrFill() throws {
         var rng = SplitMix64(seed: 0xF111)
         let photo = try RetouchFixtures.spottedPhoto(width: 32, height: 24, seed: 2)
