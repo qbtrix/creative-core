@@ -47,6 +47,65 @@ import Testing
         }
     }
 
+    @Test func chromaSmoothedAtTwiceSigma() throws {
+        // Equal luma everywhere, colour noise per pixel: only the chroma pass
+        // acts. At strength 0.5 (sigma 3) a Gaussian of sigma 6 leaves about
+        // 0.05 of iid noise's std, one of sigma 3 about 0.09.
+        var rng = SplitMix64(seed: 0xC4_0A)
+        var b = try PixelBuffer(width: 64, height: 64)
+        let w = Histogram.luminanceWeights
+        for i in 0..<64 * 64 {
+            let r = Float.random(in: 0.2...0.8, using: &rng), blue = Float.random(in: 0.2...0.8, using: &rng)
+            try b.setPixel(x: i % 64, y: i / 64, RGBA(r: r, g: (0.5 - w.r * r - w.b * blue) / w.g, b: blue, a: 1))
+        }
+        let middle = EffectFixtures.Region(x0: 16, y0: 16, x1: 48, y1: 48)
+        let before = try EffectFixtures.stats(b, middle)
+        let after = try EffectFixtures.stats(b.denoised(strength: 0.5, detail: 0), middle)
+        #expect(after.std <= 0.07 * before.std, "chroma std \(after.std) of \(before.std)")
+    }
+
+    @Test func transparentLendsNoColour() throws {
+        // An opaque red square on clear: averaging premultiplied colour over
+        // alpha keeps its edge pure red, not diluted toward black.
+        var b = try PixelBuffer(width: 32, height: 32)
+        for y in 8..<24 { for x in 8..<24 { try b.setPixel(x: x, y: y, RGBA(r: 1, g: 0, b: 0, a: 1)) } }
+        let out = try b.denoised(strength: 1, detail: 0.5)
+        for i in 8..<24 {
+            for (x, y) in [(8, i), (23, i), (i, 8), (i, 23)] {
+                let p = try out.pixel(x: x, y: y)
+                #expect(abs(p.a - 1) <= 1e-6)
+                #expect(abs(p.r - 1) <= 1e-4 && abs(p.g) <= 1e-4 && abs(p.b) <= 1e-4, "(\(x), \(y)) is \(p)")
+            }
+        }
+    }
+
+    @Test func clarityOverflowThrows() throws {
+        // A mid-grey pixel among near-transparent ones of huge negative red:
+        // its blurred straight red is about -3e40, past Float's range.
+        var b = try PixelBuffer(width: 61, height: 61, fill: RGBA(r: -3e38, g: 0, b: 0, a: 0.01))
+        try b.setPixel(x: 30, y: 30, RGBA(r: 0.5, g: 0.5, b: 0.5, a: 1))
+        #expect(throws: RasterError.self) { try b.clarity(amount: 100, radius: 30) }
+    }
+
+    @Test func extremeValuesThrowOrStayFinite() throws {
+        // Components anywhere in Float's range, alphas from 1e-30 to 1.
+        var rng = SplitMix64(seed: 0xE7_7E3E)
+        for _ in 0..<40 {
+            var b = try PixelBuffer(width: 9, height: 9)
+            for i in 0..<81 {
+                var a = Float.random(in: 0.1...1, using: &rng)
+                for _ in 0..<rng.next() % 30 { a *= 0.1 }
+                // Drawn in Double: Float's own -max...max spans an infinite width.
+                let m = Double(Float.greatestFiniteMagnitude)
+                var part = [Float](repeating: 0, count: 3)
+                for k in 0..<3 { part[k] = Float(Double.random(in: -m...m, using: &rng)) }
+                try b.setPixel(x: i % 9, y: i / 9, RGBA(r: part[0], g: part[1], b: part[2], a: a))
+            }
+            try EffectFuzz.expectThrowsOrKeepsSize(b) { try $0.denoised(strength: 1, detail: 0.5) }
+            try EffectFuzz.expectThrowsOrKeepsSize(b) { try $0.clarity(amount: 100, radius: 6) }
+        }
+    }
+
     @Test func clarityRaisesContrastKeepsMean() throws {
         let grey = try texture(0.4...0.6, seed: 0xC1A_7)
         let before = try EffectFixtures.stats(grey, all)
