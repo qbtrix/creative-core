@@ -58,10 +58,8 @@ extension PixelBuffer {
             throw RasterError.invalid("\(effect) \(reachName) \(reach): must be finite and in 0...\(Int(Self.maxLightReach))")
         }
         guard scale > 0 else { return self }
-        let offset = dx == 0 && dy == 0 ? "" : " at offset (\(dx), \(dy))"
-        let mask = try blurredAlpha(reach: reach, inner: inner, offset: max(abs(dx), abs(dy)),
-                                    cause: "\(effect) \(reachName) \(reach)\(offset)",
-                                    remedy: offset.isEmpty ? reachName : "\(reachName), the offset")
+        let work = Self.lightWork(effect: effect, reachName: reachName, reach: reach, dx: dx, dy: dy)
+        let mask = try blurredAlpha(reach: reach, inner: inner, pad: work.pad, cause: work.cause, remedy: work.remedy)
         let src = components, c = Self.channels
         var out = src
         let paint = [color.r, color.g, color.b, color.a]
@@ -85,17 +83,31 @@ extension PixelBuffer {
         return PixelBuffer(checkedWidth: width, height: height, storage: out)
     }
 
-    /// The layer's alpha (or 1 - alpha when `inner`) clamped to 0...1,
-    /// padded with its outside value and box blurred three times by `reach` /
-    /// 3. One pixel of padding makes the edge-extending blur read the outside
-    /// value past the buffer; more lets an `offset` pull in the blur that
-    /// spills past the edge, up to the blur's reach (beyond it the mask is the
+    /// The padding a side of a glow or shadow's work buffer, and the words
+    /// its too-large error uses (see `paddedWorkSize`). Two pixels make the
+    /// edge-extending blur read the outside value past the buffer; more lets
+    /// an offset (the larger of |`dx`|, |`dy`|) pull in the blur that spills
+    /// past the edge, up to the blur's reach + 3 (beyond it the mask is the
     /// outside value). The offset is compared as a Double, so it never
-    /// overflows Int. `cause` and `remedy` name the effect in the error when
-    /// the padded copy is too large (see `paddedWorkSize`).
-    private func blurredAlpha(reach: Double, inner: Bool, offset: Double, cause: String,
-                              remedy: String) throws -> LightMask {
+    /// overflows Int. The error names only what sets the padding: nothing but
+    /// the buffer for a glow (its padding is fixed), the offset alone when it
+    /// is within the reach + 3, else the reach and the offset.
+    static func lightWork(effect: String, reachName: String, reach: Double, dx: Double,
+                          dy: Double) -> (pad: Int, cause: String, remedy: String?) {
+        let offset = max(abs(dx), abs(dy))
         let pad = Int(min(offset, reach + 3).rounded(.up)) + 2
+        guard offset > 0 else { return (pad, effect, nil) }
+        let at = " at offset (\(dx), \(dy))"
+        guard reach + 3 < offset else { return (pad, effect + at, "offset") }
+        return (pad, "\(effect) \(reachName) \(reach)\(at)", "\(reachName), the offset")
+    }
+
+    /// The layer's alpha (or 1 - alpha when `inner`) clamped to 0...1,
+    /// padded by `pad` pixels with its outside value and box blurred three
+    /// times by `reach` / 3 (see `lightWork`). `cause` and `remedy` name the
+    /// effect in the error when the padded copy is too large.
+    private func blurredAlpha(reach: Double, inner: Bool, pad: Int, cause: String,
+                              remedy: String?) throws -> LightMask {
         let (pw, ph) = try Self.paddedWorkSize(width: width, height: height, pad: pad, cause: cause, remedy: remedy)
         let outside: Float = inner ? 1 : 0, c = Self.channels, src = components
         var padded = [Float](repeating: outside, count: pw * ph * c)

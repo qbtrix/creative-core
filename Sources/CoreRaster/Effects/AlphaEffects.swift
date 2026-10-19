@@ -66,10 +66,10 @@ extension PixelBuffer {
     }
 
     /// The size of this buffer padded by `pad` pixels a side, the work buffer
-    /// of the effect `cause` names (e.g. "glow radius 1000.0"). Throws
-    /// `RasterError.invalid` naming the effect, the padded size and the fix
-    /// when the padded size passes `maxPixels`; `remedy` is what to reduce
-    /// besides the buffer ("radius", or nil when the padding is fixed).
+    /// of the effect `cause` names (e.g. "shadow at offset (40.0, 0.0)").
+    /// Throws `RasterError.invalid` naming the effect, the padded size and the
+    /// fix when the padded size passes `maxPixels`; `remedy` is what to reduce
+    /// besides the buffer ("offset", or nil when the padding is fixed).
     static func paddedWorkSize(width: Int, height: Int, pad: Int, cause: String,
                                remedy: String?) throws -> (width: Int, height: Int) {
         let pw = width + 2 * pad, ph = height + 2 * pad

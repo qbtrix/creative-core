@@ -54,5 +54,19 @@
     "anchor": "if alpha < a1 { return 0.5 * (u + v) - (2 * u * v * alpha).squareRoot() }",
     "replacement": "if alpha < a1 { return (0.5 - alpha) * u }",
     "filter": "AlphaEffectTests"
+  },
+  {
+    "note": "the padded work size adds the pad once instead of on both sides, so a stroke, glow or shadow too large to pad passes the guard and its error names the wrong size, caught by AlphaEffectLightTests.tooLargeToPadNamesTheEffect",
+    "file": "Sources/CoreRaster/Effects/AlphaEffects.swift",
+    "anchor": "let pw = width + 2 * pad, ph = height + 2 * pad",
+    "replacement": "let pw = width + pad, ph = height + pad",
+    "filter": "AlphaEffectLightTests"
+  },
+  {
+    "note": "the light too-large error always blames the blur and the offset, so a shadow whose offset alone sets the padding tells the caller to reduce the blur, caught by AlphaEffectLightTests.tooLargeNamesOnlyWhatSetsThePadding",
+    "file": "Sources/CoreRaster/Effects/AlphaEffects+Light.swift",
+    "anchor": "guard reach + 3 < offset else { return (pad, effect + at, \"offset\") }",
+    "replacement": "guard true else { return (pad, effect + at, \"offset\") }",
+    "filter": "AlphaEffectLightTests"
   }
 ]
