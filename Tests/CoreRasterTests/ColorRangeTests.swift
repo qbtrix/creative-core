@@ -23,7 +23,7 @@ import Testing
         }
     }
 
-    /// Fuzziness 0.2 around C: C is covered fully, the ring (about 0.18 from
+    /// Fuzziness 0.2 around C: C is covered fully, the ring (about 0.137 from
     /// C) fades but is not gone, and every pixel follows the smoothstep of its
     /// own distance, reaching 0 by distance 0.2.
     @Test
@@ -32,7 +32,7 @@ import Testing
         let mask = try scene.buffer.colorRangeMask(around: FillScene.colorC, fuzziness: 0.2)
         for p in FillCheck.pixels(scene.regionC) { #expect(try mask.coverage(x: p.x, y: p.y) == 1) }
         let ring = try mask.coverage(x: scene.regionC.x, y: scene.regionC.y - 1)
-        #expect(ring > 0 && ring < 0.1, "ring coverage \(ring)")
+        #expect(abs(Double(ring) - falloff(0.137, fuzziness: 0.2)) < 0.01, "ring coverage \(ring)")
         for y in 0..<mask.height {
             for x in 0..<mask.width {
                 let d = try FillCheck.distance(scene.buffer.pixel(x: x, y: y), FillScene.colorC)
@@ -53,6 +53,45 @@ import Testing
         #expect(values[0] == 1 && values[10] == 0)
         #expect(zip(values, values.dropFirst()).allSatisfy { $0 >= $1 }, "\(values)")
         #expect(values[2] > 0.5 && values[2] < 1, "\(values)")
+    }
+
+    /// Alpha is a fourth axis of the straight colours: B at alpha 0.8 is 0.2
+    /// from B, so fuzziness 0 skips it and fuzziness 0.4 gives falloff(0.2, 0.4).
+    @Test
+    func alphaIsFourthAxis() throws {
+        let image = try FillFixtures.alphaPair()
+        let hard = try image.colorRangeMask(around: FillScene.colorB, fuzziness: 0)
+        #expect(hard.area == 2)
+        #expect(try hard.coverage(x: 2, y: 0) == 0)
+        let soft = try image.colorRangeMask(around: FillScene.colorB, fuzziness: 0.4)
+        #expect(abs(Double(try soft.coverage(x: 2, y: 0)) - falloff(0.2, fuzziness: 0.4)) < 1e-4)
+    }
+
+    /// The bucket and colour range measure one distance: for seeded pairs,
+    /// some partly transparent, a fill at `.within(t)` takes the second pixel
+    /// exactly when d <= t, and colour range covers it exactly when d < t,
+    /// with d the packet's distance (`FillCheck.distance`).
+    @Test
+    func floodAndRangeShareDistance() throws {
+        var rng = SplitMix64(seed: 0xF7_05)
+        for _ in 0..<200 {
+            func color() -> RGBA {
+                RGBA(r: .random(in: 0...1, using: &rng), g: .random(in: 0...1, using: &rng),
+                     b: .random(in: 0...1, using: &rng), a: Bool.random(using: &rng) ? 1 : .random(in: 0.05...1, using: &rng))
+                    .premultiplied()
+            }
+            let (p, q) = (color(), color())
+            let t = Float.random(in: 0.01...1, using: &rng)
+            let d = try FillCheck.distance(p, q)
+            guard abs(d - Double(t)) > 1e-5 else { continue }
+            var pair = try PixelBuffer(width: 2, height: 1)
+            try pair.setPixel(x: 0, y: 0, p)
+            try pair.setPixel(x: 1, y: 0, q)
+            let flood = try pair.floodMask(from: (x: 0, y: 0), tolerance: .within(t), antiAlias: false)
+            let range = try pair.colorRangeMask(around: p, fuzziness: t)
+            #expect((try flood.coverage(x: 1, y: 0) == 1) == (d <= Double(t)), "d \(d), t \(t)")
+            #expect((try range.coverage(x: 1, y: 0) > 0) == (d < Double(t)), "d \(d), t \(t)")
+        }
     }
 
     @Test

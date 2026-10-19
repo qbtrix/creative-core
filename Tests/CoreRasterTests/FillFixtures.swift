@@ -28,7 +28,7 @@ struct FillRect: Hashable {
 
 /// A scene of flat opaque regions on background colour A.
 /// - `regionB` and `twinB` are colour B, apart, each with a one-pixel
-///   anti-aliased ring of `border(B)` (A and B mixed half and half).
+///   anti-aliased ring of `border(B)` (A and B mixed, 0.15 from B).
 /// - `regionC` is colour C with the same kind of ring, for colour range.
 /// - `diagonalPair` are two squares of colour D that touch only at a
 ///   corner: 8-connected joins them, 4-connected does not.
@@ -38,10 +38,16 @@ struct FillScene {
     static let colorC = RGBA(r: 0.8, g: 0.2, b: 0.1, a: 1)
     static let colorD = RGBA(r: 0.1, g: 0.6, b: 0.2, a: 1)
 
+    /// A's share of the ring colour: 0.355 puts B's ring 0.15 from B in
+    /// OKLab, so a fill from B at tolerance 0.1 half-covers it
+    /// (`1 - (0.15 - 0.1) / 0.1`). C's ring sits about 0.137 from C.
+    static let borderShareOfA: Float = 0.355
+
     /// The anti-aliased ring colour around a region of `color` on A.
     static func border(_ color: RGBA) -> RGBA {
-        RGBA(r: (colorA.r + color.r) / 2, g: (colorA.g + color.g) / 2,
-             b: (colorA.b + color.b) / 2, a: 1)
+        let s = borderShareOfA
+        return RGBA(r: color.r + (colorA.r - color.r) * s, g: color.g + (colorA.g - color.g) * s,
+                    b: color.b + (colorA.b - color.b) * s, a: 1)
     }
 
     let buffer: PixelBuffer
@@ -91,6 +97,15 @@ enum FillFixtures {
     static func singleColor(_ color: RGBA = FillScene.colorA,
                             width: Int = largeSide, height: Int = largeSide) throws -> PixelBuffer {
         try PixelBuffer(width: width, height: height, fill: color)
+    }
+
+    /// A 4 x 1 row: B opaque at x 0 and 1, B straight at alpha 0.8
+    /// (premultiplied) at x 2 and 3. The two halves differ only in alpha.
+    static func alphaPair() throws -> PixelBuffer {
+        var image = try PixelBuffer(width: 4, height: 1)
+        let faint = RGBA(r: FillScene.colorB.r, g: FillScene.colorB.g, b: FillScene.colorB.b, a: 0.8).premultiplied()
+        for x in 0..<4 { try image.setPixel(x: x, y: 0, x < 2 ? FillScene.colorB : faint) }
+        return image
     }
 
     /// Seeded opaque noise with components in 0...1, for `sampledColor`'s box mean.

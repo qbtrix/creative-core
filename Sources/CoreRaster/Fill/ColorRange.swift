@@ -3,8 +3,7 @@
 // clipped at the buffer's edge; `colorRangeMask` covers each pixel by
 // `1 − smoothstep(0, f, d)` of its OKLab distance `d` from the colour.
 // Invariants: arguments are checked before any pixel is read; the distance is
-// the Euclidean OKLab distance of the straight colours with the alpha
-// difference as a fourth axis, in Double through CoreColor; coverage stays in
+// `FillColor`'s, shared with flood fill; coverage stays in
 // 0...1; fuzziness 0 is a hard mask of exact matches.
 import CoreColor
 
@@ -48,8 +47,9 @@ extension PixelBuffer {
     ///   - fuzziness: in 0...1; the distance at which coverage falls to 0.
     ///     0 gives a hard mask of exact matches.
     /// - Returns: a mask the size of the buffer, coverage in 0...1.
-    /// - Throws: `RasterError.invalid` for a non-finite colour or a
-    ///   fuzziness outside 0...1.
+    /// - Throws: `RasterError.invalid` for a non-finite colour, a fuzziness
+    ///   outside 0...1, or a buffer pixel that is not finite once
+    ///   unpremultiplied (so has no OKLab value); the message names the pixel.
     public func colorRangeMask(around color: RGBA, fuzziness: Float) throws -> Mask {
         guard color.isFinite else {
             throw RasterError.invalid("colour range colour \(color): components must be finite")
@@ -57,8 +57,7 @@ extension PixelBuffer {
         guard (0...1).contains(fuzziness) else {
             throw RasterError.invalid("colour range fuzziness \(fuzziness): must be in 0...1")
         }
-        let target = try Self.straightOKLab(color)
-        let f = Double(fuzziness)
+        let target = try FillColor(color, what: "colour range colour \(color)")
         var coverage = [Float](repeating: 0, count: width * height)
         // Flat regions repeat one colour, so the last pixel's answer is reused.
         var last: (pixel: RGBA, value: Float)?
@@ -69,33 +68,17 @@ extension PixelBuffer {
                     coverage[y * width + x] = last.value
                     continue
                 }
-                let q = try Self.straightOKLab(c)
-                let (d0, d1, d2) = (q.lab.c0 - target.lab.c0, q.lab.c1 - target.lab.c1, q.lab.c2 - target.lab.c2)
-                let da = q.a - target.a
-                let d = (d0 * d0 + d1 * d1 + d2 * d2 + da * da).squareRoot()
+                let d = try FillColor(c, what: "colour range: pixel (\(x), \(y))").distance(to: target)
                 let value: Float
-                if f == 0 {
+                if fuzziness == 0 {
                     value = d == 0 ? 1 : 0
                 } else {
-                    let t = min(max(d / f, 0), 1)
-                    value = Float(1 - t * t * (3 - 2 * t))
+                    value = 1 - Self.smoothstep(0, fuzziness, Float(d))
                 }
                 coverage[y * width + x] = value
                 last = (c, value)
             }
         }
         return Mask(checkedWidth: width, height: height, storage: coverage)
-    }
-
-    /// A premultiplied colour as straight OKLab plus alpha. Throws
-    /// `RasterError.invalid` when unpremultiplying leaves a non-finite value.
-    private static func straightOKLab(_ c: RGBA) throws -> (lab: Color3, a: Double) {
-        let s = c.unpremultiplied()
-        do {
-            let lab = try Color3(Double(s.r), Double(s.g), Double(s.b)).converted(from: .linearSRGB, to: .oklab)
-            return (lab, Double(s.a))
-        } catch {
-            throw RasterError.invalid("colour \(c) has no finite OKLab value")
-        }
     }
 }

@@ -1,7 +1,7 @@
 // FloodFillTests.swift: fill-tools FT-3's acceptance, written first (FT-1) and
 // turned on with `floodMask` (FT-3). `FillCheck` is shared with ColorRangeTests.
 import CoreColor
-import CoreRaster
+@testable import CoreRaster
 import Foundation
 import Testing
 #if canImport(Glibc)
@@ -51,23 +51,84 @@ enum FillCheck {
         }
     }
 
-    /// The B ring is a half-and-half mix of A and B, about 0.197 from B in
-    /// OKLab, so the soft edge `1 - (d - t) / t` is one half at t = d / 1.5.
+    /// The packet's FT-3 claim: at tolerance 0.1 the fill covers B's interior
+    /// and half-covers its border. The B ring sits 0.15 from B in OKLab, so
+    /// the soft edge `1 - (d - t) / t` is one half at t = 0.1.
     @Test
     func borderHalfCovered() throws {
         let scene = try FillScene()
         let d = try FillCheck.distance(FillScene.border(FillScene.colorB), FillScene.colorB)
-        let t = Float(d / 1.5)
-        let soft = try scene.buffer.floodMask(from: scene.seedB, tolerance: .within(t))
-        let hard = try scene.buffer.floodMask(from: scene.seedB, tolerance: .within(t), antiAlias: false)
-        let want = 1 - (d - Double(t)) / Double(t)
-        #expect(abs(want - 0.5) < 1e-6)
+        #expect(abs(d - 0.15) < 1e-4, "ring distance \(d)")
+        let soft = try scene.buffer.floodMask(from: scene.seedB, tolerance: .within(0.1))
+        let hard = try scene.buffer.floodMask(from: scene.seedB, tolerance: .within(0.1), antiAlias: false)
         for p in FillCheck.edgeRing(scene.regionB) {
-            #expect(abs(Double(try cover(soft, p)) - want) < 1e-3, "(\(p.x), \(p.y))")
+            #expect(abs(Double(try cover(soft, p)) - 0.5) < 1e-3, "(\(p.x), \(p.y))")
             #expect(try cover(hard, p) == 0, "(\(p.x), \(p.y))")
         }
         for p in FillCheck.pixels(scene.regionB) { #expect(try cover(soft, p) == 1) }
         #expect(try cover(soft, (x: scene.regionB.x - 2, y: scene.seedB.y)) == 0)
+    }
+
+    /// A rejected neighbour more than 2t away gets 0, not a negative coverage:
+    /// the B ring is 0.15 from B, past 2 x 0.05.
+    @Test
+    func softEdgeClampsAtZero() throws {
+        let scene = try FillScene()
+        let mask = try scene.buffer.floodMask(from: scene.seedB, tolerance: .within(0.05))
+        for p in FillCheck.edgeRing(scene.regionB) { #expect(try cover(mask, p) == 0, "(\(p.x), \(p.y))") }
+        #expect(mask.area == Double(scene.regionB.width * scene.regionB.height))
+    }
+
+    /// The soft edge follows the connectivity: a ring corner touches B only
+    /// diagonally, so `.four` leaves it at 0 and `.eight` half-covers it.
+    @Test
+    func softEdgeFollowsConnectivity() throws {
+        let scene = try FillScene()
+        let b = scene.regionB
+        let corners = [(x: b.x - 1, y: b.y - 1), (x: b.x + b.width, y: b.y - 1),
+                       (x: b.x - 1, y: b.y + b.height), (x: b.x + b.width, y: b.y + b.height)]
+        let four = try scene.buffer.floodMask(from: scene.seedB, tolerance: .within(0.1), connectivity: .four)
+        let eight = try scene.buffer.floodMask(from: scene.seedB, tolerance: .within(0.1), connectivity: .eight)
+        for p in corners {
+            #expect(try cover(four, p) == 0, "(\(p.x), \(p.y))")
+            #expect(abs(try cover(eight, p) - 0.5) < 1e-3, "(\(p.x), \(p.y))")
+        }
+    }
+
+    /// Anti-aliasing needs a tolerance: `.exact` and `.within(0)` stay hard.
+    @Test
+    func exactIgnoresAntiAlias() throws {
+        let scene = try FillScene()
+        for tolerance: FillTolerance in [.exact, .within(0)] {
+            let soft = try scene.buffer.floodMask(from: scene.seedB, tolerance: tolerance, antiAlias: true)
+            #expect(soft == (try scene.buffer.floodMask(from: scene.seedB, tolerance: tolerance, antiAlias: false)))
+        }
+    }
+
+    /// Alpha is a fourth axis and colours are compared straight: B at alpha
+    /// 0.8 is 0.2 from B at alpha 1, never darker for being premultiplied.
+    @Test
+    func alphaIsFourthAxis() throws {
+        let image = try FillFixtures.alphaPair()
+        let near = try image.floodMask(from: (x: 0, y: 0), tolerance: .within(0.1), antiAlias: false)
+        #expect(near.area == 2)
+        let far = try image.floodMask(from: (x: 0, y: 0), tolerance: .within(0.25), antiAlias: false)
+        #expect(far.area == 4)
+    }
+
+    /// A pixel with no OKLab value throws an error that says where it is.
+    @Test
+    func nanPixelNamesLocation() throws {
+        var storage = [Float](repeating: 0.5, count: 6 * 4 * 4)
+        storage[4 * (2 * 6 + 3)] = .nan
+        let image = PixelBuffer(checkedWidth: 6, height: 4, storage: storage)
+        do {
+            _ = try image.floodMask(from: (x: 2, y: 2), tolerance: .within(0.1))
+            Issue.record("a NaN pixel next to the seed did not throw")
+        } catch let RasterError.invalid(message) {
+            #expect(message.contains("(3, 2)"), "\(message)")
+        }
+        #expect(throws: RasterError.self) { try image.colorRangeMask(around: FillScene.colorA, fuzziness: 0.2) }
     }
 
     @Test
@@ -148,6 +209,9 @@ enum FillCheck {
                                                       connectivity: Bool.random(using: &rng) ? .four : .eight,
                                                       antiAlias: .random(using: &rng))
                 #expect(mask.width == 32 && mask.height == 24 && (0...768).contains(mask.area))
+                for y in 0..<24 {
+                    for x in 0..<32 { #expect((0...1).contains(try mask.coverage(x: x, y: y)), "(\(x), \(y))") }
+                }
             } catch is RasterError {
                 continue
             }
@@ -158,17 +222,23 @@ enum FillCheck {
     /// the input and the 4-byte-per-pixel mask of at most 2 bytes per pixel.
     /// The buffer is built inside the body, so skipping the case costs nothing.
     /// The peak is process-wide and other suites run alongside, so the
-    /// high-water mark restarts before each fill (Linux) and the smallest of
-    /// up to three fills counts: another suite's allocation is transient.
-    @Test
+    /// high-water mark restarts before each fill and the smallest of up to
+    /// three fills counts: another suite's allocation is transient. Linux only:
+    /// Darwin's `ru_maxrss` is a lifetime peak that cannot be restarted, so an
+    /// earlier suite's higher peak would hide the fill's growth there. A
+    /// missing measurement fails rather than passes.
+    @Test(.enabled(if: PeakResident.canRestart, "the resident peak restarts on Linux only"))
     func worstCaseMemory() throws {
         let image = try FillFixtures.singleColor()
         let pixels = FillFixtures.largeSide * FillFixtures.largeSide
         var extra = Int.max
         for _ in 0..<3 where extra > 6 * pixels {
-            let before = PeakResident.restart()
+            let before = try #require(PeakResident.restart(), "could not restart the resident peak")
+            #expect(before > 0)
             let mask = try image.floodMask(from: (x: 0, y: 0), tolerance: .exact, antiAlias: false)
-            extra = min(extra, PeakResident.bytes() - before)
+            let after = PeakResident.bytes()
+            #expect(after >= before)
+            extra = min(extra, after - before)
             #expect(mask.area == Double(pixels))
         }
         #expect(extra <= 6 * pixels, "peak grew \(extra) bytes for \(pixels) pixels")
@@ -177,20 +247,32 @@ enum FillCheck {
 
 /// The process's resident high-water mark in bytes.
 private enum PeakResident {
-    /// Restarts the high-water mark at what is resident now where the
-    /// platform can (Linux), and returns the mark to measure from.
-    static func restart() -> Int {
+    /// Whether the platform can restart the high-water mark (Linux).
+    static var canRestart: Bool {
         #if os(Linux)
-        let fd = open("/proc/self/clear_refs", O_WRONLY)
-        if fd >= 0 {
-            _ = write(fd, "5", 1)
-            close(fd)
-        }
+        true
+        #else
+        false
         #endif
-        return bytes()
     }
 
-    /// Linux's `VmHWM` (KiB in /proc/self/status), else `ru_maxrss` (bytes on Darwin).
+    /// Restarts the high-water mark at what is resident now and returns the
+    /// mark to measure from, or nil when it cannot restart or read it.
+    static func restart() -> Int? {
+        #if os(Linux)
+        let fd = open("/proc/self/clear_refs", O_WRONLY)
+        guard fd >= 0 else { return nil }
+        let wrote = write(fd, "5", 1)
+        close(fd)
+        guard wrote == 1 else { return nil }
+        let mark = bytes()
+        return mark > 0 ? mark : nil
+        #else
+        return nil
+        #endif
+    }
+
+    /// Linux's `VmHWM` (KiB in /proc/self/status), or 0 when it cannot be read.
     static func bytes() -> Int {
         #if os(Linux)
         guard let status = try? String(contentsOfFile: "/proc/self/status", encoding: .utf8),
@@ -199,9 +281,7 @@ private enum PeakResident {
         else { return 0 }
         return kb * 1024
         #else
-        var usage = rusage()
-        guard getrusage(RUSAGE_SELF, &usage) == 0 else { return 0 }
-        return Int(usage.ru_maxrss)
+        return 0
         #endif
     }
 }

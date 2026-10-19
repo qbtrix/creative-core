@@ -18,15 +18,19 @@ extension PixelBuffer {
     ///   - seed: the starting pixel; must lie inside the buffer
     ///     (`0..<width`, `0..<height`), or the call throws.
     ///   - tolerance: `.exact`, or `.within(t)` with `t` in 0...1, an OKLab
-    ///     distance (alpha as a fourth axis) from the seed's colour.
+    ///     distance of the straight colours (alpha as a fourth axis) from the
+    ///     seed's colour (`FillColor`).
     ///   - contiguous: `true` takes only pixels connected to the seed;
     ///     `false` takes every matching pixel in the buffer.
     ///   - connectivity: the neighbours a contiguous fill steps to.
-    ///   - antiAlias: `true` gives the rejected pixels next to taken ones a
-    ///     one-pixel soft edge of coverage in 0...1.
+    ///   - antiAlias: `true` gives the rejected pixels next to taken ones (by
+    ///     `connectivity`) a one-pixel soft edge of coverage `1 − (d − t) / t`,
+    ///     clamped to 0...1, so it falls to 0 at distance 2t. Ignored for
+    ///     `.exact` and `.within(0)`, which always give a hard mask.
     /// - Returns: a mask the size of the buffer, coverage in 0...1.
-    /// - Throws: `RasterError.invalid` for a seed outside the buffer or a
-    ///   tolerance outside 0...1.
+    /// - Throws: `RasterError.invalid` for a seed outside the buffer, a
+    ///   tolerance outside 0...1, or a pixel the fill reads that is not finite
+    ///   once unpremultiplied (so has no OKLab value); the message names it.
     public func floodMask(from seed: (x: Int, y: Int), tolerance: FillTolerance, contiguous: Bool = true,
                           connectivity: Connectivity = .four, antiAlias: Bool = true) throws -> Mask {
         guard (0..<width).contains(seed.x), (0..<height).contains(seed.y) else {
@@ -44,7 +48,7 @@ extension PixelBuffer {
         var coverage = [Float](repeating: 0, count: w * h)
         var taken = [UInt64](repeating: 0, count: (w * h + 63) / 64)
         try components.withUnsafeBufferPointer { pixels in
-            let match = try FloodMatch(pixels, seed: seed.y * w + seed.x, limit: limit)
+            let match = try FloodMatch(pixels, width: w, seed: seed.y * w + seed.x, limit: limit)
             func isTaken(_ i: Int) -> Bool { taken[i >> 6] & (1 << UInt64(i & 63)) != 0 }
             func take(_ i: Int) {
                 taken[i >> 6] |= 1 << UInt64(i & 63)
@@ -98,36 +102,28 @@ extension PixelBuffer {
 /// premultiplied components.
 private struct FloodMatch {
     let pixels: UnsafeBufferPointer<Float>
+    let width: Int
     let seed: RGBA
-    let seedLab: Color3
+    let seedColor: FillColor
     let limit: Double
 
-    init(_ pixels: UnsafeBufferPointer<Float>, seed index: Int, limit: Double) throws {
+    init(_ pixels: UnsafeBufferPointer<Float>, width: Int, seed index: Int, limit: Double) throws {
         self.pixels = pixels
+        self.width = width
         self.limit = limit
         seed = Self.color(pixels, index)
-        seedLab = try Self.oklab(seed)
+        seedColor = try FillColor(seed, what: "flood fill: pixel (\(index % width), \(index / width))")
     }
 
     private static func color(_ pixels: UnsafeBufferPointer<Float>, _ i: Int) -> RGBA {
-        RGBA(r: pixels[4 * i], g: pixels[4 * i + 1], b: pixels[4 * i + 2], a: pixels[4 * i + 3]).unpremultiplied()
+        RGBA(r: pixels[4 * i], g: pixels[4 * i + 1], b: pixels[4 * i + 2], a: pixels[4 * i + 3])
     }
 
-    private static func oklab(_ c: RGBA) throws -> Color3 {
-        do {
-            return try Color3(Double(c.r), Double(c.g), Double(c.b)).converted(from: .linearSRGB, to: .oklab)
-        } catch {
-            throw RasterError.invalid("flood fill: a pixel has no OKLab value")
-        }
-    }
-
-    /// The OKLab distance of pixel `i` from the seed, alpha as a fourth axis.
+    /// The `FillColor` distance of pixel `i` from the seed.
     func distance(_ i: Int) throws -> Double {
         let c = Self.color(pixels, i)
         guard c != seed else { return 0 }
-        let lab = try Self.oklab(c)
-        let (d0, d1, d2, da) = (lab.c0 - seedLab.c0, lab.c1 - seedLab.c1, lab.c2 - seedLab.c2, Double(c.a - seed.a))
-        return (d0 * d0 + d1 * d1 + d2 * d2 + da * da).squareRoot()
+        return try FillColor(c, what: "flood fill: pixel (\(i % width), \(i / width))").distance(to: seedColor)
     }
 
     /// Whether pixel `i` is within the tolerance: `d <= t`, so `.within(0)` takes exact matches.
