@@ -77,3 +77,4 @@ utc	stage	event	ref	note
 2026-10-19T13:02:28Z	IC-9b	resume	-	new lead run act-1a1543c8a34-t9zw; old IC-9b builder lost; IC-9b builder restarted on 0b5a641
 2026-10-19T15:20:09Z	4	pr-merged	#721	IC-9b merged 14:47Z; png ratio 1.04x; encode median 14.7 s vs 2.5 s budget (known issue)
 2026-10-19T15:20:12Z	4	ci-run	https://github.com/qbtrix/creative-core/actions/runs/39263347459	run 405 green on d2f4262, holds #702 (IC-png, IC-jpeg)
+2026-10-19T15:20:59Z	4	slice-done	#562	Belt-Slice-Done IC-png, IC-jpeg on run 405

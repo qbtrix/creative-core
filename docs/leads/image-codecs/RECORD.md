@@ -11,9 +11,9 @@ Next: round-6 gate + critics on IC-z; then IC-10 feature-done
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
 |---|---|---|---|---|---|
 | IC-a | IC-1, IC-2 | nothing | merged-done | 384 (641739b) | none |
-| IC-png | IC-3, IC-4, IC-5 | IC-a | built, round 1 | | none |
-| IC-jpeg | IC-6, IC-7, IC-8 | IC-a | open | | none |
-| IC-z | IC-9, IC-10 | IC-png, IC-jpeg | open | | wanted (release budgets) |
+| IC-png | IC-3, IC-4, IC-5 | IC-a | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39263347459 | none |
+| IC-jpeg | IC-6, IC-7, IC-8 | IC-a | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39263347459 | none |
+| IC-z | IC-9, IC-10 | IC-png, IC-jpeg | built to IC-9b, round 6 | | wanted (release budgets) |
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
