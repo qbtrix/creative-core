@@ -84,3 +84,4 @@ utc	stage	event	ref	note
 2026-10-19T16:53:05Z	4	round-result	r6	88ed878: clean, 0 major, 1 minor (public docs name internal maxWorkPixels), 8 refuted; #719 fix verified; mutate AlphaEffects 14/14, DenoiseClarity 13/13, DistanceField 9/9, CPUEffect 2/2
 2026-10-19T16:54:21Z	5	wave-start	FX-10	status line + waves row built, r6 F1 folded
 2026-10-19T17:06:21Z	5	gate	a77ab8c3	scripts/ci rerun on dev a77ab8c3: CI: PASS (1957 parallel + 36 budget); the r6 single failure on 88ed878 did not reproduce (wall-clock under load)
+2026-10-19T17:16:14Z	5	waiting	wave C	final-PR builders running gates/mutation under the shared lock; no PR open yet
