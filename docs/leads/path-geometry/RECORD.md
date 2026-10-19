@@ -3,9 +3,9 @@
 Issue: #430 · Packet: docs/blueprints/core/features/path-geometry.md
 Run: act-1a15685b8d2-jkm8 · Session: https://claude.ai/code/session_0155HiDB6qGDiNT4Jp56T1UA · Resumed: 2026-10-19T23:36Z on dev fb09fdc2 (previous run act-1a1541f2193-03la)
 Line lead for: layered-codecs (#438, already done by run act-1a14de006be-1kmq), masks-mattes (#431), path-geometry (#430)
-Stage: 3 final slice PG-z: P6a #743 merged (fb09fdc2); P6b rebased onto dev as ced9dc1 (+207/-2), gating
+Stage: 3 final slice PG-z: P6b open as #745 (ced9dc17, fast-lane + feature-done, CI: PASS 2062 tests)
 Base: 0b5a641be359e283625fa5c798b8d02872fad344
-Next: open P6b with `feature-done` once scripts/ci passes; then Anatomy round 3 on dev; Slice-Done for PG-shape and PG-z on the CI run the feature-done merge dispatches
+Next: #745 merges and dispatches dev CI; Slice-Done PG-shape and PG-z on that run; then Anatomy round 3 on dev
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -24,7 +24,7 @@ Next: open P6b with `feature-done` once scripts/ci passes; then Anatomy round 3 
 | P3 | PG-measure | PG-5, PG-6 | PathMeasure.swift, PathPropertySupport, PathMeasureTests, PathTrimDashTests | both | FlarePathMeasure | #735 | merged 18:10 (ffc7dfef) |
 | P4 | PG-shape | PG-9, PG-10 | PathBoolean.swift, PathBooleanTests, PathBooleanFuzzTests | both | FlarePathBoolean | #731 | merged 17:44 |
 | P5 | PG-shape | PG-8 | PathOutline.swift, PathOutlineTests | PathOutlineTests | FlarePathOutline | #739 | merged 19:50 (e2b83d0a) |
-| P6 | PG-z | PG-11, PG-12 | PathOpsWalkTests, PathOpsBudgetTests, geometry.json, packet | walk | none | | split at 421 lines: P6a #743 (perf, 748aabb8, +183/-29) open; P6b lead/path-geometry-P6 5c285f35 (walk, budgets, handScribble, docs, +207/-2) opens with feature-done once #743 merges and it is rebased |
+| P6 | PG-z | PG-11, PG-12 | PathOpsWalkTests, PathOpsBudgetTests, geometry.json, packet | walk | none | | P6a #743 merged (fb09fdc2); P6b #745 open (ced9dc17, +207/-2, feature-done) |
 
 ## Rounds
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
