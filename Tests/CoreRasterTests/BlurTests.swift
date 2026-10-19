@@ -97,3 +97,14 @@ private func randomBuffer(width: Int, height: Int, _ rng: inout SplitMix64) thro
     try edge.setPixel(x: 0, y: 0, RGBA(r: -big, g: 0, b: 0, a: 1))
     #expect(throws: RasterError.self) { try edge.unsharpMask(amount: 10, sigma: 1, threshold: 0) }
 }
+
+/// A sigma so small that 2 sigma² underflows to 0 is a no-op, not NaN weights.
+@Test func blurWithAnUnderflowingSigmaIsUnchanged() throws {
+    var rng = SplitMix64(seed: 0xB10F)
+    let image = try randomBuffer(width: 6, height: 5, &rng)
+    for sigma in [1e-200, 1e-160, Double.leastNonzeroMagnitude] {
+        let out = try image.gaussianBlur(sigma: sigma)
+        #expect(out.components.allSatisfy { $0.isFinite })
+        #expect(out == image)
+    }
+}

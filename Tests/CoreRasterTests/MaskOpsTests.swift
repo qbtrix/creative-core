@@ -121,6 +121,36 @@ import Testing
         }
     }
 
+    /// A radius whose sigma squared underflows keeps the mask, every value in 0...1 (no NaN weights).
+    @Test func underflowingRadiusKeepsTheMask() throws {
+        let full = try Mask(width: 8, height: 8, fill: 1)
+        var rng = SplitMix64(seed: 0x71E7)
+        let random = MaskFixtures.random(width: 9, height: 6, &rng)
+        for mask in [full, random] {
+            let out = try mask.feathered(radius: 1e-200)
+            #expect(try MaskFixtures.all(out).allSatisfy { (0...1).contains($0) })
+            #expect(out == mask)
+        }
+    }
+
+    /// Between samples 0 and 0.75 the 0.5 crossing sits 2/3 of the way, not at the midpoint.
+    @Test func crossingInterpolatesTheLevel() throws {
+        let rings = MaskFixtures.values(width: 2, height: 1, [0, 0.75]).contours(level: 0.5)
+        let ring = try #require(rings.first)
+        #expect(rings.count == 1)
+        #expect(ring.contains { abs($0.x - (0.5 + 2.0 / 3)) < 1e-6 && abs($0.y - 0.5) < 1e-9 })
+        #expect(ring.contains { abs($0.x - 1.5) < 1e-9 && abs($0.y - (-0.5 + 2.0 / 3)) < 1e-6 })
+    }
+
+    /// A checkerboard just past the 4,000,000-segment cap (`Mask.maxContourSegments`) throws instead of building billions of links.
+    @Test func checkerboardOverTheSegmentCapThrows() throws {
+        // Every inner cell is a saddle with 2 segments: 2 x 1421² ≈ 4.04 million.
+        let n = 1420
+        let board = MaskFixtures.values(width: n, height: n, (0..<(n * n)).map { i in Float((i % n + i / n) % 2) })
+        #expect(2 * (n + 1) * (n + 1) > 4_000_000)
+        #expect(throws: RasterError.self) { _ = try board.contours() }
+    }
+
     /// Consecutive points, last to first included, sit in neighbouring cells: no gap.
     private func expectClosed(_ ring: [Mask.Point]) {
         #expect(ring.count >= 3)

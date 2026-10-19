@@ -105,6 +105,13 @@ private struct CompositingFake: RenderBackend {
         #expect(fake.calls.contains(.read(s)))
         #expect(b == handle)
         #expect(try d.read(b) == direct(source, onto: backdrop, x: 1, mode: .multiply, opacity: 0.5, maskY: 1))
+        // `flipped` routes by `.affine` and `applying` by `.effect`: both fall back under their own family.
+        let cpu = CPUBackend()
+        let local = try cpu.surface(source)
+        #expect(try d.read(d.flipped(s, .horizontal)) == cpu.read(cpu.flipped(local, .horizontal)))
+        #expect(fallback(d) == "affine \(RenderDispatcher.reasonUnsupported)")
+        #expect(try d.read(d.applying(s, .boxBlur(radius: 1))) == cpu.read(cpu.applying(local, .boxBlur(radius: 1))))
+        #expect(fallback(d) == "effect \(RenderDispatcher.reasonUnsupported)")
     }
 
     @Test func colorCasesFallBack() throws {
