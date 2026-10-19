@@ -2,9 +2,9 @@
 
 Issue: #432 · Packet: docs/blueprints/core/features/tone-pack.md
 Run: act-1a1543c8a5f-6y14 (relaunch; first run act-1a150bfbcf7-sfwy) · Started: 2026-10-18T20:45Z · Relaunched: 2026-10-19T13:05Z
-Stage: 4 round 5 fixes re-dispatched after relaunch (first run's wf_206056b3-8d3 died: r5-b1 left a commit on lead/tone-pack-r5-b1 with no PR, r5-b2 and r5-b3 pushed nothing); relaunch fix run wf_f47eb584-ac1 (r5-b1 finish branch, r5-b2 AutoTone tests + walk routing, r5-b3 colour-op speed + release budgets)
-Base: 0b5a641be359e283625fa5c798b8d02872fad344
-Next: r5 fixes merge; round 6 for TP-cpu, TP-z only (TP-a, TP-mix, TP-map at round cap); then TP-10 (feature-done), Belt-Slice-Done TP-z, Mac-Finish-Wanted TP-z
+Stage: 4 round 6 (TP-cpu, TP-z) on 4b238e0; round 5 fixes all merged
+Base: 4b238e05
+Next: round 6 gate, mutate, critic panel for TP-cpu and TP-z on 4b238e0; then TP-10 (feature-done), Belt-Slice-Done TP-z, Mac-Finish-Wanted TP-z
 
 Line lead for #434, #433 and #432 (rule 19); one wave plan across the three
 features, bookkeeping per feature. Packet v3 (has a Slices table).
@@ -57,7 +57,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 | TP-map | 2 | 7d8af79 | PASS | 66/66 | - | clarity, contract, tests, robustness | 10 (3 major: AutoTone public docs; AutoTone levels untested; gradientMap untested; 7 minor), 0 refuted | b1 #617 merged (28b5528), b2 #628 merged (9385de9), b4 #630 merged (9cd326b), b3 #632 merged (60faf3a); round 2 fixes all merged | no |
 | TP-mix, TP-map | 3 | 77b74a1 | PASS | 133/133 | - | clarity, contract, tests, robustness | 9 (4 major: WB bright set must use non-clipped pixels; clip guard untested; brightShare untested; 5 minor), 0 refuted; excluded: TP-8 not built (stale, merged after 77b74a1), JPEG SOF2 unbounded alloc (image-codecs, out of feature) | r3-b1 #643 merged (33e9202), r3-b2 #642 merged (48cbaf9) | no |
 | TP-mix, TP-map, TP-cpu | 4 | d902951 | PASS | 148/148 | - | clarity, contract, tests, robustness | 8 (1 major: TP-9 unbuilt; 7 minor), 0 refuted | r4-b2 #670 merged (f4cf85d), r4-b3 #675 merged (25915ce); r4-b1 #678 merged (3197e99), r4-b4 #698 merged (7f81db8) | no |
-| TP-mix, TP-map, TP-cpu, TP-z | 5 | 7f81db8 | PASS | 40/40 (tone plans) | - | clarity, contract, tests, robustness | 9 (1 major: colour ops miss release budgets 4-70x and ToneBudgetTests disabled in every optimized build; 8 minor: ToneAdjustment doc names wrong file, invert space unstated, gradientMap stop error lacks index, W1 tone value inits undocumented, walk auto tone skips dispatcher, AutoTone gamma/minimumSpan/white-balance pass-two untested), 4 refuted | r5-b1, r5-b2, r5-b3 running (wf_206056b3-8d3) | no |
+| TP-mix, TP-map, TP-cpu, TP-z | 5 | 7f81db8 | PASS | 40/40 (tone plans) | - | clarity, contract, tests, robustness | 9 (1 major: colour ops miss release budgets 4-70x and ToneBudgetTests disabled in every optimized build; 8 minor: ToneAdjustment doc names wrong file, invert space unstated, gradientMap stop error lacks index, W1 tone value inits undocumented, walk auto tone skips dispatcher, AutoTone gamma/minimumSpan/white-balance pass-two untested), 4 refuted | r5-b1 #714 merged (f1089c4), r5-b2 #715 merged (d2f4262), r5-b3 #717 merged (9df2695; ops 1.3-3x faster bit-exact, still over budget on loaded Linux, budgets reported, Mac gates) | no |
 
 ## Decisions
 - TP-5 (#585): map ops on encoded values via `mappingStraight`; `inverted` is a − c on linear premultiplied (exact double inversion); `.cube` parse per packet, size 2...65, domain exactly 0…1; blue-fastest mutant moved to the apply stride (parser keeps file order); ColorMix helpers made internal for reuse.
