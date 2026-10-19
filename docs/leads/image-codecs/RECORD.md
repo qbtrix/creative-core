@@ -3,7 +3,7 @@
 Issue: #562 · Packet: docs/blueprints/core/features/image-codecs.md
 Run: act-1a1511a1174-tlch · Started: 2026-10-18T22:40Z
 Line lead for: image-codecs (#562), preview-cache (#440, already done), vector-import (#439, VI-z left)
-Stage: IC-png Anatomy round 3 (fix batch); IC-jpeg Anatomy round 4 (gate rerun, quiet machine)
+Stage: IC-png Anatomy round 3 (fix batch); IC-jpeg Anatomy round 4 (panel)
 Base: 9385de9 (wave 4)
 Next: r3-png-b1, r3-png-b2 PRs merge, then IC-png round 4 (last allowed); IC-jpeg r4 panel once its gate prints CI: PASS
 
