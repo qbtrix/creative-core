@@ -67,3 +67,4 @@ utc	stage	event	ref	note
 2026-10-19T09:15:32Z	4	mutation	blgwbkiln	full changed-since run killed at its 30 min limit at 107/230 caught, none escaped; rerunning the affine plans (AffineTransform, CompositeAffine, CPUAffine, Parity, Resident) with a 2 h limit
 2026-10-19T09:19:31Z	4	heartbeat	-	round 4 affine-plan mutation rerun: AffineTransform 10/10, CompositeAffine in progress, none escaped
 2026-10-19T09:26:05Z	4	panel-start	wf_9bfb2c20-426	round 4 affine-plan mutation 33/33 caught; panel running
+2026-10-19T09:31:42Z	4	fixes-launched	wf_f729ca1c-4f8	round 4: 9 confirmed (3 major); r4-b1..b3 on base 9786884
