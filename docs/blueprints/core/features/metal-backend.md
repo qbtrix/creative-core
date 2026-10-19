@@ -23,9 +23,9 @@ speed in Photo and Halo.
 for the harness and the CPU goldens). Base: `origin/dev` after `render-backend`'s
 `feature-done`.
 
-**Where parity runs.** core's `ci.yml` has a macOS job (`macos-15`,
+**Where parity runs.** core's `ci.yml` has a macOS job (`xcode-27`,
 `scripts/ci` on dev runs). Every parity test is
-`.enabled(if: MetalBackend.defaultDevice != nil)`; the macos-15 runner
+`.enabled(if: MetalBackend.defaultDevice != nil)`; the macOS runner
 exposes a Metal device (dev CI run 39010063417: `MetalPipelinesTests` ran
 there; recorded in `waves.md`), so parity runs on dev's macOS job. If a later
 runner skips, the lead runs the suite on its Mac before each `Fast-Check:` and
@@ -402,5 +402,6 @@ GPU path.
 
 ## Open
 
-- **The runner's device.** Answered: the macos-15 runner exposes a Metal
-  device (dev CI run 39010063417, where `MetalPipelinesTests` ran).
+- **The runner's device.** Answered: the macos-15 runner exposed a Metal
+  device (dev CI run 39010063417, where `MetalPipelinesTests` ran); the job
+  now runs on `xcode-27`.

@@ -12,7 +12,7 @@
 #
 # Paths: the Metal sources (shaders live in Sources/CoreRenderMetal/Shaders),
 # its tests, the Linux-safe Metal parts in CoreRender it builds on, and this file.
-# Same runner as ci.yml's macOS job.
+# Same runner as ci.yml's macOS job (vars.MACOS_RUNNER, else xcode-27).
 name: Metal PR
 
 on:
@@ -37,10 +37,10 @@ concurrency:
 jobs:
   metal:
     name: Metal (macOS)
-    runs-on: macos-15
+    runs-on: ${{ vars.MACOS_RUNNER || 'xcode-27' }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - run: swift --version
+      - run: xcodebuild -version && swift --version
       - run: swift build --build-tests
       - run: swift test --skip-build --filter CoreRenderMetalTests
