@@ -42,3 +42,4 @@ utc	stage	event	ref	note
 2026-10-19T03:23:06Z	3	gate-held	#610	AC-6 6611256 gate failed only ThumbnailStoreRecoveryTests:159 wall-clock (2.3s, load 16); not pushed, re-gate when fixers finish
 2026-10-19T03:34:55Z	3	heartbeat	-	dev run 384 green 641739b, no new slice done; AC-6/FX-7 gates held (load 15, r2 fixers running)
 2026-10-19T03:55:54Z	3	heartbeat	-	r2 fixers tone-pack/effects still in their gates (load 10); AC-6/FX-7 gates held
+2026-10-19T04:22:41Z	3	pushed	#610	AC-6 head 5554440 CI: PASS (TMPDIR tmpfs), body updated, footer stripped
