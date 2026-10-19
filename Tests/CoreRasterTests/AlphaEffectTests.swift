@@ -31,7 +31,49 @@ import Testing
         }
     }
 
-    @Test func outsideStrokeIsOutside() throws { try expectRing(.outside, inner: 16, outer: 20) { $0 == 1 } }
+    @Test func outsideStrokeIsOutside() throws {
+        try expectRing(.outside, inner: 16, outer: 20) { $0 == 1 }
+        // The far side is a one-pixel smoothstep ramp, not a hard step: some
+        // pixels about 20 px from the centre are partly covered.
+        let out = try EffectFixtures.disc(size: 64, radius: 16).stroked(color: blue, width: 4, position: .outside)
+        var partial = 0
+        for y in 0..<64 {
+            for x in 0..<64 {
+                let r = ((Double(x) - 31.5) * (Double(x) - 31.5) + (Double(y) - 31.5) * (Double(y) - 31.5)).squareRoot()
+                let cover = try out.pixel(x: x, y: y).b
+                if abs(r - 20) < 0.5, cover > 0.05, cover < 0.95 { partial += 1 }
+            }
+        }
+        #expect(partial >= 8, "\(partial) partly covered pixels on the far edge")
+    }
+
+    /// The stroke measures to the anti-aliased edge, not to pixel centres: a
+    /// vertical edge column of alpha 0.75 sits a quarter pixel further out
+    /// than one of 0.25 by half a pixel each way, so a 4 px outside stroke
+    /// 4 px past that column covers about 0.84 and 0.16 (smoothstep of
+    /// 4.5 - 3.75 and 4.5 - 4.25), where a pixel-centre field gives 0.5 and 0.
+    @Test func strokeMeasuresAntiAliasedEdge() throws {
+        for (edgeAlpha, want) in [(Float(0.75), Float(0.84375)), (0.25, 0.15625)] {
+            var b = try PixelBuffer(width: 24, height: 24)
+            for y in 0..<24 {
+                for x in 0..<8 { try b.setPixel(x: x, y: y, RGBA(r: 1, g: 1, b: 1, a: 1)) }
+                try b.setPixel(x: 8, y: y, RGBA(r: edgeAlpha, g: edgeAlpha, b: edgeAlpha, a: edgeAlpha))
+            }
+            let cover = try b.stroked(color: blue, width: 4, position: .outside).pixel(x: 12, y: 12).b
+            #expect(abs(cover - want) < 0.02, "edge alpha \(edgeAlpha): cover \(cover)")
+        }
+    }
+
+    /// A radius is not the same reach everywhere (`LayerEffect`'s doc): box
+    /// blur's is per pass, so a 1 px dot spreads past 25 px at radius 10,
+    /// while a glow of radius 10 reaches only about 10 px.
+    @Test func boxBlurRadiusIsPerPassGlowRadiusIsReach() throws {
+        var dot = try PixelBuffer(width: 81, height: 81)
+        try dot.setPixel(x: 40, y: 40, RGBA(r: 1, g: 1, b: 1, a: 1))
+        #expect(try dot.boxBlurred(radius: 10).pixel(x: 65, y: 40).a > 0)
+        let glow = try dot.glowing(color: blue, radius: 10, intensity: 1, inner: false)
+        #expect(try glow.pixel(x: 65, y: 40).a == 0 && glow.pixel(x: 45, y: 40).a > 0)
+    }
 
     @Test func insideStrokeIsInside() throws { try expectRing(.inside, inner: 12, outer: 16) { $0 == 0 } }
 

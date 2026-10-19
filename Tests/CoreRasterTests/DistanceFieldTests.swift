@@ -1,7 +1,8 @@
 // DistanceFieldTests.swift: effects-engine FX-5's `DistanceField` acceptance,
 // written first (FX-1), on since FX-5 built it: exact Euclidean distance
 // on a 64 x 64 grid, alpha equal to `level` is inside, inside and outside are
-// complements, a bad level throws and stray lookups never crash.
+// complements, `inside` counts the transparent ring past the buffer's edge,
+// a bad level throws and stray lookups never crash.
 import CoreRaster
 import Testing
 
@@ -50,6 +51,16 @@ import Testing
                 #expect(abs(Double(max(inside, outside)) - abs(r - 16)) <= 1.5, "(\(x), \(y))")
             }
         }
+    }
+
+    /// Past the buffer's edge reads as transparent, so a fully opaque buffer's
+    /// `inside` counts the ring of pixels just past the edge.
+    @Test func insideCountsBorderRing() throws {
+        var opaque = try PixelBuffer(width: 8, height: 8)
+        for y in 0..<8 { for x in 0..<8 { try opaque.setPixel(x: x, y: y, RGBA(r: 1, g: 1, b: 1, a: 1)) } }
+        let field = try DistanceField(alpha: opaque)
+        #expect(field.inside(x: 0, y: 3) == 1 && field.inside(x: 3, y: 3) == 4 && field.inside(x: 7, y: 7) == 1)
+        #expect(field.outside(x: 3, y: 3) == 0)
     }
 
     @Test func badLevelThrowsAndLookupsNeverCrash() throws {

@@ -11,6 +11,7 @@
 
 /// Distances from a buffer's alpha edge, in pixels.
 public struct DistanceField: Sendable {
+    /// The source buffer's size; outside(x:y:) and inside(x:y:) are defined on 0..<width × 0..<height.
     public let width: Int, height: Int
     /// Row-major distance to the nearest shape pixel (0 on the shape).
     let outsideField: [Float]

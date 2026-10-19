@@ -19,5 +19,19 @@
     "anchor": "inShape = layerAlpha >= 0.5",
     "replacement": "inShape = layerAlpha < 0.5",
     "filter": "AlphaEffectTests"
+  },
+  {
+    "note": "the inside field drops the transparent ring past the buffer's edge, so a fully opaque buffer reads as infinitely deep, caught by DistanceFieldTests.insideCountsBorderRing",
+    "file": "Sources/CoreRaster/Effects/DistanceField.swift",
+    "anchor": "insideField = Self.transform(seeds: shape.map { !$0 }, width: width, height: height, border: true).distance",
+    "replacement": "insideField = Self.transform(seeds: shape.map { !$0 }, width: width, height: height, border: false).distance",
+    "filter": "DistanceFieldTests"
+  },
+  {
+    "note": "the stroke coverage is a hard step instead of a one-pixel smoothstep ramp, so the stroke's far edge is aliased, caught by AlphaEffectTests.outsideStrokeIsOutside and strokeMeasuresAntiAliasedEdge",
+    "file": "Sources/CoreRaster/Effects/AlphaEffects.swift",
+    "anchor": "return Float(t * t * (3 - 2 * t))",
+    "replacement": "return Float(t >= 0.5 ? 1 : 0)",
+    "filter": "AlphaEffectTests"
   }
 ]

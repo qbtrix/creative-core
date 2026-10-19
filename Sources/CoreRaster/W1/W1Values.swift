@@ -184,17 +184,33 @@ public struct ColorLUT: Hashable, Sendable {
     }
 }
 
-/// A non-destructive effect on a layer's pixels. Distances, radii, offsets and
-/// widths are in pixels, 0...1,000; angles in degrees. Denoise `strength` and
+/// A non-destructive effect on a layer's pixels. Radii, distances and widths
+/// are 0...1,000 px; shadow `dx` / `dy` are any finite number of pixels (+x
+/// right, +y down; negative casts up or left); angles are in degrees. A radius
+/// does not mean the same reach everywhere: box blur `radius` is the half-width
+/// of each of three box passes, so colour reaches 3 x radius px (sigma about
+/// sqrt(r (r + 1))), while glow `radius`, shadow `blur` and clarity `radius`
+/// are the total reach (sigma about value / 3). So `.boxBlur(radius: 10)`
+/// spreads about 30 px and `.glow(radius: 10)` about 10 px. Denoise `strength` and
 /// `detail` are 0...1 (strength 0 changes nothing), clarity `amount` is
 /// -100...100 (0 changes nothing, negative softens), glow `intensity` is 0...1
 /// (0 changes nothing). The effect ops throw on a value outside its range.
 /// Glow, shadow and stroke `color` are linear, premultiplied RGBA like a
 /// `PixelBuffer`'s pixels; their alpha is the effect's opacity.
 public enum LayerEffect: Hashable, Sendable {
-    case boxBlur(radius: Double), motionBlur(degrees: Double, distance: Double), denoise(strength: Double, detail: Double)
-    case clarity(amount: Double, radius: Double), glow(color: RGBA, radius: Double, intensity: Double, inner: Bool)
+    /// Three box passes of half-width `radius` px each: reach 3 x radius, sigma about sqrt(r (r + 1)).
+    case boxBlur(radius: Double)
+    /// Averages along `degrees` (0 is +x, 90 is +y) over a centred line `distance` px long.
+    case motionBlur(degrees: Double, distance: Double)
+    /// An edge-keeping smooth: `strength` and `detail` in 0...1.
+    case denoise(strength: Double, detail: Double)
+    /// Local contrast by `amount` against a blur whose total reach is `radius` px (sigma radius / 3).
+    case clarity(amount: Double, radius: Double)
+    /// A glow whose total reach is `radius` px (sigma about radius / 3).
+    case glow(color: RGBA, radius: Double, intensity: Double, inner: Bool)
+    /// A shadow offset by any finite (`dx`, `dy`) px, +y down, whose blur reaches `blur` px in total (sigma about blur / 3).
     case shadow(color: RGBA, dx: Double, dy: Double, blur: Double, inner: Bool)
+    /// A stroke `width` px wide at `position` on the alpha edge.
     case stroke(color: RGBA, width: Double, position: StrokePosition)
 }
 
