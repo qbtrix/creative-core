@@ -1,7 +1,7 @@
 [
   {"note": "resident tiles skip the dirty check, so every render uploads every tile again", "filter": "ResidentSurfacesTests", "file": "Sources/CoreRender/ResidentSurfaces.swift",
-   "anchor": "if let held, held.pixels == pixels { return held.surface }",
-   "replacement": "if let held, held.pixels != held.pixels { return held.surface }"},
+   "anchor": "if let held, held.pixels.sharesStorage(with: pixels) { return held.surface }",
+   "replacement": "if let held, !held.pixels.sharesStorage(with: held.pixels) { return held.surface }"},
   {"note": "resident tiles upload a clear tile instead of keeping no surface", "filter": "ResidentSurfacesTests", "file": "Sources/CoreRender/ResidentSurfaces.swift",
    "anchor": "pixels.components.allSatisfy { $0 == 0 } ? nil :",
    "replacement": "false ? nil :"},
