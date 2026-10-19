@@ -63,3 +63,4 @@ utc	stage	event	ref	note
 2026-10-19T09:59:44Z	anatomy	gate	3d9c151	IC-jpeg r4: local budget test ThumbnailStoreRecoveryTests failed 3x only inside full local scripts/ci (passes alone and in the serial budget pass on both heads); dev ci.yml run 39230628738 Linux green on 8cd57c6 (holds #681); panel started
 2026-10-19T10:00:06Z	heartbeat	status	3d9c151	IC-png r3 fix batch wf_10264d50-8f5 running; IC-jpeg r4 panel wf_65826713-fae running
 2026-10-19T10:04:44Z	IC-jpeg r4	panel done	wf_65826713-fae	9 confirmed (2 major); fix batch r4-jpeg-b1 started (wf_64a04865-b46)
+2026-10-19T10:21:55Z	heartbeat	waiting	wf_10264d50-8f5,wf_64a04865-b46	IC-png r3 fixers and IC-jpeg r4 fixer running, no PRs yet
