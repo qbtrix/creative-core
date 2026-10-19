@@ -75,5 +75,12 @@
     "anchor": "header.tolerance.linear >= 0 else {",
     "replacement": "header.tolerance.linear > 0 else {",
     "filter": "ParityHarnessTests"
+  },
+  {
+    "note": "pack band height for an affine transform uses the source's height, not the requested one",
+    "file": "Sources/CoreRender/Parity/ParityPack.swift",
+    "anchor": "case let .transformed(_, _, height, _): return height",
+    "replacement": "case .transformed: return sample.source.height",
+    "filter": "CPUGoldenTests"
   }
 ]
