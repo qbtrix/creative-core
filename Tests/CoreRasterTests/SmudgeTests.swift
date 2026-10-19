@@ -113,6 +113,16 @@ import Testing
         #expect(feathered > 0)
     }
 
+    /// Strength is range-checked by the shared colour-math check, so its
+    /// error reads like every other CoreRaster range error.
+    @Test func strengthErrorUsesSharedCheck() throws {
+        var buffer = try RetouchFixtures.redEdge(width: 8, height: 8, edgeX: 4)
+        var state = SmudgeState(strength: 1.5)
+        #expect(throws: RasterError.invalid("smudge strength 1.5: must be in 0.0...1.0")) {
+            try state.dab(try RetouchFixtures.roundDab(radius: 2), x: 0, y: 0, on: &buffer)
+        }
+    }
+
     @Test func fuzzedDabsThrowOrSmudge() throws {
         var rng = SplitMix64(seed: 0x5D06)
         let positions = [Int.min, -9, -2, 0, 3, 17, 25, Int.max]

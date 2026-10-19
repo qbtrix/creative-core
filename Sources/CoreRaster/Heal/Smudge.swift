@@ -28,9 +28,7 @@ public struct SmudgeState: Hashable, Sendable {
     /// a new pick-up at its own size. Throws `RasterError.invalid` for a
     /// strength outside 0...1 or NaN.
     public mutating func dab(_ dab: Mask, x: Int, y: Int, on buffer: inout PixelBuffer) throws {
-        guard (0...1).contains(strength) else {
-            throw RasterError.invalid("smudge strength \(strength): must be in 0...1")
-        }
+        try ColorMath.check("smudge strength", strength, in: 0...1)
         if strength > 0, let patch = carried, carriedWidth == dab.width, carriedHeight == dab.height {
             try lay(patch, through: dab, x: x, y: y, on: &buffer)
         }

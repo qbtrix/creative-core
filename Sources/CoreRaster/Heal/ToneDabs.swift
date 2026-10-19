@@ -3,14 +3,23 @@
 // pixels under it change, and alpha never does. Each pixel's weight is the
 // dab's coverage there times, for dodge and burn, its tonal range's weight at
 // the pixel's Rec. 709 luma (on straight linear colour). Dodge scales linear
-// colour by 1 + exposure × weight, burn by 1 − exposure × weight × 0.5, and
+// colour by 1 + exposure × weight, burn by 1 − exposure × weight × 0.5 (a
+// linear gain, one stop apart only at exposure 1), and
 // sponge scales chroma about the luma by 1 + amount × coverage; colour is
 // clamped to 0...1 straight. Scaling commutes with premultiplication, so the
 // ops run on premultiplied values and never round-trip alpha.
 
-/// The band of luma a dodge or burn dab acts on.
+/// The band of luma a dodge or burn dab acts on. Luma is Rec. 709 on
+/// straight (unpremultiplied) linear colour; the bands overlap in smooth
+/// ramps and their weights sum to 1 at every luma.
 public enum TonalRange: Hashable, Sendable {
-    case shadows, midtones, highlights
+    /// Luma below 0.2 fully, fading out by 0.4.
+    case shadows
+    /// Luma 0.4...0.6 fully, fading to zero at 0.2 and 0.8; luma at or
+    /// below 0.2, or at or above 0.8, is untouched.
+    case midtones
+    /// Luma above 0.8 fully, fading in from 0.6.
+    case highlights
 
     /// How much a pixel at `luma` belongs to this range, in 0...1. Midtones
     /// is a smoothstep window: `smoothstep(0.2, 0.4, l) × (1 −
@@ -30,10 +39,12 @@ public enum TonalRange: Hashable, Sendable {
 extension PixelBuffer {
     /// Lightens the pixels under `dab` (its top-left at `x`, `y`) in `range`:
     /// linear colour is multiplied by `1 + exposure × weight`, the weight being
-    /// the dab's coverage times the range's weight at the pixel's luma. At
-    /// full weight, exposure 1 doubles linear colour (one stop up, clamped);
-    /// `burn` at the same exposure halves it. `exposure` is in 0...1; 0
-    /// changes nothing, and so does a dab placed wholly off the buffer.
+    /// the dab's coverage times the range's weight at the pixel's luma.
+    /// `exposure` in 0...1 is a linear gain, not stops: dodge multiplies by
+    /// `1 + exposure × weight`, burn by `1 − exposure × weight / 2`, so the
+    /// two are one stop apart only at exposure 1 (dodge doubles, clamped;
+    /// burn halves). 0 changes nothing, and so does a dab placed wholly off
+    /// the buffer.
     /// Throws `RasterError.invalid` for an exposure outside 0...1 or NaN.
     public mutating func dodge(_ dab: Mask, x: Int, y: Int, range: TonalRange, exposure: Float) throws {
         try ColorMath.check("exposure", exposure, in: 0...1)
@@ -43,8 +54,10 @@ extension PixelBuffer {
     /// Darkens the pixels under `dab` (its top-left at `x`, `y`) in `range`:
     /// linear colour is multiplied by `1 − exposure × weight × 0.5`, the
     /// weight being the dab's coverage times the range's weight at the
-    /// pixel's luma. At full weight, exposure 1 halves linear colour (one stop
-    /// down), mirroring `dodge`, which doubles it. `exposure` is in 0...1; 0
+    /// pixel's luma. `exposure` in 0...1 is a linear gain, not stops: dodge
+    /// multiplies by `1 + exposure × weight`, burn by `1 − exposure × weight /
+    /// 2`, so the two are one stop apart only at exposure 1 (burn halves,
+    /// dodge doubles); exposure 0.5 gives ×0.75 here and ×1.5 for dodge. 0
     /// changes nothing, and so does a dab placed wholly off the buffer.
     /// Throws `RasterError.invalid` for an exposure outside 0...1 or NaN.
     public mutating func burn(_ dab: Mask, x: Int, y: Int, range: TonalRange, exposure: Float) throws {
