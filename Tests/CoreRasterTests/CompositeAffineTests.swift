@@ -159,6 +159,8 @@ import Darwin
             (AffineMatrix(a: 0.3, b: 0, c: 0, d: 3, tx: 70.61, ty: 60.37), 10, 10),
             (AffineMatrix(a: 0.2, b: 2.5, c: -2.5, d: 0.2, tx: 90.4, ty: 60.3), 10, 10),
             (AffineMatrix(a: 2.5, b: 0.1, c: 1.8, d: 0.4, tx: 50.3, ty: 70.7), 10, 10),
+            // A 20x shrink: stretch is capped at the source's size, so lanczos3's pad is 3, not 4.
+            (AffineMatrix(a: 0.05, b: 0, c: 0, d: 0.05, tx: 80.3, ty: 80.6), 10, 10),
         ]
         let zero = Float(sign: .minus, exponent: 0, significand: 0)
         let base = try PixelBuffer(width: 160, height: 160, fill: RGBA(r: zero, g: zero, b: zero, a: zero))
@@ -249,5 +251,69 @@ import Darwin
             try got.composite(layer, through: m, mode: .normal, opacity: 1, filter: .lanczos3)
             #expect(got == base, "\(m)")
         }
+    }
+
+    /// A huge finite linear part (1e300 along one axis, a 1e300 scale, a
+    /// 1e300 skew) makes the filter's reach far past Int: the pad is clamped
+    /// to 2^52 before it becomes Int, so the call returns or throws
+    /// RasterError and never traps.
+    @Test func hugeFiniteScaleReachIsClamped() throws {
+        let layer = try AffineFixtures.layer(seed: 523, width: 4, height: 4, border: 0)
+        let base = try backdrop(seed: 524)
+        // The first and the skews are invertible, so `reach` runs on them; the
+        // 1e300 scale's determinant overflows, so it throws before.
+        let huge = [AffineMatrix(a: 1e300, b: 0, c: 0, d: 1e-300, tx: 0, ty: 0), AffineFixtures.skew(1e300, 0),
+                    AffineFixtures.skew(0, 1e300), AffineFixtures.scale(1e300, 1e300)]
+        #expect(huge.prefix(3).allSatisfy { $0.inverse != nil })
+        for m in huge {
+            for filter in [ResampleFilter.bilinear, .lanczos3] {
+                var got = base
+                do {
+                    try got.composite(layer, through: m, mode: .normal, opacity: 1, filter: filter)
+                } catch is RasterError {}
+                #expect(got.width == base.width && got.height == base.height, "\(m) \(filter)")
+            }
+        }
+    }
+
+    /// A layer whose box covers a 400 x 300 backdrop (scaled up and turned,
+    /// the photo-layer case) is resampled one box row at a time, and the
+    /// result still matches transform-then-composite to a full-size copy.
+    @Test func noFullSizeIntermediate() throws {
+        let layer = try AffineFixtures.layer(seed: 525, width: 40, height: 30, border: 0)
+        let base = try PixelBuffer(width: 400, height: 300, fill: RGBA(r: 0.2, g: 0.4, b: 0.6, a: 1))
+        let t = Double.pi / 12
+        let m = AffineMatrix(a: 14 * cos(t), b: 14 * sin(t), c: -14 * sin(t), d: 14 * cos(t), tx: 40.3, ty: -90.7)
+        let box = try #require(m.bounds(of: layer.width, layer.height))
+        #expect(box.x <= 0 && box.y <= 0 && box.x + box.width >= base.width && box.y + box.height >= base.height)
+        for filter in [ResampleFilter.bilinear, .lanczos3] {
+            var got = base
+            try got.composite(layer, through: m, mode: .screen, opacity: 0.8, filter: filter)
+            let want = try reference(base, layer, m, mode: .screen, opacity: 0.8, filter: filter)
+            #expect(try affineMaxDelta(got, want) <= 1 / 255, "\(filter)")
+        }
+    }
+
+    /// A lanczos3 overshoot past Float's range during a through-composite
+    /// names the operation the caller ran and the matrix they passed, not
+    /// the row resample's shifted internal matrix.
+    @Test func overshootNamesCompositeThrough() throws {
+        let big = Float.greatestFiniteMagnitude
+        var layer = try PixelBuffer(width: 12, height: 6)
+        for y in 0..<6 {
+            for x in 0..<12 {
+                let v = (x / 2).isMultiple(of: 2) ? big : -big
+                try layer.setPixel(x: x, y: y, RGBA(r: v, g: v, b: v, a: v))
+            }
+        }
+        let base = try backdrop(seed: 526)
+        let m = AffineFixtures.translation(5.3, 7)
+        var got = base
+        let error = #expect(throws: RasterError.self) {
+            try got.composite(layer, through: m, mode: .normal, opacity: 1, filter: .lanczos3)
+        }
+        guard case .invalid(let message) = try #require(error) else { return }
+        #expect(message.contains("composite through \(m)") && message.contains("lanczos3"), "\(message)")
+        #expect(got.components.allSatisfy { $0.isFinite })
     }
 }

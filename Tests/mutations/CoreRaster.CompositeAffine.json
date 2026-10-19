@@ -9,9 +9,37 @@
   {
     "note": "opacity is applied twice, once to the resampled piece and once in the blend, caught by CompositeAffineTests.equalsTransformThenComposite",
     "file": "Sources/CoreRaster/Compositing/CompositeAffine.swift",
-    "anchor": "try composite(piece, x: x0, y: y0, mode: mode, opacity: opacity)",
-    "replacement": "try composite(piece, x: x0, y: y0, mode: mode, opacity: opacity * opacity)",
+    "anchor": "try composite(row, x: x0, y: y, mode: mode, opacity: opacity)",
+    "replacement": "try composite(row, x: x0, y: y, mode: mode, opacity: opacity * opacity)",
     "filter": "CompositeAffineTests"
+  },
+  {
+    "note": "the row walk moves every row's matrix by the box's top instead of the row's own y so each row resamples the box's first line, caught by CompositeAffineTests.equalsTransformThenComposite",
+    "file": "Sources/CoreRaster/Compositing/CompositeAffine.swift",
+    "anchor": "tx: m.tx - Double(x0), ty: m.ty - Double(y))",
+    "replacement": "tx: m.tx - Double(x0), ty: m.ty - Double(y0))",
+    "filter": "CompositeAffineTests"
+  },
+  {
+    "note": "the overshoot from the row resample is rethrown as is, naming the shifted internal matrix and transform instead of composite through and the caller's matrix, caught by CompositeAffineTests.overshootNamesCompositeThrough",
+    "file": "Sources/CoreRaster/Compositing/CompositeAffine.swift",
+    "anchor": "throw RasterError.invalid(\"composite through \\(m) with \\(filter): lanczos3 overshoot",
+    "replacement": "throw error; _ = (\"composite through \\(m) with \\(filter): lanczos3 overshoot",
+    "filter": "CompositeAffineTests"
+  },
+  {
+    "note": "the reach pad skips the 2^52 clamp so a 1e300 linear part traps converting the pad to Int, caught by CompositeAffineTests.hugeFiniteScaleReachIsClamped as a crash",
+    "file": "Sources/CoreRaster/Compositing/CompositeAffine.swift",
+    "anchor": "Int(min(v.rounded(.up) + 1, limit))",
+    "replacement": "Int(v.rounded(.up) + 1)",
+    "filter": "CompositeAffineTests"
+  },
+  {
+    "note": "the reach drops the stretch cap at the source's size so a 20x shrink pads by radius times the full inverse scale, writing a pixel past the box, caught by CompositeAffineTests.rowsOutsideBoundsAreUntouched",
+    "file": "Sources/CoreRaster/Compositing/CompositeAffine.swift",
+    "anchor": "let stretchX = min(max((inv.a * inv.a + inv.c * inv.c).squareRoot(), 1), Double(max(width, 1)))\n        let stretchY = min(max((inv.b * inv.b + inv.d * inv.d).squareRoot(), 1), Double(max(height, 1)))",
+    "replacement": "let stretchX = max((inv.a * inv.a + inv.c * inv.c).squareRoot(), 1)\n        let stretchY = max((inv.b * inv.b + inv.d * inv.d).squareRoot(), 1)",
+    "filter": "CompositeAffineTests.rowsOutsideBoundsAreUntouched"
   },
   {
     "note": "bounds edges skip the 2^52 clamp so a huge finite matrix traps converting to Int, caught by CompositeAffineTests.hugeFiniteMatrixIsClampedAndOffBackdrop as a crash",
