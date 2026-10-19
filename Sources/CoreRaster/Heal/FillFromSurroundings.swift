@@ -1,28 +1,30 @@
 // FillFromSurroundings.swift: remove a spot or an object by building it from
 // nearby texture, then healing the seam (retouch-heal RH-4).
 //
-// A seeded search draws a fixed number of candidate offsets near the mask and
-// keeps only those whose source (the mask's bounds plus a one-pixel ring,
-// shifted) lies on the buffer and covers no masked pixel, so nothing is ever
-// copied from inside the hole. Each candidate is scored by how well the band
-// of `patchRadius` pixels around the hole matches its shifted twin; the best
-// one goes through `healed`, which solves its tone to meet the ring. All
-// state is local: the same seed gives the same pixels.
+// Each hole pixel gets its own source: the centre of the `2r + 1` patch
+// outside the hole (dilated by `r`) that best matches the patch around it,
+// found by the seeded search in PatchSearch.swift, coarse to fine on a pyramid
+// of up to three levels. The hole is then healed against the ring: its tone
+// is the ring's, relaxed in (`relaxHeal`), and its grain each source's own
+// (the source minus its local mean). All state is local: the same seed gives
+// the same pixels.
 
 extension PixelBuffer {
-    /// Candidate offsets the search keeps at most.
-    static let fillCandidates = 48
-    /// Draws the search makes at most while looking for those candidates.
-    static let fillDraws = 512
-    /// The widest scoring band, whatever `patchRadius` asks for.
-    static let fillMaxBand = 16
+    /// The largest patch radius the fill uses; a larger `patchRadius` acts as this.
+    static let fillMaxPatchRadius = 8
+    /// Pyramid levels the fill searches, at most; a level with a side under 16 gets none under it.
+    static let fillLevels = 3
+    /// The radius of the window whose mean a source's grain is taken against.
+    static let fillGrainRadius = 4
 
-    /// The buffer with the pixels `mask` covers rebuilt from patches of
-    /// radius `patchRadius` (a `2r + 1` square) found outside the mask, then
+    /// The buffer with the pixels `mask` covers rebuilt pixel by pixel from
+    /// `2r + 1` square patches (r is `patchRadius`, at most
+    /// `fillMaxPatchRadius`) centred outside the mask dilated by r, then
     /// healed against the ring around it. The same `seed` gives the same
     /// pixels; an empty mask returns the input. Throws `RasterError.invalid`
-    /// when the mask's size differs from the buffer's or `patchRadius` is
-    /// below 1.
+    /// when the mask's size differs from the buffer's, `patchRadius` is below
+    /// 1, the mask's bounds plus a one-pixel ring hold more than
+    /// `maxHealPixels` pixels, or the mask covers every pixel.
     public func filledFromSurroundings(_ mask: Mask, seed: UInt64, patchRadius: Int = 3) throws -> PixelBuffer {
         guard mask.width == width, mask.height == height else {
             throw RasterError.invalid("fill mask \(mask.width)x\(mask.height) differs from buffer \(width)x\(height)")
@@ -32,89 +34,82 @@ extension PixelBuffer {
         }
         guard let box = try Self.coveredBounds(of: mask) else { return self }
 
-        // The guarded source: the bounds plus the ring `healed` reads, clipped.
+        // The grid: the bounds plus the ring `healed` reads, clipped, checked before any work.
         let gx0 = max(box.minX - 1, 0), gx1 = min(box.maxX + 1, width - 1)
         let gy0 = max(box.minY - 1, 0), gy1 = min(box.maxY + 1, height - 1)
-        let span = 4 * max(gx1 - gx0 + 1, gy1 - gy0 + 1) + min(patchRadius, Self.fillMaxBand)
-        // The guarded rectangle is on the buffer, so each range holds 0.
-        let dxRange = -min(gx0, span)...min(width - 1 - gx1, span)
-        let dyRange = -min(gy0, span)...min(height - 1 - gy1, span)
-        let band = try fillBand(mask, box: box, radius: min(patchRadius, Self.fillMaxBand))
+        let gw = gx1 - gx0 + 1, gh = gy1 - gy0 + 1, gridPixels = gw * gh
+        guard gridPixels <= Self.maxHealPixels else {
+            throw RasterError.invalid("fill mask bounds \(box.maxX - box.minX + 1)x\(box.maxY - box.minY + 1) "
+                + "plus a 1 px ring hold \(gridPixels) pixels, over \(Self.maxHealPixels); mask a smaller area")
+        }
+        let r = min(patchRadius, Self.fillMaxPatchRadius)
+        var cover = [Float](repeating: 0, count: gridPixels), hole = [Bool](repeating: false, count: width * height)
+        for gy in 0..<gh {
+            for gx in 0..<gw {
+                cover[gy * gw + gx] = try mask.coverage(x: gx0 + gx, y: gy0 + gy)
+                hole[(gy0 + gy) * width + gx0 + gx] = cover[gy * gw + gx] > 0
+            }
+        }
+        var levels = [PatchLevel(width: width, height: height, pixels: components, hole: hole, source: [])]
+        guard levels[0].markSources(radius: r) else {
+            throw RasterError.invalid("fill mask covers every pixel: nothing outside it to fill from")
+        }
+        while levels.count < Self.fillLevels, let last = levels.last, min(last.width, last.height) >= 16 {
+            var coarser = last.halved()
+            guard coarser.markSources(radius: r) else { break }
+            levels.append(coarser)
+        }
 
         var rng = FillRandom(state: seed)
-        var best: (score: Double, dx: Int, dy: Int)?
-        var kept = 0, draws = 0
-        while kept < Self.fillCandidates, draws < Self.fillDraws {
-            draws += 1
-            let dx = dxRange.lowerBound + rng.below(dxRange.count)
-            let dy = dyRange.lowerBound + rng.below(dyRange.count)
-            guard try sourceIsClear(mask, x0: gx0 + dx, y0: gy0 + dy, x1: gx1 + dx, y1: gy1 + dy, box: box) else {
-                continue
-            }
-            kept += 1
-            let score = try fillScore(band, mask: mask, dx: dx, dy: dy)
-            if best.map({ score < $0.score }) ?? true { best = (score, dx, dy) }
+        var map: [Int] = []
+        for i in levels.indices.reversed() {
+            map = i == levels.count - 1
+                ? [Int](repeating: -1, count: levels[i].width * levels[i].height)
+                : levels[i + 1].mapUp(map, to: levels[i])
+            levels[i].search(&map, radius: r, rng: &rng)
         }
-        guard let chosen = best else {
-            throw RasterError.invalid("no patch outside the mask fits the buffer to fill from")
+
+        // The tone: the ring's, relaxed into the hole from the ring's mean.
+        var h = [Double](repeating: 0, count: gridPixels * 4), ringMean = [Double](repeating: 0, count: 4), n = 0.0
+        for i in 0..<gridPixels where cover[i] == 0 {
+            let p = (gy0 + i / gw) * width + gx0 + i % gw
+            for k in 0..<4 { h[i * 4 + k] = Double(components[p * 4 + k]); ringMean[k] += h[i * 4 + k] }
+            n += 1
         }
-        return try healed(offset: (dx: chosen.dx, dy: chosen.dy), through: mask)
+        for i in 0..<gridPixels where cover[i] > 0 { for k in 0..<4 { h[i * 4 + k] = ringMean[k] / max(n, 1) } }
+        return try grainedFill(levels[0], map: map, tone: h, cover: cover, grid: (gx0, gy0, gw, gh))
     }
 
-    /// The unmasked pixels within `radius` of the mask's bounds: the texture
-    /// a candidate must match.
-    func fillBand(_ mask: Mask, box: (minX: Int, minY: Int, maxX: Int, maxY: Int), radius: Int) throws -> [(Int, Int)] {
-        var band: [(Int, Int)] = []
-        for y in max(box.minY - radius, 0)...min(box.maxY + radius, height - 1) {
-            for x in max(box.minX - radius, 0)...min(box.maxX + radius, width - 1)
-            where try mask.coverage(x: x, y: y) == 0 {
-                band.append((x, y))
+    /// Relaxes `tone` into the hole, adds each hole pixel's source grain (the
+    /// source minus the mean of the unmasked pixels within `fillGrainRadius`
+    /// of it) and blends feathered pixels by coverage.
+    func grainedFill(_ level: PatchLevel, map: [Int], tone: [Double], cover: [Float],
+                     grid: (x0: Int, y0: Int, w: Int, h: Int)) throws -> PixelBuffer {
+        var tone = tone
+        Self.relaxHeal(&tone, cover: cover, width: grid.w, height: grid.h)
+        var result = self
+        for i in cover.indices where cover[i] > 0 {
+            let x = grid.x0 + i % grid.w, y = grid.y0 + i / grid.w, s = map[y * width + x]
+            let sx = s % width, sy = s / width, g = Self.fillGrainRadius
+            var mean = [Double](repeating: 0, count: 4), n = 0.0
+            for wy in max(sy - g, 0)...min(sy + g, height - 1) {
+                for wx in max(sx - g, 0)...min(sx + g, width - 1) where !level.hole[wy * width + wx] {
+                    for k in 0..<4 { mean[k] += Double(level.pixels[(wy * width + wx) * 4 + k]) }
+                    n += 1
+                }
             }
+            func grain(_ k: Int) -> Double { Double(level.pixels[s * 4 + k]) - mean[k] / max(n, 1) }
+            let dest = Self.channelsOf(try pixel(x: x, y: y)), c = min(cover[i], 1)
+            var out = [Float](repeating: 0, count: 4)
+            for k in 0..<4 { out[k] = dest[k] + (Float(tone[i * 4 + k] + grain(k)) - dest[k]) * c }
+            try result.setPixel(x: x, y: y, RGBA(r: out[0], g: out[1], b: out[2], a: out[3]))
         }
-        return band
-    }
-
-    /// True when the rectangle lies on the buffer and holds no masked pixel.
-    /// Masked pixels all lie in `box`, so only the overlap with it is read.
-    func sourceIsClear(_ mask: Mask, x0: Int, y0: Int, x1: Int, y1: Int,
-                       box: (minX: Int, minY: Int, maxX: Int, maxY: Int)) throws -> Bool {
-        guard x0 >= 0, y0 >= 0, x1 < width, y1 < height else { return false }
-        let ox0 = max(x0, box.minX), ox1 = min(x1, box.maxX)
-        let oy0 = max(y0, box.minY), oy1 = min(y1, box.maxY)
-        guard ox0 <= ox1, oy0 <= oy1 else { return true }
-        for y in oy0...oy1 {
-            for x in ox0...ox1 where try mask.coverage(x: x, y: y) > 0 {
-                return false
-            }
-        }
-        return true
-    }
-
-    /// The mean squared colour difference between the band and the band
-    /// shifted by the offset. A shifted pixel off the buffer counts as the
-    /// worst difference; one under the mask is skipped (its value is the
-    /// damage being removed, and the clearance check keeps it out of the fill).
-    func fillScore(_ band: [(Int, Int)], mask: Mask, dx: Int, dy: Int) throws -> Double {
-        var total = 0.0, counted = 0
-        for (x, y) in band {
-            let sx = x + dx, sy = y + dy
-            guard (0..<width).contains(sx), (0..<height).contains(sy) else {
-                total += 3
-                counted += 1
-                continue
-            }
-            guard try mask.coverage(x: sx, y: sy) == 0 else { continue }
-            counted += 1
-            let a = try pixel(x: x, y: y), b = try pixel(x: sx, y: sy)
-            let dr = Double(a.r - b.r), dg = Double(a.g - b.g), db = Double(a.b - b.b)
-            total += dr * dr + dg * dg + db * db
-        }
-        return total / Double(max(counted, 1))
+        return result
     }
 }
 
 /// SplitMix64, local to the fill so its search shares no state.
-private struct FillRandom {
+struct FillRandom {
     var state: UInt64
 
     mutating func next() -> UInt64 {

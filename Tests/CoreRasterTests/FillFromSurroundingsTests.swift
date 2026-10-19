@@ -92,6 +92,74 @@ private func lumaStats(_ buffer: PixelBuffer, under mask: Mask) throws -> (mean:
                               r: Int(spot.radius) + 2)
     }
 
+    @Test func fillsWhereNoTranslationFits() throws {
+        // A hole spanning most of the width, and two holes in opposite corners:
+        // no single shift of the bounds lies clear of the mask on the buffer.
+        let photo = try RetouchFixtures.spottedPhoto(width: 48, height: 32, seed: 3)
+        let wide = try Mask.ellipse(width: 48, height: 32, centerX: 24, centerY: 16, radiusX: 20, radiusY: 10)
+        var corners = try RetouchFixtures.disc(width: 48, height: 32, centerX: 6, centerY: 6, radius: 4)
+        try corners.add(RetouchFixtures.disc(width: 48, height: 32, centerX: 42, centerY: 26, radius: 4))
+        for mask in [wide, corners] {
+            let filled = try photo.clean.filledFromSurroundings(mask, seed: 1)
+            let hole = try lumaStats(filled, under: mask), clean = try lumaStats(photo.clean, under: mask)
+            #expect(abs(hole.mean - clean.mean) <= 0.03, "hole mean \(hole.mean), clean mean \(clean.mean)")
+        }
+    }
+
+    @Test func patchRadiusSetsPatchSize() throws {
+        let (photo, spot) = try Self.spotOne()
+        let one = try photo.spotted.filledFromSurroundings(spot.hole, seed: 4, patchRadius: 1)
+        let three = try photo.spotted.filledFromSurroundings(spot.hole, seed: 4, patchRadius: 3)
+        #expect(one != three)
+        // Radii past the cap act as the cap.
+        #expect(try photo.spotted.filledFromSurroundings(spot.hole, seed: 4, patchRadius: 8)
+            == photo.spotted.filledFromSurroundings(spot.hole, seed: 4, patchRadius: 64))
+    }
+
+    @Test func fullMaskThrowsWithReason() throws {
+        let photo = try RetouchFixtures.spottedPhoto(width: 16, height: 12, seed: 3)
+        let all = try Mask(width: 16, height: 12, fill: 1)
+        #expect { try photo.spotted.filledFromSurroundings(all, seed: 1) } throws: { error in
+            "\(error)".contains("covers every pixel")
+        }
+    }
+
+    @Test func sparseMaskOverCapThrowsEarly() throws {
+        // Two dots in opposite corners: their bounds hold 2100 x 2100 pixels,
+        // over maxHealPixels, so the fill throws before any search.
+        let buffer = try PixelBuffer(width: 2100, height: 2100, fill: RGBA(r: 0.5, g: 0.5, b: 0.5, a: 1))
+        var mask = try Mask(width: 2100, height: 2100)
+        try mask.add(Mask.ellipse(width: 2100, height: 2100, centerX: 0.5, centerY: 0.5, radiusX: 0.5, radiusY: 0.5))
+        try mask.add(Mask.ellipse(width: 2100, height: 2100, centerX: 2099.5, centerY: 2099.5, radiusX: 0.5, radiusY: 0.5))
+        let clock = ContinuousClock(), start = clock.now
+        #expect { try buffer.filledFromSurroundings(mask, seed: 1) } throws: { error in
+            "\(error)".contains("2100x2100")
+        }
+        #expect(clock.now - start < .seconds(20))
+    }
+
+    @Test func picksBestMatch() throws {
+        // Fine grain on the left, black and white stripes 4 px wide on the right:
+        // a hole in the grain fills with grain, not stripes.
+        var rng = SplitMix64(seed: 0xBE57)
+        var buffer = try PixelBuffer(width: 96, height: 64)
+        for y in 0..<64 {
+            for x in 0..<96 {
+                let v = x < 64 ? 0.5 + Float.random(in: -0.04...0.04, using: &rng) : Float(x / 4 % 2)
+                try buffer.setPixel(x: x, y: y, RGBA(r: v, g: v, b: v, a: 1))
+            }
+        }
+        let hole = try RetouchFixtures.disc(width: 96, height: 64, centerX: 24, centerY: 32, radius: 5)
+        var ring = try RetouchFixtures.disc(width: 96, height: 64, centerX: 24, centerY: 32, radius: 10)
+        try ring.subtract(hole)
+        for seed: UInt64 in 1...4 {
+            let filled = try buffer.filledFromSurroundings(hole, seed: seed)
+            let inHole = try lumaStats(filled, under: hole), around = try lumaStats(filled, under: ring)
+            #expect(abs(inHole.variance - around.variance) <= 0.5 * around.variance,
+                    "seed \(seed): hole variance \(inHole.variance), ring variance \(around.variance)")
+        }
+    }
+
     @Test func fuzzedInputsThrowOrFill() throws {
         var rng = SplitMix64(seed: 0xF111)
         let photo = try RetouchFixtures.spottedPhoto(width: 32, height: 24, seed: 2)
