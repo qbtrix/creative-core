@@ -1,9 +1,9 @@
 // ResidentMetalTests.swift: resident rendering on the GPU. The Float16 upload encodes every component as
-// HalfFloat does, bit for bit; `blank` reads back clear; the batched composite gives the bits of one in-place
-// composite per step, resident or evicted, and a `read` straight after it (the composite commits with no wait)
-// sees those pixels even with the sources released; and ResidentSurfaces on Metal uploads
-// 0 tiles for an unchanged render, 1 for one written tile, and rebuilds every tile onto a new backend after a
-// device loss. Skipped without a device.
+// HalfFloat does, bit for bit; `blank` reads back clear; the batched composite gives
+// the bits of one in-place composite per step, resident or evicted, and a `read` straight after it (the
+// composite commits with no wait) sees those pixels even with the sources released; and ResidentSurfaces on
+// Metal uploads 0 tiles for an unchanged render, 1 for one written tile, and rebuilds every tile onto a new
+// backend after a device loss. Skipped without a device.
 #if canImport(Metal)
 import CoreRaster
 import CoreRender

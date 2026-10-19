@@ -139,10 +139,10 @@ extension MetalBackend {
         #endif
         // The handler runs on Metal's thread; `fail` takes the lock, which a readback may hold while it waits
         // on a later buffer, so it goes to another queue rather than block Metal's completion delivery.
-        commands.addCompletedHandler { [weak self] done in
+        commands.addCompletedHandler { [self] done in
             guard let reason = Self.commandBufferFailure(status: done.status, error: done.error, label: "batched composite")
             else { return }
-            DispatchQueue.global().async { self?.fail(reason) }
+            DispatchQueue.global().async { self.fail(reason) }
         }
         commands.commit()
         lastUnwaited = commands

@@ -1,6 +1,7 @@
 // ResidentSurfacesTests.swift: layer tiles stay on their backend between
 // renders. A second render with nothing changed uploads 0 tiles, one written
-// tile uploads exactly 1, a clear tile never uploads, prune and rebuild move
+// tile uploads exactly 1, equal pixels in new storage upload again (the dirty
+// check is storage identity), a clear tile never uploads, prune and rebuild move
 // and release surfaces, and the batched composite (default and through the
 // dispatcher) gives the pixels of one composite per step. Counts come from the
 // FakeBackend's `.surface` calls and `uploads`; pixels from the CPU backend.
@@ -50,6 +51,14 @@ private func uploads(_ fake: FakeBackend) -> Int {
         #expect(fake.calls.contains(.release(old)))
     }
 
+    @Test func equalPixelsInNewStorageUploadAgain() throws {
+        let resident = ResidentSurfaces(backend: FakeBackend(supports: [.composite]))
+        let first = try sync(resident, "paint", [tile(0.3)])
+        let second = try sync(resident, "paint", [tile(0.3)])
+        #expect(resident.uploads == 2)
+        #expect(second != first)
+    }
+
     @Test func aClearTileKeepsNoSurfaceAndNeverUploads() throws {
         let fake = FakeBackend(supports: [.composite])
         let resident = ResidentSurfaces(backend: fake)
@@ -62,12 +71,13 @@ private func uploads(_ fake: FakeBackend) -> Int {
     @Test func pruneReleasesTheTilesOfLayersNotKept() throws {
         let fake = FakeBackend(supports: [.composite])
         let resident = ResidentSurfaces(backend: fake)
-        let a = try sync(resident, "a", [tile(0.2)]), b = try sync(resident, "b", [tile(0.4)])
+        let kept = try tile(0.4)
+        let a = try sync(resident, "a", [tile(0.2)]), b = try sync(resident, "b", [kept])
         resident.prune(keeping: ["b"])
         #expect(fake.calls.contains(.release(try #require(a[0]))))
         #expect(!fake.calls.contains(.release(try #require(b[0]))))
         #expect(resident.count == 1)
-        _ = try sync(resident, "b", [tile(0.4)])
+        _ = try sync(resident, "b", [kept])
         #expect(resident.uploads == 2)
     }
 
