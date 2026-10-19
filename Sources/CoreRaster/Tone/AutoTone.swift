@@ -60,10 +60,10 @@ public struct AutoTone: Hashable, Sendable {
     /// buffer); levels 0, 1, 1 when every pixel is transparent or the black
     /// and white points are under 1/256 apart; none of these throws. Throws
     /// `RasterError.invalid` only when the suggested white balance is not
-    /// neutral and applying it gives a non-finite pixel (the buffer holds a
-    /// non-finite component).
+    /// neutral and applying it gives a non-finite pixel (a component so
+    /// large that the white-balance gain overflows it to infinity).
     public static func suggest(for buffer: PixelBuffer) throws -> AutoTone {
-        let balance = try whiteBalance(for: buffer)
+        let balance = whiteBalance(for: buffer)
         let balanced = try buffer.whiteBalance(temperature: balance.temperature, tint: balance.tint)
         let luma = try Histogram(of: balanced, bins: bins).luminance
         var tone = AutoTone(inBlack: 0, inWhite: 1, gamma: 1, temperature: balance.temperature, tint: balance.tint)
@@ -81,21 +81,21 @@ public struct AutoTone: Hashable, Sendable {
     /// set's mean grey: gains 2^(T/200), 2^(−M/200), 2^(−T/200) times one
     /// norm, so T = 100·log2(b/r) and M = 100·log2(g²/(r·b)), clamped to the
     /// slider range.
-    static func whiteBalance(for buffer: PixelBuffer) throws -> (temperature: Float, tint: Float) {
-        let luma = try Histogram(of: buffer, bins: bins).luminance
-        guard let threshold = quantile(luma, 1 - brightShare) else { return (0, 0) }
+    static func whiteBalance(for buffer: PixelBuffer) -> (temperature: Float, tint: Float) {
+        // The bright set is the top `brightShare` of the non-clipped pixels
+        // alone, so blown highlights can neither fill nor shrink it.
         let c = buffer.components, w = Histogram.luminanceWeights
-        var sum = SIMD3<Double>.zero, count = 0
+        var unclipped = [(luma: Float, rgb: SIMD3<Double>)]()
         for i in stride(from: 0, to: c.count, by: PixelBuffer.channels) where c[i + 3] != 0 {
             let s = RGBA(r: c[i], g: c[i + 1], b: c[i + 2], a: c[i + 3]).unpremultiplied()
             let rgb = SIMD3<Double>(Double(s.r), Double(s.g), Double(s.b))
-            guard rgb.min() > 0, rgb.max() < 1,
-                  Double(w.r * s.r + w.g * s.g + w.b * s.b) >= threshold else { continue }
-            sum += rgb
-            count += 1
+            guard rgb.min() > 0, rgb.max() < 1 else { continue }
+            unclipped.append((w.r * s.r + w.g * s.g + w.b * s.b, rgb))
         }
-        guard count > 0 else { return (0, 0) }
-        let mean = sum / Double(count)
+        guard !unclipped.isEmpty else { return (0, 0) }
+        let take = max(1, Int((brightShare * Double(unclipped.count)).rounded(.up)))
+        let bright = unclipped.sorted { $0.luma > $1.luma }.prefix(take)
+        let mean = bright.reduce(SIMD3<Double>.zero) { $0 + $1.rgb } / Double(bright.count)
         let temperature = 100 * log2(mean.z / mean.x)
         let tint = 100 * log2(mean.y * mean.y / (mean.x * mean.z))
         return (Float(min(max(temperature, -100), 100)), Float(min(max(tint, -100), 100)))
