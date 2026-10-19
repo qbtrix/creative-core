@@ -54,7 +54,10 @@ import Testing
             let error = #expect(throws: RasterError.self) {
                 try b.mappingStraight(bands: bands) { p in p.r == 2 ? RGBA(r: .nan, g: 0, b: 0, a: 1) : p }
             }
-            guard case .invalid(let why) = error else { continue }
+            guard case .invalid(let why) = error else {
+                Issue.record("\(bands) bands: expected .invalid, got \(String(describing: error))")
+                continue
+            }
             #expect(why.contains("at index \(6 * 23 + 17):"), "\(bands) bands: \(why)")
         }
     }

@@ -4,7 +4,8 @@
 // step through a RenderDispatcher whose preferred FakeBackend supports
 // `.adjust` only: auto tone's suggestion neutralises the grey patch within
 // 2/255, then vibrance 30, HSL blues -20 saturation, black and white
-// default, invert twice (`==` identity), a 17³ `.cube` identity LUT (within
+// default, invert twice (`==` on every component of 0.5 or more, within one
+// ulp below it, where 1 − c rounds), a 17³ `.cube` identity LUT (within
 // 1e-5) and posterize 4 (four levels per channel). The colour cases land on
 // the CPU and give their CoreRaster call's pixels with `==`; `contrast`
 // lands on the fake. The fake is not a pixel reference (its `.adjust`
