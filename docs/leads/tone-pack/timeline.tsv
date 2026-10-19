@@ -91,3 +91,5 @@ utc	stage	event	ref	note
 2026-10-19T15:39Z	4	stage-start	round 7	0b96aa5
 2026-10-19T15:43Z	4	heartbeat	run 39279766862	dev CI on 0b96aa5 queued; round 7 gate, mutation and panel running
 2026-10-19T15:47Z	4	round-findings	round 7	panel clean: 2 minor (TP-z walk misses 5 ops vs slice sentence; no mutation on mapStraight alpha-0 guard), 0 refuted; gate and mutation still running
+2026-10-19T15:59Z	4	round-result	round 7	gate PASS 1971 tests, 49/49 mutants; panel 2 minor; clean pending dev CI 39279766862
+2026-10-19T15:59Z	4	stage-start	r7-fix	one batch, last PR (feature-done); round 8 follows for TP-z
