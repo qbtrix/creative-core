@@ -1,5 +1,5 @@
-// ColorRangeTests.swift: fill-tools FT-4's acceptance, written first (FT-1); FT-4
-// removes the `.disabled` traits. Distances come from `FillCheck` (FloodFillTests).
+// ColorRangeTests.swift: fill-tools FT-4's acceptance for `sampledColor` and
+// `colorRangeMask`. Distances come from `FillCheck` (FloodFillTests).
 import CoreRaster
 import Testing
 
@@ -10,7 +10,7 @@ import Testing
         return 1 - x * x * (3 - 2 * x)
     }
 
-    @Test(.disabled("waits on FT-4"))
+    @Test
     func fuzzinessZeroCoversOnlyExactMatches() throws {
         let scene = try FillScene()
         let mask = try scene.buffer.colorRangeMask(around: FillScene.colorC, fuzziness: 0)
@@ -26,7 +26,7 @@ import Testing
     /// Fuzziness 0.2 around C: C is covered fully, the ring (about 0.18 from
     /// C) fades but is not gone, and every pixel follows the smoothstep of its
     /// own distance, reaching 0 by distance 0.2.
-    @Test(.disabled("waits on FT-4"))
+    @Test
     func fallsOffWithDistance() throws {
         let scene = try FillScene()
         let mask = try scene.buffer.colorRangeMask(around: FillScene.colorC, fuzziness: 0.2)
@@ -55,7 +55,7 @@ import Testing
         #expect(values[2] > 0.5 && values[2] < 1, "\(values)")
     }
 
-    @Test(.disabled("waits on FT-4"))
+    @Test
     func threeByThreeMean() throws {
         let noise = try FillFixtures.noise()
         for (x, y, r) in [(3, 3, 1), (1, 1, 1), (5, 2, 1), (3, 3, 2)] {
@@ -68,7 +68,23 @@ import Testing
         #expect(try noise.sampledColor(at: (x: 3, y: 3), radius: 0) == noise.pixel(x: 3, y: 3))
     }
 
-    @Test(.disabled("waits on FT-4"))
+    /// The box clips at the buffer's edge: the mean is over its in-bounds pixels.
+    @Test
+    func boxClipsAtEdge() throws {
+        let noise = try FillFixtures.noise()
+        let corner = try noise.sampledColor(at: (x: 0, y: 0), radius: 1)
+        let quad = try [(0, 0), (1, 0), (0, 1), (1, 1)].map { try noise.pixel(x: $0.0, y: $0.1) }
+        let want = quad.reduce(RGBA.clear) { RGBA(r: $0.r + $1.r / 4, g: $0.g + $1.g / 4, b: $0.b + $1.b / 4, a: $0.a + $1.a / 4) }
+        for (g, w) in [(corner.r, want.r), (corner.g, want.g), (corner.b, want.b), (corner.a, want.a)] {
+            #expect(abs(g - w) < 1e-5, "\(corner) vs \(want)")
+        }
+        let edge = try noise.sampledColor(at: (x: 6, y: 3), radius: 2)
+        let box = try (1...5).flatMap { y in try (4...6).map { try noise.pixel(x: $0, y: y) } }
+        let meanR = box.reduce(Float(0)) { $0 + $1.r } / Float(box.count)
+        #expect(abs(edge.r - meanR) < 1e-5 && abs(edge.a - 1) < 1e-6)
+    }
+
+    @Test
     func badArgumentsThrow() throws {
         let noise = try FillFixtures.noise()
         for radius in [3, -1, Int.max] {
@@ -85,7 +101,7 @@ import Testing
 
     /// Seeded colours and fuzziness, in and out of range: the mask throws
     /// `RasterError` or has coverage in 0...1, and two runs are `==`.
-    @Test(.disabled("waits on FT-4"))
+    @Test
     func fuzzedArgumentsThrowOrStayInRange() throws {
         let noise = try FillFixtures.noise()
         var rng = SplitMix64(seed: 0xF7_04)
