@@ -24,7 +24,7 @@ Next: P3 (measure) and P4 (boolean) open once their regates pass; PG-edit done (
 | P3 | PG-measure | PG-5, PG-6 | PathMeasure.swift, PathPropertySupport, PathMeasureTests, PathTrimDashTests | both | FlarePathMeasure | #735 | merged 18:10 (ffc7dfef) |
 | P4 | PG-shape | PG-9, PG-10 | PathBoolean.swift, PathBooleanTests, PathBooleanFuzzTests | both | FlarePathBoolean | #731 | merged 17:44 |
 | P5 | PG-shape | PG-8 | PathOutline.swift, PathOutlineTests | PathOutlineTests | FlarePathOutline | #739 | merged 19:50 (e2b83d0a) |
-| P6 | PG-z | PG-11, PG-12 | PathOpsWalkTests, PathOpsBudgetTests, geometry.json, packet | walk | none | | built 666428cf (189 lines), held; rebasing on #741 and fixing budgets |
+| P6 | PG-z | PG-11, PG-12 | PathOpsWalkTests, PathOpsBudgetTests, geometry.json, packet | walk | none | | rebased 33c586ec (398 lines, CI: PASS, mutate 18/18); trim/dash over on the random fixture, moving budget rows to a local hand-drawn scribble |
 
 ## Rounds
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
@@ -51,3 +51,5 @@ Next: P3 (measure) and P4 (boolean) open once their regates pass; PG-edit done (
 
 ## Open
 - none
+- P6 at 33c586ec (on 4de35272), release: nearest 1.68 ms (2), trim 23.2 ms (5), dash 43.4 ms / 26 ms quiet (5), union 21-36 ms (50). Flatten alone of the random scribble is 5.7 ms (401,801 points, 8.49M long), so trim and dash cannot reach 5 ms on it.
+- Decision (lead, 2026-10-19): PG-11's trim/dash/nearest rows run on a new seeded `handScribble()` (10,000 anchors, local steps, controls near anchors), a realistic drag-time stroke; budgets unchanged; `scribble()` kept for PG-3 tests. Recorded as a deviation in the packet. If still over, the rows go to the Mac finish.
