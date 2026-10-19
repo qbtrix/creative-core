@@ -67,7 +67,10 @@ public struct HSLShift: Hashable, Sendable {
     }
 }
 
-/// Per-hue-band shifts for the HSL adjustment, one `HSLShift` per band.
+/// Per-hue-band shifts for the HSL adjustment, one `HSLShift` per band,
+/// centred at reds 0°, oranges 30°, yellows 60°, greens 120°, aquas 180°,
+/// blues 240°, purples 270°, magentas 300° (hue of the sRGB-encoded colour);
+/// each band fades out by a raised cosine at its neighbours' centres.
 /// The default changes nothing.
 public struct HSLAdjustment: Hashable, Sendable {
     public var reds, oranges, yellows, greens, aquas, blues, purples, magentas: HSLShift
@@ -87,7 +90,9 @@ public struct HSLAdjustment: Hashable, Sendable {
 }
 
 /// The black-and-white mix: how much each hue band contributes to the gray,
-/// each in percent, -200...300, and an optional tint laid over the result.
+/// each in percent, -200...300, with bands centred at reds 0°, yellows 60°,
+/// greens 120°, cyans 180°, blues 240°, magentas 300° (each blends linearly
+/// into its neighbours), and an optional tint laid over the result.
 /// The default mix is 40, 60, 40, 60, 20, 80 with no tint. The tone ops clamp
 /// a value outside that range. `tint` is a straight-alpha (not premultiplied),
 /// sRGB-encoded color, as a color picker gives it; its alpha is the tint's
@@ -141,7 +146,8 @@ public struct ToneBalance: Hashable, Sendable {
     }
 }
 
-/// One stop of a gradient map: the luminance `offset` in 0...1 it sits at,
+/// One stop of a gradient map: the `offset` it sits at, as Rec. 709 luma of
+/// the sRGB-encoded (not linear) straight colour, 0...1,
 /// and the color it maps to. `color` is straight-alpha (not premultiplied),
 /// sRGB-encoded RGB in 0...1, the space the map runs in; its alpha is
 /// ignored and each pixel keeps its own alpha.

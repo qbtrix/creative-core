@@ -61,6 +61,21 @@ private func warmLUT() throws -> ColorLUT {
         #expect(try cpu.read(s) == input)
     }
 
+    /// The split `ToneAdjustment` documents: `hueSaturation` throws outside
+    /// -180...180, while `colorBalance` clamps a shift of 150 to 100.
+    @Test func outOfRangeThrowsOrClamps() throws {
+        let cpu = CPUBackend()
+        let input = try seededBuffer(width: 6, height: 4, seed: 0xE4)
+        let s = try cpu.surface(input)
+        #expect(throws: (any Error).self) { try cpu.adjusted(s, .hueSaturation(hue: 181, saturation: 0, lightness: 0)) }
+        func balance(_ r: Float) -> ToneAdjustment {
+            .colorBalance(ToneBalance(shadows: [r, 0, 0], midtones: .zero, highlights: .zero, preserveLuminosity: false))
+        }
+        let over = try cpu.read(cpu.adjusted(s, balance(150)))
+        #expect(over == (try cpu.read(cpu.adjusted(s, balance(100)))))
+        #expect(over != input)
+    }
+
     @Test func lutOnce() throws {
         let cpu = CPUBackend()
         let input = try seededBuffer(width: 8, height: 8, seed: 0xE2)
