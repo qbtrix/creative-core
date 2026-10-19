@@ -35,3 +35,4 @@ utc	stage	event	ref	note
 2026-10-19T01:28:26Z	build	merged	#605	FX-6 merged
 2026-10-19T01:28:26Z	build	start	FX-7	builder on lead/effects-engine-fx-7 from 7d8af79
 2026-10-19T01:28:26Z	anatomy	round-start	7d8af79	round 2 gate+mutate (changed since 5ea5ae5)
+2026-10-19T01:29:01Z	ci	dev-run	39183955889	Linux green on fe927cb (none of #598 #600 #603 #605 in it); macOS red on PNG/JPEG test fixtures, not this line (dev-red open)
