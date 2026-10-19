@@ -1,8 +1,10 @@
 // JPEGWriteTests.swift: JPEG.write checked against ITU-T T.81 and JFIF 1.02:
 // quality 90 reopens within a mean of 3/255, qualities 1...100 only, SOI then
 // the JFIF APP0, a baseline 4:2:0 frame, the Annex K Huffman tables, and the
-// K.1 / K.2 quantization tables scaled by quality, luma's on the Y component.
-// Written files are parsed with JPEGFixtures.split.
+// K.1 / K.2 quantization tables scaled by quality, luma's on the Y component,
+// 0xFF bytes stuffed, ZRL for long zero runs and 1-bit padding (F.1.2), and
+// alpha un-premultiplied then dropped. Written files are parsed with
+// JPEGFixtures.split.
 @testable import CoreRaster
 import CoreColor
 import Testing
@@ -68,6 +70,7 @@ import Foundation
             #expect(PNGFixtures.thrown { try JPEG.write(source, quality: quality) } == "unsupported", "quality \(quality)")
         }
         #expect(PNGFixtures.thrown { try JPEG.write(PixelBuffer(width: JPEG.maxSide + 1, height: 1), quality: 90) } == "tooLarge")
+        #expect(PNGFixtures.thrown { try JPEG.write(PixelBuffer(width: 1, height: JPEG.maxSide + 1), quality: 90) } == "tooLarge")
     }
 
     /// B.2.1 and JFIF 1.02: SOI, then APP0 "JFIF\0"; the frame is baseline SOF0, Y at 2x2 and Cb, Cr at 1x1 (4:2:0).
@@ -116,6 +119,73 @@ import Foundation
         for quality in [30, 90] {
             let t = Self.tables(try JPEG.write(source, quality: quality))
             #expect(t == [Self.scaled(F.lumaQ, quality)] + [[Int]](repeating: Self.scaled(F.chromaQ, quality), count: 2), "quality \(quality)")
+        }
+    }
+
+    /// The entropy-coded bytes of a written file: the scan after the SOS header, before EOI.
+    static func entropy(_ data: Data) -> [UInt8] {
+        let scan = F.split(data).scan
+        guard scan.count >= 6 else { return [] }
+        let start = 2 + (Int(scan[2]) << 8 | Int(scan[3]))
+        return start <= scan.count - 2 ? Array(scan[start..<(scan.count - 2)]) : []
+    }
+
+    /// F.1.2.3 and F.1.2.2: seeded opaque noise at quality 100 codes 0xFF bytes, each followed by a stuffed
+    /// 0x00, and reopens close to the source; a lone (7, 7) coefficient, 62 zeros after the DC, needs ZRL codes
+    /// (run 16) before it and reopens as the same pattern.
+    @Test func noiseReopensAtHundred() throws {
+        var rng = SplitMix64(seed: 0x88)
+        let (width, height) = (32, 24)
+        let bytes = (0..<(width * height)).flatMap { _ in (0..<3).map { _ in UInt8.random(in: 0...255, using: &rng) } + [255] }
+        let source = try PixelBuffer(rgba8: bytes, width: width, height: height)
+        let data = try JPEG.write(source, quality: 100), coded = Self.entropy(data)
+        #expect(zip(coded, coded.dropFirst()).contains { $0 == (0xFF, 0x00) })
+        let back = try JPEG.read(data), out = try back.rgba8()
+        #expect(back.width == width && back.height == height && out.count == bytes.count)
+        // 4:2:0 halves chroma on noise, so the bound is on luma: within 3 levels per pixel on average.
+        var total = 0.0
+        for i in stride(from: 0, to: min(out.count, bytes.count), by: 4) {
+            let luma = { (b: [UInt8]) in 0.299 * Double(b[i]) + 0.587 * Double(b[i + 1]) + 0.114 * Double(b[i + 2]) }
+            total += abs(luma(bytes) - luma(out))
+        }
+        #expect(total / Double(width * height) <= 3, "mean luma error \(total / Double(width * height))")
+
+        // One MCU: the top left Y block is the (7, 7) basis function alone, the rest flat mid grey.
+        let t = JPEGDecoder.cosines, amplitude: Float = 200
+        let pattern = (0..<64).map { amplitude * t[($0 % 8) * 8 + 7] * t[($0 / 8) * 8 + 7] }
+        var e = JPEGEncoder(quality: 100)
+        e.block(pattern, 0)
+        for c in [0, 0, 0, 1, 2] { e.block([Float](repeating: 0, count: 64), c) }
+        e.bits.flush()
+        let image = try JPEG.read(Data(e.header(16, 16) + e.bits.bytes + [0xFF, 0xD9])), grey = try image.rgba8()
+        #expect(grey.count == 16 * 16 * 4)
+        for k in 0..<64 where grey.count == 16 * 16 * 4 {
+            let got = Float(grey[((k / 8) * 16 + k % 8) * 4]), want = 128 + pattern[k]
+            #expect(abs(got - want) <= 1.5, "pixel (\(k % 8), \(k / 8)): \(got), want \(want)")
+        }
+    }
+
+    /// F.1.2.3: a partial last byte is padded with 1-bits; an empty one adds nothing.
+    @Test func padsWithOnes() {
+        var w = JPEGBitWriter()
+        w.put(0b101, 3)
+        w.flush()
+        #expect(w.bytes == [0xBF])
+        w.flush()
+        #expect(w.bytes == [0xBF])
+    }
+
+    /// Alpha is un-premultiplied, then dropped: half-transparent mid grey reopens as opaque mid grey, and a fully
+    /// transparent pixel as black.
+    @Test func alphaDropped() throws {
+        let (width, height) = (16, 8)
+        let bytes = (0..<(width * height)).flatMap { (i: Int) -> [UInt8] in i % width < 8 ? [128, 128, 128, 128] : [200, 50, 90, 0] }
+        let out = try JPEG.read(JPEG.write(PixelBuffer(rgba8: bytes, width: width, height: height), quality: 100)).rgba8()
+        #expect(out.count == bytes.count)
+        for i in 0..<(width * height) where out.count == bytes.count {
+            let want: Int = i % width < 8 ? 128 : 0
+            for c in 0..<3 { #expect(abs(Int(out[i * 4 + c]) - want) <= 3, "pixel \(i), channel \(c): \(out[i * 4 + c])") }
+            #expect(out[i * 4 + 3] == 255)
         }
     }
 }
