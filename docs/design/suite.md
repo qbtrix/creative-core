@@ -51,7 +51,7 @@ Rules:
               builds on        verified by                        cloud worker can
   Core*       Linux + macOS    swift test, property/fuzz, golden  build, test, ship alone
   <App>Core   Linux + macOS    swift test, property/fuzz          build, test, ship alone
-  <App>Plat.  macOS only       unit tests on macos-26 runner      write blind, iterate on CI
+  <App>Plat.  macOS only       unit tests on xcode-27 runner      write blind, iterate on CI
   App shell   macOS only       xcodebuild, XCUITest, screenshots  write blind, iterate on CI
   Taste       n/a              maintainer                            nothing
 ```
@@ -60,7 +60,7 @@ Rules:
 - **Platform adapters are narrow.** Codecs go through ImageIO. GPU rendering uses Core Image and Metal, and text shaping uses Core Text. PhotoKit reads the Photos library, and Foundation Models runs the on-device model. Each adapter implements a protocol declared in a Linux-safe target, so the core tests it against a fake. Example: auto layout takes a `TextMeasurer` protocol, macOS backs it with Core Text, and tests use a fixed-width fake.
 - **CPU reference renderer = the oracle.** CoreRaster's compositor runs on Linux. The Metal renderer in `<App>Platform` gets snapshot-compared against it on macOS CI within a tolerance. Then a GPU bug shows up as a failing diff, not a taste call.
 - **Shells are thin.** A view reads document state and calls `engine.perform(command)`. Nothing else mutates the document. The rubric checks this, and a grep in `scripts/ci` fails on document assignment outside the engine.
-- **macOS CI per app repo.** Two jobs. `linux` runs `scripts/ci` in `swift:6.3.3-noble`, the same as creative-core. `macos` runs on `macos-26`, because Liquid Glass and Foundation Models need the macOS 26 SDK. creative-core is on `macos-15` today. The `macos` job runs `xcodegen`, `xcodebuild build test` and the UITests, then uploads the `.xcresult`. Standard runners are free for public repos. Workers push, read the failed check log with `gh run view --log-failed`, fix and push again.
+- **macOS CI per app repo.** Two jobs. `linux` runs `scripts/ci` in `swift:6.3.3-noble`, the same as creative-core. `macos` runs on GitHub's `xcode-27` image (Xcode 27, the same Xcode as the team's Macs), because Liquid Glass and Foundation Models need the macOS 26 SDK or later. creative-core uses the same image. The label comes from `vars.MACOS_RUNNER` when set, so a self-hosted Mac can replace it by changing one value. The `macos` job runs `xcodegen`, `xcodebuild build test` and the UITests, then uploads the `.xcresult`. Standard runners are free for public repos. Workers push, read the failed check log with `gh run view --log-failed`, fix and push again.
 - **What can't be verified anywhere but a human eye:** spacing, motion feel, glass legibility over real content, and whether a flow feels right. Those PRs never take the fast lane.
 
 ## 3. Interconnection (native first)
@@ -358,7 +358,7 @@ At pilot rates the shared and Flare rows land in about 1 to 2 hours and the app 
 
 - **Usage limits.** Cloud sessions share the subscription plan's 5-hour and weekly limits. Cloud adds machines, not tokens. Measure with `/usage` after Phase 1 before scaling Phase 2.
 - **macOS CI concurrency.** Standard runners are free on public repos, but an org gets only a handful of concurrent macOS jobs (about 5 on Free and Team; check the current limit). Five app repos share that pool, so shell PRs will queue. Keep journeys short and cancel superseded runs.
-- **Xcode drift.** The `macos-26` image's default Xcode moves. Pin it with `xcode-select` in CI. The floor is Swift 6.1, set by GRDB (L1): 7.10.0 is the first GRDB release that links against Ubuntu's SQLite, and it needs tools 6.1. The `macos-15` Xcode already ships 6.1.
+- **Xcode drift.** CI runs the `xcode-27` image, whose only Xcode is 27, so CI matches the team's Macs. When the image gains a second Xcode, pin it with `xcode-select`. The floor is Swift 6.1, set by GRDB (L1): 7.10.0 is the first GRDB release that links against Ubuntu's SQLite, and it needs tools 6.1.
 - **Hosted XCUITest may be blocked by TCC.** The fallback is the control port plus a self-hosted Mac mini.
 - **SwiftUI polish needs a human eye.** No gate catches spacing or motion feel. Budget maintainer review time, not agent time. It's the real bottleneck in Phase 2.
 - **CPU raster speed.** The Linux reference compositor is the oracle, not the product path. Interactive rendering is Metal in `<App>Platform`, so it has the slowest feedback loop.

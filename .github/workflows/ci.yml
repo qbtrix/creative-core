@@ -62,13 +62,17 @@ jobs:
       - run: swift --version
       - run: scripts/ci
 
+  # The macOS runner label lives in one place: the MACOS_RUNNER repo variable
+  # when set (a self-hosted runner later), else GitHub's xcode-27 image, whose
+  # default Xcode is 27, the same Xcode the team's Macs run. metal-pr.yml uses
+  # the same expression.
   macos:
     name: macOS
-    runs-on: macos-15
+    runs-on: ${{ vars.MACOS_RUNNER || 'xcode-27' }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - run: swift --version
+      - run: xcodebuild -version && swift --version
       - run: scripts/ci
 
   fast-lane-tests:
