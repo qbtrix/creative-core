@@ -46,7 +46,7 @@
     "file": "Sources/FlareCore/PathOps/PathBoolean.swift",
     "anchor": "if t > 0, t < 1 { cuts[k].append((t, end)) }",
     "replacement": "if t > 1, t < 1 { cuts[k].append((t, end)) }",
-    "filter": "PathBooleanFuzzTests"
+    "filter": "PathBooleanTests.partlySharedEdgeSplitsAtTheOtherEnds|PathBooleanFuzzTests"
   },
   {
     "note": "path boolean pair search checks each pair only in the last band",

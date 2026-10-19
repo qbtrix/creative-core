@@ -61,6 +61,19 @@ import Testing
         #expect(abs(try Self.area(.union, left, right) - 1) < 1e-12)
     }
 
+    @Test func partlySharedEdgeSplitsAtTheOtherEnds() throws {
+        // The edges at x = 10 overlap on y 5...10; a's straight-through vertex
+        // (10, 7) lies inside side's edge, which only the collinear split cuts.
+        let a = Path(polyline: [Point(x: 0, y: 0), Point(x: 10, y: 0), Point(x: 10, y: 7), Point(x: 10, y: 10),
+                                Point(x: 0, y: 10)], closed: true)
+        let side = Self.square(10, 5, 20, 15)
+        let union = try Path.combine(.union, a, side, rule: .nonZero, tolerance: 0.01)
+        #expect(try union.flattened(tolerance: 0.01).count == 1)
+        #expect(try Self.area(.union, a, side) == 200)
+        #expect(try Path.combine(.intersect, a, side, rule: .nonZero, tolerance: 0.01).elements.isEmpty)
+        #expect(try Self.area(.exclude, a, side) == 200)
+    }
+
     @Test func nonZeroDiffers() throws {
         // One path, two overlapping squares wound the same way: the overlap winds twice.
         let twice = Path(elements: Self.a.elements + Self.b.elements)
