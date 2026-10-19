@@ -77,3 +77,4 @@ utc	stage	event	ref	note
 2026-10-19T10:50:11Z	4	round-gate	7f81db8	round 5 CI PASS, mutation 40/40; panel wf_40faad79-81e
 2026-10-19T10:54:14Z	4	round-findings	7f81db8	round 5: 9 confirmed (1 major perf), 4 refuted; fixes wf_206056b3-8d3
 2026-10-19T11:13:13Z	4	heartbeat	wf_206056b3-8d3	round-5 fix batches r5-b1..b3 running
+2026-10-19T11:35:02Z	4	heartbeat	wf_206056b3-8d3	r5 fixers building, no PR yet
