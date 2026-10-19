@@ -1,5 +1,5 @@
 // ToneDabTests.swift: retouch-heal RH-5's acceptance, written first by RH-1
-// (docs/blueprints/core/features/retouch-heal.md). Disabled until RH-5 lands.
+// (docs/blueprints/core/features/retouch-heal.md), turned on by RH-5.
 import CoreRaster
 import Testing
 
@@ -32,24 +32,36 @@ private func chroma(_ p: RGBA) -> Float { max(p.r, p.g, p.b) - min(p.r, p.g, p.b
         #expect(try abs(centre(out, patch: 2).r - 0.95) <= tolerance)
     }
 
-    @Test(.disabled("waits on RH-5")) func midtonesOnly() throws {
+    @Test func midtonesOnly() throws {
         try Self.expectMidtonesOnly(try Self.patchesAfter { try $0.dodge($1, x: $2, y: $3, range: .midtones, exposure: 1) },
                                     direction: 1)
     }
 
-    @Test(.disabled("waits on RH-5")) func burnMirrors() throws {
+    @Test func burnMirrors() throws {
         try Self.expectMidtonesOnly(try Self.patchesAfter { try $0.burn($1, x: $2, y: $3, range: .midtones, exposure: 1) },
                                     direction: -1)
     }
 
-    @Test(.disabled("waits on RH-5")) func spongeRaisesAndGreys() throws {
+    /// Shadows and highlights mirror the midtone window: each moves only its own patch.
+    @Test func shadowsAndHighlightsOnly() throws {
+        let lit = try Self.patchesAfter { try $0.dodge($1, x: $2, y: $3, range: .highlights, exposure: 1) }
+        #expect(try Self.centre(lit, patch: 2).r - 0.95 > Self.tolerance)
+        #expect(try abs(Self.centre(lit, patch: 0).r - 0.1) <= Self.tolerance)
+        #expect(try abs(Self.centre(lit, patch: 1).r - 0.5) <= Self.tolerance)
+        let dark = try Self.patchesAfter { try $0.burn($1, x: $2, y: $3, range: .shadows, exposure: 1) }
+        #expect(try 0.1 - Self.centre(dark, patch: 0).r > Self.tolerance)
+        #expect(try abs(Self.centre(dark, patch: 1).r - 0.5) <= Self.tolerance)
+        #expect(try abs(Self.centre(dark, patch: 2).r - 0.95) <= Self.tolerance)
+    }
+
+    @Test func spongeRaisesAndGreys() throws {
         let richer = try Self.patchesAfter { try $0.sponge($1, x: $2, y: $3, amount: 1) }
         #expect(try chroma(Self.centre(richer, patch: 3)) > chroma(RetouchFixtures.tint) + Self.tolerance)
         let grey = try Self.patchesAfter { try $0.sponge($1, x: $2, y: $3, amount: -1) }
         #expect(try chroma(Self.centre(grey, patch: 3)) <= Self.tolerance)
     }
 
-    @Test(.disabled("waits on RH-5")) func dabCoverageWeights() throws {
+    @Test func dabCoverageWeights() throws {
         let grey = RGBA(r: 0.5, g: 0.5, b: 0.5, a: 1)
         var buffer = try PixelBuffer(width: 20, height: 20, fill: grey)
         try buffer.dodge(try RetouchFixtures.roundDab(radius: 10, hardness: 0.5), x: 0, y: 0, range: .midtones, exposure: 1)
@@ -58,7 +70,7 @@ private func chroma(_ p: RGBA) -> Float { max(p.r, p.g, p.b) - min(p.r, p.g, p.b
         #expect(try buffer.pixel(x: 0, y: 0) == grey)
     }
 
-    @Test(.disabled("waits on RH-5")) func alphaNeverChanges() throws {
+    @Test func alphaNeverChanges() throws {
         let input = try PixelBuffer(width: 16, height: 16, fill: RGBA(r: 0.3, g: 0.2, b: 0.05, a: 0.4))
         let dab = try RetouchFixtures.roundDab(radius: 8, hardness: 0.6)
         for op: DabOp in [{ try $0.dodge($1, x: $2, y: $3, range: .shadows, exposure: 0.8) },
@@ -72,7 +84,7 @@ private func chroma(_ p: RGBA) -> Float { max(p.r, p.g, p.b) - min(p.r, p.g, p.b
         }
     }
 
-    @Test(.disabled("waits on RH-5")) func zeroStrengthIsIdentity() throws {
+    @Test func zeroStrengthIsIdentity() throws {
         let input = try RetouchFixtures.tonePatches(side: Self.side)
         for range in [TonalRange.shadows, .midtones, .highlights] {
             #expect(try Self.patchesAfter { try $0.dodge($1, x: $2, y: $3, range: range, exposure: 0) } == input)
@@ -81,7 +93,7 @@ private func chroma(_ p: RGBA) -> Float { max(p.r, p.g, p.b) - min(p.r, p.g, p.b
         #expect(try Self.patchesAfter { try $0.sponge($1, x: $2, y: $3, amount: 0) } == input)
     }
 
-    @Test(.disabled("waits on RH-5")) func outsideBoundsUntouched() throws {
+    @Test func outsideBoundsUntouched() throws {
         let photo = try RetouchFixtures.spottedPhoto(width: 40, height: 30, seed: 11)
         var out = photo.clean
         let dab = try RetouchFixtures.roundDab(radius: 6)
@@ -92,7 +104,7 @@ private func chroma(_ p: RGBA) -> Float { max(p.r, p.g, p.b) - min(p.r, p.g, p.b
         #expect(out != photo.clean)
     }
 
-    @Test(.disabled("waits on RH-5")) func fuzzedStrengthsThrowOrDab() throws {
+    @Test func fuzzedStrengthsThrowOrDab() throws {
         var rng = SplitMix64(seed: 0xD0D6)
         let strengths: [Float] = [.nan, .infinity, -.infinity, -1.5, -1, -0.1, 0, 0.5, 1, 1.1]
         let positions = [Int.min, -20, -3, 0, 5, 30, Int.max]

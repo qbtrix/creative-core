@@ -21,11 +21,3 @@ import Testing
     #expect(throws: RasterError.self) { try buffer.healed(offset: (dx: 1, dy: 0), through: mask) }
     #expect(throws: RasterError.self) { try buffer.filledFromSurroundings(mask, seed: 1) }
 }
-
-@Test func dabStubsThrowRasterError() throws {
-    var buffer = try PixelBuffer(width: 4, height: 4)
-    let dab = try Mask(width: 2, height: 2, fill: 1)
-    #expect(throws: RasterError.self) { try buffer.dodge(dab, x: 0, y: 0, range: .midtones, exposure: 0.5) }
-    #expect(throws: RasterError.self) { try buffer.burn(dab, x: 0, y: 0, range: .shadows, exposure: 0.5) }
-    #expect(throws: RasterError.self) { try buffer.sponge(dab, x: 0, y: 0, amount: 0.5) }
-}

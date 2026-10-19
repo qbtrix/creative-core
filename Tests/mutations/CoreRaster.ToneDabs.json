@@ -1,0 +1,16 @@
+[
+  {
+    "note": "tone dab midtone weight inverted to the packet's |2l - 1| shape, so a midtone dodge lifts shadows and highlights instead of luma 0.5, caught by ToneDabTests.midtonesOnly",
+    "file": "Sources/CoreRaster/Heal/ToneDabs.swift",
+    "anchor": "case .midtones: return PixelBuffer.smoothstep(0.2, 0.4, l) * (1 - PixelBuffer.smoothstep(0.6, 0.8, l))",
+    "replacement": "case .midtones: return 1 - PixelBuffer.smoothstep(0.2, 0.4, l) * (1 - PixelBuffer.smoothstep(0.6, 0.8, l))",
+    "filter": "ToneDabTests"
+  },
+  {
+    "note": "tone dab coverage ignored, so a feathered dab's edge lifts as much as its centre, caught by ToneDabTests.dabCoverageWeights",
+    "file": "Sources/CoreRaster/Heal/ToneDabs.swift",
+    "anchor": "let factor = 1 + gain * coverage * range.weight(luma: Self.luma(p) / p.a)",
+    "replacement": "let factor = 1 + gain * range.weight(luma: Self.luma(p) / p.a)",
+    "filter": "ToneDabTests"
+  }
+]
