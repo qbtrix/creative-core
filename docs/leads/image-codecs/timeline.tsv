@@ -83,3 +83,4 @@ utc	stage	event	ref	note
 2026-10-19T16:54:13Z	5	gap-filed	#728	PNG encode 12MP level 6 release median 14.7 s vs 2.5 s budget (p2)
 2026-10-19T17:06:16Z	5	gate	a77ab8c3	scripts/ci rerun on dev a77ab8c3: CI: PASS (1957 parallel + 36 budget); the r6 single failure on 88ed878 did not reproduce (wall-clock under load)
 2026-10-19T17:16:08Z	5	waiting	wave C	final-PR builders running gates/mutation under the shared lock; no PR open yet
+2026-10-19T17:38:52Z	5	waiting	wave C	feature-done builders: gates and mutation plans queued behind the shared gate lock; FX-10 branch pushed at 77f9ea05
