@@ -19,5 +19,26 @@
     "anchor": "PSD.linear[$0 * 255 / top]",
     "replacement": "Float($0) / Float(top)",
     "filter": "PNGReadTests"
+  },
+  {
+    "note": "an Adam7 pass's first row takes the previous pass's last row as its prior row, caught by PNGReadTests.adam7",
+    "file": "Sources/CoreRaster/Codecs/PNGRead.swift",
+    "anchor": "prior: row > 0 ? at - rowBytes : -1",
+    "replacement": "prior: at > 0 ? at - rowBytes : -1",
+    "filter": "PNGReadTests"
+  },
+  {
+    "note": "inflate is no longer capped at the bytes IHDR implies, so a bloated IDAT expands fully, caught by PNGReadTests.refusesHuge",
+    "file": "Sources/CoreRaster/Codecs/PNGRead.swift",
+    "anchor": "Inflate.zlib(Data(stream), limit: total)",
+    "replacement": "Inflate.zlib(Data(stream), limit: Int.max)",
+    "filter": "PNGReadTests"
+  },
+  {
+    "note": "a PNG cut off before IEND no longer says IEND is missing, caught by PNGReadTests.damagedMessagesNamePNG",
+    "file": "Sources/CoreRaster/Codecs/PNGRead.swift",
+    "anchor": "guard !reader.isAtEnd else { throw damaged(\"file ends before IEND\") }",
+    "replacement": "",
+    "filter": "PNGReadTests"
   }
 ]
