@@ -2,9 +2,9 @@
 
 Issue: #432 · Packet: docs/blueprints/core/features/tone-pack.md
 Run: act-1a150bfbcf7-sfwy · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
-Stage: 3 wave 5 + 4 round 2 (gate on 7d8af79)
+Stage: 3 wave 6 (TP-8) + 4 round 2 fixes merged
 Base: 4feaaf9fac3cc050901f8b459a0908515a927f54
-Next: TP-7 building; round 2 gate+mutate running on 7d8af79, critic panel after
+Next: TP-8 building (wave 6); round 3 of TP-mix/TP-map after; TP-cpu merged-done once TP-8 is in a green dev Linux run
 
 Line lead for #434, #433 and #432 (rule 19); one wave plan across the three
 features, bookkeeping per feature. Packet v3 (has a Slices table).
@@ -20,7 +20,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 | TP-5 | 3 | TP-map | `gradientMap`, LUT apply, `CubeLUT.parse` + fuzz, `posterized`, `thresholded`, `inverted`; turns on `ColorMapTests`, `ColorLUTTests` | `Sources/CoreRaster/Tone/ColorMap.swift`, `Sources/CoreRaster/Tone/CubeLUT.swift`, both tests, `Tests/mutations/CoreRaster.ColorMap.json`, `Tests/mutations/CoreRaster.CubeLUT.json` | `ColorMapTests`, `ColorLUTTests` | 5 (packet) | #585 | merged |
 | TP-6 | 3 | TP-map | `AutoTone.suggest`; turns on `AutoToneTests` | `Sources/CoreRaster/Tone/AutoTone.swift`, its tests, `Tests/mutations/CoreRaster.AutoTone.json` | `AutoToneTests` | 2 (packet) | #600 | merged |
 | TP-7 | 5 | TP-cpu | `CPUBackend+Color.swift` body; turns on `CPUColorTests` | `Sources/CoreRender/CPU/CPUBackend+Color.swift`, `Tests/CoreRenderTests/CPUColorTests.swift`, `Tests/mutations/CoreRenderCPUColor.json` | `CPUColorTests` | 2 (packet) | #609 | merged |
-| TP-8 | 6 | TP-cpu | `Samples+Color.swift` and CPU goldens | `Sources/CoreRender/Parity/Samples+Color.swift`, `Tests/CoreRenderTests/Golden/color/` | `CPUGoldenTests` | none: goldens | | planned |
+| TP-8 | 6 | TP-cpu | `Samples+Color.swift` and CPU goldens | `Sources/CoreRender/Parity/Samples+Color.swift`, `Tests/CoreRenderTests/Golden/color/` | `CPUGoldenTests` | none: goldens | | building |
 | TP-9 | 7 | TP-z | KJ-TP walk; `ToneBudgetTests` (release, `.serialized`, reported) | `Tests/CoreRenderTests/ToneWalkTests.swift`, `Tests/CoreRasterTests/ToneBudgetTests.swift` | `ToneWalkTests.walk` | none | | planned |
 | TP-10 | 8 | TP-z | Packet status line says built; `feature-done` | `docs/blueprints/core/features/tone-pack.md` | – | none | | planned |
 
@@ -54,7 +54,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 | slice | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
 |---|---|---|---|---|---|---|---|---|---|
 | TP-a, TP-mix | 1 | 5ea5ae5 | PASS (try 5, budget retries under load) | 70/70 | - | clarity, contract, tests, robustness | 11 (7 major: HSLShift hue unit; hueSaturation parity claim; preserveLuminosity clamp breaks luma; hsl, vibrance, colorBalance, channelMixer, blackAndWhite mutants escape; 4 minor), 0 refuted | #596 (r1-b1, merged; 8/8), #597 (r1-b2, merged; 10/10) | no |
-| TP-map | 2 | 7d8af79 | PASS | 66/66 | - | clarity, contract, tests, robustness | 10 (3 major: AutoTone public docs; AutoTone levels untested; gradientMap untested; 7 minor), 0 refuted | b1 #617 merged (28b5528), b2 #628 merged (9385de9), b4 #630 merged (9cd326b), b3 being finished by a new fixer | no |
+| TP-map | 2 | 7d8af79 | PASS | 66/66 | - | clarity, contract, tests, robustness | 10 (3 major: AutoTone public docs; AutoTone levels untested; gradientMap untested; 7 minor), 0 refuted | b1 #617 merged (28b5528), b2 #628 merged (9385de9), b4 #630 merged (9cd326b), b3 #632 merged (60faf3a); round 2 fixes all merged | no |
 
 ## Decisions
 - TP-5 (#585): map ops on encoded values via `mappingStraight`; `inverted` is a − c on linear premultiplied (exact double inversion); `.cube` parse per packet, size 2...65, domain exactly 0…1; blue-fastest mutant moved to the apply stride (parser keeps file order); ColorMix helpers made internal for reuse.
