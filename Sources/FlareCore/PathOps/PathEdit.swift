@@ -59,9 +59,18 @@ extension Path {
     public func nearest(to p: Point, tolerance: Double) throws -> PathLocation? {
         guard tolerance.isFinite, tolerance > 0 else { throw GeometryError.invalidTolerance }
         guard p.isFinite else { throw GeometryError.nonFinite }
+        let cubics = zip(elements, pens()).map { e, pen in pen.pen.flatMap { Self.cubic(e, from: $0, start: pen.start) } }
+        // A distance some element reaches (the one whose end lies nearest `p`)
+        // or the best so far: an element whose curve stays farther cannot win
+        // or tie, so it is skipped and the result is that of searching them all.
+        let ends = cubics.map { c in c.map { norm($0.3.x - p.x, $0.3.y - p.y) } ?? .infinity }
+        var reach = Double.nan
+        if let j = ends.indices.min(by: { ends[$0] < ends[$1] }), let c = cubics[j] {
+            reach = Self.closest(c, to: p, tolerance: tolerance).2
+        }
         var best: PathLocation?
-        for (i, (element, pen)) in zip(elements, pens()).enumerated() {
-            guard let from = pen.pen, let c = Self.cubic(element, from: from, start: pen.start) else { continue }
+        for (i, c) in cubics.enumerated() {
+            guard let c, !Self.beyond(c, p, Swift.min(best?.distance ?? .infinity, reach), depth: 8) else { continue }
             let (t, point, distance) = Self.closest(c, to: p, tolerance: tolerance)
             if distance < best?.distance ?? .infinity { best = PathLocation(element: i, t: t, point: point, distance: distance) }
         }
@@ -188,6 +197,23 @@ extension Path {
         case .quad(let c, let to): return (from, lerp(from, c, 2.0 / 3), lerp(to, c, 2.0 / 3), to)
         case .cubic(let c1, let c2, let to): return (from, c1, c2, to)
         }
+    }
+
+    /// Whether all of cubic `c` is farther than `reach` from `p`: its control box (less a
+    /// rounding margin) is, or both de Casteljau halves' are, down to `depth` splits. An
+    /// end within `reach`, a non-finite input or a NaN `reach` answers false.
+    static func beyond(_ c: (Point, Point, Point, Point), _ p: Point, _ reach: Double, depth: Int) -> Bool {
+        let xs = (min(c.0.x, c.1.x, c.2.x, c.3.x), max(c.0.x, c.1.x, c.2.x, c.3.x))
+        let ys = (min(c.0.y, c.1.y, c.2.y, c.3.y), max(c.0.y, c.1.y, c.2.y, c.3.y))
+        let margin = 1e-9 * (1 + max(-xs.0, xs.1, -ys.0, ys.1, abs(p.x), abs(p.y)))
+        let gap = norm(max(xs.0 - p.x, p.x - xs.1, 0), max(ys.0 - p.y, p.y - ys.1, 0)) - margin
+        guard gap.isFinite, reach.isFinite else { return false }
+        if gap > reach { return true }
+        guard depth > 0, norm(c.3.x - p.x, c.3.y - p.y) > reach else { return false }
+        let p01 = lerp(c.0, c.1, 0.5), p12 = lerp(c.1, c.2, 0.5), p23 = lerp(c.2, c.3, 0.5)
+        let p012 = lerp(p01, p12, 0.5), p123 = lerp(p12, p23, 0.5), mid = lerp(p012, p123, 0.5)
+        return beyond((c.0, p01, p012, mid), p, reach, depth: depth - 1)
+            && beyond((mid, p123, p23, c.3), p, reach, depth: depth - 1)
     }
 
     /// The closest point of cubic `c` to `p`: the nearest of the equal t steps
