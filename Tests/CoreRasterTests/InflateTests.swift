@@ -40,6 +40,20 @@ import Foundation
     static let repeatPast: [UInt8] = [0x05, 0xC0, 0x81, 0x00, 0x00, 0x00, 0x00, 0x00, 0x90, 0xFF, 0x7F]
     /// The same header, then 18 + 127 and 18 + 109: all 258 lengths 0, so symbol 256 (end of block) has no code.
     static let noEndOfBlock: [UInt8] = [0x05, 0xC0, 0x81, 0x00, 0x00, 0x00, 0x00, 0x00, 0x90, 0xFF, 0x6D, 0x00]
+    /// Dynamic block: HLIT 0, HDIST 0, HCLEN 18; code-length code 0 = 3 bits, 1...12, 17 and 18 = 4 bits.
+    /// Literal/length lengths 'a' 1, 'b' 2, ... 'l' 12, end of block 12 (a complete code); the one distance
+    /// length 0. Data: 'l' (12 bits), 'k' (11 bits), 'a', 'b', 'l', end (12 bits): past the 10-bit fast table,
+    /// so 'k', 'l' and the end decode through the bit-by-bit walk. Checked against zlib.
+    static let longCodeBlock: [UInt8] = [0x05, 0xC0, 0x41, 0x8E, 0x24, 0x49, 0x92, 0x04, 0xC1, 0xB7, 0x12, 0x8B, 0x9A,
+                                         0x47, 0x56, 0xCF, 0xFE, 0xFF, 0xBC, 0xF8, 0xBF, 0xFF, 0xE9, 0xFF, 0xFE, 0x1F]
+    static let longCodeOut = Array("lkabl".utf8)
+    /// Dynamic block: HLIT 1, HDIST 0, HCLEN 18; code-length code 1 = 1 bit, 2 and 18 = 2 bits. Literal/length
+    /// lengths 'a' 1, end 2, 257 2; one distance code, length 1 (incomplete, which 3.2.7 allows for a single
+    /// code). Data: 'a', 257 (length 3) distance 1, end. Checked against zlib.
+    static let oneDistanceCode: [UInt8] = [0x0D, 0xC0, 0x01, 0x01, 0x00, 0x00, 0x00, 0x80, 0x90, 0xAD, 0xFE, 0x9F, 0x28, 0x16]
+    static let oneDistanceOut = Array("aaaa".utf8)
+    /// Fixed block: 'a', length code 257 (7 bits 0000001), then distance code 30 (5 bits 11110), which 3.2.6 reserves.
+    static let fixedDist30: [UInt8] = [0x4B, 0x04, 0x3E]
 
     func raw(_ bytes: [UInt8], limit: Int = 1 << 20) throws -> [UInt8] { [UInt8](try Inflate.raw(Data(bytes), limit: limit)) }
     func zlib(_ bytes: [UInt8], limit: Int = 1 << 20) throws -> [UInt8] { [UInt8](try Inflate.zlib(Data(bytes), limit: limit)) }
@@ -67,6 +81,16 @@ import Foundation
         #expect(try zlib(F.zlib(Self.dynamic, of: Self.dynamicOut)) == Self.dynamicOut)
     }
 
+    /// Codes of 11 and 12 bits miss the 10-bit fast table and decode through the canonical walk.
+    @Test func longCodes() throws {
+        #expect(try raw(Self.longCodeBlock) == Self.longCodeOut)
+    }
+
+    /// A dynamic block whose only distance code is one bit long (incomplete, but allowed) decodes.
+    @Test func singleDistanceCode() throws {
+        #expect(try raw(Self.oneDistanceCode) == Self.oneDistanceOut)
+    }
+
     @Test func adlerChecked() throws {
         var bytes = F.zlib(Self.dynamic, of: Self.dynamicOut)
         bytes[bytes.count - 1] ^= 0x01
@@ -82,6 +106,15 @@ import Foundation
             ("empty", []),
         ]
         for (name, bytes) in zlibCases { #expect(F.thrown { try zlib(bytes) } == "damaged", "\(name)") }
+        let zlibNamed: [(String, [UInt8], String)] = [
+            ("method 9", [0x79, 0x18], "method 9, not 8"), ("window 2^16", [0x88, 0x1C], "over 32 KiB"),
+            ("check bits", [0x78, 0x02], "check bits"), ("preset dictionary", [0x78, 0x20], "dictionary"),
+        ]
+        for (name, header, text) in zlibNamed {
+            var message = "returned"
+            do { _ = try zlib(header + a.dropFirst(2)) } catch { message = String(describing: error) }
+            #expect(message.hasPrefix("damaged") && message.contains(text), "\(name): \(message)")
+        }
         let rawCases: [(String, [UInt8])] = [
             ("distance 2 after one byte", [0x4B, 0x04, 0x42, 0x00]),
             ("over-subscribed code-length code", Array(Self.dynamic.prefix(8)) + [0x10] + Self.dynamic.dropFirst(9)),
@@ -92,6 +125,7 @@ import Foundation
         for (name, bytes) in rawCases { #expect(F.thrown { try raw(bytes) } == "damaged", "\(name)") }
         let named: [(String, [UInt8], String)] = [
             ("length code 286 in a fixed block", Self.fixed286, "length code 286"),
+            ("distance code 30 in a fixed block", Self.fixedDist30, "distance code 30"),
             ("HLIT 30", Self.hlit30, "HLIT or HDIST"), ("HDIST 30", Self.hdist30, "HLIT or HDIST"),
             ("lengths repeat past the codes", Self.repeatPast, "repeat past"),
             ("no end-of-block code", Self.noEndOfBlock, "no end-of-block"),
