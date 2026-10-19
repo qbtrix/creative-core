@@ -2,7 +2,7 @@
 // quality 90 reopens within a mean of 3/255, qualities 1...100 only, SOI then
 // the JFIF APP0, a baseline 4:2:0 frame, the Annex K Huffman tables, and the
 // K.1 / K.2 quantization tables scaled by quality, luma's on the Y component.
-// Written files are parsed with JPEGFixtures.split. Disabled until IC-8.
+// Written files are parsed with JPEGFixtures.split.
 @testable import CoreRaster
 import CoreColor
 import Testing
@@ -47,7 +47,7 @@ import Foundation
         return table.map { min(max(($0 * scale + 50) / 100, 1), 255) }
     }
 
-    @Test(.disabled("waits on IC-8")) func qualityNinetyReopens() throws {
+    @Test func qualityNinetyReopens() throws {
         for (seed, width, height) in [(UInt64(0x81), 37, 29), (0x82, 64, 48)] {
             let source = try Self.gradient(seed, width, height), back = try JPEG.read(JPEG.write(source, quality: 90))
             #expect(back.width == width && back.height == height)
@@ -61,7 +61,7 @@ import Foundation
         }
     }
 
-    @Test(.disabled("waits on IC-8")) func qualityRange() throws {
+    @Test func qualityRange() throws {
         let source = try Self.gradient(0x83, 17, 9)
         for quality in [1, 100] { #expect(try JPEG.read(JPEG.write(source, quality: quality)).width == 17, "quality \(quality)") }
         for quality in [0, 101, -1, Int.max] {
@@ -71,7 +71,7 @@ import Foundation
     }
 
     /// B.2.1 and JFIF 1.02: SOI, then APP0 "JFIF\0"; the frame is baseline SOF0, Y at 2x2 and Cb, Cr at 1x1 (4:2:0).
-    @Test(.disabled("waits on IC-8")) func startsWithSOIAndJFIF() throws {
+    @Test func startsWithSOIAndJFIF() throws {
         let data = try JPEG.write(Self.gradient(0x84, 23, 15))
         #expect(Array(data.prefix(4)) == [0xFF, 0xD8, 0xFF, 0xE0] && Array(data.dropFirst(6).prefix(5)) == Array("JFIF".utf8) + [0])
         #expect(Array(data.suffix(2)) == [0xFF, 0xD9])
@@ -84,7 +84,7 @@ import Foundation
     }
 
     /// The DHT tables (B.2.4.2) are K.3 to K.6: luma DC and AC as table 0, chroma as table 1.
-    @Test(.disabled("waits on IC-8")) func annexKHuffmanTables() throws {
+    @Test func annexKHuffmanTables() throws {
         var found: [Int: [Int]] = [:]
         for body in F.split(try JPEG.write(Self.gradient(0x85, 16, 16))).segments.filter({ $0.marker == 0xC4 }).map(\.body) {
             var at = 0
@@ -100,7 +100,7 @@ import Foundation
 
     /// Quality 50 writes K.1 and K.2 as printed, 100 all ones, and the others the scaling above: an inverted
     /// scale writes coarse tables at high quality.
-    @Test(.disabled("waits on IC-8")) func qualityScale() throws {
+    @Test func qualityScale() throws {
         let source = try Self.gradient(0x86, 16, 16)
         for quality in [1, 10, 25, 50, 75, 90, 100] {
             let t = Self.tables(try JPEG.write(source, quality: quality))
@@ -111,7 +111,7 @@ import Foundation
     }
 
     /// The Y component (SOF component 1) names the table holding scaled K.1; Cb and Cr name scaled K.2.
-    @Test(.disabled("waits on IC-8")) func lumaTables() throws {
+    @Test func lumaTables() throws {
         let source = try Self.gradient(0x87, 16, 16)
         for quality in [30, 90] {
             let t = Self.tables(try JPEG.write(source, quality: quality))

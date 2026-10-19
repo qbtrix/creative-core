@@ -58,14 +58,6 @@ public enum JPEG {
         guard !d.coefficients.isEmpty else { throw CodecError.damaged("no scan") }
         return try d.pixels()
     }
-
-    /// `buffer` as a baseline JFIF: alpha dropped, 4:2:0 chroma, one scan, the
-    /// Annex K tables scaled by `quality` (1...100, higher keeps more detail).
-    /// Throws `unsupported` for a quality outside 1...100, `tooLarge` for a
-    /// side over `maxSide`. Until IC-8 it throws `unsupported`.
-    public static func write(_ buffer: PixelBuffer, quality: Int = 90) throws -> Data {
-        throw CodecError.unsupported("JPEG.write waits on IC-8")
-    }
 }
 
 /// A frame component (B.2.2): the blocks a scan of it alone codes (A.2.2) and its stored `stride` x `rows` MCU grid.
