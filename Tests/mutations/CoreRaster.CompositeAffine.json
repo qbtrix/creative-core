@@ -1,0 +1,16 @@
+[
+  {
+    "note": "the bounds take two corners only, missing a rotated layer's other corners, caught by CompositeAffineTests.rotatedBoundsCoverCorners",
+    "file": "Sources/CoreRaster/Compositing/CompositeAffine.swift",
+    "anchor": "let xs = [tx, a * w + tx, c * h + tx, a * w + c * h + tx]",
+    "replacement": "let xs = [tx, a * w + c * h + tx]",
+    "filter": "CompositeAffineTests"
+  },
+  {
+    "note": "opacity is applied twice, once to the resampled piece and once in the blend, caught by CompositeAffineTests.equalsTransformThenComposite",
+    "file": "Sources/CoreRaster/Compositing/CompositeAffine.swift",
+    "anchor": "try composite(piece, x: x0, y: y0, mode: mode, opacity: opacity)",
+    "replacement": "try composite(piece, x: x0, y: y0, mode: mode, opacity: opacity * opacity)",
+    "filter": "CompositeAffineTests"
+  }
+]
