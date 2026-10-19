@@ -105,27 +105,37 @@ extension JPEGDecoder {
         return out
     }
 
-    /// A sequential scan (A.2) of MCUs, or one component's own blocks; every `restart` units the DC predictions are 0.
+    /// A sequential scan (A.2); every `restart` units the DC predictions are 0.
     mutating func baselineScan(_ scan: JPEGScan, _ intervals: [[UInt8]]) throws {
-        guard let f = frame else { return }
-        let single = scan.parts.count == 1, first = f.components[scan.parts[0].index]
+        var pred = [Int32](repeating: 0, count: scan.parts.count)
+        try walk(scan, intervals, restart: { pred = pred.map { _ in 0 } }) { bits, j, store, base in
+            guard let dc = scan.parts[j].dc, let ac = scan.parts[j].ac else { throw CodecError.damaged("no DHT for the scan") }
+            try bits.block(dc, ac, &pred[j], &store, base)
+        }
+    }
+
+    /// A scan's blocks in coding order (A.2): its MCUs, or one component's own blocks, each passed as the bits, the scan
+    /// part, that component's store and the block's offset in it; `reset` runs at each restart interval's start.
+    mutating func walk(_ scan: JPEGScan, _ intervals: [[UInt8]], restart reset: () -> Void,
+                       _ block: (inout JPEGBits, Int, inout [Int32], Int) throws -> Void) throws {
+        guard let f = frame, let lead = scan.parts.first else { return }
+        let single = scan.parts.count == 1, first = f.components[lead.index]
         let units = single ? first.blocksX * first.blocksY : f.mcusX * f.mcusY
-        var pred = [Int32](repeating: 0, count: scan.parts.count), bits = JPEGBits(bytes: []), interval = 0
+        var bits = JPEGBits(bytes: []), interval = 0
         for m in 0..<units {
             if m == 0 || (restart > 0 && m % restart == 0) {
                 guard interval < intervals.count else { throw CodecError.damaged("restart interval \(interval) missing") }
                 bits = JPEGBits(bytes: intervals[interval])
                 interval += 1
-                pred = pred.map { _ in 0 }
+                reset()
             }
             for (j, part) in scan.parts.enumerated() {
-                guard let dc = part.dc, let ac = part.ac else { throw CodecError.damaged("no DHT for the scan") }
                 let c = f.components[part.index]
                 let count = single ? 1 : c.h * c.v
                 let x0 = single ? m % c.blocksX : m % f.mcusX * c.h, y0 = single ? m / c.blocksX : m / f.mcusX * c.v
                 for k in 0..<count {
                     let base = ((y0 + k / c.h) * c.stride + x0 + k % c.h) * 64
-                    try bits.block(dc, ac, &pred[j], &coefficients[part.index], base)
+                    try block(&bits, j, &coefficients[part.index], base)
                 }
             }
             guard !bits.overrun else { throw CodecError.damaged("scan ends at MCU \(m)") }

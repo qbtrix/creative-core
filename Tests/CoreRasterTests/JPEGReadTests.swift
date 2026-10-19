@@ -4,7 +4,7 @@
 // 4:4:4, 4:2:2 and 4:2:0, the zigzag order, restart intervals, the EXIF
 // orientation reported but not applied, and unsupported, oversized or
 // damaged files refused; progressive codings (Annex G) read as their baseline
-// ones do. The progressive cases are disabled until IC-7.
+// ones do, and progressive scans out of Annex G's order or limits refused.
 @testable import CoreRaster
 import CoreColor
 import Testing
@@ -116,6 +116,7 @@ import Foundation
             }
         }
         #expect(PNGFixtures.thrown { try JPEG.read(F.stub(F.Frame(width: JPEG.maxSide, height: 1, block: F.seeded(0)))) } == "damaged")
+        #expect(PNGFixtures.thrown { try JPEG.read(F.stub(F.Frame(width: JPEG.maxSide, height: 8, block: F.seeded(0)), sof: 0xC2)) } == "damaged")
     }
 
     @Test func damagedThrows() throws {
@@ -156,7 +157,7 @@ import Foundation
         try check(f, data, note)
     }
 
-    @Test(.disabled("waits on IC-7")) func progressiveMatchesBaseline() throws {
+    @Test func progressiveMatchesBaseline() throws {
         try sameAsBaseline(F.Frame(width: 21, height: 9, block: F.seeded(0x91)), "grey")
         for (i, sampling) in Self.samplings.enumerated() {
             try sameAsBaseline(F.Frame(width: 37, height: 21, sampling: sampling, block: F.seeded(0x92 + UInt64(i))), "\(sampling[0].h)x\(sampling[0].v)")
@@ -165,7 +166,7 @@ import Foundation
 
     /// Luma AC at Al 1 then refined (G.1.2.3): the refinement carries every low bit and every ±1, so skipping it is
     /// levels off. Zigzag 2...17 are 16 zero-history zeros before a refined coefficient, which takes a ZRL first.
-    @Test(.disabled("waits on IC-7")) func acRefinement() throws {
+    @Test func acRefinement() throws {
         let flat = [Int](repeating: 16, count: 64)
         let f = F.Frame(width: 16, height: 16, tables: [flat, flat], block: { _, x, y in
             var q = [Int](repeating: 0, count: 64)
@@ -173,5 +174,29 @@ import Foundation
             return q
         })
         try sameAsBaseline(f, "refined")
+    }
+
+    /// B.2.3 and G.1.1.1 on an 8 x 8 grey SOF2: DC first, its refinement and an AC band (one EOB) decode; each bad scan
+    /// after the DC first scan (or first, for AC before DC) is damaged.
+    @Test func progressiveScanChecks() throws {
+        let f = F.Frame(width: 8, height: 8, block: F.seeded(0x93)), zeros = [UInt8](repeating: 0, count: 8)
+        let head = F.header(f, sof: 0xC2, precision: 8, restart: 0, orientation: nil, littleEndian: false)
+        let dc = F.sos([0], 0, 0, 0, 1) + zeros
+        func read(_ scans: [UInt8]...) -> String { PNGFixtures.thrown { try JPEG.read(Data(head + scans.joined() + [0xFF, 0xD9])) } }
+        #expect(read(dc, F.sos([0], 0, 0, 1, 0) + zeros, F.sos([0], 1, 63, 0, 0) + [0xAF]) == "returned")
+        let bad: [(String, [UInt8])] = [
+            ("DC band 0...5", F.sos([0], 0, 5, 0, 0)), ("band 5...3", F.sos([0], 5, 3, 0, 0)), ("band past 63", F.sos([0], 1, 64, 0, 0)),
+            ("Al 14", F.sos([0], 0, 0, 0, 14)), ("Ah 2 after Al 1", F.sos([0], 0, 0, 2, 1)), ("DC coded twice", F.sos([0], 0, 0, 0, 1)),
+            ("refinement of an uncoded band", F.sos([0], 1, 63, 1, 0)),
+        ]
+        for (name, scan) in bad { #expect(read(dc, scan + zeros) == "damaged", "\(name)") }
+        #expect(read(F.sos([0], 1, 63, 0, 0) + zeros) == "damaged", "AC before DC")
+    }
+
+    /// Seeded mutations of progressive codings throw a CodecError or decode, never trap or hang.
+    @Test func progressiveMutationsThrowOrDecode() {
+        let seeds = [F.progressive(F.Frame(width: 19, height: 9, block: F.seeded(0x94))),
+                     F.progressive(F.Frame(width: 21, height: 17, sampling: Self.samplings[2], block: F.seeded(0x95)))]
+        fuzz(mutations(of: seeds, count: 600, seed: 0x1EA)) { _ = try JPEG.read($0) }
     }
 }
