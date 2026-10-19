@@ -74,3 +74,4 @@ utc	stage	event	ref	note
 2026-10-19T10:46:11Z	4	heartbeat	-	round 5 gate + mutation running on 8613770
 2026-10-19T11:11:18Z	4	round-gate	8613770	round 5 CI PASS, mutation 37/37; panel wf_375316d3-50a
 2026-10-19T11:13:13Z	4	heartbeat	wf_375316d3-50a	round-5 panel running on 8613770
+2026-10-19T11:15:03Z	4	panel	wf_375316d3-50a	round 5: 5 confirmed (1 major), 0 refuted; fixes queued
