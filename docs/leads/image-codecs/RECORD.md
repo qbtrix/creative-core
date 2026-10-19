@@ -3,9 +3,9 @@
 Issue: #562 · Packet: docs/blueprints/core/features/image-codecs.md
 Run: act-1a1511a1174-tlch · Started: 2026-10-18T22:40Z
 Line lead for: image-codecs (#562), preview-cache (#440, already done), vector-import (#439, VI-z left)
-Stage: wave 5 (IC-9 builder running, base 2436c3a); IC-png and IC-jpeg Anatomy done; waiting on a dev CI run holding #702 for Belt-Slice-Done
+Stage: wave 5 (IC-9 #709 merged; IC-9b Deflate budget fix building, base 51797e2); IC-png and IC-jpeg Anatomy done; waiting on a dev CI run holding #702 for Belt-Slice-Done
 Base: 9385de9 (wave 4)
-Next: IC-9 PR merges; Mac-Finish-Wanted for IC-z; IC-10 feature-done (also carries the docs/gaps.md entries for #703-#705); Belt-Slice-Done for IC-png and IC-jpeg once a dev ci.yml run holding 2436c3a (#702) has a green Linux job (run 39238594196 on 8613770 holds #692 and #696 but not #702)
+Next: IC-9b merges; Mac-Finish-Wanted for IC-z (release budgets, after IC-9b); IC-10 feature-done (also carries the docs/gaps.md entries for #703-#705); Belt-Slice-Done for IC-png and IC-jpeg once a dev ci.yml run holding 2436c3a (#702) has a green Linux job (run 39238594196 on 8613770 holds #692 and #696 but not #702)
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -26,7 +26,8 @@ Next: IC-9 PR merges; Mac-Finish-Wanted for IC-z; IC-10 feature-done (also carri
 | IC-5 | 4 | PNG write, encodePNG | PNGWrite.swift, PNGWriteTests | PNGWriteTests | CoreRaster.PNGWrite (2) | #636 (a4df142) | merged 06:10Z (2e3ac14) |
 | IC-7 | 4 | progressive JPEG | JPEGProgressive.swift, JPEGReadTests | progressive half | CoreRaster.JPEGProgressive (1+) | #635 (a686651) | merged (dev 81ae63c) |
 | IC-8 | 4 | baseline JPEG write | JPEGWrite.swift, JPEGWriteTests | JPEGWriteTests | CoreRaster.JPEGWrite (2) | #634 (8e31fe9) | merged |
-| IC-9 | 5 | KJ-IC walk, budgets | ImageCodecWalkTests, ImageCodecBudgetTests | walk | – | | open |
+| IC-9 | 5 | KJ-IC walk, budgets | ImageCodecWalkTests, ImageCodecBudgetTests | walk | – | #709 | merged |
+| IC-9b | 5 | Deflate: bounded search per level, dynamic-Huffman blocks (PNG encode budget) | Deflate.swift, DeflateTests | DeflateTests | Deflate length limit, fixed/dynamic choice, nice length | | building |
 | IC-10 | 6 | waves.md, codecs part, feature-done | waves.md, codecs.json | c4-assemble --check | – | | open |
 
 ## Rounds
@@ -64,3 +65,5 @@ Next: IC-9 PR merges; Mac-Finish-Wanted for IC-z; IC-10 feature-done (also carri
 | IC-png | 3 | 124c35e | 7 (2 major, 5 minor; 1 refuted) | fix batches r3-png-b1 (#696, merged), r3-png-b2 (#692, merged) |
 | IC-jpeg | 4 | 3d9c151 | 9 (2 major, 7 minor; 0 refuted); gate: local budget test outside the feature flaked, dev Linux CI green on 8cd57c6 | fix batch r4-jpeg-b1 (#702, merged 10:46Z, 61/61); loop ends at the 4-round cap |
 | IC-png | 4 | 64bd637 | 7 (0 major, 7 minor); gate CI: PASS, 922 anchors, Inflate 13/13, Deflate 3/3, PNG 11/11, PNGWrite 4/4; clean | minors filed as gap issues #703, #704, #705; loop ends at the 4-round cap |
+
+- 2026-10-19T11:40Z: IC-9 #709 merged. Linux release medians: PNG decode 12 MP 894 ms (≤1500), PNG encode 12 MP level 6 9,044 ms (≤2500, over) at 1.41x size (≤1.3x, over; withKnownIssue), JPEG decode 24 MP 1,506 ms (≤2000). Lead decision: IC-9b gives Deflate a bounded per-level search and dynamic-Huffman blocks (the packet's Deflate contract line changes from fixed-only). The walk's quality-90 3/255 mean holds for grey and 4:2:0; 4:4:4 and 4:2:2 re-encode as 4:2:0 (JPEG.write writes 4:2:0 only), so their means (6.81, 4.06, 4.41) are printed, not gated.
