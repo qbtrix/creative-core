@@ -23,8 +23,8 @@ Next: wave 4 building (IC-4, IC-5, IC-7, IC-8); then Anatomy rounds for IC-png a
 | IC-3 | 3 | Inflate, Deflate bodies | Inflate.swift, Deflate.swift, InflateTests | InflateTests | CoreRaster.Inflate (3) | #625 (526da94) | merged |
 | IC-6 | 3 | JPEG info, baseline read | JPEG.swift, JPEGReadTests, JPEGFuzzTests | baseline half | CoreRaster.JPEG (2) | #627 (22a5fdd) | merged |
 | IC-4 | 4 | PNG info, read, decodePNG | PNG.swift, PNGReadTests, PNGFuzzTests | PNGReadTests | CoreRaster.PNG (3) | | building |
-| IC-5 | 4 | PNG write, encodePNG | PNGWrite.swift, PNGWriteTests | PNGWriteTests | CoreRaster.PNGWrite (2) | | building |
-| IC-7 | 4 | progressive JPEG | JPEGProgressive.swift, JPEGReadTests | progressive half | CoreRaster.JPEGProgressive (1+) | | building |
+| IC-5 | 4 | PNG write, encodePNG | PNGWrite.swift, PNGWriteTests | PNGWriteTests | CoreRaster.PNGWrite (2) | #636 (dd55943) | rebasing (conflict + footer) |
+| IC-7 | 4 | progressive JPEG | JPEGProgressive.swift, JPEGReadTests | progressive half | CoreRaster.JPEGProgressive (1+) | #635 (1c562cb) | rebasing (conflict + footer) |
 | IC-8 | 4 | baseline JPEG write | JPEGWrite.swift, JPEGWriteTests | JPEGWriteTests | CoreRaster.JPEGWrite (2) | #634 (8e31fe9) | merged |
 | IC-9 | 5 | KJ-IC walk, budgets | ImageCodecWalkTests, ImageCodecBudgetTests | walk | – | | open |
 | IC-10 | 6 | waves.md, codecs part, feature-done | waves.md, codecs.json | c4-assemble --check | – | | open |
@@ -49,3 +49,5 @@ Next: wave 4 building (IC-4, IC-5, IC-7, IC-8); then Anatomy rounds for IC-png a
 - IC-3 and IC-6 also drop their rows from `ImageCodecShapeTests.stubsThrowCodecErrors` (that file is IC-1's, but the stub list names the filling task; one extra file each).
 - Wave 3: IC-3 #625 (398 lines, 3/3 CoreRaster.Inflate; inflate 48 MB in 0.37 s release) and IC-6 #627 (399 lines, 2/2 CoreRaster.JPEG; 24 MP 4:2:0 in ~1.15 s release; seams for IC-7: JPEGDecoder.nextScan/scanHeader/entropy, JPEGBits, JPEGHuffman, coefficients[c] natural order, pixels(); hook line in JPEG.read) merged.
 - IC-a round 2 is skipped: IC-a's files are test fixtures that wave 4 enables; their next check is each slice's own round (rule: per slice, under budget).
+- Wave 4: #635 (IC-7, 3/3) and #636 (IC-5, 2/2) went dirty after #634 merged and their bodies carried an attribution footer; builders are rebasing and stripping it. #636 keeps 4 PNGWriteTests disabled "waits on IC-4" (round trips, ihdrDepthRecorded, ORA); the lead enables them after IC-4 merges.
+- Budget risk for IC-9: IC-5 measured 12 MP PNG write ~8.5 s release locally (Deflate.zlib level 6 ~7.6 s on a very repetitive synthetic image) vs the 2.5 s budget. Likely long hash chains on repetitive input; IC-9 measures on the packet's image and, if over, a Deflate chain-limit fix task goes in before IC-z.
