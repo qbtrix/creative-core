@@ -3,9 +3,9 @@
 Issue: #562 · Packet: docs/blueprints/core/features/image-codecs.md
 Run: act-1a1543c8a34-t9zw (previous act-1a150bfbcf7-sfwy / act-1a1511a1174-tlch) · Started: 2026-10-18T22:40Z
 Line lead for: image-codecs (#562), preview-cache (#440, already done), vector-import (#439, VI-z left)
-Stage: 5 IC-10 merged
+Stage: 5 feature-done merged
 Base: 9385de9 (wave 4)
-Next: green ci.yml run https://github.com/qbtrix/creative-core/actions/runs/39299995103, then Belt-Slice-Done IC-z and contact sheet on #562
+Next: green Linux on https://github.com/qbtrix/creative-core/actions/runs/39300831435, then done lines and contact sheet
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
