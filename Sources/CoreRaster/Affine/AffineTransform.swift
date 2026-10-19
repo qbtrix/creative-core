@@ -27,7 +27,7 @@ extension PixelBuffer {
         if let copy = exactCopy(m, inverse: inv, width: outW, height: outH) { return copy }
         let output = sampled(inv, width: outW, height: outH, filter: filter)
         guard output.allSatisfy(\.isFinite) else {
-            throw RasterError.invalid("transform by \(m): a component overflowed")
+            throw RasterError.invalid("transform by \(m) with \(filter): lanczos3 overshoot made a component non-finite; use .bilinear or keep components finite")
         }
         return PixelBuffer(checkedWidth: outW, height: outH, storage: output)
     }
@@ -93,11 +93,11 @@ extension PixelBuffer {
     /// be non-finite only after a lanczos3 overshoot on extreme values.
     private func sampled(_ inv: AffineMatrix, width outW: Int, height outH: Int, filter: ResampleFilter) -> [Float] {
         // How far one output step moves along each source axis, at least 1;
-        // capped at the source's size, past which the kernel already reaches
-        // every pixel, so a huge shrink costs no more taps than the source has.
-        let cap = Double(max(width, height))
-        let stretchX = min(max((inv.a * inv.a + inv.c * inv.c).squareRoot(), 1), cap)
-        let stretchY = min(max((inv.b * inv.b + inv.d * inv.d).squareRoot(), 1), cap)
+        // capped at the source's size along that axis, past which the kernel
+        // already reaches every pixel on it, so a huge shrink costs no more
+        // taps than the source has.
+        let stretchX = min(max((inv.a * inv.a + inv.c * inv.c).squareRoot(), 1), Double(width))
+        let stretchY = min(max((inv.b * inv.b + inv.d * inv.d).squareRoot(), 1), Double(height))
         let reachX = filter.radius * stretchX, reachY = filter.radius * stretchY
         let input = components
         let c = Self.channels

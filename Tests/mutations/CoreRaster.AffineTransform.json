@@ -26,5 +26,40 @@
     "anchor": "(width - 1 - x, y) : (x, height - 1 - y)",
     "replacement": "(width - 1 - x, y) : (width - 1 - x, y)",
     "filter": "AffineOpsTests"
+  },
+  {
+    "note": "the kernel never widens when the map shrinks the image (stretch forced to 1), caught by AffineOpsTests.downscaleWidensKernel",
+    "file": "Sources/CoreRaster/Affine/AffineTransform.swift",
+    "anchor": "let stretchX = min(max((inv.a * inv.a + inv.c * inv.c).squareRoot(), 1), Double(width))",
+    "replacement": "let stretchX = 1.0",
+    "filter": "AffineOpsTests"
+  },
+  {
+    "note": "filtered sums are not divided by the kernel's total weight, caught by AffineOpsTests.halfPixelTranslationBlends",
+    "file": "Sources/CoreRaster/Affine/AffineTransform.swift",
+    "anchor": "output[base + k] = Float(sum[k] / total)",
+    "replacement": "output[base + k] = Float(sum[k])",
+    "filter": "AffineOpsTests"
+  },
+  {
+    "note": "the whole-translation copy drops its limit so Int(m.tx) traps on a huge shift, caught by AffineOpsTests.hugeWholeTranslationIsClear",
+    "file": "Sources/CoreRaster/Affine/AffineTransform.swift",
+    "anchor": "m.tx == m.tx.rounded(), m.ty == m.ty.rounded(), abs(m.tx) <= limit, abs(m.ty) <= limit else {",
+    "replacement": "m.tx == m.tx.rounded(), m.ty == m.ty.rounded() else {",
+    "filter": "AffineOpsTests"
+  },
+  {
+    "note": "a non-finite lanczos3 overshoot is returned instead of thrown, caught by AffineOpsTests.overshootThrows",
+    "file": "Sources/CoreRaster/Affine/AffineTransform.swift",
+    "anchor": "guard output.allSatisfy(\\.isFinite) else {",
+    "replacement": "guard true else {",
+    "filter": "AffineOpsTests"
+  },
+  {
+    "note": "the kernel stretch is capped at the larger side instead of each axis length, caught by AffineOpsTests.extremeShrinkOnNarrowAxisIsBounded",
+    "file": "Sources/CoreRaster/Affine/AffineTransform.swift",
+    "anchor": ".squareRoot(), 1), Double(width))",
+    "replacement": ".squareRoot(), 1), Double(max(width, height)))",
+    "filter": "AffineOpsTests"
   }
 ]
