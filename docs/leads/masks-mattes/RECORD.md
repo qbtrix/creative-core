@@ -37,7 +37,10 @@ Next: M3 (CPU composite) and M6 (exporters) building stacked; rebase and open on
 
 - For the next round (from M3 #737): the CPUGoldenTests header still says "133 samples in 8 goldens" (should be 145 in 9), left out for the 15-file cap. CoreRenderDispatcherW1#3 and #4 (the flipped and applying fallbacks) escape on dev, because eachNewMethodReachesTheCPU only checks the masked composite. Fold both into the next masks PR. M3 also edits ParitySamples, ParityPack and the four W1/dispatcher/parity/CPU suites, and repointed CoreRenderDispatcherW1#5.
 
+- Round-2 masks model and export fixes: PR #740 (lead/masks-mattes-r2-b2, head 1c9504f5, 43/43, 192 lines). ConvertToSymbol now refuses to split a matte pair; SVG blur is feather / 3 (MM-8 amended); export docs list every unsupported reason; Lottie mask paths are written closed; one matte level documented and pinned; overflow-safe feather scale; expectRefused takes the exact error.
+
 ## Decisions
+- Feather is one quantity everywhere: the blur radius, sigma = feather / 3 (round 2; SVG was feather / 2).
 - Rule 20: MM-1 and MM-2 (disabled checks) are not their own PRs; each slice PR adds its own failing suite as its first commit. MM-a is slice-done once M1 and M4 (which carry the fixtures) merge.
 - MM-10 edits `geometry.json`, which path-geometry's last PR also edits, so M7 runs after path-geometry's P6 merges.
 - Builder branches are `lead/masks-mattes-<pr id>`.
