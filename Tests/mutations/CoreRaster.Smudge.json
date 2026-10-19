@@ -12,5 +12,19 @@
     "anchor": "if strength > 0, let patch = carried, carriedWidth == dab.width, carriedHeight == dab.height {",
     "replacement": "if strength > 0, let patch = Optional(carried ?? [RGBA?](repeating: .clear, count: dab.width * dab.height)) {",
     "filter": "SmudgeTests"
+  },
+  {
+    "note": "smudge lays the carried patch at full weight wherever the dab touches, ignoring feathered coverage, caught by SmudgeTests.featherWeightsByCoverage",
+    "file": "Sources/CoreRaster/Heal/Smudge.swift",
+    "anchor": "let t = strength * (try dab.coverage(x: i, y: j))",
+    "replacement": "let t = strength * (try dab.coverage(x: i, y: j) > 0 ? 1 : 0)",
+    "filter": "SmudgeTests.featherWeightsByCoverage"
+  },
+  {
+    "note": "a dab of a new size lays the old carried patch instead of only picking up, caught by SmudgeTests.sizeChangeOnlyPicksUp",
+    "file": "Sources/CoreRaster/Heal/Smudge.swift",
+    "anchor": "carriedWidth == dab.width, carriedHeight == dab.height {",
+    "replacement": "true {",
+    "filter": "SmudgeTests.sizeChangeOnlyPicksUp"
   }
 ]

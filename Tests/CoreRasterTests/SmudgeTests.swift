@@ -54,6 +54,65 @@ import Testing
         #expect(after != before)
     }
 
+    @Test func sizeChangeOnlyPicksUp() throws {
+        // A dab of a new size lays nothing: it starts a new pick-up, like the first dab.
+        let before = try RetouchFixtures.redEdge(width: 30, height: 20, edgeX: 10)
+        var after = before
+        var state = SmudgeState(strength: 1)
+        try state.dab(Mask(width: 5, height: 5, fill: 1), x: 6, y: 6, on: &after)
+        try state.dab(Mask(width: 7, height: 7, fill: 1), x: 8, y: 6, on: &after)
+        #expect(after == before)
+        try state.dab(Mask(width: 7, height: 7, fill: 1), x: 10, y: 6, on: &after)
+        #expect(after != before)
+    }
+
+    @Test func statesCompareByCarriedPatch() throws {
+        let buffer = try RetouchFixtures.redEdge(width: 30, height: 20, edgeX: 10)
+        let dab = try RetouchFixtures.roundDab(radius: 3)
+        var a = SmudgeState(strength: 0.5), b = SmudgeState(strength: 0.5)
+        var bufferA = buffer, bufferB = buffer
+        #expect(a == b)
+        for x in [4, 6, 8] {
+            try a.dab(dab, x: x, y: 5, on: &bufferA)
+            try b.dab(dab, x: x, y: 5, on: &bufferB)
+        }
+        #expect(a == b && bufferA == bufferB)
+        let copy = a
+        try a.dab(dab, x: 10, y: 5, on: &bufferA)
+        #expect(a != b && copy == b)
+        #expect(Set([a, b, copy]).count == 2)
+    }
+
+    @Test func featherWeightsByCoverage() throws {
+        // Dab 1 at column 14 picks up; dab 2 at column 16 lays it, so dab pixel
+        // (i, j) gets the colour from 2 px left, weighted by the dab's coverage.
+        let before = try RetouchFixtures.redEdge(width: 60, height: 20, edgeX: 20)
+        var after = before
+        var state = SmudgeState(strength: 1)
+        let dab = try RetouchFixtures.roundDab(radius: 4, hardness: 0.5)
+        try state.dab(dab, x: 14, y: 6, on: &after)
+        try state.dab(dab, x: 16, y: 6, on: &after)
+        let full = try Self.redness(after, x: 20, y: 10) - Self.redness(before, x: 20, y: 10)
+        #expect(try dab.coverage(x: 4, y: 4) == 1 && full > 0.99)
+        var feathered = 0
+        for j in 0..<dab.height {
+            for i in 0..<dab.width {
+                let c = try dab.coverage(x: i, y: j)
+                let p = try before.pixel(x: 16 + i, y: 6 + j), q = try before.pixel(x: 14 + i, y: 6 + j)
+                let got = try after.pixel(x: 16 + i, y: 6 + j)
+                let want = [p.r * (1 - c) + q.r * c, p.g * (1 - c) + q.g * c, p.b * (1 - c) + q.b * c]
+                for (g, w) in zip([got.r, got.g, got.b], want) {
+                    #expect(abs(g - w) < 1e-5, "pixel (\(i), \(j)) at coverage \(c)")
+                }
+                guard c > 0, c < 1, p != q else { continue }
+                feathered += 1
+                let change = try Self.redness(after, x: 16 + i, y: 6 + j) - Self.redness(before, x: 16 + i, y: 6 + j)
+                #expect(change > 0 && change < full, "pixel (\(i), \(j)) at coverage \(c)")
+            }
+        }
+        #expect(feathered > 0)
+    }
+
     @Test func fuzzedDabsThrowOrSmudge() throws {
         var rng = SplitMix64(seed: 0x5D06)
         let positions = [Int.min, -9, -2, 0, 3, 17, 25, Int.max]
