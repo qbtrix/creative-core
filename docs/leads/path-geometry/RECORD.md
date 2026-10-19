@@ -24,7 +24,7 @@ Next: P3 (measure) and P4 (boolean) open once their regates pass; PG-edit done (
 | P3 | PG-measure | PG-5, PG-6 | PathMeasure.swift, PathPropertySupport, PathMeasureTests, PathTrimDashTests | both | FlarePathMeasure | #735 | merged 18:10 (ffc7dfef) |
 | P4 | PG-shape | PG-9, PG-10 | PathBoolean.swift, PathBooleanTests, PathBooleanFuzzTests | both | FlarePathBoolean | #731 | merged 17:44 |
 | P5 | PG-shape | PG-8 | PathOutline.swift, PathOutlineTests | PathOutlineTests | FlarePathOutline | #739 | merged 19:50 (e2b83d0a) |
-| P6 | PG-z | PG-11, PG-12 | PathOpsWalkTests, PathOpsBudgetTests, geometry.json, packet | walk | none | | waits all |
+| P6 | PG-z | PG-11, PG-12 | PathOpsWalkTests, PathOpsBudgetTests, geometry.json, packet | walk | none | | built 666428cf (189 lines), held; rebasing on #741 and fixing budgets |
 
 ## Rounds
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
@@ -37,6 +37,8 @@ Next: P3 (measure) and P4 (boolean) open once their regates pass; PG-edit done (
 - P5 note for round 3: `combine` returns sliver and zero-area contours when many nearly collinear edges meet at one point (865 contours unioning per-segment rectangles of a flattened circle). P5 sidesteps it with one offset loop per subpath; round 3 must look at `combine` itself.
 
 - Round-2 path fixes: PR #741 (lead/path-geometry-r2-b1, merged 21:11 as 4de35272, 25/25, 191 lines). Dash cut binary-searches its span (a 20k-point dash went from >300 s to <3 s); `combine` gains `maxBooleanWork = 50,000,000` (pair tests, cuts, ray steps) and throws tooComplex past it, while maxBooleanVertices stays 200,000; non-finite cross products throw nonFinite; smooth/symmetric convert leaves the anchor unchanged on non-finite arms; docs for tooComplex, dashed and open subpaths in combine.
+
+- P6 release budgets on Linux before #741 (dev 758f0c7a): nearest 15.7 ms (budget 2), trim 59.4 ms (5), dash [400, 200] 7,034 ms (5), union 2 x 5,000 22.0 ms (50, within). Walk passes. The scribble flattens to 401,801 points, 8.49M long. P6 is rebasing on #741 and fixing the rows still over; budgets are 'release, reported' (scripts/ci prints them in debug).
 
 ## Decisions
 - Boolean time is bounded by a work cap, not a lower vertex cap (round 2): a real 2 x 100k input may hit the work cap first.
