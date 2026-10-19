@@ -4,13 +4,13 @@
     "file": "Sources/CoreRaster/Fill/ColorRange.swift",
     "anchor": "let t = min(max(d / f, 0), 1)",
     "replacement": "let t = min(max((d - f) / (0 - f), 0), 1)",
-    "filter": "ColorRangeTests"
+    "filter": "ColorRangeTests.fallsOffWithDistance"
   },
   {
     "note": "sampled colour box is half-open, so radius 1 averages a 2x2 box instead of 3x3, caught by ColorRangeTests.threeByThreeMean",
     "file": "Sources/CoreRaster/Fill/ColorRange.swift",
     "anchor": "max(c - radius, 0)...min(c + radius, size - 1)",
     "replacement": "max(c - radius, 0)..<min(c + radius, size - 1)",
-    "filter": "ColorRangeTests"
+    "filter": "ColorRangeTests.threeByThreeMean"
   }
 ]
