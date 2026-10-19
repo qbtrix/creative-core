@@ -69,14 +69,55 @@ import Testing
     }
 
     /// A combining mark inserted after a letter would fuse two graphemes, so it
-    /// is refused with a message naming the grapheme offset of the edit.
+    /// is refused with a message naming the command, the mark, the grapheme
+    /// offset of the edit and the grapheme it would join, even from `execute`.
     @Test func fusingInsertRefused() {
         let start = TextFixtures.document(TextFixtures.text("e"))
         var engine = CommandEngine(document: start)
         var message = ""
         do { try engine.perform(Self.edit(1..<1, "\u{301}")) } catch CommandError.invalidDocument(let text) { message = text } catch {}
-        #expect(message.contains("grapheme 1"))
+        #expect(message.hasPrefix("Edit Text:") && message.contains("U+301") && message.contains("grapheme 1"))
+        #expect(message.contains("before: \"e\""))
         #expect(engine.document == start && !engine.canUndo)
+        var direct = Self.edit(1..<1, "\u{301}"), doc = start
+        message = ""
+        do { try direct.execute(&doc) } catch CommandError.invalidDocument(let text) { message = text } catch {}
+        #expect(message.hasPrefix("Edit Text:") && doc == start)
+        #expect(direct.replacement == "\u{301}")
+    }
+
+    /// Runs whose end overflows Int, or that lie outside the string, are refused
+    /// with a CommandError before any arithmetic on them, leaving the document unchanged.
+    @Test func malformedRunsThrow() {
+        for runs in [[TextRun(start: Int.max, length: 1)], [TextRun(start: 1, length: Int.max)]] {
+            let start = TextFixtures.document(TextFixtures.text("abc", runs: runs))
+            for command in [Self.apply(0..<1), Self.clear(0..<1), Self.edit(0..<1, "x")] as [any Command] {
+                var engine = CommandEngine(document: start)
+                #expect(throws: CommandError.self) { try engine.perform(command) }
+                #expect(engine.document == start && !engine.canUndo)
+            }
+        }
+    }
+
+    /// Seeded random runs, many with extreme starts and lengths, never crash a
+    /// run command: it throws a CommandError and leaves the document, or succeeds with valid runs.
+    @Test(arguments: 0..<50 as Range<UInt64>) func malformedRunsFuzz(seed: UInt64) throws {
+        var rng = SplitMix64(seed: seed)
+        let values = [Int.min, -1, 0, 1, 2, 3, 4, Int.max - 1, Int.max]
+        for _ in 0..<10 {
+            let runs = (0..<Int.random(in: 1...3, using: &rng)).map { _ in
+                TextRun(start: values.randomElement(using: &rng) ?? 0, length: values.randomElement(using: &rng) ?? 0, weight: 700)
+            }
+            let start = TextFixtures.document(TextFixtures.text("abc", runs: runs))
+            var engine = CommandEngine(document: start)
+            let range = 0..<Int.random(in: 0...3, using: &rng)
+            let command: any Command = [Self.apply(range), Self.clear(range), Self.edit(range, "xy")]
+                .randomElement(using: &rng) ?? Self.clear(range)
+            do { try engine.perform(command) } catch is CommandError { #expect(engine.document == start) }
+            let text = try #require(TextFixtures.ballText(engine.document))
+            #expect(engine.document == start
+                    || text.runs.allSatisfy { $0.start >= 0 && $0.length > 0 && $0.start <= text.string.count - $0.length })
+        }
     }
 
     @Test func familyListsExactlyItsIDs() {
@@ -125,6 +166,8 @@ import Testing
     @Test func boldAllThenClearLeavesNoRuns() throws {
         #expect(try Self.run([Self.apply(0..<15), Self.clear(0..<15)])?.runs == [])
         #expect(try Self.run([Self.apply(0..<15, TextRunStyle(fontSize: 24))])?.runs == [])
+        #expect(try Self.run([Self.apply(0..<15, TextRunStyle(fontFamily: "Inter", italic: false, fill: .solid(.black),
+                                                              tracking: 0, baselineShift: 0))])?.runs == [])
     }
     @Test func editKeepsRunsOnTheirGraphemes() throws {
         #expect(try Self.run([Self.edit(0..<5, "Take")], on: Self.boldMid)?.runs == [Self.bold(5, 5)])
@@ -172,17 +215,35 @@ import Testing
             #expect(engine.document == locked)
         }
     }
-    /// Seeded random styles and edits either throw a CommandError or leave runs inside the string.
+    /// A random style over a few values of every field, the shape's own and neutral ones included.
+    static func anyStyle(_ rng: inout SplitMix64) -> TextRunStyle {
+        func pick<T>(_ values: [T]) -> T? { Bool.random(using: &rng) ? values.randomElement(using: &rng) : nil }
+        return TextRunStyle(fontFamily: pick(["Inter", "Serif"]), fontSize: pick([24, 30]), weight: pick([400, 700]),
+                            italic: pick([false, true]), fill: pick([.solid(.black), .solid(.white)]),
+                            tracking: pick([0, 2]), baselineShift: pick([0, -3]))
+    }
+
+    /// Seeded random styles, clears and edits either throw a CommandError or
+    /// leave runs inside the string, sorted, never overlapping, with touching
+    /// equal neighbours merged and no plain runs.
     @Test(arguments: 0..<50 as Range<UInt64>) func fuzz(seed: UInt64) throws {
         var rng = SplitMix64(seed: seed)
         var engine = CommandEngine(document: TextFixtures.document(Self.boldMid))
         for _ in 0..<20 {
             let a = Int.random(in: -2...18, using: &rng), b = Int.random(in: -2...18, using: &rng)
             let range = min(a, b)..<max(a, b)
-            let command: any Command = Bool.random(using: &rng) ? Self.apply(range) : Self.edit(range, "é👍🏽")
+            let command: any Command = switch Int.random(in: 0..<3, using: &rng) {
+            case 0: Self.apply(range, Self.anyStyle(&rng))
+            case 1: Self.clear(range)
+            default: Self.edit(range, "é👍🏽")
+            }
             do { try engine.perform(command) } catch is CommandError {}
             let text = try #require(TextFixtures.ballText(engine.document))
             #expect(text.runs.allSatisfy { $0.start >= 0 && $0.length > 0 && $0.start + $0.length <= text.string.count })
+            #expect(zip(text.runs, text.runs.dropFirst()).allSatisfy {
+                $0.start + $0.length <= $1.start && !($0.start + $0.length == $1.start && $0.over(0, 0) == $1.over(0, 0))
+            })
+            #expect(text.runs.allSatisfy { $0.over(0, 0) != .plain })
         }
     }
 }

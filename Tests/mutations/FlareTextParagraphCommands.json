@@ -26,5 +26,12 @@
     "anchor": "              (next.owner, next.layerID, next.textIndex) == (owner, layerID, textIndex) else { return false }",
     "replacement": "              (next.owner, next.layerID) == (owner, layerID) else { return false }",
     "filter": "TextParagraphCommandsTests.dragRedoesToLastValue"
+  },
+  {
+    "note": "paragraph drag merge accepts a first step that changed two fields",
+    "file": "Sources/FlareCore/TextStyleCommands+Paragraph.swift",
+    "anchor": "        guard mine.count == 1, Self.changedFields(paragraph, set).isSubset(of: mine) else { return false }",
+    "replacement": "        guard mine.count >= 1, Self.changedFields(paragraph, set).isSubset(of: mine) else { return false }",
+    "filter": "TextParagraphCommandsTests.mergeOnlySameField"
   }
 ]

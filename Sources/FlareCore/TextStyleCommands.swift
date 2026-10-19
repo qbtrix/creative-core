@@ -38,9 +38,9 @@ public struct TextRunStyle: Codable, Sendable, Hashable {
     public var italic: Bool?
     /// The fill; the shape's own fill removes it.
     public var fill: Fill?
-    /// Extra space between graphemes, in points; 0 removes it.
+    /// Extra space after each grapheme, in points, added to the paragraph's; 0 removes it.
     public var tracking: Double?
-    /// The vertical offset from the baseline, in points; 0 removes it.
+    /// Points the baseline is raised, negative lowers; 0 removes it.
     public var baselineShift: Double?
     /// A style with the given fields set; every field left nil is unchanged when applied.
     public init(fontFamily: String? = nil, fontSize: Double? = nil, weight: Int? = nil, italic: Bool? = nil,
@@ -55,7 +55,11 @@ public struct TextRunStyle: Codable, Sendable, Hashable {
 /// shape's own value (or weight 400, italic false, tracking/baselineShift 0)
 /// is removed from the range; see `TextRunStyle`. Throws `invalidIndex` when
 /// `range` is outside the string's graphemes (offsets count graphemes, not
-/// UTF-16 units), with the out-of-range bound as its number.
+/// UTF-16 units), with the out-of-range bound as its number, and
+/// `invalidDocument` when an existing run lies outside the string. Through
+/// `CommandEngine.perform`, a value outside the format's range (fontSize > 0,
+/// weight 100...900) throws `CommandError.invalidDocument` naming the field; a
+/// locked layer throws `layerLocked` and a missing text `shapeNotFound`.
 public struct ApplyTextStyle: LayerParamsCommand {
     public static let id = "text.applyStyle"
     public var label: String { "Apply Text Style" }
@@ -82,7 +86,8 @@ public struct ApplyTextStyle: LayerParamsCommand {
 /// they take the shape's own style. To remove only one field, use
 /// `ApplyTextStyle` with that field set to the shape's own value. Throws
 /// `invalidIndex` when `range` is outside the string's graphemes, with the
-/// out-of-range bound as its number.
+/// out-of-range bound as its number, and `invalidDocument` when an existing
+/// run lies outside the string.
 public struct ClearTextStyle: LayerParamsCommand {
     public static let id = "text.clearStyle"
     public var label: String { "Clear Text Style" }
@@ -105,29 +110,35 @@ public struct ClearTextStyle: LayerParamsCommand {
     }
 }
 
-/// Replaces graphemes `replacing` of text `textIndex` with `with`, keeping
-/// every run on its graphemes: runs after the edit shift, a run the edit cuts
-/// shrinks, and inserted text takes the style of the grapheme before it.
+/// Replaces graphemes `replacing` of text `textIndex` with `replacement`,
+/// keeping every run on its graphemes: runs after the edit shift, a run the
+/// edit cuts shrinks, and inserted text takes the style of the grapheme before it.
 /// Throws `invalidIndex` when `replacing` is outside the string's graphemes,
-/// with the out-of-range bound as its number. Throws `invalidDocument` when
-/// `with` starts or ends with a mark that would join the grapheme beside the
-/// edit (a combining mark, a joiner); widen `replacing` to include that grapheme.
+/// with the out-of-range bound as its number, and `invalidDocument` when an
+/// existing run lies outside the string. Throws `invalidDocument`, with a
+/// message starting "Edit Text:" that names the inserted scalars, the edit's
+/// grapheme offset and the neighbouring graphemes, when `replacement` starts
+/// or ends with a mark that would join the grapheme beside the edit (a
+/// combining mark, a joiner); widen `replacing` to include that grapheme.
 public struct EditTextString: LayerParamsCommand {
     public static let id = "text.editString"
     public var label: String { "Edit Text" }
-    public var owner: LayerOwner, layerID: String, textIndex: Int, replacing: Range<Int>, with: String
+    public var owner: LayerOwner, layerID: String, textIndex: Int, replacing: Range<Int>
+    /// The text put in place of graphemes `replacing`; empty deletes them.
+    public var replacement: String
     var oldText: TextShape?
-    public init(owner: LayerOwner, layerID: String, textIndex: Int, replacing: Range<Int>, with: String) {
-        (self.owner, self.layerID, self.textIndex, self.replacing, self.with) = (owner, layerID, textIndex, replacing, with)
+    public init(owner: LayerOwner, layerID: String, textIndex: Int, replacing: Range<Int>, with replacement: String) {
+        (self.owner, self.layerID, self.textIndex, self.replacing) = (owner, layerID, textIndex, replacing)
+        self.replacement = replacement
     }
     struct Params: Codable { var textIndex: Int; var replacing: Range<Int>; var with: String }
-    var params: Params { Params(textIndex: textIndex, replacing: replacing, with: with) }
+    var params: Params { Params(textIndex: textIndex, replacing: replacing, with: replacement) }
     init(owner: LayerOwner, layerID: String, params: Params) {
         self.init(owner: owner, layerID: layerID, textIndex: params.textIndex, replacing: params.replacing, with: params.with)
     }
     public mutating func execute(_ document: inout Document) throws {
-        let (range, with) = (replacing, with)
-        oldText = try document.editTextRuns(owner, layer: layerID, index: textIndex) { try $0.replace(range, with: with) }
+        let (range, replacement) = (replacing, replacement)
+        oldText = try document.editTextRuns(owner, layer: layerID, index: textIndex) { try $0.replace(range, with: replacement) }
     }
     public func undo(_ document: inout Document) throws {
         try document.restoreText(oldText, owner, layer: layerID, index: textIndex)
@@ -169,10 +180,16 @@ extension TextRun {
 }
 
 extension TextShape {
-    /// Throws `invalidIndex` unless `range` lies inside the string's graphemes.
+    /// Throws `invalidIndex` unless `range` lies inside the string's graphemes,
+    /// and `invalidDocument` unless every run does, the way FlareFormat checks
+    /// them: runs come from the document, so their ends must not overflow.
     func checkGraphemes(_ range: Range<Int>) throws {
+        let count = string.count
         if range.lowerBound < 0 { throw CommandError.invalidIndex(range.lowerBound) }
-        if string.count < range.upperBound { throw CommandError.invalidIndex(range.upperBound) }
+        if count < range.upperBound { throw CommandError.invalidIndex(range.upperBound) }
+        for run in runs where run.start < 0 || run.length <= 0 || run.start > count - run.length {
+            throw CommandError.invalidDocument("text run at \(run.start), length \(run.length), is outside the \(count) graphemes")
+        }
     }
 
     /// Restyles graphemes `range`: each piece inside it (part of a run, or a gap
@@ -200,8 +217,8 @@ extension TextShape {
     /// keeps its start, else it moves past the inserted text; a run ending before
     /// the edit keeps its end, else the end moves with the string, so a run
     /// ending at the edit point takes the inserted text. Throws
-    /// `invalidDocument`, naming the edit's grapheme offset, when `with` would
-    /// fuse with a neighbouring grapheme.
+    /// `invalidDocument`, naming the inserted scalars, the edit's grapheme
+    /// offset and its neighbours, when `with` would fuse with one of them.
     mutating func replace(_ range: Range<Int>, with: String) throws {
         try checkGraphemes(range)
         let (lo, hi, count) = (range.lowerBound, range.upperBound, string.count)
@@ -209,8 +226,11 @@ extension TextShape {
         let edited = String(string[..<from]) + with + String(string[to...])
         let delta = with.count - (hi - lo)
         guard edited.count == count + delta else {
-            throw CommandError.invalidDocument(
-                "text inserted at grapheme \(lo) joins the grapheme beside it; include that grapheme in `replacing`")
+            let scalars = with.unicodeScalars.map { "U+" + String($0.value, radix: 16, uppercase: true) }.joined(separator: " ")
+            let before = lo > 0 ? "\"\(string[string.index(before: from)])\"" : "none"
+            let after = hi < count ? "\"\(string[to])\"" : "none"
+            throw CommandError.invalidDocument("Edit Text: \(scalars) inserted at grapheme \(lo) joins the grapheme beside it"
+                + " (before: \(before), after: \(after)); include that grapheme in `replacing`")
         }
         string = edited
         runs = normalized(runs.map { run in

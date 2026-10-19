@@ -37,6 +37,24 @@ import Testing
         #expect(engine.undoStack.last?.commands.count == 2)
         try engine.undo()
         #expect(engine.document == TextFixtures.document() && !engine.canUndo)
+        try engine.perform(Self.paragraph(ParagraphStyle(alignment: .center, lineHeight: 1.3)), coalesceKey: "both")
+        try engine.perform(Self.paragraph(ParagraphStyle(alignment: .center, lineHeight: 1.4)), coalesceKey: "both")
+        #expect(engine.undoStack.last?.commands.count == 2)
+    }
+
+    /// Through the engine, an out-of-range value throws invalidDocument naming the field, as the docs say.
+    @Test func refusalNamesTheField() {
+        var engine = CommandEngine(document: TextFixtures.document())
+        var message = ""
+        do { try engine.perform(Self.paragraph(ParagraphStyle(lineHeight: 5))) } catch CommandError.invalidDocument(let text) {
+            message = text
+        } catch {}
+        #expect(message.contains("lineHeight"))
+        do { try engine.perform(Self.onPath(TextOnPath(path: Self.line, startOffset: 2))) } catch CommandError.invalidDocument(let text) {
+            message = text
+        } catch {}
+        #expect(message.contains("startOffset"))
+        #expect(engine.document == TextFixtures.document() && !engine.canUndo)
     }
 
     /// The merged command redoes to the drag's last value, and a drag on another text does not merge.

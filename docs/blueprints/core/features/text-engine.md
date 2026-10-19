@@ -85,7 +85,7 @@ public struct ApplyTextStyle: LayerCommand { owner, layerID, textIndex, range: R
 public struct ClearTextStyle: LayerCommand { owner, layerID, textIndex, range: Range<Int> }
 public struct SetParagraphStyle: LayerCommand { owner, layerID, textIndex, paragraph: ParagraphStyle? }    // merges a drag of one field
 public struct SetTextOnPath: LayerCommand { owner, layerID, textIndex, onPath: TextOnPath? }
-public struct EditTextString: LayerCommand { owner, layerID, textIndex, replacing: Range<Int>, with: String }   // keeps runs on their graphemes
+public struct EditTextString: LayerCommand { owner, layerID, textIndex, replacing: Range<Int>, replacement: String /* init label with: */ }   // keeps runs on their graphemes
 ```
 
 ## Pseudocode

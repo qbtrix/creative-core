@@ -16,8 +16,8 @@
   {
     "note": "text range check uses <= for <, so a range ending at the string's end is refused",
     "file": "Sources/FlareCore/TextStyleCommands.swift",
-    "anchor": "        if string.count < range.upperBound { throw CommandError.invalidIndex(range.upperBound) }",
-    "replacement": "        if string.count <= range.upperBound { throw CommandError.invalidIndex(range.upperBound) }",
+    "anchor": "        if count < range.upperBound { throw CommandError.invalidIndex(range.upperBound) }",
+    "replacement": "        if count <= range.upperBound { throw CommandError.invalidIndex(range.upperBound) }",
     "filter": "TextStyleCommandsTests.rangePastEndRefused"
   },
   {
@@ -33,5 +33,19 @@
     "anchor": "        if range.lowerBound < 0 { throw CommandError.invalidIndex(range.lowerBound) }",
     "replacement": "        if range.lowerBound < -1 { throw CommandError.invalidIndex(range.lowerBound) }",
     "filter": "TextStyleCommandsTests.rangePastEndNamesOffset"
+  },
+  {
+    "note": "text run bounds guard skipped, so a run whose end overflows Int traps instead of throwing",
+    "file": "Sources/FlareCore/TextStyleCommands.swift",
+    "anchor": "        for run in runs where run.start < 0 || run.length <= 0 || run.start > count - run.length {",
+    "replacement": "        for run in runs where run.start < 0 || run.length <= 0 {",
+    "filter": "TextStyleCommandsTests.malformedRunsThrow"
+  },
+  {
+    "note": "text fill equal to the shape's own is kept, so a run in the shape's own fill is not dropped",
+    "file": "Sources/FlareCore/TextStyleCommands.swift",
+    "anchor": "            if run.fill == fill { run.fill = nil }",
+    "replacement": "            if run.fill == fill, false { run.fill = nil }",
+    "filter": "TextStyleCommandsTests.boldAllThenClearLeavesNoRuns"
   }
 ]
