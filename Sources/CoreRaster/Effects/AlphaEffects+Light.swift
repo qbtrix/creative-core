@@ -21,7 +21,9 @@ extension PixelBuffer {
     /// the layer, or inside it from its edges when `inner`. Intensity 0
     /// returns the buffer unchanged. Throws `RasterError.invalid` for a colour
     /// that is not finite, a radius not finite or not in 0...1,000, an
-    /// intensity not finite or not in 0...1, or a result that overflows.
+    /// intensity not finite or not in 0...1, a buffer too large to pad for
+    /// the effect (its padded work copy passes `maxPixels`), or a result that
+    /// overflows.
     public func glowing(color: RGBA, radius: Double, intensity: Double, inner: Bool) throws -> PixelBuffer {
         guard intensity.isFinite, intensity >= 0, intensity <= 1 else {
             throw RasterError.invalid("glow intensity \(intensity): must be finite and in 0...1")
@@ -35,7 +37,9 @@ extension PixelBuffer {
     /// pixels (about a Gaussian of sigma `blur` / 3): a drop shadow under the layer, or
     /// an inner shadow over it, clipped to its alpha, when `inner`. Throws
     /// `RasterError.invalid` for a colour or offset that is not finite, a blur
-    /// not finite or not in 0...1,000, or a result that overflows.
+    /// not finite or not in 0...1,000, a buffer too large to pad for the
+    /// effect (its copy padded for the blur and offset passes `maxPixels`),
+    /// or a result that overflows.
     public func shadowed(color: RGBA, dx: Double, dy: Double, blur: Double, inner: Bool) throws -> PixelBuffer {
         guard dx.isFinite, dy.isFinite else {
             throw RasterError.invalid("shadow offset (\(dx), \(dy)): dx and dy must be finite")
@@ -54,7 +58,10 @@ extension PixelBuffer {
             throw RasterError.invalid("\(effect) \(reachName) \(reach): must be finite and in 0...\(Int(Self.maxLightReach))")
         }
         guard scale > 0 else { return self }
-        let mask = try blurredAlpha(reach: reach, inner: inner, offset: max(abs(dx), abs(dy)))
+        let offset = dx == 0 && dy == 0 ? "" : " at offset (\(dx), \(dy))"
+        let mask = try blurredAlpha(reach: reach, inner: inner, offset: max(abs(dx), abs(dy)),
+                                    cause: "\(effect) \(reachName) \(reach)\(offset)",
+                                    remedy: offset.isEmpty ? reachName : "\(reachName), the offset")
         let src = components, c = Self.channels
         var out = src
         let paint = [color.r, color.g, color.b, color.a]
@@ -84,10 +91,12 @@ extension PixelBuffer {
     /// value past the buffer; more lets an `offset` pull in the blur that
     /// spills past the edge, up to the blur's reach (beyond it the mask is the
     /// outside value). The offset is compared as a Double, so it never
-    /// overflows Int.
-    private func blurredAlpha(reach: Double, inner: Bool, offset: Double) throws -> LightMask {
-        let pad = Int(min(offset, reach + 3).rounded(.up)) + 2, pw = width + 2 * pad, ph = height + 2 * pad
-        _ = try Self.validatedSize(width: pw, height: ph)
+    /// overflows Int. `cause` and `remedy` name the effect in the error when
+    /// the padded copy is too large (see `paddedWorkSize`).
+    private func blurredAlpha(reach: Double, inner: Bool, offset: Double, cause: String,
+                              remedy: String) throws -> LightMask {
+        let pad = Int(min(offset, reach + 3).rounded(.up)) + 2
+        let (pw, ph) = try Self.paddedWorkSize(width: width, height: height, pad: pad, cause: cause, remedy: remedy)
         let outside: Float = inner ? 1 : 0, c = Self.channels, src = components
         var padded = [Float](repeating: outside, count: pw * ph * c)
         for y in 0..<height {

@@ -214,8 +214,16 @@ public enum LayerEffect: Hashable, Sendable {
     case stroke(color: RGBA, width: Double, position: StrokePosition)
 }
 
-/// Where a stroke effect sits relative to the layer's edge.
-public enum StrokePosition: Hashable, Sendable { case outside, inside, center }
+/// Where a stroke effect sits relative to the layer's edge, the boundary of
+/// its alpha >= 0.5 set.
+public enum StrokePosition: Hashable, Sendable {
+    /// Entirely off the shape (alpha < 0.5), `width` wide, painted under the layer.
+    case outside
+    /// Entirely on the shape, `width` wide, painted over the layer and clipped to its alpha.
+    case inside
+    /// Straddles the edge, `width` / 2 each side (`width` in total), painted over the layer.
+    case center
+}
 
 /// How close a color must be to the seed for a fill to take it: exactly
 /// equal, or within a distance in 0...1 in OKLab.

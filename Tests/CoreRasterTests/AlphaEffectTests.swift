@@ -64,6 +64,42 @@ import Testing
         }
     }
 
+    /// The anti-aliased edge measure holds off-axis too, through the edge
+    /// offset's corner branches: the half-plane x + y <= 24.5 (pixel area
+    /// coordinates) gives its two diagonal edge rows alpha 0.125 and 0.875,
+    /// and a pixel whose centre is a distance d from the line has outside
+    /// stroke cover smoothstep(w + 0.5 - d). Pixel centres or the linear
+    /// branch alone miss it by more than 0.02.
+    @Test func strokeMeasuresDiagonalAntiAliasedEdge() throws {
+        let k = 24.5, size = 40
+        var b = try PixelBuffer(width: size, height: size)
+        for y in 0..<size {
+            for x in 0..<size {
+                // Area of the unit pixel [x, x + 1] x [y, y + 1] with X + Y <= k.
+                let t = k - Double(x + y)
+                let a = t <= 0 ? 0 : t <= 1 ? t * t / 2 : t <= 2 ? 1 - (2 - t) * (2 - t) / 2 : 1
+                let f = Float(a)
+                try b.setPixel(x: x, y: y, RGBA(r: f, g: f, b: f, a: f))
+            }
+        }
+        #expect(try b.pixel(x: 12, y: 12).a == 0.125 && b.pixel(x: 12, y: 11).a == 0.875)
+        for w in [3.0, 3.5, 4.0, 4.5] {
+            let out = try b.stroked(color: blue, width: w, position: .outside)
+            var probed = 0
+            for x in 12...16 {
+                for y in 12...24 {
+                    let d = (Double(x + y) + 1 - k) / 2.0.squareRoot()
+                    let t = min(max(w + 0.5 - d, 0), 1), want = t * t * (3 - 2 * t)
+                    guard want > 0.05, want < 0.95 else { continue }
+                    probed += 1
+                    let cover = try out.pixel(x: x, y: y).b
+                    #expect(abs(Double(cover) - want) < 0.02, "width \(w) at (\(x), \(y)): cover \(cover), want \(want)")
+                }
+            }
+            #expect(probed > 0, "width \(w): no pixel on the ramp")
+        }
+    }
+
     /// A radius is not the same reach everywhere (`LayerEffect`'s doc): box
     /// blur's is per pass, so a 1 px dot spreads past 25 px at radius 10,
     /// while a glow of radius 10 reaches only about 10 px.

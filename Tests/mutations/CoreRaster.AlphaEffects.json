@@ -40,5 +40,19 @@
     "anchor": "src[o + k] * (1 - lightAlpha)",
     "replacement": "src[o + k] * (1 - cover)",
     "filter": "AlphaEffectLightTests"
+  },
+  {
+    "note": "the stroke measures to edge pixel centres instead of the sub-pixel anti-aliased edge point, so a partly covered edge column is measured from its centre, caught by AlphaEffectTests.strokeMeasuresAntiAliasedEdge",
+    "file": "Sources/CoreRaster/Effects/AlphaEffects.swift",
+    "anchor": "let d = g > 0 ? Self.edgeOffset(alpha: v, abs(gx) / g, abs(gy) / g) / g : 0",
+    "replacement": "let d = 0.0",
+    "filter": "AlphaEffectTests"
+  },
+  {
+    "note": "the edge offset drops its corner branch for the linear one, so a diagonal edge pixel of low alpha puts the edge too far out, caught by AlphaEffectTests.strokeMeasuresDiagonalAntiAliasedEdge",
+    "file": "Sources/CoreRaster/Effects/AlphaEffects.swift",
+    "anchor": "if alpha < a1 { return 0.5 * (u + v) - (2 * u * v * alpha).squareRoot() }",
+    "replacement": "if alpha < a1 { return (0.5 - alpha) * u }",
+    "filter": "AlphaEffectTests"
   }
 ]
