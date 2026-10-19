@@ -32,3 +32,6 @@ utc	stage	event	ref	note
 2026-10-19T00:42:44Z	3	build	FX-6	builder launched (glow, shadow)
 2026-10-19T00:43:57Z	4	fix-merged	#593	r1-b1 blur fixes merged (9/9 caught)
 2026-10-19T01:20:48Z	build	pr-open	#605	FX-6 glow and shadow (FX-alpha), Mutate 2/2; box blur in place of Gaussian (round-2 contract item)
+2026-10-19T01:28:26Z	build	merged	#605	FX-6 merged
+2026-10-19T01:28:26Z	build	start	FX-7	builder on lead/effects-engine-fx-7 from 7d8af79
+2026-10-19T01:28:26Z	anatomy	round-start	7d8af79	round 2 gate+mutate (changed since 5ea5ae5)
