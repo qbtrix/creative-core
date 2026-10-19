@@ -74,6 +74,29 @@ import Testing
         }
     }
 
+    /// Each bad LUT_3D_SIZE line says what it found: the out-of-range value,
+    /// a second size line, or the text that is not one integer.
+    @Test func sizeErrorNamesValue() {
+        func message(_ text: String) -> String {
+            do {
+                _ = try CubeLUT.parse(text)
+                return "parsed"
+            } catch let RasterError.invalid(why) {
+                return why
+            } catch {
+                return "\(error)"
+            }
+        }
+        let range = message("LUT_3D_SIZE 66\n")
+        #expect(range.contains(".cube line 1") && range.contains("66") && range.contains("2...65"), "\(range)")
+        let twice = message("LUT_3D_SIZE 2\nLUT_3D_SIZE 2\n")
+        #expect(twice.contains(".cube line 2") && twice.contains("twice"), "\(twice)")
+        let float = message("LUT_3D_SIZE 64.0\n")
+        #expect(float.contains(".cube line 1") && float.contains("'64.0'"), "\(float)")
+        let extra = message("LUT_3D_SIZE 4 4\n")
+        #expect(extra.contains("'4 4'"), "\(extra)")
+    }
+
     @Test func refusesOtherDomain() {
         let other = ToneFixtures.damaged.filter { $0.label == "DOMAIN_MAX 2" }
         #expect(other.count == 1)
