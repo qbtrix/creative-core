@@ -189,6 +189,10 @@ private func fill(_ w: Int, _ h: Int, _ r: Float, _ g: Float, _ b: Float, _ a: F
             let placed = [RenderOp.composite, .blendSeparable, .blendNonSeparable, .retouch].contains(op)
             #expect(Set(["off-left", "off-top", "off-right", "off-bottom"]).isSubset(of: names) == placed, "\(op)")
         }
+        let affine = try ParityHarness.sampleSet(for: .affine)
+        #expect(try affine == ParityHarness.sampleSet(for: .affine) && affine.count == 10)
+        #expect(Set(affine.map(\.name)).count == affine.count, "affine: names are unique")
+        #expect(affine.allSatisfy { ($0.backdrop != nil) == $0.name.hasPrefix("through-") }, "affine: backdrop only when compositing")
         let tiny = try #require(try ParityHarness.sampleSet(for: .display).first { $0.name == "alpha-subnormal" })
         #expect(try tiny.source.pixel(x: 0, y: 0).a == 1e-45)
         let hue = try ParityHarness.sampleSet(for: .blendNonSeparable).map(\.name)
@@ -196,12 +200,12 @@ private func fill(_ w: Int, _ h: Int, _ r: Float, _ g: Float, _ b: Float, _ a: F
     }
 
     @Test func w1FamiliesHaveEmptySetsAndOldFamiliesAreUnchanged() throws {
-        for op in RenderOp.notOnMetalYet.sorted(by: { $0.rawValue < $1.rawValue }) {
+        for op in RenderOp.notOnMetalYet.subtracting([.affine]).sorted(by: { $0.rawValue < $1.rawValue }) {
             #expect(try ParityHarness.sampleSet(for: op).isEmpty, "\(op) has no samples until its feature adds them")
             #expect(try ParityHarness.sampleSet(for: op) == ParityHarness.sampleSet(for: op), "\(op)")
         }
-        #expect(ParityPack.all.count == 5 && ParityPack.all.map(\.name) == ["display-blur-adjust-retouch", "composite-blendSeparable",
-                                               "blendNonSeparable", "transform", "resample"])
+        #expect(ParityPack.all.count == 6 && ParityPack.all.map(\.name) == ["display-blur-adjust-retouch", "composite-blendSeparable",
+                                               "blendNonSeparable", "transform", "resample", "affine"])
         // FNV-1a over each old family's names, calls and input Float bits: the goldens were cut from these.
         var counts: [String: Int] = [:], prints: [String: UInt64] = [:]
         for op in RenderOp.allCases where !RenderOp.notOnMetalYet.contains(op) {

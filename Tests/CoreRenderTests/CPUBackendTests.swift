@@ -176,6 +176,12 @@ private func seededBuffer(width: Int, height: Int, seed: UInt64) throws -> Pixel
                 case .gaussianBlur(let sigma): expected = try sample.source.gaussianBlur(sigma: sigma)
                 case .adjusted(.contrast(let amount)): expected = try sample.source.contrast(amount)
                 case let .cloned(dx, dy, mask): expected = try sample.source.cloned(offset: (dx: dx, dy: dy), through: mask)
+                case let .transformed(m, w, h, filter): expected = try sample.source.transformed(m, width: w, height: h, filter: filter)
+                case .flipped(let axis): expected = sample.source.flipped(axis)
+                case let .compositeThrough(m, mode, opacity, filter):
+                    var backdrop = try #require(sample.backdrop)
+                    try backdrop.composite(sample.source, through: m, mode: mode, opacity: opacity, filter: filter)
+                    expected = backdrop
                 default:
                     Issue.record("unexpected call for \(op): \(sample.name)")
                     continue

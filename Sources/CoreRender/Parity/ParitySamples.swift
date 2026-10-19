@@ -36,9 +36,16 @@ public enum ParityCall: Equatable, Sendable {
     /// `cloned`: each masked pixel takes the pixel `dx`, `dy` pixels away in
     /// the same surface.
     case cloned(dx: Int, dy: Int, mask: Mask)
+    /// `transformed` through the matrix into `width` x `height` pixels.
+    case transformed(AffineMatrix, width: Int, height: Int, filter: ResampleFilter)
+    /// `flipped` across the axis.
+    case flipped(FlipAxis)
+    /// `composite` of the source onto the backdrop through the matrix (source to backdrop
+    /// pixels), `opacity` from 0 to 1.
+    case compositeThrough(AffineMatrix, mode: BlendMode, opacity: Float, filter: ResampleFilter)
 }
 
-/// One named input for one op; `backdrop` is set for `.composite` only.
+/// One named input for one op; `backdrop` is set for `.composite` and `.compositeThrough` only.
 public struct ParitySample: Equatable, Sendable {
     /// Stable name, unique within the op; goldens are filed under it.
     public let name: String
@@ -102,8 +109,8 @@ extension ParityHarness {
         }
     }
 
-    /// `sample` rendered on `backend` and read back, its surfaces released. A
-    /// `.composite` sample without a backdrop throws `RenderError.raster` naming it.
+    /// `sample` rendered on `backend` and read back, its surfaces released. A `.composite` or
+    /// `.compositeThrough` sample without a backdrop throws `RenderError.raster` naming it.
     public static func render(_ sample: ParitySample, on backend: any RenderBackend) throws -> PixelBuffer {
         let s = try backend.surface(sample.source)
         defer { backend.release(s) }
@@ -113,28 +120,42 @@ extension ParityHarness {
             let bytes = try backend.display(s, colorSpace: space)
             return try RenderError.mapping { try PixelBuffer(rgba8: bytes, width: s.width, height: s.height, colorSpace: space) }
         case let .composite(x, y, mode, opacity):
-            guard let backdrop = sample.backdrop else {
-                throw RenderError.raster("composite sample '\(sample.name)' has no backdrop")
+            out = try onto(sample, on: backend) { try backend.composite(s, onto: &$0, x: x, y: y, mode: mode, opacity: opacity) }
+        case let .compositeThrough(m, mode, opacity, filter):
+            out = try onto(sample, on: backend) {
+                try backend.composite(s, onto: &$0, through: m, mode: mode, opacity: opacity, filter: filter)
             }
-            var target = try backend.surface(backdrop)
-            do { try backend.composite(s, onto: &target, x: x, y: y, mode: mode, opacity: opacity) } catch {
-                backend.release(target)
-                throw error
-            }
-            out = target
         case .rotated(let turn): out = try backend.rotated(s, turn)
         case let .resampled(w, h, filter): out = try backend.resampled(s, width: w, height: h, filter: filter)
         case .gaussianBlur(let sigma): out = try backend.gaussianBlur(s, sigma: sigma)
         case .adjusted(let adjustment): out = try backend.adjusted(s, adjustment)
         case let .cloned(dx, dy, mask): out = try backend.cloned(s, offset: (dx: dx, dy: dy), through: mask)
+        case let .transformed(m, w, h, filter): out = try backend.transformed(s, m, width: w, height: h, filter: filter)
+        case .flipped(let axis): out = try backend.flipped(s, axis)
         }
         defer { backend.release(out) }
         return try backend.read(out)
     }
 
+    /// `sample`'s backdrop as a surface on `backend` after `draw` blended onto it; the backdrop is
+    /// released if `draw` throws. No backdrop throws `RenderError.raster` naming the sample.
+    private static func onto(_ sample: ParitySample, on backend: any RenderBackend,
+                             _ draw: (inout RenderSurface) throws -> Void) throws -> RenderSurface {
+        guard let backdrop = sample.backdrop else {
+            throw RenderError.raster("composite sample '\(sample.name)' has no backdrop")
+        }
+        var target = try backend.surface(backdrop)
+        do { try draw(&target) } catch {
+            backend.release(target)
+            throw error
+        }
+        return target
+    }
+
     /// Seeded straight colors premultiplied by `alpha` (random when nil; 0 keeps
-    /// the color, as a careless op leaves it), alpha 1 on even rows if `opaqueRows`.
-    private static func seeded(_ width: Int, _ height: Int, seed: UInt64, alpha: Float?, opaqueRows: Bool) throws -> PixelBuffer {
+    /// the color, as a careless op leaves it), alpha 1 on even rows if `opaqueRows`. Internal so
+    /// each W1 family's `Samples+<Family>.swift` builds its inputs the same way.
+    static func seeded(_ width: Int, _ height: Int, seed: UInt64, alpha: Float?, opaqueRows: Bool) throws -> PixelBuffer {
         var rng = ParityRandom(seed: seed)
         var buffer = try PixelBuffer(width: width, height: height)
         for y in 0..<height {
