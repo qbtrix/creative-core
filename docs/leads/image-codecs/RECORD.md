@@ -3,9 +3,9 @@
 Issue: #562 · Packet: docs/blueprints/core/features/image-codecs.md
 Run: act-1a1511a1174-tlch · Started: 2026-10-18T22:40Z
 Line lead for: image-codecs (#562), preview-cache (#440, already done), vector-import (#439, VI-z left)
-Stage: IC-png Anatomy round 3 (gate); IC-jpeg round 3 fix batch
+Stage: IC-png Anatomy round 3 (gate); IC-jpeg Anatomy round 4 (gate queued)
 Base: 9385de9 (wave 4)
-Next: #680 (r2-png-b2, 5cfdc4e, 10/10) merged; IC-png round 3 gate running on 124c35e; r3-jpeg-b1 fixer running, then IC-jpeg round 4 (last allowed)
+Next: #681 (r3-jpeg-b1, 468358b, 33/33) merged; IC-png round 3 gate on 124c35e, then IC-jpeg round 4 gate (last allowed) on 3d9c151; panels follow
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |

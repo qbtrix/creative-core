@@ -53,3 +53,5 @@ utc	stage	event	ref	note
 2026-10-19T09:09:39Z	4	merged	#676	r2-png-b1 1cb0228 12/12; r2-png-b2, r3-jpeg-b1 fixers running
 2026-10-19T09:14:56Z	anatomy	merged	#680	r2-png-b2 5cfdc4e
 2026-10-19T09:14:56Z	anatomy	gate	124c35e	IC-png round 3 gate started
+2026-10-19T09:18:11Z	anatomy	merged	#681	r3-jpeg-b1 468358b 33/33
+2026-10-19T09:18:11Z	anatomy	gate	3d9c151	IC-jpeg round 4 gate queued
