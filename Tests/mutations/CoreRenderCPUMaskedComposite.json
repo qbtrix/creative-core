@@ -1,0 +1,23 @@
+[
+  {
+    "note": "the CPU masked composite swaps the mask offsets, passing maskY as maskX, caught by CPUMaskedCompositeTests.equalsDirect",
+    "file": "Sources/CoreRender/CPU/CPUBackend+MaskedComposite.swift",
+    "anchor": "mask: mask, maskX: maskX, maskY: maskY)",
+    "replacement": "mask: mask, maskX: maskY, maskY: maskX)",
+    "filter": "CPUMaskedCompositeTests"
+  },
+  {
+    "note": "the CPU masked composite writes the backdrop outside the store's lock, reading it, compositing a copy and storing it back, so concurrent composites lose updates, caught by CPUMaskedCompositeTests.concurrentCompositesApplyInTurn",
+    "file": "Sources/CoreRender/CPU/CPUBackend+MaskedComposite.swift",
+    "anchor": "        try store.update(b) { backdrop in\n            try RenderError.mapping {\n                try backdrop.composite(source, x: x, y: y, mode: mode, opacity: opacity,\n                                       mask: mask, maskX: maskX, maskY: maskY)\n            }\n        }",
+    "replacement": "        var backdrop = try read(b)\n        try RenderError.mapping {\n            try backdrop.composite(source, x: x, y: y, mode: mode, opacity: opacity, mask: mask, maskX: maskX, maskY: maskY)\n        }\n        try store.update(b) { $0 = backdrop }",
+    "filter": "CPUMaskedCompositeTests"
+  },
+  {
+    "note": "the CPU masked composite drops the caller's opacity and composites at 1, caught by CPUMaskedCompositeTests.equalsDirect",
+    "file": "Sources/CoreRender/CPU/CPUBackend+MaskedComposite.swift",
+    "anchor": "mode: mode, opacity: opacity,\n",
+    "replacement": "mode: mode, opacity: 1,\n",
+    "filter": "CPUMaskedCompositeTests"
+  }
+]

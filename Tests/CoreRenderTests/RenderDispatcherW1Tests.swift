@@ -3,8 +3,8 @@
 // each reaches the CPU (its input read from the fake and uploaded) and records
 // `(<family>, "unsupported")`; `adjusted` routes by `ToneAdjustment.family`;
 // the masked composite is never routed by its blend mode; and the two W1
-// composites move a backdrop the way `composite` does. The CPU answers every
-// W1 family with its stub until a feature fills it.
+// composites move a backdrop the way `composite` does. The CPU's masked
+// composite is built (masks-mattes MM-5), so its fallbacks land pixels.
 import CoreColor
 import CoreRaster
 import CoreRender
@@ -79,28 +79,32 @@ private struct CompositingFake: RenderBackend {
         mask = try Mask(width: 4, height: 3, fill: 0.5)
     }
 
-    /// Runs `call` on a fresh dispatcher over a fake preferring every old
-    /// family, with `s` made on the fake and a CPU backdrop `b`, and checks
-    /// it fell back to the CPU for `family`: the CPU stub's error, the
-    /// recorded fallback, and `s` read from the fake for the upload.
-    private func expectCPU(_ family: RenderOp, seed: UInt64,
-                           _ call: (RenderDispatcher, RenderSurface, inout RenderSurface) throws -> Void) throws {
-        let fake = FakeBackend(supports: oldFamilies)
-        let d = RenderDispatcher(preferred: fake, fallback: CPUBackend())
-        let s = try d.surface(seededBuffer(width: 4, height: 3, seed: seed))
-        var b = try d.fallback.surface(seededBuffer(width: 6, height: 5, seed: seed + 1))
-        let backdrop = b
-        #expect(s.backend == "fake")
-        #expect(throws: RenderError.unsupported(family)) { try call(d, s, &b) }
-        #expect(fallback(d) == "\(family.rawValue) \(RenderDispatcher.reasonUnsupported)")
-        #expect(fake.calls.contains(.read(s)))
-        #expect(b == backdrop)
+    /// `backdrop` after CoreRaster's masked composite of `source` with `mode`
+    /// at (`x`, `y`), opacity 1 unless given, the mask at (0, 0) unless given.
+    private func direct(_ source: PixelBuffer, onto backdrop: PixelBuffer, x: Int = 0, y: Int = 0, mode: BlendMode,
+                        opacity: Float = 1, maskX: Int = 0, maskY: Int = 0) throws -> PixelBuffer {
+        var out = backdrop
+        try out.composite(source, x: x, y: y, mode: mode, opacity: opacity, mask: mask, maskX: maskX, maskY: maskY)
+        return out
     }
 
+    /// With a fake preferring every old family, `s` made on the fake and a
+    /// CPU backdrop `b`, the masked composite falls back to the CPU: the
+    /// fallback is recorded, `s` is read from the fake for the upload, and `b`
+    /// keeps its handle and takes the direct composite's pixels.
     @Test func eachNewMethodReachesTheCPU() throws {
-        try expectCPU(.maskedComposite, seed: 1) { d, s, b in
-            try d.composite(s, onto: &b, x: 1, y: 0, mode: .multiply, opacity: 0.5, mask: mask, maskX: 0, maskY: 1)
-        }
+        let fake = FakeBackend(supports: oldFamilies)
+        let d = RenderDispatcher(preferred: fake, fallback: CPUBackend())
+        let (source, backdrop) = (try seededBuffer(width: 4, height: 3, seed: 1), try seededBuffer(width: 6, height: 5, seed: 2))
+        let s = try d.surface(source)
+        var b = try d.fallback.surface(backdrop)
+        let handle = b
+        #expect(s.backend == "fake")
+        try d.composite(s, onto: &b, x: 1, y: 0, mode: .multiply, opacity: 0.5, mask: mask, maskX: 0, maskY: 1)
+        #expect(fallback(d) == "maskedComposite \(RenderDispatcher.reasonUnsupported)")
+        #expect(fake.calls.contains(.read(s)))
+        #expect(b == handle)
+        #expect(try d.read(b) == direct(source, onto: backdrop, x: 1, mode: .multiply, opacity: 0.5, maskY: 1))
     }
 
     @Test func colorCasesFallBack() throws {
@@ -127,30 +131,28 @@ private struct CompositingFake: RenderBackend {
     func maskedCompositeIsItsOwnFamily(mode: BlendMode) throws {
         let fake = FakeBackend(supports: oldFamilies)
         let d = RenderDispatcher(preferred: fake, fallback: CPUBackend())
-        let s = try d.fallback.surface(seededBuffer(width: 4, height: 3, seed: 15))
-        var b = try d.fallback.surface(seededBuffer(width: 6, height: 5, seed: 16))
-        #expect(throws: RenderError.unsupported(.maskedComposite)) {
-            try d.composite(s, onto: &b, x: 0, y: 0, mode: mode, opacity: 1, mask: mask, maskX: 0, maskY: 0)
-        }
+        let (source, backdrop) = (try seededBuffer(width: 4, height: 3, seed: 15), try seededBuffer(width: 6, height: 5, seed: 16))
+        let s = try d.fallback.surface(source)
+        var b = try d.fallback.surface(backdrop)
+        try d.composite(s, onto: &b, x: 0, y: 0, mode: mode, opacity: 1, mask: mask, maskX: 0, maskY: 0)
         #expect(fallback(d) == "maskedComposite \(RenderDispatcher.reasonUnsupported)")
         #expect(fake.calls.isEmpty)
+        #expect(try d.read(b) == direct(source, onto: backdrop, mode: mode))
     }
 
     @Test func aFakeBackdropIsUploadedForTheMaskedComposite() throws {
         let fake = FakeBackend(supports: oldFamilies)
         let d = RenderDispatcher(preferred: fake, fallback: CPUBackend())
-        let backdrop = try seededBuffer(width: 6, height: 5, seed: 17)
+        let (source, backdrop) = (try seededBuffer(width: 4, height: 3, seed: 18), try seededBuffer(width: 6, height: 5, seed: 17))
         var b = try fake.surface(backdrop)
         let original = b
-        #expect(throws: RenderError.unsupported(.maskedComposite)) {
-            try d.composite(d.fallback.surface(seededBuffer(width: 4, height: 3, seed: 18)), onto: &b,
-                            x: 0, y: 0, mode: .normal, opacity: 1, mask: mask, maskX: 0, maskY: 0)
-        }
+        try d.composite(d.fallback.surface(source), onto: &b,
+                        x: 0, y: 0, mode: .normal, opacity: 1, mask: mask, maskX: 0, maskY: 0)
         #expect(fake.calls.contains(.read(original)))
-        // The stub threw, so the caller keeps its handle and the fake's copy.
-        #expect(b == original)
-        #expect(!fake.calls.contains(.release(original)))
-        #expect(try fake.read(b) == backdrop)
+        // The backdrop moved to the CPU: the caller's handle is the CPU copy, the fake's released.
+        #expect(b.backend == d.fallback.name)
+        #expect(fake.calls.contains(.release(original)))
+        #expect(try d.read(b) == direct(source, onto: backdrop, mode: .normal))
     }
 
     @Test func aMovedBackdropReplacesTheCallersHandle() throws {
