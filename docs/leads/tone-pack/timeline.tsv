@@ -80,3 +80,4 @@ utc	stage	event	ref	note
 2026-10-19T11:35:02Z	4	heartbeat	wf_206056b3-8d3	r5 fixers building, no PR yet
 2026-10-19T11:57:38Z	4	heartbeat	wf_206056b3-8d3	r5 fixers in gate, no PR yet
 2026-10-19T13:05Z	4	stage-start	0b5a641	relaunch (run act-1a1543c8a5f-6y14); lead branch rebased; r5-b1..b3 re-dispatched
+2026-10-19T13:01Z	4	fix-dispatch	0b5a641	r5 fixes wf_f47eb584-ac1: r5-b1 r5-b2 r5-b3

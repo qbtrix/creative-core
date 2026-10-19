@@ -2,7 +2,7 @@
 
 Issue: #432 · Packet: docs/blueprints/core/features/tone-pack.md
 Run: act-1a1543c8a5f-6y14 (relaunch; first run act-1a150bfbcf7-sfwy) · Started: 2026-10-18T20:45Z · Relaunched: 2026-10-19T13:05Z
-Stage: 4 round 5 fixes re-dispatched after relaunch (first run's wf_206056b3-8d3 died: r5-b1 left a commit on lead/tone-pack-r5-b1 with no PR, r5-b2 and r5-b3 pushed nothing)
+Stage: 4 round 5 fixes re-dispatched after relaunch (first run's wf_206056b3-8d3 died: r5-b1 left a commit on lead/tone-pack-r5-b1 with no PR, r5-b2 and r5-b3 pushed nothing); relaunch fix run wf_f47eb584-ac1 (r5-b1 finish branch, r5-b2 AutoTone tests + walk routing, r5-b3 colour-op speed + release budgets)
 Base: 0b5a641be359e283625fa5c798b8d02872fad344
 Next: r5 fixes merge; round 6 for TP-cpu, TP-z only (TP-a, TP-mix, TP-map at round cap); then TP-10 (feature-done), Belt-Slice-Done TP-z, Mac-Finish-Wanted TP-z
 
