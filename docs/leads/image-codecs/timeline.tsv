@@ -80,3 +80,4 @@ utc	stage	event	ref	note
 2026-10-19T15:20:59Z	4	slice-done	#562	Belt-Slice-Done IC-png, IC-jpeg on run 405
 2026-10-19T15:21:35Z	4	round-start	r6	gate (ci, validate, 13 mutate plans) + critic panel clarity/contract/tests/robustness on IC-z, verified
 2026-10-19T16:53:00Z	4	round-result	r6	88ed878: 0 major, 4 minor (F1 walk 4:4:4/4:2:2 means unchecked, F2 24MP JPEG pixels unchecked, F3 DeflateHuffman doc, F4 IC-10 itself), 4 refuted; mutate all 100% (Deflate 7, Inflate 13, PNG 11, PNGWrite 4, JPEGDecode 6, JPEGWrite 7); ci 1 failing test, rerun for name
+2026-10-19T16:54:13Z	5	gap-filed	#728	PNG encode 12MP level 6 release median 14.7 s vs 2.5 s budget (p2)
