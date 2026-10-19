@@ -156,6 +156,7 @@ import Testing
         let start = TextFixtures.document(TextFixtures.text("Bring"))
         var engine = CommandEngine(document: start)
         #expect(throws: CommandError.invalidIndex(9)) { try engine.perform(Self.apply(3..<9)) }
+        #expect(throws: CommandError.invalidIndex(-1)) { try engine.perform(Self.apply(-1..<2)) }
         #expect(engine.document == start && !engine.canUndo)
     }
     /// Setting a field back to regular removes it: weight 400 over a bold range leaves no runs.

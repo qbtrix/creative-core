@@ -32,6 +32,6 @@
     "file": "Sources/FlareCore/TextStyleCommands.swift",
     "anchor": "        if range.lowerBound < 0 { throw CommandError.invalidIndex(range.lowerBound) }",
     "replacement": "        if range.lowerBound < -1 { throw CommandError.invalidIndex(range.lowerBound) }",
-    "filter": "TextStyleCommandsTests.rangePastEndRefused"
+    "filter": "TextStyleCommandsTests.rangePastEndNamesOffset"
   }
 ]
