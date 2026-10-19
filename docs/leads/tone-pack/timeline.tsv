@@ -61,3 +61,4 @@ utc	stage	event	ref	note
 2026-10-19T07:05:34Z	4	heartbeat	-	round 4 mutation on d902951
 2026-10-19T07:10:09Z	4	round 4 gate	d902951	CI PASS, mutate 148/148; panel wf_6161a746-3ae
 2026-10-19T07:14:47Z	4	fix-batches	wf_62790f68-535	round 4: 8 confirmed; 4 batches, r4-b4 builds TP-9
+2026-10-19T07:27:07Z	4	heartbeat	-	r4 fixes running (wf_62790f68-535), agents active
