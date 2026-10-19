@@ -23,3 +23,4 @@ utc	stage	event	ref	note
 2026-10-19T17:35:13Z	stage4	round-1 masks fix #730 in lane (6/6 FlareMatteRenderList, +18-4, 3 files)
 2026-10-19T17:35:49Z	stage4	#730 merged
 2026-10-19T17:46:10Z	heartbeat	builders running
+2026-10-19T18:02:27Z	stage4	round 1 fixes merged (#730, #733); round 2 gate+mutation on f99bcc4e
