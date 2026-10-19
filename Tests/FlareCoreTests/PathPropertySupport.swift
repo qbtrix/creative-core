@@ -1,7 +1,6 @@
-// PathPropertySupport.swift: seeded generators for the measure, trim and dash
-// property checks: random open and closed paths of lines, quads and cubics,
-// hostile paths with a NaN or infinite coordinate, dash patterns and phases.
-// Same seed, same values, on every platform.
+// PathPropertySupport.swift: seeded generators (paths of lines, quads and
+// cubics; hostile paths with a NaN or infinite coordinate; dash patterns and
+// phases) for the measure, trim and dash property checks.
 import FlareCore
 import Testing
 

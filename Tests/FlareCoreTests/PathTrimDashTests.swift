@@ -1,19 +1,15 @@
-// PathTrimDashTests.swift: trim cuts the ruler at start, end and a wrapping
-// offset, over the whole path or each contour; dash lays its pattern (odd
-// counts repeat, phase shifts, each contour restarts) along the ruler; bad
-// patterns and input throw; 300 seeded paths keep trimmed length exact.
+// PathTrimDashTests.swift: trim (wrapping offset, per contour) and dash (odd
+// counts repeat, phase, contour restart) along the ruler; bad input throws.
 import FlareCore
 import Testing
 
 private func pt(_ x: Double, _ y: Double) -> Point { Point(x: x, y: y) }
 private let tol = 0.01
 
-/// The length of each subpath of `path`.
 private func pieces(_ path: Path) throws -> [Double] {
     try path.flattened(tolerance: tol).map { try Path(polyline: $0, closed: false).length(tolerance: tol) }
 }
 
-/// Polylines with repeated consecutive points dropped.
 private func distinct(_ lines: [[Point]]) -> [[Point]] {
     lines.map { line in line.enumerated().filter { $0.offset == 0 || line[$0.offset - 1] != $0.element }.map(\.element) }
 }
@@ -25,7 +21,6 @@ private func close(_ a: [Double], _ b: [Double], _ eps: Double = 1e-9) -> Bool {
 @Suite struct PathTrimDashTests {
     static func rect() throws -> Path { try PathBuilders.rectangle(in: Rect(minX: 0, minY: 0, maxX: 100, maxY: 50)) }
     static let line120 = Path(polyline: [pt(0, 0), pt(120, 0)], closed: false)
-    /// Two closed squares: perimeters 40 and 80.
     static let twoSquares = Path(elements:
         Path(polyline: [pt(0, 0), pt(10, 0), pt(10, 10), pt(0, 10)], closed: true).elements
         + Path(polyline: [pt(50, 0), pt(70, 0), pt(70, 20), pt(50, 20)], closed: true).elements)
@@ -48,22 +43,14 @@ private func close(_ a: [Double], _ b: [Double], _ eps: Double = 1e-9) -> Bool {
             let trimmed = try Self.rect().trimmed(start: 0.25, end: 0.75, offset: offset, mode: .together, tolerance: tol)
             #expect(close(try pieces(trimmed), [75, 75]), "offset \(offset)")
         }
-        let reversed = try Self.rect().trimmed(start: 0.75, end: 0.25, offset: 0, mode: .together, tolerance: tol)
-        #expect(close(try pieces(reversed), [75, 75]))
+        #expect(close(try pieces(Self.rect().trimmed(start: 0.75, end: 0.25, offset: 0, mode: .together, tolerance: tol)), [75, 75]))
     }
 
     @Test func eachContourRestarts() throws {
-        let each = try Self.twoSquares.trimmed(start: 0, end: 0.5, offset: 0, mode: .eachContour, tolerance: tol)
-        #expect(close(try pieces(each), [20, 40]))
-        let together = try Self.twoSquares.trimmed(start: 0, end: 0.5, offset: 0, mode: .together, tolerance: tol)
-        #expect(close(try pieces(together), [40, 20]))
+        #expect(close(try pieces(Self.twoSquares.trimmed(start: 0, end: 0.5, offset: 0, mode: .eachContour, tolerance: tol)), [20, 40]))
+        #expect(close(try pieces(Self.twoSquares.trimmed(start: 0, end: 0.5, offset: 0, mode: .together, tolerance: tol)), [40, 20]))
         // A dash pattern restarts at each contour: [30, 100] draws 30 of each.
         #expect(close(try pieces(Self.twoSquares.dashed([30, 100], phase: 0, tolerance: tol)), [30, 30]))
-    }
-
-    @Test func dashesOf10On300() throws {
-        let dashes = try Self.rect().dashed([10, 5], phase: 0, tolerance: tol)
-        #expect(close(try pieces(dashes), Array(repeating: 10, count: 20)))
     }
 
     @Test func oddPatternRepeats() throws {
@@ -72,7 +59,8 @@ private func close(_ a: [Double], _ b: [Double], _ eps: Double = 1e-9) -> Bool {
         #expect(try dashes.flattened(tolerance: tol).map { $0.first?.x } == [0, 15, 30, 40, 55, 70, 80, 95, 110])
     }
 
-    @Test func phaseShiftsTheStart() throws {
+    @Test func dashesOf10On300AndPhaseShiftsTheStart() throws {
+        #expect(close(try pieces(Self.rect().dashed([10, 5], phase: 0, tolerance: tol)), Array(repeating: 10, count: 20)))
         let line = Path(polyline: [pt(0, 0), pt(30, 0)], closed: false)
         #expect(close(try pieces(line.dashed([10, 5], phase: 5, tolerance: tol)), [5, 10, 5]))
         #expect(close(try pieces(line.dashed([10, 5], phase: -5, tolerance: tol)), [10, 10]))
@@ -112,8 +100,7 @@ private func close(_ a: [Double], _ b: [Double], _ eps: Double = 1e-9) -> Bool {
             }
             let pattern = PathGen.pattern(&rng)
             let dashes = try pieces(path.dashed(pattern, phase: PathGen.phase(&rng), tolerance: tol))
-            let longest = pattern.max() ?? 0
-            #expect(dashes.allSatisfy { $0 >= 0 && $0 <= longest + 1e-9 })
+            #expect(dashes.allSatisfy { $0 >= 0 && $0 <= (pattern.max() ?? 0) + 1e-9 })
             #expect(dashes.reduce(0, +) <= length + 1e-6)
         }
     }

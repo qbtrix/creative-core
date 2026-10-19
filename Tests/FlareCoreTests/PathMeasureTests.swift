@@ -17,14 +17,11 @@ private func near(_ a: Point, _ b: Point, _ eps: Double = 1e-9) -> Bool { abs(a.
 
     @Test func sampleAtCorner() throws {
         let path = try PathBuilders.rectangle(in: Self.rect)
-        let corner = try #require(try path.sample(atLength: 150, tolerance: 0.1))
-        #expect(near(corner.point, pt(100, 50)) && near(corner.tangent, pt(-1, 0)))
-        let start = try #require(try path.sample(atLength: 0, tolerance: 0.1))
-        #expect(near(start.point, pt(0, 0)) && near(start.tangent, pt(1, 0)))
-        let mid = try #require(try path.sample(atLength: 125, tolerance: 0.1))
-        #expect(near(mid.point, pt(100, 25)) && near(mid.tangent, pt(0, 1)))
-        let end = try #require(try path.sample(atLength: 300, tolerance: 0.1))
-        #expect(near(end.point, pt(0, 0)) && near(end.tangent, pt(0, -1)))
+        // (length, point, tangent): the corner at 150 takes the segment leaving it.
+        for (s, p, t) in [(150.0, pt(100, 50), pt(-1, 0)), (0, pt(0, 0), pt(1, 0)), (125, pt(100, 25), pt(0, 1)), (300, pt(0, 0), pt(0, -1))] {
+            let got = try #require(try path.sample(atLength: s, tolerance: 0.1))
+            #expect(near(got.point, p) && near(got.tangent, t), "at \(s)")
+        }
     }
 
     @Test func outsideTheRulerIsNil() throws {
@@ -52,8 +49,7 @@ private func near(_ a: Point, _ b: Point, _ eps: Double = 1e-9) -> Bool { abs(a.
         #expect(try path.length(tolerance: 0.1) == 30)
         let join = try #require(try path.sample(atLength: 10, tolerance: 0.1))
         #expect(near(join.point, pt(0, 5)) && near(join.tangent, pt(0, 1)))
-        let inSecond = try #require(try path.sample(atLength: 20, tolerance: 0.1))
-        #expect(near(inSecond.point, pt(0, 15)))
+        #expect(near(try #require(try path.sample(atLength: 20, tolerance: 0.1)).point, pt(0, 15)))
     }
 
     @Test func badInputThrows() throws {

@@ -235,6 +235,7 @@ extension PathAnchor {
     }
 }
 
-private func lerp(_ a: Point, _ b: Point, _ t: Double) -> Point {
+/// The point `t` of the way from `a` to `b`; PathMeasure cuts with it too.
+func lerp(_ a: Point, _ b: Point, _ t: Double) -> Point {
     Point(x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t)
 }
