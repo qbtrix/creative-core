@@ -23,8 +23,8 @@
   {
     "note": "the matrix guard drops the inverse check so a singular matrix mapped off the backdrop returns without throwing, caught by CompositeAffineTests.badInputThrowsAndLeavesBackdrop",
     "file": "Sources/CoreRaster/Compositing/CompositeAffine.swift",
-    "anchor": "allSatisfy(\\.isFinite), let inv = m.inverse else {",
-    "replacement": "allSatisfy(\\.isFinite), let inv = m.inverse ?? Optional(m) else {",
+    "anchor": "let inv = try m.checkedInverse(for: \"composite through \\(m)\")",
+    "replacement": "let inv = (try? m.checkedInverse(for: \"composite through \\(m)\")) ?? m",
     "filter": "CompositeAffineTests"
   },
   {

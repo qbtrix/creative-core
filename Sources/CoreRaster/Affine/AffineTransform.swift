@@ -11,19 +11,21 @@
 // `rotated(degrees:filter:)` does, and each axis's kernel widens by how far
 // one output step moves in the source along it, as `resized` widens when
 // shrinking. Invariants: the output size passed `validatedSize`, the matrix
-// is finite and invertible, and every output component is finite.
+// is finite and invertible (`checkedInverse`, which says which one failed),
+// and every output component is finite.
 
 extension PixelBuffer {
     /// This image mapped through `m` into a `width` x `height` buffer,
-    /// sampled with `filter`; outside the source is transparent. Throws
-    /// `RasterError.invalid` for a size `validatedSize` rejects, a matrix with
-    /// a non-finite entry or no finite inverse, or a lanczos3 overshoot that
-    /// is not finite.
+    /// sampled with `filter`; outside the source is transparent. `m` maps
+    /// source pixel coordinates to output pixel coordinates (forward, as in
+    /// the RenderBackend contract), so pass the matrix itself, never its
+    /// inverse; pixel (x, y) is sampled at its centre (x + 0.5, y + 0.5).
+    /// Throws `RasterError.invalid` for a size `validatedSize` rejects, a
+    /// matrix with a non-finite entry or a singular one (see
+    /// `checkedInverse`), or a lanczos3 overshoot that is not finite.
     public func transformed(_ m: AffineMatrix, width outW: Int, height outH: Int, filter: ResampleFilter) throws -> PixelBuffer {
         _ = try Self.validatedSize(width: outW, height: outH)
-        guard [m.a, m.b, m.c, m.d, m.tx, m.ty].allSatisfy(\.isFinite), let inv = m.inverse else {
-            throw RasterError.invalid("transform by \(m): the matrix must be finite and invertible")
-        }
+        let inv = try m.checkedInverse(for: "transform by \(m)")
         if let copy = exactCopy(m, inverse: inv, width: outW, height: outH) { return copy }
         let output = sampled(inv, width: outW, height: outH, filter: filter)
         guard output.allSatisfy(\.isFinite) else {
@@ -156,6 +158,20 @@ extension ResampleFilter {
 }
 
 extension AffineMatrix {
+    /// This matrix's inverse, for a resampling `operation` that needs one.
+    /// Throws `RasterError.invalid` naming the fault: "non-finite" for a NaN
+    /// or infinite entry, "singular" with the determinant when no finite
+    /// inverse exists (a scale or skew collapsed an axis).
+    func checkedInverse(for operation: String) throws -> AffineMatrix {
+        guard [a, b, c, d, tx, ty].allSatisfy(\.isFinite) else {
+            throw RasterError.invalid("\(operation): matrix has a non-finite entry; compute it from finite values")
+        }
+        guard let inv = inverse else {
+            throw RasterError.invalid("\(operation): matrix is singular (determinant \(a * d - b * c)); a scale or skew collapsed an axis, keep both axes non-zero")
+        }
+        return inv
+    }
+
     /// Where the centre of pixel (`x`, `y`) lands under this map.
     func centre(_ x: Int, _ y: Int) -> (x: Double, y: Double) {
         let px = Double(x) + 0.5, py = Double(y) + 0.5
