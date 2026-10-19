@@ -13,7 +13,8 @@
 // leaves the backend unhealthy with the reason in `capabilities.lastError` (so `deviceLost` is only ever thrown with `isHealthy` false), and only a
 // `recover` whose probe passes makes it healthy again. No probe's GPU wait or runtime compile of a
 // custom source runs under the lock: `supports` and `isHealthy` answer while a probe is in flight; only the short
-// blit of a tile readback (MetalSurface.readback, for `read` and eviction) waits on the GPU under it. A backend from
+// blit of a tile readback (MetalSurface.readback, for `read` and eviction) waits on the GPU under it. The batched
+// composite alone commits without waiting; every later op on the queue is ordered after it. A backend from
 // `startingInBackground` (MetalBackend+Warmup.swift, MB-17) leaves each family out of `supports` until its
 // pipelines finish compiling off the caller's queue; the plain init compiles each on first use.
 #if canImport(Metal)
@@ -51,6 +52,9 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     var budget: Int
     /// Counts uploads, reads and restores: the `lastUse` stamp. Advance with `tick` under the lock.
     private var useClock: UInt64 = 0
+    /// The last batched composite's command buffer, committed with no wait (MetalBackend+Resident.swift):
+    /// `recover` waits for it before ops move to a new queue. Under the lock.
+    var lastUnwaited: (any MTLCommandBuffer)?
     /// Rows the opaque-row fast path blitted (MB-6, MetalBackend+OpaqueRows.swift); under the lock.
     var blittedRows = 0
     /// Whether the background compile ran on the main thread, nil until it starts (MB-17); under the lock.
@@ -174,7 +178,10 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
             throw RenderError.deviceLost(reason)
         }
         try checkedProbe(source: probeSource, on: queue)
+        // Nothing orders the new queue after the old one: let the last unwaited composite land first.
+        withLock { lastUnwaited }?.waitUntilCompleted()
         withCapabilities { capabilities in
+            lastUnwaited = nil
             commandQueue = queue
             capabilities.recover()
         }
