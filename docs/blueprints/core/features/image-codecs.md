@@ -13,6 +13,7 @@ stand-in is Photo's ImageIO one, macOS-only, and `layered-codecs.md` notes
 there is no inflate in core).
 **Line:** `line:core` · **Wave:** 5 (`waves.md`; beta-80 **W0**, `p0`) ·
 **Lead branch:** `lead/image-codecs`
+**Status:** built (IC-1 to IC-10) · follow-ups: #703, #704, #705, #728 (PNG encode release time)
 
 **Covers:** the captain's AI-accessible-first call (the beta-80 plan's "W0:
 command layer"): headless Linux I/O for Photo and Library; creative-apps
@@ -58,8 +59,10 @@ Engine only. KJ-IC (`ImageCodecWalkTests.walk`, IC-9): every PNG fixture
 reference pixels; each re-encodes as RGBA and reopens `==`; an ORA with
 three layers written through `PNGCodec` reopens with the same layers; every
 JPEG fixture decodes within a mean absolute error of 1/255 and a maximum of
-4/255 of its reference; quality 90 re-encodes and reopens within 3/255 mean;
-an EXIF-rotated fixture reports orientation 6.
+4/255 of its reference; quality 90 re-encodes and reopens the same size,
+grey and 4:2:0 within 3/255 mean, finer chroma (4:4:4, 4:2:2; the writer is
+4:2:0) within its measured 8/255; an EXIF-rotated fixture reports
+orientation 6.
 
 ## Screens and states
 
