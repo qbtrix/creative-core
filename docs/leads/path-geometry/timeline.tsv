@@ -8,3 +8,4 @@ utc	stage	event	ref	note
 2026-10-19T14:12:44Z	heartbeat	builders running
 2026-10-19T14:30:50Z	heartbeat	builders running
 2026-10-19T14:48:57Z	heartbeat	builders running
+2026-10-19T15:21:04Z	stage3	P1 #713 merged; PG-a Belt-Slice-Done posted (run 39263347459); container restart, wave 2 builders: P2 finish + P3, P4
