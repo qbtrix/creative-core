@@ -8,9 +8,10 @@
 // `h = destination - source` on the ring just outside the mask. A neighbour
 // off the buffer is dropped (no flux across the buffer's edge). Solving for h
 // rather than f keeps a zero correction exactly zero, so a heal whose source
-// is the destination returns it bit for bit. Every allocation and loop is
-// sized by the mask's covered bounds, never by the buffer, so a dab heals at
-// dab speed on any photo; the solve is `HealSolver`'s multigrid.
+// is the destination returns it bit for bit. The mask is buffer-sized, so
+// finding its covered bounds scans the whole mask; past that, every
+// allocation and loop is sized by those bounds, never by the buffer. The
+// solve is `HealSolver`'s multigrid.
 
 extension PixelBuffer {
     /// The most pixels the bounding rectangle of a mask's covered pixels may
@@ -26,22 +27,34 @@ extension PixelBuffer {
 
     /// The buffer with the source (itself shifted by `offset`) cloned through
     /// `mask` and its colour solved to match the destination along the mask's
-    /// edge. Only pixels inside the mask's bounds change. The mask must match
-    /// the buffer's size and its covered bounds hold at most `maxHealPixels`;
-    /// otherwise, or for an offset whose source lies off the buffer, it throws
-    /// `RasterError.invalid`. Pixel (x, y) takes its texture from (x + dx,
-    /// y + dy), and a feathered mask blends the result by coverage.
+    /// edge. Only pixels inside the mask's bounds change. Pixel (x, y) takes
+    /// its texture from (x + dx, y + dy), and a feathered mask blends the
+    /// result by coverage.
+    ///
+    /// `mask` is buffer-sized, not a dab placed at x, y as the tone dabs and
+    /// smudge take it: place a brush dab into a buffer-sized mask first.
+    /// Building and scanning that mask costs O(buffer) per call; the solve
+    /// and the writes cost only the mask's covered bounds.
+    ///
+    /// Throws `RasterError.invalid` when the mask's size differs from the
+    /// buffer's, when its covered bounds hold more than `maxHealPixels`, or
+    /// when the source of any pixel in those bounds lies off the buffer.
+    /// Unlike `cloned(offset:through:)`, which leaves such pixels as they
+    /// are, heal throws for an off-buffer source. An empty mask returns the
+    /// buffer unchanged, whatever the offset: there is no source to check.
     public func healed(offset: (dx: Int, dy: Int), through mask: Mask) throws -> PixelBuffer {
         var result = self
         try result.heal(offset: offset, through: mask)
         return result
     }
 
-    /// `healed(offset:through:)` in place, so a brush dab pays for the dab,
-    /// not for a copy of the buffer. The buffer is unchanged when it throws.
+    /// `healed(offset:through:)` in place: it writes only the mask's covered
+    /// bounds and makes no copy of the buffer. `mask` is buffer-sized, as for
+    /// `healed`, and the same rules on throwing and on an empty mask apply.
+    /// The buffer is unchanged when it throws.
     public mutating func heal(offset: (dx: Int, dy: Int), through mask: Mask) throws {
         guard mask.width == width, mask.height == height else {
-            throw RasterError.invalid("heal mask \(mask.width)x\(mask.height) differs from buffer \(width)x\(height)")
+            throw RasterError.invalid("heal mask \(mask.width)x\(mask.height) differs from buffer \(width)x\(height); heal takes a buffer-sized mask; place the dab into one")
         }
         guard let box = mask.coveredRect else { return }
         guard box.width * box.height <= Self.maxHealPixels else {

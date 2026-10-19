@@ -28,6 +28,42 @@ func expectSameOutside(_ a: PixelBuffer, _ b: PixelBuffer, cx: Int, cy: Int, r: 
         }
     }
 
+    @Test func reproducesFieldOnLargeRegion() throws {
+        // A radius-100 disc: big enough that a loose tolerance or too few
+        // V-cycles leave visible error. The baseline's worst is about 2e-4,
+        // so the bound is 1e-3, tighter than the 1/255 accuracy claim.
+        let field = try RetouchFixtures.gradientField(width: 400, height: 300)
+        let mask = try RetouchFixtures.disc(width: 400, height: 300, centerX: 300, centerY: 150, radius: 100)
+        let healed = try field.healed(offset: (dx: -160, dy: 2), through: mask)
+        var worst: Float = 0
+        for y in 0..<300 {
+            for x in 0..<400 where try mask.coverage(x: x, y: y) > 0 {
+                let p = try healed.pixel(x: x, y: y), f = RetouchFixtures.fieldValue(x: x, y: y)
+                worst = max(worst, abs(p.r - f.r), abs(p.g - f.g), abs(p.b - f.b), abs(p.a - f.a))
+            }
+        }
+        #expect(worst <= 1e-3, "worst error \(worst) off the field")
+    }
+
+    @Test func emptyMaskReturnsInputWhateverTheOffset() throws {
+        let field = try RetouchFixtures.gradientField(width: 32, height: 24)
+        let empty = try Mask(width: 32, height: 24)
+        for offset in [(dx: Int.max, dy: 0), (dx: Int.min, dy: Int.max), (dx: 1000, dy: -1000)] {
+            #expect(try field.healed(offset: offset, through: empty) == field)
+        }
+    }
+
+    @Test func dabSizedMaskThrowsAskingForBufferSized() throws {
+        let buffer = try PixelBuffer(width: 400, height: 300, fill: RGBA(r: 0.5, g: 0.5, b: 0.5, a: 1))
+        let dab = try Mask(width: 200, height: 200, fill: 1)
+        do {
+            _ = try buffer.healed(offset: (dx: 0, dy: 0), through: dab)
+            Issue.record("a dab-sized mask healed")
+        } catch let RasterError.invalid(message) {
+            #expect(message.contains("buffer-sized"), "\(message)")
+        }
+    }
+
     @Test func keepsSourceTexture() throws {
         // The field plus a texture of period 24 in x, with a disc painted out
         // where it is fully covered: healed from one period to the left, the

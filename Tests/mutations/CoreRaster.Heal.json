@@ -14,6 +14,20 @@
     "filter": "HealTests.reproducesField"
   },
   {
+    "note": "the heal's convergence tolerance is loosened from 1e-5 to 1e-3, so a large region stops early with visible error, caught by HealTests.reproducesFieldOnLargeRegion",
+    "file": "Sources/CoreRaster/Heal/Heal.swift",
+    "anchor": "static let healTolerance: Float = 1e-5",
+    "replacement": "static let healTolerance: Float = 1e-3",
+    "filter": "HealTests.reproducesFieldOnLargeRegion"
+  },
+  {
+    "note": "the heal's V-cycle cap drops from 40 to 4, so a large region stops before it converges, caught by HealTests.reproducesFieldOnLargeRegion",
+    "file": "Sources/CoreRaster/Heal/Heal.swift",
+    "anchor": "static let healMaxCycles = 40",
+    "replacement": "static let healMaxCycles = 4",
+    "filter": "HealTests.reproducesFieldOnLargeRegion"
+  },
+  {
     "note": "the heal's bounds loop runs over the whole buffer instead of the mask's bounds, so a heal from an offset reads its source off the buffer and fails, caught by HealTests.outsideBoundsUntouched",
     "file": "Sources/CoreRaster/Heal/Heal.swift",
     "anchor": "guard let box = mask.coveredRect else { return }",
