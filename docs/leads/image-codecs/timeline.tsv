@@ -14,3 +14,4 @@ utc	stage	event	ref	note
 2026-10-19T04:04Z	3	stage-start	9385de9	wave 4: IC-4, IC-5, IC-7, IC-8
 2026-10-19T04:07:57Z	build	agents-launched	IC-4,IC-5,IC-7,IC-8	wave 4 builders on 9385de9
 2026-10-19T04:09:09Z	heartbeat	ci-green	run 384	Linux+macOS green at 641739b; IC-a Slice-Done comment confirmed; wave 4 building
+2026-10-19T04:30:00Z	heartbeat	building	IC-4,IC-5,IC-7,IC-8	wave 4 builders still running
