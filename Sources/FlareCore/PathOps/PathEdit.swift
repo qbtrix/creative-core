@@ -32,6 +32,8 @@ extension Path {
 
     /// The path that draws `contours`: a move per contour, a line where both
     /// facing handles are nil, a cubic otherwise, and a close when `closed`.
+    /// Each anchor's `kind` is not read: the shape comes from points and
+    /// handles alone, and `contours` re-derives kind from the handles.
     public init(contours: [PathContour]) {
         var elements: [PathElement] = []
         for contour in contours {
@@ -60,14 +62,15 @@ extension Path {
         var best: PathLocation?
         for (i, (element, pen)) in zip(elements, pens()).enumerated() {
             guard let from = pen.pen, let c = Self.cubic(element, from: from, start: pen.start) else { continue }
-            let (t, point, distance) = try Self.closest(c, to: p, tolerance: tolerance)
+            let (t, point, distance) = Self.closest(c, to: p, tolerance: tolerance)
             if distance < best?.distance ?? .infinity { best = PathLocation(element: i, t: t, point: point, distance: distance) }
         }
         return best
     }
 
     /// The path with a new anchor at `location`, its element split there by
-    /// de Casteljau so the drawn shape does not change.
+    /// de Casteljau so the drawn shape does not change. Only `location.element`
+    /// and `location.t` are read; its point and distance are ignored.
     ///
     /// Throws `GeometryError.invalidLocation` when `location.element` is not a
     /// drawing element or `location.t` is outside 0...1.
@@ -109,7 +112,9 @@ extension Path {
     /// The path with anchor `index` of contour `contour` made `kind`: corner
     /// drops both handles, smooth lines them up, symmetric also equalizes them.
     /// Smooth turns both onto their bisector, keeping lengths and sides; a
-    /// missing handle starts a third of the way to its neighbour.
+    /// missing handle starts a third of the way to its neighbour. With no usable
+    /// arm (no handle and no distinct neighbour, as for a lone anchor) smooth
+    /// and symmetric leave the anchor as it is, so the path draws unchanged.
     ///
     /// Throws `GeometryError.invalidLocation` for an index out of range.
     public func converting(contour: Int, index: Int, to kind: AnchorKind) throws -> Path {
@@ -181,21 +186,23 @@ extension Path {
         }
     }
 
-    /// The closest point of cubic `c` to `p`: the nearest flattened point (equal
-    /// t steps), then golden-section search between its neighbours.
-    private static func closest(_ c: (Point, Point, Point, Point), to p: Point, tolerance: Double) throws -> (Double, Point, Double) {
-        func distance(_ q: Point) -> Double { norm(q.x - p.x, q.y - p.y) }
+    /// The closest point of cubic `c` to `p`: the nearest of the equal t steps
+    /// `flattened` takes, then golden-section search between its neighbours
+    /// until the bracket is under 1e-9 in t.
+    private static func closest(_ c: (Point, Point, Point, Point), to p: Point, tolerance: Double) -> (Double, Point, Double) {
         func at(_ t: Double) -> (t: Double, point: Point, distance: Double) {
             let q = cubicAt(c.0, c.1, c.2, c.3, t)
-            return (t, q, distance(q))
+            return (t, q, norm(q.x - p.x, q.y - p.y))
         }
-        let samples = try Path(elements: [.move(to: c.0), .cubic(control1: c.1, control2: c.2, to: c.3)])
-            .flattened(tolerance: tolerance).first ?? []
-        let n = max(samples.count - 1, 1)
-        let k = samples.indices.min { distance(samples[$0]) < distance(samples[$1]) } ?? 0
+        let n = cubicSegments(c.0, c.1, c.2, c.3, tolerance: tolerance)
+        var k = 0, nearest = Double.infinity
+        for i in 0...n {
+            let d = at(Double(i) / Double(n)).distance
+            if d < nearest { (k, nearest) = (i, d) }
+        }
         var lo = Double(max(k - 1, 0)) / Double(n), hi = Double(min(k + 1, n)) / Double(n)
         let g = (5.0.squareRoot() - 1) / 2
-        for _ in 0..<80 {
+        for _ in 0..<80 where hi - lo > 1e-9 {
             let a = hi - g * (hi - lo), b = lo + g * (hi - lo)
             if at(a).distance < at(b).distance { hi = b } else { lo = a }
         }

@@ -128,12 +128,7 @@ extension Path {
                     if emit(quadAt(from, c, to, Double(i) / Double(n)), starts: false) { return true }
                 }
             case .cubic(let c1, let c2, let to):
-                // Wang's bound for degree 3: n^2 >= (3*2/8) * max second difference / tol.
-                let m = max(
-                    norm(from.x - 2 * c1.x + c2.x, from.y - 2 * c1.y + c2.y),
-                    norm(c1.x - 2 * c2.x + to.x, c1.y - 2 * c2.y + to.y)
-                )
-                let n = Self.segmentCount((0.75 * m / tolerance).squareRoot())
+                let n = Self.cubicSegments(from, c1, c2, to, tolerance: tolerance)
                 for i in 1...n {
                     if emit(cubicAt(from, c1, c2, to, Double(i) / Double(n)), starts: false) { return true }
                 }
@@ -142,6 +137,16 @@ extension Path {
             }
         }
         return false
+    }
+
+    /// Equal t steps that keep a cubic within `tolerance` of its polyline.
+    /// Wang's bound for degree 3: n^2 >= (3*2/8) * max second difference / tol.
+    static func cubicSegments(_ from: Point, _ c1: Point, _ c2: Point, _ to: Point, tolerance: Double) -> Int {
+        let m = max(
+            norm(from.x - 2 * c1.x + c2.x, from.y - 2 * c1.y + c2.y),
+            norm(c1.x - 2 * c2.x + to.x, c1.y - 2 * c2.y + to.y)
+        )
+        return segmentCount((0.75 * m / tolerance).squareRoot())
     }
 
     /// `ceil(raw)` clamped to 1...maxFlattenSegments; NaN gives 1.
