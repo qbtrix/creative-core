@@ -6,7 +6,12 @@
 // texts, then instances, each instance's symbol layers recursively.
 //
 // Invariants:
-// - a hidden layer is absent from `nodes` and `items`, with all it holds
+// - a hidden layer is absent from `nodes` and `items`, with all it holds; one
+//   a visible layer of its list uses as a track matte lists in `matteItems`
+// - an item's `clips` are its layer's and every host layer's masks through
+//   that layer's scene matrix, outermost first; its `matte` is the nearest
+//   matted layer's on its way down, naming the source layer's items, which
+//   are flagged `isMatteSource`
 // - an item's opacity is the product of every layer opacity on its way down;
 //   instances have no opacity of their own
 // - an item is locked when its layer or any host layer above it is locked
@@ -221,8 +226,9 @@ extension RenderList {
     init(layers: [Layer], owner: LayerOwner, frame: Double, symbols: [Symbol], path: [String]) {
         var walker = Walker(owner: owner, symbols: symbols)
         nodes = walker.walk(layers, symbol: nil, frame: frame, path: path, hosts: [],
-                            parent: .identity, opacity: 1, locked: false)
+                            parent: .identity, opacity: 1, locked: false, clips: [])
         items = walker.items
+        matteItems = walker.matteItems
         isTruncated = walker.isTruncated
     }
 
@@ -245,7 +251,9 @@ extension RenderList {
     private struct Walker {
         let owner: LayerOwner
         let symbols: [Symbol]
-        var items: [RenderItem] = []
+        var items: [RenderItem] = [], matteItems: [RenderItem] = []
+        /// True while walking a hidden matte source: its items go to `matteItems`.
+        var matteOnly = false
         var expanded = 0
         var isTruncated = false
         /// Per symbol id, each layer's shape outlines.
@@ -255,7 +263,7 @@ extension RenderList {
         /// the owner's own layers, which are not charged to the budget.
         mutating func walk(
             _ layers: [Layer], symbol: String?, frame: Double, path: [String], hosts: [InstanceHost],
-            parent: Matrix, opacity: Double, locked: Bool
+            parent: Matrix, opacity: Double, locked: Bool, clips: [ClippedPath]
         ) -> [RenderNode] {
             var nodes: [RenderNode] = []
             let owner = self.owner
@@ -266,16 +274,29 @@ extension RenderList {
                 cached = outlines[symbol] ?? layers.map { $0.shapes.map(Outline.init) }
                 outlines[symbol] = cached
             }
-            for (li, layer) in layers.enumerated() where layer.isVisible {
+            // Hidden layers a visible one uses as a matte are walked into `matteItems` only.
+            let wanted = Set(layers.filter(\.isVisible).compactMap { $0.matte?.sourceLayerID })
+            var spans: [String: (items: Range<Int>, inMatteItems: Bool)] = [:]
+            for (li, layer) in layers.enumerated() where layer.isVisible || wanted.contains(layer.id) {
+                let outer = matteOnly
+                matteOnly = outer || !layer.isVisible
+                defer { matteOnly = outer }
+                let start = matteOnly ? matteItems.count : items.count
                 let (t, o) = layer.placement(at: frame)
                 let m = parent * t.matrix
                 let op = opacity * o
                 let lk = locked || layer.isLocked
+                let own = clips + layer.masks.map {
+                    ClippedPath(path: $0.path.transformed(by: m), mode: $0.mode, feather: $0.feather,
+                                opacity: $0.opacity, inverted: $0.inverted, depth: hosts.count)
+                }
                 func item(_ outline: Path, _ fill: Fill?, _ stroke: Stroke?, shape: Int?, text: Int?) -> RenderItem {
                     let address = RenderAddress(owner: owner, hosts: hosts, layerID: layer.id,
                                                 shapeIndex: shape, textIndex: text)
-                    return RenderItem(address: address, outline: outline, fill: fill, stroke: stroke,
-                                      matrix: m, opacity: op, isLocked: lk, isText: text != nil)
+                    var item = RenderItem(address: address, outline: outline, fill: fill, stroke: stroke,
+                                          matrix: m, opacity: op, isLocked: lk, isText: text != nil)
+                    item.clips = own
+                    return item
                 }
                 var children: [RenderNode] = []
                 let shared = cached?[li]
@@ -284,14 +305,14 @@ extension RenderList {
                     children.append(.shape(index: i, s))
                     if let outline = shared?[i] {
                         expanded += outline.points
-                        items.append(item(outline.path, s.fill, s.stroke, shape: i, text: nil))
+                        add(item(outline.path, s.fill, s.stroke, shape: i, text: nil))
                     } else {
-                        items.append(item(s.outline, s.fill, s.stroke, shape: i, text: nil))
+                        add(item(s.outline, s.fill, s.stroke, shape: i, text: nil))
                     }
                 }
                 for (i, x) in layer.texts.enumerated() {
                     children.append(.text(index: i, x))
-                    items.append(item(Path(), nil, nil, shape: nil, text: i))
+                    add(item(Path(), nil, nil, shape: nil, text: i))
                 }
                 for (i, inst) in layer.instances.enumerated() {
                     expanded += weight
@@ -306,13 +327,34 @@ extension RenderList {
                     }
                     let inner = walk(target.layers, symbol: target.id, frame: local, path: path + [target.id],
                                      hosts: hosts + [InstanceHost(layerID: layer.id, instanceIndex: i)],
-                                     parent: m * inst.transform.matrix, opacity: op, locked: lk)
+                                     parent: m * inst.transform.matrix, opacity: op, locked: lk, clips: own)
                     children.append(.instance(index: i, inst, symbolID: target.id, frame: local, children: inner))
                 }
+                spans[layer.id] = (start..<(matteOnly ? matteItems.count : items.count), matteOnly)
+                guard layer.isVisible else { continue }
                 nodes.append(.layer(RenderLayer(id: layer.id, name: layer.name, transform: t, opacity: o,
                                                 isLocked: layer.isLocked, children: children)))
             }
+            // Inner walks linked their own mattes first, so a matte nearer the item wins.
+            for layer in layers where layer.isVisible {
+                guard let matte = layer.matte, let source = spans[matte.sourceLayerID], let span = spans[layer.id] else { continue }
+                update(source.items, inMatteItems: source.inMatteItems) { $0.isMatteSource = true }
+                let link = MatteLink(sourceItems: source.items, inMatteItems: source.inMatteItems, kind: matte.kind)
+                update(span.items, inMatteItems: span.inMatteItems) { if $0.matte == nil { $0.matte = link } }
+            }
             return nodes
+        }
+
+        private mutating func add(_ item: RenderItem) {
+            if matteOnly { matteItems.append(item) } else { items.append(item) }
+        }
+
+        private mutating func update(_ range: Range<Int>, inMatteItems: Bool, _ change: (inout RenderItem) -> Void) {
+            if inMatteItems {
+                for i in range.clamped(to: matteItems.indices) { change(&matteItems[i]) }
+            } else {
+                for i in range.clamped(to: items.indices) { change(&items[i]) }
+            }
         }
     }
 }
