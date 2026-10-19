@@ -14,3 +14,4 @@ utc	stage	event	ref	note
 2026-10-19T16:15:33Z	heartbeat	builders running
 2026-10-19T16:31:57Z	stage3	M5 #724, M2 #726 merged; MM-a Belt-Slice-Done (run 39279766862)
 2026-10-19T16:33:39Z	heartbeat	builders running
+2026-10-19T16:36:43Z	anatomy	round 1 on #713 #723 #718 #726 #720 #724: 0 blockers, 5 should-fix, 7 nits; fixer lead/masks-mattes-r1-b1 launched
