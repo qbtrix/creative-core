@@ -28,6 +28,11 @@ extension Path {
     /// throws `GeometryError.nonFinite`.
     public static func combine(_ op: BooleanOp, _ a: Path, _ b: Path, rule: FillRule,
                                tolerance: Double) throws -> Path {
+        try combine(op, a, b, rule: rule, tolerance: tolerance, workLimit: 0)
+    }
+
+    static func combine(_ op: BooleanOp, _ a: Path, _ b: Path, rule: FillRule,
+                        tolerance: Double, workLimit: Int) throws -> Path {
         var count = 0
         for path in [a, b] { try path.forEachFlattenedPoint(tolerance: tolerance) { _, _ in count += 1; return false } }
         guard count <= maxBooleanVertices else { throw GeometryError.tooComplex(count) }

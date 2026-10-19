@@ -1,6 +1,6 @@
 // PathBooleanTests.swift: Path.combine on squares with known areas (PathArea
 // shoelace oracle; outers run counter-clockwise, so area is minus signed area).
-import FlareCore
+@testable import FlareCore
 import Testing
 
 @Suite struct PathBooleanTests {
@@ -87,5 +87,28 @@ import Testing
         let bad = Path(polyline: [Point(x: 0, y: 0), Point(x: .nan, y: 1), Point(x: 1, y: 1)], closed: true)
         #expect(throws: GeometryError.nonFinite) { try Path.combine(.union, bad, Self.a, rule: .nonZero, tolerance: 0.01) }
         #expect(throws: GeometryError.invalidTolerance) { try Path.combine(.union, Self.a, Self.b, rule: .nonZero, tolerance: 0) }
+    }
+
+    /// A comb of `n` teeth 10 tall along x; `swapped` lays it along y instead.
+    static func comb(_ n: Int, swapped: Bool = false) -> Path {
+        let points = (0..<n).flatMap { k -> [Point] in
+            let a = 2 * Double(k) + 0.5
+            return [Point(x: a, y: 0), Point(x: a, y: 10), Point(x: a + 1, y: 10), Point(x: a + 1, y: 0)]
+        } + [Point(x: 2 * Double(n) + 1, y: -1), Point(x: 0, y: -1)]
+        return Path(polyline: swapped ? points.map { Point(x: $0.y, y: $0.x) } : points, closed: true)
+    }
+
+    @Test func crossingWorkIsCapped() throws {
+        // 5 teeth each way cross 100 times: past a 50-step cap it throws instead of cutting on.
+        let (x, y) = (Self.comb(5), Self.comb(5, swapped: true))
+        #expect(throws: GeometryError.tooComplex(50)) { try Path.combine(.union, x, y, rule: .nonZero, tolerance: 0.01, workLimit: 50) }
+        #expect(try !Path.combine(.union, x, y, rule: .nonZero, tolerance: 0.01).elements.isEmpty)
+        #expect(try !Path.combine(.union, x, y, rule: .nonZero, tolerance: 0.01, workLimit: 10_000).elements.isEmpty)
+    }
+
+    @Test func hugeCoordinatesThrowNotLoseCrossings() throws {
+        // Edge norms near 1e155 square past Double's range.
+        let big = Self.square(-1e155, -1e155, 1e155, 1e155), shifted = Self.square(0, 0, 2e155, 2e155)
+        #expect(throws: GeometryError.nonFinite) { try Path.combine(.union, big, shifted, rule: .nonZero, tolerance: 0.01) }
     }
 }
