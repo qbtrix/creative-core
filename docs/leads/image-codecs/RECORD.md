@@ -3,9 +3,9 @@
 Issue: #562 · Packet: docs/blueprints/core/features/image-codecs.md
 Run: act-1a1511a1174-tlch · Started: 2026-10-18T22:40Z
 Line lead for: image-codecs (#562), preview-cache (#440, already done), vector-import (#439, VI-z left)
-Stage: 3 wave 1
-Base: 15e96dd47c720025f5ae49b3649608deb65ab216
-Next: IC-1 (stubs, crc32 move, codecs part) building; wave 2 is IC-2 once it merges
+Stage: 3 wave 2
+Base: 62a84e9 (wave 2)
+Next: IC-2 (disabled suites, fixtures) building; wave 3 is IC-3 + IC-6 once it merges
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -18,8 +18,8 @@ Next: IC-1 (stubs, crc32 move, codecs part) building; wave 2 is IC-2 once it mer
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
 |---|---|---|---|---|---|---|---|
-| IC-1 | 1 | stubs Inflate, Deflate, PNG(Info, Codec), JPEG(Info); crc32 moved to ByteReader; codecs part | Codecs/{Inflate,Deflate,PNG,JPEG,ByteReader,ZipStore}.swift, ImageCodecShapeTests, codecs.json | ImageCodecShapeTests, ZipStore tests | – | | building |
-| IC-2 | 2 | seven suites disabled, spec-built fixtures | Tests/CoreRasterTests/{Inflate,PNGRead,PNGWrite,PNGFuzz,JPEGRead,JPEGWrite,JPEGFuzz}Tests, Fixtures/{PNG,JPEG}Fixtures | suites compile | – | | open |
+| IC-1 | 1 | stubs Inflate, Deflate, PNG(Info, Codec), JPEG(Info); crc32 moved to ByteReader; codecs part | Codecs/{Inflate,Deflate,PNG,JPEG,ByteReader,ZipStore}.swift, ImageCodecShapeTests, codecs.json | ImageCodecShapeTests, ZipStore tests | – | #575 (2268443) | merged |
+| IC-2 | 2 | seven suites disabled, spec-built fixtures | Tests/CoreRasterTests/{Inflate,PNGRead,PNGWrite,PNGFuzz,JPEGRead,JPEGWrite,JPEGFuzz}Tests, Fixtures/{PNG,JPEG}Fixtures | suites compile | – | | building |
 | IC-3 | 3 | Inflate, Deflate bodies | Inflate.swift, Deflate.swift, InflateTests | InflateTests | CoreRaster.Inflate (3) | | open |
 | IC-6 | 3 | JPEG info, baseline read | JPEG.swift, JPEGReadTests, JPEGFuzzTests | baseline half | CoreRaster.JPEG (2) | | open |
 | IC-4 | 4 | PNG info, read, decodePNG | PNG.swift, PNGReadTests, PNGFuzzTests | PNGReadTests | CoreRaster.PNG (3) | | open |
@@ -40,4 +40,7 @@ Next: IC-1 (stubs, crc32 move, codecs part) building; wave 2 is IC-2 once it mer
 - IC-7 has one mutation in the packet; rule 14 wants 2 or more, so its builder adds a second (e.g. DC refinement bit).
 
 ## Open
-- none
+- `ZipStore.crc32` is a one-line forward (callers RawPixelCodec, ORAContainerTests are outside IC-1); a later task that may touch PixelCodec.swift can remove it.
+
+## Notes
+- 2026-10-19T00:10Z: IC-1 #575 merged 22:38Z. Helpers: `ByteReader.crc32`, internal `Deflate.adler32`; `Deflate.zlib` writes stored blocks at every level until IC-3; stubs end "waits on IC-<n>" and `ImageCodecShapeTests.stubsThrowCodecErrors` lists them, so each filling task drops its calls there; IC-10 replaces the C4 "declared stubs" sentence.
