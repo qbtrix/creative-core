@@ -22,7 +22,7 @@ Next: wave 4 building (IC-4, IC-5, IC-7, IC-8); then Anatomy rounds for IC-png a
 | IC-2 | 2 | seven suites disabled, spec-built fixtures | Tests/CoreRasterTests/{Inflate,PNGRead,PNGWrite,PNGFuzz,JPEGRead,JPEGWrite,JPEGFuzz}Tests, Fixtures/{PNG,JPEG}Fixtures | suites compile | – | #590, #592, #594, #599; macOS fix #607 | merged |
 | IC-3 | 3 | Inflate, Deflate bodies | Inflate.swift, Deflate.swift, InflateTests | InflateTests | CoreRaster.Inflate (3) | #625 (526da94) | merged |
 | IC-6 | 3 | JPEG info, baseline read | JPEG.swift, JPEGReadTests, JPEGFuzzTests | baseline half | CoreRaster.JPEG (2) | #627 (22a5fdd) | merged |
-| IC-4 | 4 | PNG info, read, decodePNG | PNG.swift, PNGReadTests, PNGFuzzTests | PNGReadTests | CoreRaster.PNG (3) | | building |
+| IC-4 | 4 | PNG info, read, decodePNG | PNG.swift, PNGReadTests, PNGFuzzTests | PNGReadTests | CoreRaster.PNG (3) | #637 (c724af7) | rebasing (conflict + footer) |
 | IC-5 | 4 | PNG write, encodePNG | PNGWrite.swift, PNGWriteTests | PNGWriteTests | CoreRaster.PNGWrite (2) | #636 (dd55943) | rebasing (conflict + footer) |
 | IC-7 | 4 | progressive JPEG | JPEGProgressive.swift, JPEGReadTests | progressive half | CoreRaster.JPEGProgressive (1+) | #635 (1c562cb) | rebasing (conflict + footer) |
 | IC-8 | 4 | baseline JPEG write | JPEGWrite.swift, JPEGWriteTests | JPEGWriteTests | CoreRaster.JPEGWrite (2) | #634 (8e31fe9) | merged |
@@ -51,3 +51,6 @@ Next: wave 4 building (IC-4, IC-5, IC-7, IC-8); then Anatomy rounds for IC-png a
 - IC-a round 2 is skipped: IC-a's files are test fixtures that wave 4 enables; their next check is each slice's own round (rule: per slice, under budget).
 - Wave 4: #635 (IC-7, 3/3) and #636 (IC-5, 2/2) went dirty after #634 merged and their bodies carried an attribution footer; builders are rebasing and stripping it. #636 keeps 4 PNGWriteTests disabled "waits on IC-4" (round trips, ihdrDepthRecorded, ORA); the lead enables them after IC-4 merges.
 - Budget risk for IC-9: IC-5 measured 12 MP PNG write ~8.5 s release locally (Deflate.zlib level 6 ~7.6 s on a very repetitive synthetic image) vs the 2.5 s budget. Likely long hash chains on repetitive input; IC-9 measures on the packet's image and, if over, a Deflate chain-limit fix task goes in before IC-z.
+- IC-4 #637: reader in new PNGRead.swift (PNG.swift forwards); 3/3 CoreRaster.PNG; 12 MP decode 0.78 s release (budget 1.5 s). Whichever of #636/#637 merges second enables the four "waits on IC-4" PNGWriteTests.
+- The GitHub MCP server appends an attribution footer to every PR body it creates; each builder strips it with update_pull_request after create.
+- Stray: Tests/CoreRasterTests/ZZBench.swift came in with #625 (48 MB benchmark printing timings each test run). Route its removal into the IC-png/IC-jpeg Anatomy fix batch.
