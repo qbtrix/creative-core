@@ -80,3 +80,4 @@ utc	stage	event	ref	note
 2026-10-19T11:35:02Z	4	heartbeat	-	r5 fixes queued until tone fixers free RAM (4.3 GB avail)
 2026-10-19T11:57:38Z	4	heartbeat	-	r5 fixes still queued for RAM (4.0 GB avail, 5 gates running)
 2026-10-19T13:02:32Z	4	fix-start	-	new lead run act-1a1543c8a34-t9zw; round 5 fixes (5 findings) in one batch r5-b1 on 0b5a641
+2026-10-19T15:20:15Z	4	pr-merged	#716	AC r5-b1 merged 13:57Z
