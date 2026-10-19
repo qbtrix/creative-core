@@ -19,5 +19,33 @@
     "anchor": "if antiAlias, limit > 0 {",
     "replacement": "if !antiAlias, limit > 0 {",
     "filter": "FloodFillTests.borderHalfCovered"
+  },
+  {
+    "note": "the soft edge loses its lower clamp, so a neighbour more than 2t away gets negative coverage, caught by FloodFillTests.softEdgeClampsAtZero",
+    "file": "Sources/CoreRaster/Fill/FloodFill.swift",
+    "anchor": "coverage[y * w + x] = Float(min(max(1 - (d - limit) / limit, 0), 1))",
+    "replacement": "coverage[y * w + x] = Float(min(1 - (d - limit) / limit, 1))",
+    "filter": "FloodFillTests.softEdgeClampsAtZero"
+  },
+  {
+    "note": "the soft edge counts diagonal neighbours under four-connectivity, so ring corners get soft coverage, caught by FloodFillTests.softEdgeFollowsConnectivity",
+    "file": "Sources/CoreRaster/Fill/FloodFill.swift",
+    "anchor": " && (reach == 1 || dx == 0 || dy == 0)",
+    "replacement": "",
+    "filter": "FloodFillTests.softEdgeFollowsConnectivity"
+  },
+  {
+    "note": "the fill colour distance drops the alpha axis, so a half-transparent copy of the seed colour matches at tolerance 0, caught by FloodFillTests.alphaIsFourthAxis and ColorRangeTests.alphaIsFourthAxis",
+    "file": "Sources/CoreRaster/Fill/FillColor.swift",
+    "anchor": "let da = alpha - other.alpha",
+    "replacement": "let da = 0.0",
+    "filter": "FloodFillTests.alphaIsFourthAxis|ColorRangeTests.alphaIsFourthAxis"
+  },
+  {
+    "note": "the fill colour is measured premultiplied, so a semi-transparent pixel looks darker, caught by FloodFillTests.alphaIsFourthAxis and ColorRangeTests.alphaIsFourthAxis",
+    "file": "Sources/CoreRaster/Fill/FillColor.swift",
+    "anchor": "let s = premultiplied.unpremultiplied()",
+    "replacement": "let s = premultiplied",
+    "filter": "FloodFillTests.alphaIsFourthAxis|ColorRangeTests.alphaIsFourthAxis"
   }
 ]

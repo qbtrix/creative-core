@@ -2,8 +2,8 @@
   {
     "note": "colour range smoothstep edges swapped, so coverage rises with distance instead of falling, caught by ColorRangeTests.fallsOffWithDistance",
     "file": "Sources/CoreRaster/Fill/ColorRange.swift",
-    "anchor": "let t = min(max(d / f, 0), 1)",
-    "replacement": "let t = min(max((d - f) / (0 - f), 0), 1)",
+    "anchor": "value = 1 - Self.smoothstep(0, fuzziness, Float(d))",
+    "replacement": "value = 1 - Self.smoothstep(fuzziness, 0, Float(d))",
     "filter": "ColorRangeTests.fallsOffWithDistance"
   },
   {
