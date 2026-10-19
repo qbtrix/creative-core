@@ -5,7 +5,7 @@ Run: act-1a1511a1174-tlch · Started: 2026-10-18T22:40Z
 Line lead for: image-codecs (#562), preview-cache (#440, already done), vector-import (#439, VI-z left)
 Stage: 4 round 1 (IC-jpeg); wave 4 IC-png PRs waiting on lane
 Base: 9385de9 (wave 4)
-Next: IC-jpeg round 1 on dev 81ae63c (gate, mutate, panel); IC-png round once #636 and #637 merge
+Next: IC-jpeg r1 fix batch (3 PRs) merges, then IC-jpeg round 2; IC-png round once #636 and #637 merge
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -33,6 +33,7 @@ Next: IC-jpeg round 1 on dev 81ae63c (gate, mutate, panel); IC-png round once #6
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
 |---|---|---|---|---|---|---|---|---|
 | 1 (IC-a) | 080366a | n/a (dev ci run 384 Linux green; Swift on dev) | n/a (IC-a has no plan) | 384 | clarity, check correctness vs specs | 0 blocker/major; 3 minor: PNGReadTests:64 comment says passes 2 and 3 empty (only 3) → IC-4; JPEG.write doc 'alpha dropped' ambiguous for premultiplied input → IC-8; InflateTests.fuzzed passes Data slices (startIndex 2) → IC-3's #625 passes it, no change | IC-4, IC-8 builders | yes (1 of 2) |
+| 1 (IC-jpeg) | 81ae63c | PASS (1770 tests) | 7/7 (JPEG 2, JPEGProgressive 3, JPEGWrite 2) | - | clarity, contract, robustness, tests | 5 major (tests: EOBn runs and progressive restart untested, scan-order AC clause, coded-block bound indistinguishable, writer stuffing/ZRL untested), 7 minor (orientation doc, decimal marker messages, scan work budget, DNL/MCU guards, padding/alpha, guard mutation entries, ZZBench stray); 1 refuted | wf_4cb93cd0-ecb: b1 progressive, b2 reader guards+messages, b3 writer+ZZBench | no |
 
 ## Decisions
 - Waves from the packet; IC-1 shares wave 1 with vector-import's R3-3 reader perf fixer (disjoint files: CoreRaster/Codecs vs FlareCore/Import).
