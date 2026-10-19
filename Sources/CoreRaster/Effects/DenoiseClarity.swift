@@ -13,8 +13,10 @@
 // a negative amount blends toward the blurred copy. Alpha is kept.
 // Invariants: strength and detail are finite and in 0...1, amount in
 // -100...100, radius in 0...1,000; zero strength, amount or radius is identity.
-// Denoise's scratch is about 17 times the buffer, so it takes at most
-// `maxDenoisePixels`; a result past Float's range throws instead of storing inf.
+// Denoise's scratch is about 17.5 times the buffer (280 bytes a pixel), so it
+// takes at most `maxDenoisePixels` (an eighth of `maxPixels`, room for a 24 MP
+// photo); a larger buffer throws, naming the cap and the remedy (tiles or a
+// downscale); a result past Float's range throws instead of storing inf.
 #if canImport(Glibc)
 import Glibc
 #elseif canImport(Musl)
@@ -26,9 +28,11 @@ import Dispatch
 
 extension PixelBuffer {
     /// The most pixels `denoised` takes: its Double planes and bilateral
-    /// passes need about 280 bytes a pixel, so a sixteenth of `maxPixels`
-    /// (16 Mi px, about 4.7 GB of scratch) instead of 70 GB at full size.
-    public static let maxDenoisePixels = maxPixels / 16
+    /// passes need about 280 bytes a pixel (17.5 times the buffer's 16), a
+    /// bounded multiple, so an eighth of `maxPixels` (32 Mi px, room for a
+    /// 24 MP photo, about 9.4 GB of scratch at the cap) instead of 75 GB at
+    /// full size. Denoise a larger buffer in tiles, or downscale it.
+    public static let maxDenoisePixels = maxPixels / 8
 
     /// This buffer denoised by a bilateral filter: `strength` (0...1) widens
     /// the smoothing, `detail` (0...1) narrows the luma difference it smooths
@@ -42,7 +46,7 @@ extension PixelBuffer {
         }
         guard strength > 0 else { return self }
         guard width * height <= Self.maxDenoisePixels else {
-            throw RasterError.invalid("denoise size \(width)x\(height): more than \(Self.maxDenoisePixels) pixels")
+            throw RasterError.invalid("denoise size \(width)x\(height): more than maxDenoisePixels (\(Self.maxDenoisePixels)) pixels; denoise it in tiles or downscale it")
         }
         let src = components, c = Self.channels, n = width * height, w = Histogram.luminanceWeights
         // Per pixel, lumaAlpha is (luma, alpha, 0, 0), chromaAlpha (r, g, b minus luma, alpha).

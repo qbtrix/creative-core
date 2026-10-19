@@ -61,5 +61,19 @@
     "anchor": "guard sigma > 0 else { return d == 0 ? 1 : 0 }",
     "replacement": "guard sigma > 0 else { return 1 }",
     "filter": "DenoiseClarityTests"
+  },
+  {
+    "note": "denoise's pixel cap shrinks back to a sixteenth of maxPixels, so a 24 MP photo throws instead of denoising, caught by EffectBudgetTests.photoFitsTheDenoiseCap",
+    "file": "Sources/CoreRaster/Effects/DenoiseClarity.swift",
+    "anchor": "public static let maxDenoisePixels = maxPixels / 8",
+    "replacement": "public static let maxDenoisePixels = maxPixels / 16",
+    "filter": "EffectBudgetTests"
+  },
+  {
+    "note": "denoise's cap error drops the limit's name and the remedy, so an oversized caller can't tell how to fix it, caught by DenoiseClarityTests.denoiseCapErrorNamesTheLimitAndRemedy",
+    "file": "Sources/CoreRaster/Effects/DenoiseClarity.swift",
+    "anchor": "more than maxDenoisePixels (\\(Self.maxDenoisePixels)) pixels; denoise it in tiles or downscale it\")",
+    "replacement": "more than \\(Self.maxDenoisePixels) pixels\")",
+    "filter": "DenoiseClarityTests"
   }
 ]
