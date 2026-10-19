@@ -88,6 +88,16 @@ import Testing
         ])
     }
 
+    /// A symbol layer's feather goes through the same matrix as its path: 10 under a 4x instance is 40.
+    @Test func featherScalesWithMatrix() {
+        let face = Layer(id: "face", name: "Face", shapes: [Shape(points: [Point(x: 0, y: 0), Point(x: 4, y: 0)])],
+                         masks: [LayerMask(path: Self.square(0, 4), feather: 10)])
+        let host = Layer(id: "host", name: "Host",
+                         instances: [Instance(symbolID: "badge", transform: Transform(scaleX: 4, scaleY: 4))])
+        let list = Scene(id: "s", name: "S", layers: [host]).renderList(at: 0, symbols: [Symbol(id: "badge", name: "Badge", layers: [face])])
+        #expect(list.items.first?.clips.map(\.feather) == [40])
+    }
+
     /// A matte on a host layer reaches the items its instances expand; a matte nearer the item wins.
     @Test func hostMatteReachesInstanceItems() {
         let shape = Shape(points: [Point(x: 0, y: 0), Point(x: 1, y: 1)])
