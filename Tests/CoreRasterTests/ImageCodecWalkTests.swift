@@ -6,9 +6,10 @@
 // an ORA through `PNGCodec` reopen as the same layers; every JPEG fixture
 // (grey, 4:4:4, 4:2:2, 4:2:0, restarts, progressive) decodes within a mean of
 // 1/255 and a maximum of 4/255 of its A.3.3 reference and, re-encoded at
-// quality 90, reopens within a mean of 3/255 (grey and 4:2:0; the writer is
-// 4:2:0 only, so 4:4:4 and 4:2:2 chroma texture is lost by design and their
-// means are printed); an EXIF-rotated fixture reports orientation 6.
+// quality 90, reopens the same size within a mean of 3/255 (grey and 4:2:0;
+// the writer is 4:2:0 only, so 4:4:4 and 4:2:2 chroma texture is lost by
+// design and they hold a measured 8/255); an EXIF-rotated fixture reports
+// orientation 6.
 @testable import CoreRaster
 import CoreColor
 import Testing
@@ -61,7 +62,7 @@ import Foundation
 
         // JPEG: each fixture within 1/255 mean and 4/255 max of its reference, then quality 90 within 3/255 mean.
         // JPEG.write is 4:2:0 only, so the 4:4:4 and 4:2:2 fixtures' full-resolution chroma texture (seeded chroma AC)
-        // is averaged away by design: their means are printed, and the 3/255 gate holds for what 4:2:0 carries.
+        // is averaged away by design: they hold 8/255 (measured 4.1 to 6.8), and 3/255 holds for what 4:2:0 carries.
         let s = JPEGReadTests.samplings
         let frames: [(String, J.Frame, (J.Frame) -> Data)] = [
             ("grey", J.Frame(width: 21, height: 9, block: J.seeded(0x91)), { J.baseline($0) }),
@@ -78,8 +79,9 @@ import Foundation
             let read = try JPEG.read(data), again = try JPEG.read(JPEG.write(read, quality: 90))
             let mean = try meanLevels(read, again)
             let carried = frame.sampling.count == 1 || frame.sampling[0] == (2, 2)
-            print("walk \(note) at quality 90: mean \(mean) levels\(carried ? "" : " (finer chroma than 4:2:0, reported)")")
-            if carried { #expect(mean <= 3, "\(note) at quality 90: mean \(mean) levels") }
+            print("walk \(note) at quality 90: mean \(mean) levels\(carried ? "" : " (finer chroma than 4:2:0)")")
+            #expect(again.width == read.width && again.height == read.height, "\(note) at quality 90 reopens the same size")
+            #expect(mean.isFinite && mean <= (carried ? 3 : 8), "\(note) at quality 90: mean \(mean) levels")
         }
 
         // EXIF: orientation 6 is reported, not applied.
