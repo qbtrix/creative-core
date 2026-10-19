@@ -50,6 +50,15 @@ import Testing
         #expect(layers.map { $0["ind"] as? Int } == [3, 4, 2, 5, 1])
     }
 
+    /// An open mask subpath is implicitly closed, so it is written with `c: true`.
+    @Test func openMaskPathIsClosed() throws {
+        var scene = try Self.scene()
+        scene.layers[0].masks[0].path = Path(polyline: [Point(x: 10, y: 10), Point(x: 90, y: 10), Point(x: 50, y: 90)], closed: false)
+        let masks = try #require(Self.layers(scene).last?["masksProperties"] as? [[String: Any]])
+        let path = try #require(((masks.first?["pt"] as? [String: Any])?["k"]) as? [String: Any])
+        #expect(path["c"] as? Bool == true && path["v"] as? [[Double]] == [[10, 10], [90, 10], [50, 90]])
+    }
+
     @Test func refusals() throws {
         var scene = try Self.scene()
         scene.layers[0].masks[1].feather = 8

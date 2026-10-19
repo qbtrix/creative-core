@@ -1,5 +1,5 @@
 // SVGMaskExportTests.swift: MM-8 acceptance for SVG layer masks (clipPath, mask,
-// blur of feather / 2) and track mattes (mask holding the source), and refusals.
+// blur of feather / 3) and track mattes (mask holding the source), and refusals.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -19,8 +19,8 @@ import Testing
             <clipPath id="c0">
             <path d="M10 10 L90 10 L90 90 L10 90 Z"/>
             </clipPath>
-            <filter id="f1" filterUnits="userSpaceOnUse" x="18" y="18" width="64" height="64">
-            <feGaussianBlur stdDeviation="4"/>
+            <filter id="f1" filterUnits="userSpaceOnUse" x="22" y="22" width="56" height="56">
+            <feGaussianBlur stdDeviation="2.6667"/>
             </filter>
             <mask id="m2" maskUnits="userSpaceOnUse"\(Self.region)>
             <rect\(Self.region) fill="#fff"/>
@@ -42,12 +42,13 @@ import Testing
         #expect(try SVGExporter.export(scene: Self.scene(), frame: 0) == svg)
     }
 
-    @Test func blurIsHalfFeather() throws {
+    /// Feather is the blur radius, sigma = feather / 3, as `Mask.feathered(radius:)` takes it; the box widens by the feather.
+    @Test func blurIsAThirdOfFeather() throws {
         var scene = try Self.scene()
-        scene.layers[0].masks[1].feather = 3
+        scene.layers[0].masks[1].feather = 6
         let svg = try SVGExporter.export(scene: scene, frame: 0)
-        #expect(svg.contains("<feGaussianBlur stdDeviation=\"1.5\"/>"))
-        #expect(svg.contains("x=\"25.5\" y=\"25.5\" width=\"49\" height=\"49\""))
+        #expect(svg.contains("<feGaussianBlur stdDeviation=\"2\"/>"))
+        #expect(svg.contains("x=\"24\" y=\"24\" width=\"52\" height=\"52\""))
     }
 
     /// Masks that are not a hard add run followed by removals all paint one mask, starting full or empty.

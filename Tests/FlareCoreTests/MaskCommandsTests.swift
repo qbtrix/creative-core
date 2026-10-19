@@ -110,12 +110,14 @@ import Testing
         return layer(after, id)
     }
 
-    /// Checks `command` is refused through the engine and from `execute`, both leaving `start` unchanged.
-    static func expectRefused(_ command: any Command, on start: Document) {
+    /// Checks `command` is refused with `error` through the engine and from `execute` (a model error in its
+    /// command form), both leaving `start` unchanged.
+    static func expectRefused(_ command: any Command, _ error: CommandError, on start: Document) {
         var engine = CommandEngine(document: start), direct = command, doc = start
-        #expect(throws: (any Error).self) { try engine.perform(command) }
+        #expect(throws: error) { try engine.perform(command) }
         #expect(engine.document == start && !engine.canUndo)
-        #expect(throws: (any Error).self) { try direct.execute(&doc) }
+        let thrown = #expect(throws: (any Error).self) { try direct.execute(&doc) }
+        #expect(((thrown as? ModelError).map(CommandError.init) ?? thrown as? CommandError) == error)
         #expect(doc == start)
     }
 
@@ -170,10 +172,13 @@ import Testing
     @Test func refusesCycleTwoDeep() throws {
         var engine = CommandEngine(document: try Self.fixture())
         try engine.perform(SetTrackMatte(owner: Self.m, layerID: "lumen", matte: TrackMatte(sourceLayerID: "card")))
-        Self.expectRefused(SetTrackMatte(owner: Self.m, layerID: "card", matte: TrackMatte(sourceLayerID: "photo")), on: engine.document)
+        Self.expectRefused(SetTrackMatte(owner: Self.m, layerID: "card", matte: TrackMatte(sourceLayerID: "photo")),
+                            .invalidDocument("matte source photo leads back to card"), on: engine.document)
         let start = try Self.fixture()
-        Self.expectRefused(SetTrackMatte(owner: Self.m, layerID: "lumen", matte: TrackMatte(sourceLayerID: "photo")), on: start)
-        Self.expectRefused(SetTrackMatte(owner: Self.m, layerID: "card", matte: TrackMatte(sourceLayerID: "card")), on: start)
+        Self.expectRefused(SetTrackMatte(owner: Self.m, layerID: "lumen", matte: TrackMatte(sourceLayerID: "photo")),
+                            .invalidDocument("matte source photo leads back to lumen"), on: start)
+        Self.expectRefused(SetTrackMatte(owner: Self.m, layerID: "card", matte: TrackMatte(sourceLayerID: "card")),
+                            .invalidDocument("matte source card leads back to card"), on: start)
     }
 
     /// A source in another owner's list or nowhere is refused.
@@ -181,9 +186,9 @@ import Testing
         var start = try Self.fixture()
         start.symbols = [Symbol(id: "pins", name: "Pins", layers: [Layer(id: "pin", name: "Pin")])]
         for source in ["pin", "missing"] {
-            Self.expectRefused(SetTrackMatte(owner: Self.m, layerID: "card", matte: TrackMatte(sourceLayerID: source)), on: start)
+            Self.expectRefused(SetTrackMatte(owner: Self.m, layerID: "card", matte: TrackMatte(sourceLayerID: source)), .layerNotFound(source), on: start)
         }
-        Self.expectRefused(SetTrackMatte(owner: .symbol("pins"), layerID: "pin", matte: TrackMatte(sourceLayerID: "card")), on: start)
+        Self.expectRefused(SetTrackMatte(owner: .symbol("pins"), layerID: "pin", matte: TrackMatte(sourceLayerID: "card")), .layerNotFound("card"), on: start)
     }
 
     /// Every command refuses a locked layer, and the index commands an index outside the list.
@@ -197,14 +202,27 @@ import Testing
             RemoveLayerMask(owner: Self.m, layerID: "card", index: 0),
             MoveLayerMask(owner: Self.m, layerID: "card", from: 0, to: 1),
             SetTrackMatte(owner: Self.m, layerID: "card", matte: TrackMatte(sourceLayerID: "lumen")),
-        ] as [any Command] { Self.expectRefused(command, on: locked) }
-        for command in [
-            AddLayerMask(owner: Self.m, layerID: "card", mask: Self.mask(20), index: 3),
-            AddLayerMask(owner: Self.m, layerID: "card", mask: Self.mask(20), index: -1),
-            SetLayerMask(owner: Self.m, layerID: "card", index: 2, mask: Self.mask(20)),
-            RemoveLayerMask(owner: Self.m, layerID: "photo", index: 0),
-            MoveLayerMask(owner: Self.m, layerID: "card", from: 0, to: 2),
-            MoveLayerMask(owner: Self.m, layerID: "card", from: -1, to: 0),
-        ] as [any Command] { Self.expectRefused(command, on: start) }
+        ] as [any Command] { Self.expectRefused(command, .layerLocked("card"), on: locked) }
+        for (command, index) in [
+            (AddLayerMask(owner: Self.m, layerID: "card", mask: Self.mask(20), index: 3), 3),
+            (AddLayerMask(owner: Self.m, layerID: "card", mask: Self.mask(20), index: -1), -1),
+            (SetLayerMask(owner: Self.m, layerID: "card", index: 2, mask: Self.mask(20)), 2),
+            (RemoveLayerMask(owner: Self.m, layerID: "photo", index: 0), 0),
+            (MoveLayerMask(owner: Self.m, layerID: "card", from: 0, to: 2), 2),
+            (MoveLayerMask(owner: Self.m, layerID: "card", from: -1, to: 0), -1),
+        ] as [(any Command, Int)] { Self.expectRefused(command, .invalidIndex(index), on: start) }
+    }
+
+    /// Converting a matte source, or a matted layer, without the other is refused before any change;
+    /// converting both keeps the matte inside the symbol and undoes exactly.
+    @Test func convertKeepsMatteTogether() throws {
+        let start = try Self.fixture()
+        func convert(_ ids: [String]) -> ConvertToSymbol { ConvertToSymbol(sceneID: "masks", layerIDs: ids, symbolID: "lens", name: "Lens") }
+        Self.expectRefused(convert(["lumen"]), .invalidDocument("matte source lumen of photo would move into symbol lens"), on: start)
+        Self.expectRefused(convert(["card", "photo"]), .invalidDocument("matte source lumen of photo would stay out of symbol lens"), on: start)
+        #expect(try Self.roundTrip(convert(["photo", "lumen"]), "photo")?.instances.map(\.symbolID) == ["lens"])
+        var engine = CommandEngine(document: start)
+        try engine.perform(convert(["photo", "lumen"]))
+        #expect(engine.document.symbols.last?.layers.first?.matte == TrackMatte(sourceLayerID: "lumen", kind: .luma))
     }
 }

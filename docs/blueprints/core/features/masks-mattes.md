@@ -119,7 +119,8 @@ public struct SetTrackMatte: LayerCommand { owner, layerID, matte: TrackMatte? }
   own right, which is the published convention.
 - **Exporters.** SVG: masks without feather become one `<clipPath>` per
   item; with feather or opacity, a `<mask>` with a Gaussian blur filter of
-  `feather / 2`; a luma matte is a `<mask mask-type="luminance">` holding the
+  `feather / 3` (feather is one quantity everywhere: the blur radius, sigma =
+  feather / 3, the radius `Mask.feathered(radius:)` takes); a luma matte is a `<mask mask-type="luminance">` holding the
   source's group. Lottie: `masksProperties` (`mode` a, s, i, f; `x` feather;
   `o` opacity; `inv`), and `tt` 1–4 on the matted layer with `td: 1` on the
   source, the source written directly above it.
@@ -162,7 +163,7 @@ MM-10 is the prose task.
 | MM-5 | `CPUMaskedCompositeTests`: the CPU backend equals the direct call for 50 seeded layer, mask and offset sets; a released surface throws `surfaceMismatch`; goldens reproduce with zero delta | a pixel differs from CoreRaster | `CoreRenderCPUMaskedComposite`: mask offsets swapped → `CPUMaskedCompositeTests.equalsDirect`; backdrop written outside the lock → `.concurrentCompositesApplyInTurn` |
 | MM-6 | `MaskCommandsTests`: each command performs, undoes and redoes exactly; `SetLayerMask` drags merge into one step; a self matte, a two-step cycle, a source in another owner, a locked layer and an index out of range are refused with the document unchanged; the family's steps in `UndoPropertyTests` | undo leaves a trace, or a cycle is allowed | `FlareMaskCommands`: cycle check one step deep → `MaskCommandsTests.refusesCycleTwoDeep`; `MoveLayerMask` undo swaps the wrong pair → `.moveUndoesExactly`; merge across different masks → `.mergeOnlySameMask` |
 | MM-7 | `MatteRenderListTests`: clip paths are in world space through the layer's and instances' matrices; a matte names its source's index and the source is flagged; a hidden matted layer gives no item; masks keep their order | a clip is in local space or the order flips | `FlareMatteRenderList`: clip skips the instance matrix → `MatteRenderListTests.clipInWorldSpace`; masks reversed → `.masksKeepOrder` |
-| MM-8 | `SVGMaskExportTests`: the fixture writes one `clipPath`, one feathered `mask` with a blur of feather / 2, a `mask-type="luminance"` for the luma matte, byte-stable; `LottieMaskExportTests`: `masksProperties` modes and `tt: 3` with `td: 1` directly above; a non-finite value throws | a mode or matte kind is written wrong | `FlareMaskExport`: `difference` written as `s` → `LottieMaskExportTests.modesMapExactly`; `td` source written below → `.sourceAboveMatted`; blur uses the full feather → `SVGMaskExportTests.blurIsHalfFeather` |
+| MM-8 | `SVGMaskExportTests`: the fixture writes one `clipPath`, one feathered `mask` with a blur of feather / 3, a `mask-type="luminance"` for the luma matte, byte-stable; `LottieMaskExportTests`: `masksProperties` modes and `tt: 3` with `td: 1` directly above; a non-finite value throws | a mode or matte kind is written wrong | `FlareMaskExport`: `difference` written as `s` → `LottieMaskExportTests.modesMapExactly`; `td` source written below → `.sourceAboveMatted`; blur uses half the feather → `SVGMaskExportTests.blurIsAThirdOfFeather` |
 | MM-9 | `MaskWalkTests.walk` (KJ-MM); `MaskBudgetTests`: a 24 MP masked composite ≤ 1.3 × the unmasked one; feather of a 24 MP mask at radius 20 ≤ 250 ms; contours of a 24 MP selection ≤ 60 ms (release, reported) | the halves disagree on the walk | none: walk and budgets |
 | MM-10 | the `geometry` part names clips and mattes | – | – |
 
