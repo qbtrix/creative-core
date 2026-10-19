@@ -3,9 +3,9 @@
 Issue: #562 · Packet: docs/blueprints/core/features/image-codecs.md
 Run: act-1a1543c8a34-t9zw (previous act-1a150bfbcf7-sfwy / act-1a1511a1174-tlch) · Started: 2026-10-18T22:40Z
 Line lead for: image-codecs (#562), preview-cache (#440, already done), vector-import (#439, VI-z left)
-Stage: 5 wave C: IC-10 feature-done PR building
+Stage: 5 IC-10 PR open
 Base: 9385de9 (wave 4)
-Next: IC-10 PR opens; lane merge; feature-done CI run; IC-z Slice-Done + Mac-Finish-Wanted; contact sheet
+Next: lane merge of #734, then the ci.yml run on dev
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
