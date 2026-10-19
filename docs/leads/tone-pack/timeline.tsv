@@ -84,3 +84,4 @@ utc	stage	event	ref	note
 2026-10-19T14:30Z	4	pr-merged	#714 #715 #717	round 5 fixes merged
 2026-10-19T14:30Z	4	stage-start	4b238e0	round 6 TP-cpu, TP-z
 2026-10-19T15:00Z	4	gate-run	4b238e0	round 6 scripts/ci PASS (1957 tests); worker restarted, mutation rerun
+2026-10-19T15:01Z	4	stage-start	wf_8379e09a-9ff	round 6 critic panel (clarity, contract, tests, robustness) on 4b238e0

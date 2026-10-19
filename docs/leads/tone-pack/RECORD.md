@@ -2,9 +2,9 @@
 
 Issue: #432 · Packet: docs/blueprints/core/features/tone-pack.md
 Run: act-1a1543c8a5f-6y14 (relaunch; first run act-1a150bfbcf7-sfwy) · Started: 2026-10-18T20:45Z · Relaunched: 2026-10-19T13:05Z
-Stage: 4 round 6 (TP-cpu, TP-z) on 4b238e0; round 5 fixes all merged
+Stage: 4 round 6 (TP-cpu, TP-z) on 4b238e0: scripts/ci PASS; mutation (7 tone plans) running; critic panel wf_8379e09a-9ff running
 Base: 4b238e05
-Next: round 6 gate, mutate, critic panel for TP-cpu and TP-z on 4b238e0; then TP-10 (feature-done), Belt-Slice-Done TP-z, Mac-Finish-Wanted TP-z
+Next: read critic panel wf_8379e09a-9ff and mutate.log; fix batch if findings, else TP-10 (feature-done), Belt-Slice-Done TP-z, Mac-Finish-Wanted TP-z
 
 Line lead for #434, #433 and #432 (rule 19); one wave plan across the three
 features, bookkeeping per feature. Packet v3 (has a Slices table).
