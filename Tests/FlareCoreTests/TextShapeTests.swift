@@ -80,8 +80,9 @@ import Testing
         #expect(TextLayout.maxGraphemes == 100_000)
     }
 
-    /// Each command stub registers, round-trips through the registry and
-    /// throws notBuilt naming its id, leaving the document as it was.
+    /// Each command registers and round-trips through the registry; each one
+    /// still a stub (`TextStyleCommandsTests.notBuiltIDs`) throws notBuilt
+    /// naming its id, leaving the document as it was.
     @Test func commandStubsThrowNotBuilt() throws {
         let o = LayerOwner.scene(Fixtures.sceneID)
         let commands: [any Command] = [
@@ -95,6 +96,7 @@ import Testing
         for command in commands {
             let id = type(of: command).id, data = try CommandRegistry.builtIn.encode(command)
             #expect(try CommandRegistry.builtIn.encode(CommandRegistry.builtIn.decode(data)) == data)
+            guard TextStyleCommandsTests.notBuiltIDs.contains(id) else { continue }
             var engine = CommandEngine(document: TextCommandsTests.withText())
             let before = engine.document
             #expect(throws: CommandError.notBuilt("\(id) is not built yet (text-engine)")) { try engine.perform(command) }

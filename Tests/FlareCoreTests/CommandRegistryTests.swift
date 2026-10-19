@@ -88,6 +88,7 @@ import Testing
                                                         startFrame: 41, endFrame: 48))
         doc.stateMachines[0].inputs = [MachineInputCommandTests.on]
         TrackCommandsTests.addSampleTrack(&doc)
+        TextStyleCommandsTests.addSampleRuns(&doc)
         return doc
     }
 
