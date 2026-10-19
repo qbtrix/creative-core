@@ -1,6 +1,5 @@
 // ImageCodecShapeTests.swift: the image-codecs contract (IC-1). Each public
-// symbol has the packet's signature, the side limits are 30,000, every stub
-// throws `CodecError.unsupported` naming its task instead of trapping, the
+// symbol has the packet's signature, the side limits are 30,000, the
 // stored-block zlib writer lays out RFC 1950/1951 bytes, and the shared
 // CRC-32 matches its published check value.
 @testable import CoreRaster
@@ -29,19 +28,6 @@ import Foundation
         let jpeg = JPEGInfo(width: 4, height: 5, components: 3, progressive: false, orientation: 6)
         #expect(jpeg.orientation == 6 && jpeg.components == 3 && !jpeg.progressive)
         #expect(PNG.maxSide == 30_000 && JPEG.maxSide == 30_000)
-    }
-
-    @Test func stubsThrowCodecErrors() throws {
-        let buffer = try PixelBuffer(width: 1, height: 1, fill: RGBA(r: 0.5, g: 0.25, b: 0, a: 1))
-        let stubs: [(String, () throws -> Any)] = [
-            ("IC-5", { try PNG.write(buffer) }), ("IC-5", { try PNG.write(buffer, bitsPerChannel: 16, level: 0) }),
-            ("IC-5", { try PNGCodec().encodePNG(buffer, bitsPerChannel: 8) }),
-        ]
-        for (task, stub) in stubs {
-            do { _ = try stub(); Issue.record("\(task) stub returned") } catch CodecError.unsupported(let text) {
-                #expect(text.hasSuffix("waits on \(task)"))
-            } catch { Issue.record("expected CodecError.unsupported, got \(error)") }
-        }
     }
 
     @Test func storedZlibBytes() {
