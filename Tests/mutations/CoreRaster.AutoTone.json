@@ -54,5 +54,26 @@
     "anchor": "let bright = kept.prefix(take)",
     "replacement": "let bright = kept[...]",
     "filter": "AutoToneTests"
+  },
+  {
+    "note": "AutoTone drops the gamma cap, so a median almost on the black point suggests gamma 11.7 instead of 10, caught by AutoToneTests.gammaClampsToTen",
+    "file": "Sources/CoreRaster/Tone/AutoTone.swift",
+    "anchor": "Float(min(max(log(t) / log(0.5), 0.1), 10))",
+    "replacement": "Float(log(t) / log(0.5))",
+    "filter": "AutoToneTests"
+  },
+  {
+    "note": "AutoTone drops the minimumSpan guard, so a narrow-range image is stretched to 0...1 instead of keeping identity levels, caught by AutoToneTests.narrowRangeKeepsIdentityLevels",
+    "file": "Sources/CoreRaster/Tone/AutoTone.swift",
+    "anchor": "white - black >= minimumSpan else { return tone }",
+    "replacement": "white > black else { return tone }",
+    "filter": "AutoToneTests"
+  },
+  {
+    "note": "AutoTone reads the levels histogram before the white balance instead of after it, so a tinted ramp gets the unbalanced points, caught by AutoToneTests.levelsReadAfterWhiteBalance",
+    "file": "Sources/CoreRaster/Tone/AutoTone.swift",
+    "anchor": "try Histogram(of: balanced, bins: bins)",
+    "replacement": "try Histogram(of: buffer, bins: bins)",
+    "filter": "AutoToneTests"
   }
 ]
