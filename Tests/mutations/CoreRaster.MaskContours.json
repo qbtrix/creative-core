@@ -33,5 +33,12 @@
     "anchor": "if starts.count > Self.maxContourSegments {",
     "replacement": "if false {",
     "filter": "MaskOpsTests"
+  },
+  {
+    "note": "the contour pre-scan skips cells whose only crossing is a horizontal edge, so outlines break open and lose points, caught by MaskOpsTests",
+    "file": "Sources/CoreRaster/Masks/MaskContours.swift",
+    "anchor": "|| bottom[i] != bottom[i + 1] || top[i] != bottom[i] {",
+    "replacement": "|| bottom[i] != bottom[i + 1] {",
+    "filter": "MaskOpsTests"
   }
 ]

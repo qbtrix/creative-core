@@ -95,6 +95,11 @@ extension PixelBuffer {
                         }
                         for k in 0..<count {
                             let i = k * Self.channels
+                            // Weight 0 is opacity 0, which gives the backdrop itself, so it is kept as is.
+                            if let w = weights, w[k] == 0 {
+                                for c in i..<(i + Self.channels) { staged[c] = span[c] }
+                                continue
+                            }
                             let out = sourceOver(RGBA(r: row[i], g: row[i + 1], b: row[i + 2], a: row[i + 3]),
                                                 RGBA(r: span[i], g: span[i + 1], b: span[i + 2], a: span[i + 3]),
                                                 mode: mode, opacity: weights.map { opacity * $0[k] } ?? opacity)

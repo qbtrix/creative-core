@@ -31,7 +31,7 @@ import Darwin
         #expect(mask.coveredBounds.map { [$0.x, $0.y, $0.width, $0.height] } == [44, 94, 424, 324])
 
         // 2. Its contour: one closed outline, outer counter-clockwise, no gap.
-        let rings = mask.contours()
+        let rings = try mask.contours()
         #expect(rings.count == 1)
         let ring = try #require(rings.first)
         var area = 0.0

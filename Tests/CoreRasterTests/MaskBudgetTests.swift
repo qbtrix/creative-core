@@ -93,7 +93,7 @@ private func report(_ row: String, _ time: Duration, budget: Duration) {
     @Test func contoursFast() throws {
         let mask = try Self.selection()
         var rings: [[Mask.Point]] = []
-        let time = try median { rings = mask.contours() }
+        let time = try median { rings = try mask.contours() }
         report("contours \(Self.width)x\(Self.height) selection", time, budget: .milliseconds(60))
         #expect(rings.count == 1 && (rings.first?.count ?? 0) > Self.width + Self.height)
     }

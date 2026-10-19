@@ -224,11 +224,21 @@ a W2 follow-up).
   in a white box over the glyphs to check `td: 1` directly above `tt: 3`.
 - **Budgets** (`MaskBudgetTests`, 6000 x 4000) are report-only in a debug
   build, which is what `scripts/ci` runs; an optimized build gates them, and
-  the Mac finisher runs them there. Linux release numbers for this slice
-  (shared cloud container, one run of 5-run medians) miss all three: masked
-  composite 210.7 ms vs 156.9 ms unmasked, 1.34 x (budget 1.3 x); feather
-  radius 20 6159 ms (budget 250 ms); contours 257.7 ms (budget 60 ms).
-  The budgets stand: the Mac finisher's numbers decide verified-done, and
-  the feather gap (about 25 x) needs a faster blur, not a looser row.
+  the Mac finisher runs them there. Linux release numbers (shared cloud
+  container, 4 cores, one run of 5-run medians), before and after this
+  slice's fixes: masked composite 1.34 x to 1.20 x (202.6 ms vs 169.2 ms;
+  budget 1.3 x); contours 257.7 ms to 52.6 ms (budget 60 ms); feather radius
+  20 6159 ms to 722 ms (budget 250 ms), still over. The budgets stand: the
+  Mac finisher's numbers decide verified-done.
+- **Feather past sigma 2 is an extended box, not the exact Gaussian.**
+  `feathered(radius:)` keeps sigma = radius / 3. Up to sigma 2 (radius 6) it
+  is the exact Gaussian, so the goldens are unchanged (none moved). Past it,
+  four passes per axis of the extended box filter (Gwosdek, Grewenig, Bruhn,
+  Weickert, "Theoretical Foundations of Gaussian Convolution by Extended Box
+  Filtering", SSVM 2011), whose variances sum to sigma² exactly, cost the same
+  per pixel at any radius. They stay within 0.025 of the exact Gaussian
+  (`MaskFeatherBoxTests`; 0.0171 on its seeded masks). `gaussianBlur` itself
+  is unchanged and exact. The contour pass lists mixed cells from row flags
+  first, and a masked composite keeps a weight-0 pixel's backdrop as is.
 - **Built before path-geometry's last slices merged**, so the waves table and
   the C4 description may need a rebase onto them.

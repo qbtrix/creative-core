@@ -2,7 +2,8 @@
 // separable: one horizontal 1-D pass, then one vertical, both through
 // `convolved` (Resample.swift) with clamp-to-edge taps, on premultiplied
 // components. One kernel builder (`gaussianKernel`) and one tap builder
-// (`taps`) serve both functions and `Mask.feathered`.
+// (`taps`) serve both functions; `Mask.feathered` takes the kernel, or past
+// sigma 2 the extended box of `extendedBox`.
 // Invariants: sigma is finite and at least 0, and the kernel radius ceil(3
 // sigma) is at most twice the buffer's larger side; the kernel sums to 1, so
 // every blurred component is a convex mix of input components and stays finite.
@@ -65,6 +66,22 @@ extension PixelBuffer {
             for (k, w) in kernel.enumerated() { tap.add(i + k - r, weight: w, length: length) }
             return tap
         }
+    }
+
+    /// The extended box of which `passes` successive passes have variance
+    /// exactly `sigma`², per P. Gwosdek, S. Grewenig, A. Bruhn and J.
+    /// Weickert, "Theoretical Foundations of Gaussian Convolution by Extended
+    /// Box Filtering" (SSVM 2011): weight 1 on offsets -r...r and `alpha` (in
+    /// 0..<1) on -(r + 1) and r + 1, where r is the largest radius whose plain
+    /// box variance r (r + 1) / 3 is at most t = sigma² / passes, and alpha
+    /// makes up the rest: (2r + 1)(r (r + 1) − 3t) / (6 (t − (r + 1)²)).
+    static func extendedBox(sigma: Double, passes n: Int) -> (radius: Int, alpha: Double) {
+        let t = sigma * sigma / Double(n)
+        var r = Int((((12 * t + 1).squareRoot() - 1) / 2).rounded(.down))
+        // Rounding can land one off either way; step to the radius with r (r + 1) / 3 ≤ t < (r + 1)(r + 2) / 3.
+        if Double(r * (r + 1)) > 3 * t { r -= 1 } else if Double((r + 1) * (r + 2)) <= 3 * t { r += 1 }
+        let l = Double(r)
+        return (r, (2 * l + 1) * (l * (l + 1) - 3 * t) / (6 * (t - (l + 1) * (l + 1))))
     }
 
     /// The normalized 1-D Gaussian of `sigma`, 2 ceil(3 sigma) + 1 weights
