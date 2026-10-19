@@ -46,7 +46,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 |---|---|---|---|---|---|
 | FX-a | FX-0, FX-1, FX-2 | engine-contracts:EC-a (merged on base) | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39174242588 | |
 | FX-blur | FX-3, FX-4 | FX-a | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39180267199 | |
-| FX-alpha | FX-5, FX-6 | FX-a | open | | |
+| FX-alpha | FX-5, FX-6 | FX-a | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39188534008 | |
 | FX-cpu | FX-7, FX-8 | FX-blur, FX-alpha; engine-contracts:EC-b (merged on base) | open | | |
 | FX-z | FX-9, FX-10 | FX-cpu | open | | wanted (budgets) |
 
