@@ -1,0 +1,44 @@
+[
+  {
+    "note": "path boolean exclude keeps edges inside both",
+    "file": "Sources/FlareCore/PathOps/PathBoolean.swift",
+    "anchor": "case .exclude: a != b",
+    "replacement": "case .exclude: a || b",
+    "filter": "PathBooleanTests.excludeDropsOverlap"
+  },
+  {
+    "note": "path boolean fill rule ignored, always even-odd",
+    "file": "Sources/FlareCore/PathOps/PathBoolean.swift",
+    "anchor": "self == .evenOdd ? winding % 2 != 0 : winding != 0",
+    "replacement": "winding % 2 != 0",
+    "filter": "PathBooleanTests.nonZeroDiffers"
+  },
+  {
+    "note": "path boolean snap 1e-9 removed so touching squares stay two",
+    "file": "Sources/FlareCore/PathOps/PathBoolean.swift",
+    "anchor": "{ (v * 1e9).rounded() / 1e9 }",
+    "replacement": "{ v }",
+    "filter": "PathBooleanTests.touchingUnionIsOne"
+  },
+  {
+    "note": "path boolean vertex cap off by one",
+    "file": "Sources/FlareCore/PathOps/PathBoolean.swift",
+    "anchor": "guard count <= maxBooleanVertices else",
+    "replacement": "guard count < maxBooleanVertices else",
+    "filter": "PathBooleanTests.capThrows"
+  },
+  {
+    "note": "path boolean horizontal segment frame not mirrored so it keeps its direction",
+    "file": "Sources/FlareCore/PathOps/PathBoolean.swift",
+    "anchor": "result.append(inRight == (f == 0) ?",
+    "replacement": "result.append(inRight ?",
+    "filter": "PathBooleanTests.nestedSubtractIsARingWithAClockwiseHole"
+  },
+  {
+    "note": "path boolean collinear overlap not split at the other edge ends",
+    "file": "Sources/FlareCore/PathOps/PathBoolean.swift",
+    "anchor": "if t > 0, t < 1 { cuts[k].append((t, end)) }",
+    "replacement": "if t > 1, t < 1 { cuts[k].append((t, end)) }",
+    "filter": "PathBooleanTests.partlySharedEdgeSplitsAtTheOtherEnds|PathBooleanFuzzTests"
+  }
+]

@@ -19,9 +19,6 @@ import Testing
         ("outlined(width:join:cap:miterLimit:tolerance:)", {
             _ = try square.outlined(width: 4, join: .round, cap: .butt, miterLimit: 4, tolerance: 0.1)
         }),
-        ("combine(_:_:_:rule:tolerance:)", {
-            _ = try Path.combine(.union, square, square, rule: .nonZero, tolerance: 0.1)
-        }),
     ]
 
     @Test(arguments: 0..<stubs.count)
