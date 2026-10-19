@@ -3,9 +3,9 @@
 Issue: #439 · Packet: docs/blueprints/core/features/vector-import.md
 Run: act-1a1511a1174-tlch (relaunch; earlier run act-1a14de006be-1kmq) · Started: 2026-10-18T22:40Z
 Line lead for: image-codecs (#562), preview-cache (#440), vector-import (#439)
-Stage: 5 finish
+Stage: done
 Base: 62a84e9 (origin/dev at relaunch resume)
-Next: VI-9 (part words, status line, feature-done) building; then the dev CI run that holds it, Belt-Slice-Done VI-z, contact sheet
+Next: nothing; feature built (VI-9 #587 merged, dev ci run 380 green, Belt-Slice-Done VI-z and Belt-Contact-Sheet posted on #439)
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -13,7 +13,7 @@ Next: VI-9 (part words, status line, feature-done) building; then the dev CI run
 | VI-a | VI-1, VI-2 | nothing | open | | |
 | VI-svg | VI-3, VI-4, VI-5 | VI-a; engine-contracts:EC-f (met) | open | | |
 | VI-lottie | VI-6, VI-7 | VI-a; engine-contracts:EC-f (met) | open | | |
-| VI-z | VI-8, VI-9 | VI-svg, VI-lottie | open | | none |
+| VI-z | VI-8, VI-9 | VI-svg, VI-lottie | merged-done | 380 | none |
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
