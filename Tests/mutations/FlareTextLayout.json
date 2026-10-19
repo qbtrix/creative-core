@@ -1,0 +1,30 @@
+[
+  {
+    "note": "text layout counts trailing whitespace in a line's width",
+    "file": "Sources/FlareCore/TextLayout.swift",
+    "anchor": "            let width = p.ink + extra * Double(inner)",
+    "replacement": "            let width = p.full + extra * Double(inner)",
+    "filter": "TextLayoutTests.trailingSpaceDoesNotWrap"
+  },
+  {
+    "note": "text layout justifies a paragraph's last line",
+    "file": "Sources/FlareCore/TextLayout.swift",
+    "anchor": "style.boxWidth != nil && !p.endsParagraph && inner > 0",
+    "replacement": "style.boxWidth != nil && inner > 0",
+    "filter": "TextLayoutTests.lastLineNotJustified"
+  },
+  {
+    "note": "text layout takes line height from the line's first run only",
+    "file": "Sources/FlareCore/TextLayout.swift",
+    "anchor": "                    r += 1",
+    "replacement": "                    r = runs.count",
+    "filter": "TextLayoutTests.mixedSizesUseTallest"
+  },
+  {
+    "note": "text layout adds tracking once instead of per grapheme",
+    "file": "Sources/FlareCore/TextLayout.swift",
+    "anchor": "                adv.append(a + track)",
+    "replacement": "                adv.append(a + (adv.isEmpty ? track : 0))",
+    "filter": "TextLayoutTests.trackingPerGrapheme"
+  }
+]
