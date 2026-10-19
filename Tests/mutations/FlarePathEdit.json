@@ -1,6 +1,6 @@
 [
   {
-    "note": "split uses t for both halves, so the second half of a split cubic leaves the curve and the shape moves, caught by insertKeepsShape",
+    "note": "second half starts its first control from p12 instead of p123, so the second half of a split cubic leaves the curve and the shape moves, caught by insertKeepsShape",
     "file": "Sources/FlareCore/PathOps/PathEdit.swift",
     "anchor": ".cubic(control1: p123, control2: p23, to: to)",
     "replacement": ".cubic(control1: p12, control2: p23, to: to)",
@@ -33,5 +33,9 @@
     "anchor": "index < cs[contour].anchors.count",
     "replacement": "index <= cs[contour].anchors.count",
     "filter": "PathEditTests.badIndexThrows"
-  }
+  },
+  {"note": "cusp fallback off, so smoothing an anchor whose handles point one way divides by a zero bisector and the handles go NaN, caught by cuspSmoothsAlongTheOutArm", "file": "Sources/FlareCore/PathOps/PathEdit.swift", "anchor": "if norm(ux, uy) < 1e-12 {", "replacement": "if norm(ux, uy) < 0 {", "filter": "PathEditTests.cuspSmoothsAlongTheOutArm"},
+  {"note": "default handle a half instead of a third of the way to the neighbour, caught by defaultHandlesAreAThirdAlongTheNeighbourChord", "file": "Sources/FlareCore/PathOps/PathEdit.swift", "anchor": "lerp(p, $0, 1.0 / 3)", "replacement": "lerp(p, $0, 1.0 / 2)", "filter": "PathEditTests.defaultHandlesAreAThirdAlongTheNeighbourChord"},
+  {"note": "closed contour does not wrap to its last anchor, so anchor 0 of a closed square smooths along one side only, caught by defaultHandlesAreAThirdAlongTheNeighbourChord", "file": "Sources/FlareCore/PathOps/PathEdit.swift", "anchor": "anchors.indices.contains(j) || closed ?", "replacement": "anchors.indices.contains(j) ?", "filter": "PathEditTests.defaultHandlesAreAThirdAlongTheNeighbourChord"},
+  {"note": "arm length guard dropped, so a 1e-200 arm underflows to zero length and the smoothed handles go NaN, caught by tinyAndHugeArmsStayFinite", "file": "Sources/FlareCore/PathOps/PathEdit.swift", "anchor": "guard [lengthIn, lengthOut, u].allSatisfy({ $0.isFinite && $0 > 0 }) else", "replacement": "guard true else", "filter": "PathEditTests.tinyAndHugeArmsStayFinite"}
 ]

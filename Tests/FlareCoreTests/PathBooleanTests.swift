@@ -1,5 +1,6 @@
 // PathBooleanTests.swift: Path.combine on squares with known areas (PathArea
 // shoelace oracle; outers run counter-clockwise, so area is minus signed area).
+import Foundation
 @testable import FlareCore
 import Testing
 
@@ -104,6 +105,13 @@ import Testing
         #expect(throws: GeometryError.tooComplex(50)) { try Path.combine(.union, x, y, rule: .nonZero, tolerance: 0.01, workLimit: 50) }
         #expect(try !Path.combine(.union, x, y, rule: .nonZero, tolerance: 0.01).elements.isEmpty)
         #expect(try !Path.combine(.union, x, y, rule: .nonZero, tolerance: 0.01, workLimit: 10_000).elements.isEmpty)
+        // Two overlapping 5,000-vertex circles (the logo budget) need under a tenth of the cap.
+        let circle = { (cx: Double) in Path(polyline: (0..<5_000).map { k in
+            let t = Double(k) / 5_000 * 2 * Double.pi
+            return Point(x: cx + 100 * cos(t), y: 100 * sin(t))
+        }, closed: true) }
+        #expect(try !Path.combine(.union, circle(0), circle(50), rule: .nonZero, tolerance: 0.01,
+                                  workLimit: Path.maxBooleanWork / 10).elements.isEmpty)
     }
 
     @Test func hugeCoordinatesThrowNotLoseCrossings() throws {

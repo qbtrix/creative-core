@@ -64,8 +64,10 @@ extension Path {
     /// The dashes of `pattern` (dash, gap, dash, ... lengths; an odd count
     /// repeats once) along each contour, starting `phase` into the pattern.
     ///
-    /// Throws `GeometryError.invalidPattern` for a bad pattern and
-    /// `GeometryError.invalidTolerance` for a bad tolerance (`.nonFinite`, `.tooComplex` as above).
+    /// Throws `GeometryError.invalidPattern` for a bad pattern,
+    /// `GeometryError.invalidTolerance` for a bad tolerance, `.nonFinite` for a
+    /// non-finite phase or point, and `GeometryError.tooComplex(1_000_000)` when
+    /// the walk passes `maxDashSteps` (1,000,000) dash and gap entries over all contours.
     public func dashed(_ pattern: [Double], phase: Double, tolerance: Double) throws -> Path {
         guard (1...64).contains(pattern.count), pattern.allSatisfy({ $0.isFinite && $0 >= 0 }) else {
             throw GeometryError.invalidPattern
@@ -130,9 +132,20 @@ private struct RulerLine {
         return lerp(points[i], points[i + 1], (s - sums[i]) / (sums[i + 1] - sums[i]))
     }
 
-    /// The polyline from length `a` to `b` (0 <= a < b <= length).
+    /// The polyline from length `a` to `b` (0 <= a < b <= length): a binary
+    /// search finds the first point past `a`, so a cut walks only its own span.
     func cut(_ a: Double, _ b: Double) -> [Point] {
-        [at(a)] + zip(points, sums).filter { $0.1 > a && $0.1 < b }.map(\.0) + [at(b)]
+        var lo = 0, hi = sums.count
+        while lo < hi {
+            let mid = (lo + hi) / 2
+            if sums[mid] <= a { lo = mid + 1 } else { hi = mid }
+        }
+        var result = [at(a)]
+        while lo < sums.count, sums[lo] < b {
+            result.append(points[lo])
+            lo += 1
+        }
+        return result + [at(b)]
     }
 }
 

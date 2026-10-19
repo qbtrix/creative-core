@@ -47,8 +47,13 @@ public enum GeometryError: Error, Equatable, Sendable {
     /// A dash pattern that is empty, sums to zero, has a negative or
     /// non-finite entry, or has more than 64 entries.
     case invalidPattern
-    /// A boolean whose flattened inputs have this many vertices, more than
-    /// `Path.maxBooleanVertices`. Fix it by simplifying or splitting the input.
+    /// A path operation past one of its work limits. From `Path.combine` the
+    /// payload is either the flattened vertex count, when it passes
+    /// `Path.maxBooleanVertices`, or `Path.maxBooleanWork`, when edge pair
+    /// tests, crossing cuts and ray-cast steps together pass that cap. From
+    /// `Path.dashed` it is `Path.maxDashSteps` (1,000,000), the most dash and
+    /// gap entries one call walks. Fix it by simplifying or splitting the input,
+    /// or with a longer dash pattern.
     case tooComplex(Int)
 }
 
