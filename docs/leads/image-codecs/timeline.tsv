@@ -88,3 +88,4 @@ utc	stage	event	ref	note
 2026-10-19T18:08:17Z	5	pr-opened	#734	IC-10 feature-done, head 3d846299, CI: PASS, Deflate 7/7, JPEGDecode 6/6; Refs #562 (not Closes) so the issue stays open for the done lines
 2026-10-19T18:08:28Z	5	merged	#734	lane merged 18:07Z as 12ddec95; CI https://github.com/qbtrix/creative-core/actions/runs/39299995103 pending
 2026-10-19T18:23:04Z	5	ci-queued	https://github.com/qbtrix/creative-core/actions/runs/39300831435	holds #734 and #736 (17c7cf57); the earlier run 39299995103 was cancelled (superseded)
+2026-10-19T18:46:07Z	7	contact-sheet	39300831435	Linux green; Slice-Done, Mac-Finish-Wanted, Contact-Sheet posted

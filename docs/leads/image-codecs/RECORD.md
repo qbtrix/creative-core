@@ -3,9 +3,9 @@
 Issue: #562 · Packet: docs/blueprints/core/features/image-codecs.md
 Run: act-1a1543c8a34-t9zw (previous act-1a150bfbcf7-sfwy / act-1a1511a1174-tlch) · Started: 2026-10-18T22:40Z
 Line lead for: image-codecs (#562), preview-cache (#440, already done), vector-import (#439, VI-z left)
-Stage: 5 feature-done merged
+Stage: 7 contact sheet posted
 Base: 9385de9 (wave 4)
-Next: green Linux on https://github.com/qbtrix/creative-core/actions/runs/39300831435, then done lines and contact sheet
+Next: Mac finish (budgets/parity) on run 39300831435
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -13,7 +13,7 @@ Next: green Linux on https://github.com/qbtrix/creative-core/actions/runs/393008
 | IC-a | IC-1, IC-2 | nothing | merged-done | 384 (641739b) | none |
 | IC-png | IC-3, IC-4, IC-5 | IC-a | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39263347459 | none |
 | IC-jpeg | IC-6, IC-7, IC-8 | IC-a | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39263347459 | none |
-| IC-z | IC-9, IC-10 | IC-png, IC-jpeg | built to IC-9b, round 6 | | wanted (release budgets) |
+| IC-z | IC-9, IC-10 | IC-png, IC-jpeg | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39300831435 | wanted (release budgets; #728), https://github.com/qbtrix/creative-core/actions/runs/39300831435 |
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -27,8 +27,8 @@ Next: green Linux on https://github.com/qbtrix/creative-core/actions/runs/393008
 | IC-7 | 4 | progressive JPEG | JPEGProgressive.swift, JPEGReadTests | progressive half | CoreRaster.JPEGProgressive (1+) | #635 (a686651) | merged (dev 81ae63c) |
 | IC-8 | 4 | baseline JPEG write | JPEGWrite.swift, JPEGWriteTests | JPEGWriteTests | CoreRaster.JPEGWrite (2) | #634 (8e31fe9) | merged |
 | IC-9 | 5 | KJ-IC walk, budgets | ImageCodecWalkTests, ImageCodecBudgetTests | walk | – | #709 | merged |
-| IC-9b | 5 | Deflate: bounded search per level, dynamic-Huffman blocks (PNG encode budget) | Deflate.swift, DeflateTests | DeflateTests | Deflate length limit, fixed/dynamic choice, nice length | | building |
-| IC-10 | 6 | waves.md, codecs part, feature-done | waves.md, codecs.json | c4-assemble --check | – | | open |
+| IC-9b | 5 | Deflate: bounded search per level, dynamic-Huffman blocks (PNG encode budget) | Deflate.swift, DeflateTests | DeflateTests | Deflate length limit, fixed/dynamic choice, nice length | #721 (88ed878) | merged |
+| IC-10 | 6 | waves.md, codecs part, feature-done | waves.md, codecs.json | c4-assemble --check | – | #734 (12ddec95) | merged |
 
 ## Rounds
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
@@ -65,5 +65,8 @@ Next: green Linux on https://github.com/qbtrix/creative-core/actions/runs/393008
 | IC-png | 3 | 124c35e | 7 (2 major, 5 minor; 1 refuted) | fix batches r3-png-b1 (#696, merged), r3-png-b2 (#692, merged) |
 | IC-jpeg | 4 | 3d9c151 | 9 (2 major, 7 minor; 0 refuted); gate: local budget test outside the feature flaked, dev Linux CI green on 8cd57c6 | fix batch r4-jpeg-b1 (#702, merged 10:46Z, 61/61); loop ends at the 4-round cap |
 | IC-png | 4 | 64bd637 | 7 (0 major, 7 minor); gate CI: PASS, 922 anchors, Inflate 13/13, Deflate 3/3, PNG 11/11, PNGWrite 4/4; clean | minors filed as gap issues #703, #704, #705; loop ends at the 4-round cap |
+| IC-z | 6 | 88ed878 | 4 minor (walk 4:4:4/4:2:2 means ungated, 24 MP decode pixels unchecked, DynamicHeader.bits doc; 1 filed as #728 PNG encode release time); clean | F1-F3 folded into IC-10 #734 (Deflate 7/7, JPEGDecode 6/6); Linux green on run 39300831435 |
 
 - 2026-10-19T11:40Z: IC-9 #709 merged. Linux release medians: PNG decode 12 MP 894 ms (≤1500), PNG encode 12 MP level 6 9,044 ms (≤2500, over) at 1.41x size (≤1.3x, over; withKnownIssue), JPEG decode 24 MP 1,506 ms (≤2000). Lead decision: IC-9b gives Deflate a bounded per-level search and dynamic-Huffman blocks (the packet's Deflate contract line changes from fixed-only). The walk's quality-90 3/255 mean holds for grey and 4:2:0; 4:4:4 and 4:2:2 re-encode as 4:2:0 (JPEG.write writes 4:2:0 only), so their means (6.81, 4.06, 4.41) are printed, not gated.
+
+- 2026-10-19T18:46Z: IC-10 #734 (12ddec95) and AC-9 #736 (17c7cf57) merged; run 39300831435 on 17c7cf57 Linux and Mutation green, macOS queued. Posted IC-z Belt-Slice-Done, Mac-Finish-Wanted and Belt-Contact-Sheet on #562 (comment 6274655522). Feature complete on Linux; Mac finish wanted for release budgets.
