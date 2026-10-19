@@ -99,8 +99,11 @@ enum JPEGFixtures {
             let b = (0..<size).map { UInt8(truncatingIfNeeded: v >> (8 * (size - 1 - $0))) }
             return littleEndian ? b.reversed() : b
         }
-        let ifd = n(1, 2) + n(0x0112, 2) + n(3, 2) + n(1, 4) + n(orientation, 2) + [0, 0] + n(0, 4)
-        return segment(0xE1, Array("Exif".utf8) + [0, 0] + Array((littleEndian ? "II" : "MM").utf8) + n(42, 2) + n(8, 4) + ifd)
+        // Built as a list of parts: one long `+` chain times out the macOS type checker.
+        let entry: [[UInt8]] = [n(1, 2), n(0x0112, 2), n(3, 2), n(1, 4), n(orientation, 2), [0, 0], n(0, 4)]
+        let order: [UInt8] = Array((littleEndian ? "II" : "MM").utf8)
+        let body: [[UInt8]] = [Array("Exif".utf8), [0, 0], order, n(42, 2), n(8, 4), Array(entry.joined())]
+        return segment(0xE1, Array(body.joined()))
     }
     static func dqt(_ id: Int, _ table: [Int]) -> [UInt8] { segment(0xDB, [UInt8(id)] + zigzag.map { UInt8(clamping: table[$0]) }) }
     static func dht(_ tableClass: Int, _ id: Int, _ t: Huffman) -> [UInt8] {
