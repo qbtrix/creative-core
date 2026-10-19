@@ -1,7 +1,8 @@
 // FillColor.swift: the one colour distance the fill tools share (fill-tools).
 // Flood fill (bucket, wand) and the colour-range mask both measure a pixel by
 // the Euclidean OKLab distance of the straight (unpremultiplied) colours, with
-// the alpha difference as a fourth axis, in Double through CoreColor.
+// the alpha difference as a fourth axis, in Double through CoreColor. The
+// raster gradient shares its CoreColor conversion with errors as RasterError.
 import CoreColor
 
 /// A premultiplied colour as straight OKLab plus alpha, ready to measure.
@@ -14,12 +15,19 @@ struct FillColor: Sendable {
     ///   becomes after unpremultiplying, non-finite.
     init(_ premultiplied: RGBA, what: @autoclosure () -> String) throws {
         let s = premultiplied.unpremultiplied()
-        do {
-            lab = try Color3(Double(s.r), Double(s.g), Double(s.b)).converted(from: .linearSRGB, to: .oklab)
-        } catch {
-            throw RasterError.invalid("\(what()) is not finite, so it has no OKLab value")
-        }
+        lab = try Self.converted(Color3(Double(s.r), Double(s.g), Double(s.b)), from: .linearSRGB, to: .oklab,
+                                 what: "\(what()) is not finite, so it")
         alpha = Double(s.a)
+    }
+
+    /// CoreColor's conversion of `c` from `source` to `target`, its
+    /// `ColorError` mapped to `RasterError.invalid`: "`what` has no
+    /// `target` value". FillColor and the raster gradient both use it.
+    static func converted(_ c: Color3, from source: ColorSpace, to target: ColorSpace,
+                          what: @autoclosure () -> String) throws -> Color3 {
+        do { return try c.converted(from: source, to: target) } catch {
+            throw RasterError.invalid("\(what()) has no \(target.rawValue) value (\(error))")
+        }
     }
 
     /// The Euclidean OKLab distance to `other`, alpha difference as a fourth axis.

@@ -38,6 +38,73 @@ import Testing
         }
     }
 
+    /// A diagonal `a→b` (6, 8): the projection's y term and the diamond's
+    /// cross axis both count, so a ramp that ignores the drag's y fails.
+    @Test
+    func shapesFollowDiagonalDirection() throws {
+        let a = FillFixtures.gradientA, b = Mask.Point(x: 16.5, y: 18.5)
+        for shape in [RasterGradientShape.linear, .reflected, .diamond] {
+            let image = try render(shape, from: a, to: b)
+            for y in 0..<24 {
+                for x in 0..<32 {
+                    let p = Mask.Point(x: Double(x) + 0.5, y: Double(y) + 0.5)
+                    let want = FillFixtures.analyticT(shape, at: p, from: a, to: b)
+                    #expect(abs(try t(image, x, y) - want) < 1e-5, "\(shape) at (\(x), \(y))")
+                }
+            }
+        }
+    }
+
+    /// Seeded fuzz over every shape, space and dither setting: random sizes
+    /// (0 and negative too), points (huge, NaN, infinite, equal), 0...70 stops
+    /// with unsorted offsets and huge or non-finite colours. Each call throws
+    /// `RasterError` or returns a buffer of the asked size, all finite.
+    @Test
+    func fuzzedArgumentsThrowOrStayFinite() throws {
+        var rng = SplitMix64(seed: 0xF7_05)
+        func value(_ rng: inout SplitMix64) -> Double {
+            switch Int.random(in: 0..<8, using: &rng) {
+            case 0: return .nan
+            case 1: return Bool.random(using: &rng) ? .infinity : -.infinity
+            case 2, 3:  // magnitudes 2^-997...2^998, about 1e-300...1e300
+                return Double(sign: Bool.random(using: &rng) ? .plus : .minus, exponent: Int.random(in: -997...997, using: &rng),
+                              significand: Double.random(in: 1..<2, using: &rng))
+            default: return Double.random(in: -8...40, using: &rng)
+            }
+        }
+        func component(_ rng: inout SplitMix64) -> Float {
+            switch Int.random(in: 0..<6, using: &rng) {
+            case 0: return .nan
+            case 1: return Float.random(in: -1...1, using: &rng) * 1e30
+            case 2: return Float.random(in: -1e30...1e30, using: &rng)
+            default: return Float.random(in: -0.5...1.5, using: &rng)
+            }
+        }
+        let shapes: [RasterGradientShape] = [.linear, .radial, .angle, .reflected, .diamond]
+        for _ in 0..<400 {
+            let (w, h) = (Int.random(in: -2...12, using: &rng), Int.random(in: -2...12, using: &rng))
+            let a = Mask.Point(x: value(&rng), y: value(&rng))
+            let b = Int.random(in: 0..<8, using: &rng) == 0 ? a : Mask.Point(x: value(&rng), y: value(&rng))
+            let sorted = Bool.random(using: &rng)
+            var offsets = (0..<Int.random(in: 0...70, using: &rng)).map { _ in Float.random(in: -0.1...1.1, using: &rng) }
+            if sorted { offsets = offsets.map { min(max($0, 0), 1) }.sorted() }
+            let stops = offsets.map { RasterGradientStop(offset: $0, color: RGBA(r: component(&rng), g: component(&rng),
+                                                                                    b: component(&rng), a: component(&rng))) }
+            let shape = shapes[Int.random(in: 0..<shapes.count, using: &rng)]
+            let space: GradientSpace = Bool.random(using: &rng) ? .linear : .perceptual
+            do {
+                let image = try PixelBuffer.gradient(width: w, height: h, shape: shape, from: a, to: b, stops: stops,
+                                                     space: space, dither: .random(using: &rng))
+                #expect(image.width == w && image.height == h)
+                for y in 0..<image.height {
+                    for x in 0..<image.width { #expect(try image.pixel(x: x, y: y).isFinite, "\(shape) (\(x), \(y))") }
+                }
+            } catch is RasterError {
+                continue
+            }
+        }
+    }
+
     @Test
     func reflectedMirrors() throws {
         let image = try render(.reflected)
