@@ -53,7 +53,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 ## Rounds
 | slice | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
 |---|---|---|---|---|---|---|---|---|---|
-| TP-a, TP-mix | 1 | 5ea5ae5 | PASS (try 5, budget retries under load) | 70/70 | - | clarity, contract, tests, robustness | 11 (7 major: HSLShift hue unit; hueSaturation parity claim; preserveLuminosity clamp breaks luma; hsl, vibrance, colorBalance, channelMixer, blackAndWhite mutants escape; 4 minor), 0 refuted | fix batches r1-b1 ColorAdjust, r1-b2 ColorMix (wf_815f3ba7-6f6) | no |
+| TP-a, TP-mix | 1 | 5ea5ae5 | PASS (try 5, budget retries under load) | 70/70 | - | clarity, contract, tests, robustness | 11 (7 major: HSLShift hue unit; hueSaturation parity claim; preserveLuminosity clamp breaks luma; hsl, vibrance, colorBalance, channelMixer, blackAndWhite mutants escape; 4 minor), 0 refuted | #596 (r1-b1, merged; 8/8), #597 (r1-b2, open; 10/10) | no |
 
 ## Decisions
 - TP-5 (#585): map ops on encoded values via `mappingStraight`; `inverted` is a − c on linear premultiplied (exact double inversion); `.cube` parse per packet, size 2...65, domain exactly 0…1; blue-fastest mutant moved to the apply stride (parser keeps file order); ColorMix helpers made internal for reuse.
