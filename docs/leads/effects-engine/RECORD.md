@@ -53,6 +53,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 ## Rounds
 | slice | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
 |---|---|---|---|---|---|---|---|---|---|
+| FX-a, FX-blur | 1 | 5ea5ae5 | PASS (try 5, budget retries under load) | 70/70 (BlurFamily 3/3) | - | clarity, contract, tests, robustness | 7 (2 major: motion blur not centred; box blur both-axes/three-pass untested; 5 minor), 1 refuted | fix batch r1-b1 (wf_748c0f84-546) | no |
 
 ## Decisions
 - FX-5 (#588): stroke distance measured to the sub-pixel anti-aliased edge (Gustavson & Strand 2011 edge points over the exact EDT's nearest seed + 8 neighbours); field−0.5 missed the 1% ring test by +7.2%. Shape is alpha ≥ 0.5; off-buffer is transparent; level inclusive; width 0...1000.
