@@ -22,7 +22,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 | FX-7 | 5 | FX-cpu | `applying(_:)` over every case; the CPU body; turns on `CPUEffectTests` | `Sources/CoreRaster/Effects/Effects.swift`, `Sources/CoreRender/CPU/CPUBackend+Effect.swift`, `Tests/CoreRenderTests/CPUEffectTests.swift`, `Tests/mutations/CoreRenderCPUEffect.json` | `CPUEffectTests` | 2 (packet) | #611 | merged (77b74a1) |
 | FX-8 | 6 | FX-cpu | `Samples+Effect.swift` and CPU goldens | `Sources/CoreRender/Parity/Samples+Effect.swift`, `Tests/CoreRenderTests/Golden/effect/` | `CPUGoldenTests` | none: goldens | #640 | merged (2298d3f) |
 | FX-9 | 7 | FX-z | KJ-FX walk; `EffectBudgetTests` (release, `.serialized`, reported) | `Tests/CoreRenderTests/EffectWalkTests.swift`, `Tests/CoreRasterTests/EffectBudgetTests.swift` | `EffectWalkTests.walk` | none | #699 (8613770) | merged |
-| FX-10 | 8 | FX-z | Packet status line says built; `feature-done` | `docs/blueprints/core/features/effects-engine.md` | – | none | | planned |
+| FX-10 | 8 | FX-z | Packet status line says built; `feature-done` | `docs/blueprints/core/features/effects-engine.md` | – | none | #732 (15ba89b) | merged |
 
 ## Acceptance (from the packet)
 - FX-3 `BlurFamilyTests`: radius 0 and distance 0 `==` identity; disc box blur keeps total premultiplied alpha within 1e-4; 1 px vertical line under horizontal motion blur 9 spreads over 10 columns and no rows; transparent neighbour never tints an edge; radius 2,000 throws. Mutations: sample count `distance` → `motionSpreadsTen`; unpremultiplied sum → `noBleedFromTransparent`; radians as degrees → `horizontalSpreadsColumns`.
@@ -48,7 +48,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 | FX-blur | FX-3, FX-4 | FX-a | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39180267199 | |
 | FX-alpha | FX-5, FX-6 | FX-a | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39188534008 | |
 | FX-cpu | FX-7, FX-8 | FX-blur, FX-alpha; engine-contracts:EC-b (merged on base) | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39208393584 | |
-| FX-z | FX-9, FX-10 | FX-cpu | open | | wanted (budgets) |
+| FX-z | FX-9, FX-10 | FX-cpu | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39298046683 | wanted (budgets), https://github.com/qbtrix/creative-core/actions/runs/39298046683 |
 
 ## Rounds
 | slice | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
@@ -57,7 +57,8 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 | FX-alpha, FX-blur, FX-a | 2 | 7d8af79 | PASS | 66/66 | - | clarity, contract, tests, robustness | 16 (4 major: LayerEffect radius unit differs per case; glow/shadow no fuzz; glow intensity and reach untested; clarity/denoise can store +inf; 12 minor), 1 refuted | r2-b1 #631 merged (be6cc41); r2-b2 #629 merged (e001b84); r2-b3 #639 merged (6199d27) | no |
 | FX-a, FX-blur, FX-alpha, FX-cpu | 3 | 2298d3f | PASS | 109/109 | - | clarity, contract, tests, robustness | 10 (1 major: denoise overflow guard has no test or mutation; 9 minor: error messages blame valid params, padded-size error, StrokePosition docs, packet glow/motion wording, diagonal edge offset untested, denoise working-set cap, parity applied path untested), 1 refuted | r3-b3 #652 merged (a672a6b), r3-b2 #653 merged (f67d23f), r3-b1 #655 merged (59275e0), r3-b4 #658 merged (e9fa096) | no |
 | FX-a, FX-blur, FX-alpha, FX-cpu | 4 | e9fa096 | PASS | 176/176 | - | clarity, contract, tests, robustness | 8 (3 major: FX-9 unbuilt; bilateral bands past 64 lines untested; shadow-inner sample is identity; 5 minor: glow/shadow remedy, maxDenoisePixels unseen, LayerEffect inner/intensity docs, sigma-0 branch untested, paddedWorkSize no mutation), 1 refuted | #685 merged (ef57810), r4-b3 #690 merged (37e5897), #691 merged (91bc56e), r4-b4 #699 merged (8613770) | no |
-| FX-alpha, FX-cpu, FX-z | 5 | 8613770 | PASS | 37/37 | - | clarity, contract, tests, robustness | 5 (1 major: stroke/glow/shadow overflow guards untested and unmutated; 4 minor: stroke padding error blames width, clarity radius cap undocumented, KJ-FX walk never calls padded(), distance-field guard gaps), 0 refuted | r5-b1, r5-b2, r5-b3 running (wf_a0fba459-99d) | no |
+| FX-alpha, FX-cpu, FX-z | 5 | 8613770 | PASS | 37/37 | - | clarity, contract, tests, robustness | 5 (1 major: stroke/glow/shadow overflow guards untested and unmutated; 4 minor: stroke padding error blames width, clarity radius cap undocumented, KJ-FX walk never calls padded(), distance-field guard gaps), 0 refuted | r5-b1, r5-b2, r5-b3 (wf_a0fba459-99d) | no |
+| FX-z | 6 | 88ed878 | PASS on rerun at a77ab8c3 (1 budget flake under load) | 13 plans, all caught (AlphaEffects 14/14) | - | clarity, contract, tests, robustness, first-use | 1 minor: stroked/glowing/shadowed docs named internal maxWorkPixels; 8 refuted; #719 verified | #732 FX-10 (15ba89b) | yes |
 
 ## Decisions
 - FX-5 (#588): stroke distance measured to the sub-pixel anti-aliased edge (Gustavson & Strand 2011 edge points over the exact EDT's nearest seed + 8 neighbours); field−0.5 missed the 1% ring test by +7.2%. Shape is alpha ≥ 0.5; off-buffer is transparent; level inclusive; width 0...1000.
