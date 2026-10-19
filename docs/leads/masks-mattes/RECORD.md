@@ -39,6 +39,7 @@ Next: M3 (CPU composite) and M6 (exporters) building stacked; rebase and open on
 
 - Round-2 masks model and export fixes: PR #740 (lead/masks-mattes-r2-b2, merged 20:44 as 758f0c7a, 43/43, 192 lines). ConvertToSymbol now refuses to split a matte pair; SVG blur is feather / 3 (MM-8 amended); export docs list every unsupported reason; Lottie mask paths are written closed; one matte level documented and pinned; overflow-safe feather scale; expectRefused takes the exact error.
 
+- Round-2 masks raster fixes: PR #742 (lead/masks-mattes-r2-b1, head 59219f39, 15/15, 129 lines). Gaussian kernel is identity when 2 sigma^2 is not normal, NaN-safe feather clamp; `contours` throws RasterError.invalid past `Mask.maxContourSegments = 4,000,000`; crossing-level test and entry; winding doc (positive shoelace in y-down = outer); W1 route test covers flipped and boxBlur; golden header 145 in 9.
 - M7 (MM-z) built on lead/masks-mattes-M7 (66091bb5, 294 lines, gate PASS); PR held until r2-b1 merges, then rebase (`try` on contours) and open with `feature-done`. Linux release budgets at 6000 x 4000: masked composite 1.34 x (budget 1.3 x), feather r20 6159 ms (budget 250 ms), contours 258 ms (budget 60 ms). Feather is ~25 x over: the separable Gaussian is O(radius) per pixel; a perf fix (constant-time-per-pixel blur) goes out after r2-b1 merges, since that batch owns Blur.swift. The Mac finisher's release run decides verified.
 
 ## Decisions
