@@ -2,7 +2,7 @@
 // must throw a CodecError or decode, never trap or hang. Raw mutations
 // mostly stop at a chunk CRC, so a second run mutates chunk bodies (IHDR,
 // PLTE, tRNS and the zlib stream) and recomputes each CRC to reach the
-// header checks, the inflater and the unfilter. Disabled until IC-4.
+// header checks, the inflater and the unfilter.
 @testable import CoreRaster
 import Testing
 #if canImport(FoundationEssentials)
@@ -23,12 +23,12 @@ import Foundation
         return [indexed, deep, bits]
     }
 
-    @Test(.disabled("waits on IC-4")) func thousandMutationsThrowOrDecode() {
+    @Test func thousandMutationsThrowOrDecode() {
         fuzz(mutations(of: Self.seeds, count: 1_000, seed: 0x9E6)) { _ = try PNG.read($0) }
         fuzz(mutations(of: Self.seeds, count: 200, seed: 0x9E7)) { _ = try PNG.info($0) }
     }
 
-    @Test(.disabled("waits on IC-4")) func crcFixedMutations() {
+    @Test func crcFixedMutations() {
         var rng = SplitMix64(seed: 0x9E8)
         let cases = (0..<1_000).map { i -> Data in
             var parts = F.chunks(Self.seeds[i % 3])
