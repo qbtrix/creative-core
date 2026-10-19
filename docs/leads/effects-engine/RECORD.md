@@ -2,7 +2,7 @@
 
 Issue: #433 · Packet: docs/blueprints/core/features/effects-engine.md
 Run: act-1a150bfbcf7-sfwy · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
-Stage: 4 round 5 panel done (5 confirmed); fixes r5-b1..b3 queued. FX-alpha reaches its round cap (rounds 2-5); FX-cpu 3 rounds; FX-z 1
+Stage: 4 round 5 panel done (5 confirmed); fixes r5-b1..b3 running (wf_a0fba459-99d). FX-alpha reaches its round cap (rounds 2-5); FX-cpu 3 rounds; FX-z 1
 Base: 4feaaf9fac3cc050901f8b459a0908515a927f54
 Next: round 5 panel; then FX-10 (feature-done), Belt-Slice-Done FX-z, Mac-Finish-Wanted FX-z
 
@@ -57,7 +57,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 | FX-alpha, FX-blur, FX-a | 2 | 7d8af79 | PASS | 66/66 | - | clarity, contract, tests, robustness | 16 (4 major: LayerEffect radius unit differs per case; glow/shadow no fuzz; glow intensity and reach untested; clarity/denoise can store +inf; 12 minor), 1 refuted | r2-b1 #631 merged (be6cc41); r2-b2 #629 merged (e001b84); r2-b3 #639 merged (6199d27) | no |
 | FX-a, FX-blur, FX-alpha, FX-cpu | 3 | 2298d3f | PASS | 109/109 | - | clarity, contract, tests, robustness | 10 (1 major: denoise overflow guard has no test or mutation; 9 minor: error messages blame valid params, padded-size error, StrokePosition docs, packet glow/motion wording, diagonal edge offset untested, denoise working-set cap, parity applied path untested), 1 refuted | r3-b3 #652 merged (a672a6b), r3-b2 #653 merged (f67d23f), r3-b1 #655 merged (59275e0), r3-b4 #658 merged (e9fa096) | no |
 | FX-a, FX-blur, FX-alpha, FX-cpu | 4 | e9fa096 | PASS | 176/176 | - | clarity, contract, tests, robustness | 8 (3 major: FX-9 unbuilt; bilateral bands past 64 lines untested; shadow-inner sample is identity; 5 minor: glow/shadow remedy, maxDenoisePixels unseen, LayerEffect inner/intensity docs, sigma-0 branch untested, paddedWorkSize no mutation), 1 refuted | #685 merged (ef57810), r4-b3 #690 merged (37e5897), #691 merged (91bc56e), r4-b4 #699 merged (8613770) | no |
-| FX-alpha, FX-cpu, FX-z | 5 | 8613770 | PASS | 37/37 | - | clarity, contract, tests, robustness | 5 (1 major: stroke/glow/shadow overflow guards untested and unmutated; 4 minor: stroke padding error blames width, clarity radius cap undocumented, KJ-FX walk never calls padded(), distance-field guard gaps), 0 refuted | r5-b1, r5-b2, r5-b3 queued (after affine gate; RAM) | no |
+| FX-alpha, FX-cpu, FX-z | 5 | 8613770 | PASS | 37/37 | - | clarity, contract, tests, robustness | 5 (1 major: stroke/glow/shadow overflow guards untested and unmutated; 4 minor: stroke padding error blames width, clarity radius cap undocumented, KJ-FX walk never calls padded(), distance-field guard gaps), 0 refuted | r5-b1, r5-b2, r5-b3 running (wf_a0fba459-99d) | no |
 
 ## Decisions
 - FX-5 (#588): stroke distance measured to the sub-pixel anti-aliased edge (Gustavson & Strand 2011 edge points over the exact EDT's nearest seed + 8 neighbours); field−0.5 missed the 1% ring test by +7.2%. Shape is alpha ≥ 0.5; off-buffer is transparent; level inclusive; width 0...1000.
