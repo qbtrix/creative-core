@@ -21,8 +21,8 @@ private func compare(_ delta: UInt8, _ tolerance: ParityTolerance) throws -> Par
 
 private func fill(_ w: Int, _ h: Int, _ r: Float, _ g: Float, _ b: Float, _ a: Float) throws -> PixelBuffer { try PixelBuffer(width: w, height: h, fill: RGBA(r: r, g: g, b: b, a: a)) }
 
-/// A CPU backend for effects only that counts its live surfaces: `surface` and
-/// `applying` add one, `release` removes it. Every other op is NullBackend's.
+/// A CPU backend for effects and affine composites that counts its live surfaces:
+/// `surface` and `applying` add one, `release` removes it. Every other op is NullBackend's.
 private struct CountingBackend: RenderBackend {
     let cpu = CPUBackend(), null = NullBackend(), ids = Locked<Set<UUID>>([])
     let name = "counting", supports: Set<RenderOp> = [.effect], isHealthy = true
@@ -36,6 +36,10 @@ private struct CountingBackend: RenderBackend {
     func display(_ s: RenderSurface, colorSpace: ColorSpace) throws -> [UInt8] { try null.display(s, colorSpace: colorSpace) }
     func composite(_ s: RenderSurface, onto b: inout RenderSurface, x: Int, y: Int, mode: BlendMode, opacity: Float) throws {
         try null.composite(s, onto: &b, x: x, y: y, mode: mode, opacity: opacity)
+    }
+    func composite(_ s: RenderSurface, onto b: inout RenderSurface, through m: AffineMatrix, mode: BlendMode,
+                   opacity: Float, filter: ResampleFilter) throws {
+        try cpu.composite(s, onto: &b, through: m, mode: mode, opacity: opacity, filter: filter)
     }
     func cropped(_ s: RenderSurface, x: Int, y: Int, width: Int, height: Int) throws -> RenderSurface {
         try null.cropped(s, x: x, y: y, width: width, height: height)
@@ -71,6 +75,16 @@ private struct CountingBackend: RenderBackend {
             try ParityHarness.render(sample("bad-last", Array(blurs.prefix(2)) + [.boxBlur(radius: -1)]), on: backend)
         }
         #expect(backend.live == 0, "a stack whose last effect throws releases every surface: \(backend.live) live")
+    }
+
+    @Test func compositeThroughWithASingularMatrixReleasesItsBackdrop() throws {
+        let singular = AffineMatrix(a: 1, b: 2, c: 2, d: 4, tx: 3, ty: 1)
+        let call = ParityCall.compositeThrough(singular, mode: .normal, opacity: 1, filter: .bilinear)
+        let sample = ParitySample(name: "singular", call: call, source: try fill(3, 2, 0.2, 0.4, 0.6, 1),
+                                  backdrop: try fill(4, 3, 0.9, 0.1, 0.3, 1))
+        let backend = CountingBackend()
+        #expect(throws: RenderError.self) { try ParityHarness.render(sample, on: backend) }
+        #expect(backend.live == 0, "a throwing composite releases its source and backdrop: \(backend.live) live")
     }
 
     @Test func byteBoundsHoldExactly() throws {

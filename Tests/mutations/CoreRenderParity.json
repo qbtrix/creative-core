@@ -103,5 +103,12 @@
     "anchor": "            do { next = try backend.applying(out, effect) } catch {\n                backend.release(out)\n",
     "replacement": "            do { next = try backend.applying(out, effect) } catch {\n",
     "filter": "ParityHarnessTests"
+  },
+  {
+    "note": "composite sample leaks its backdrop surface when the draw throws",
+    "file": "Sources/CoreRender/Parity/ParitySamples.swift",
+    "anchor": "        do { try draw(&target) } catch {\n            backend.release(target)\n",
+    "replacement": "        do { try draw(&target) } catch {\n",
+    "filter": "ParityHarnessTests"
   }
 ]

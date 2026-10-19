@@ -73,7 +73,9 @@ private func rasterMessage(_ body: () throws -> Void) -> String {
                 try want.composite(layer, through: m, mode: mode, opacity: 0.7, filter: .bilinear)
                 let s = try cpu.surface(layer)
                 var b = try cpu.surface(backdrop)
+                let before = b
                 try cpu.composite(s, onto: &b, through: m, mode: mode, opacity: 0.7, filter: .bilinear)
+                #expect(b.id == before.id && (b.width, b.height) == (before.width, before.height), "in place: #\(i) \(mode)")
                 #expect(try cpu.read(b) == want, "#\(i) \(mode)")
                 #expect(try cpu.read(s) == layer)
                 cpu.release(s)
