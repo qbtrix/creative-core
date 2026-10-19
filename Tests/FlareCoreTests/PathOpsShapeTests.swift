@@ -7,14 +7,9 @@ import Testing
 
 @Suite struct PathOpsShapeTests {
     static let square = Path(polyline: [Point(x: 0, y: 0), Point(x: 10, y: 0), Point(x: 10, y: 10)], closed: true)
-    static let location = PathLocation(element: 1, t: 0.5, point: Point(x: 5, y: 0), distance: 0)
 
     /// (expected name, call) for every stubbed entry point.
     static let stubs: [(String, @Sendable () throws -> Void)] = [
-        ("nearest(to:tolerance:)", { _ = try square.nearest(to: Point(x: 1, y: 1), tolerance: 0.1) }),
-        ("inserting(at:)", { _ = try square.inserting(at: location) }),
-        ("removingAnchor(contour:index:)", { _ = try square.removingAnchor(contour: 0, index: 1) }),
-        ("converting(contour:index:to:)", { _ = try square.converting(contour: 0, index: 1, to: .smooth) }),
         ("length(tolerance:)", { _ = try square.length(tolerance: 0.1) }),
         ("sample(atLength:tolerance:)", { _ = try square.sample(atLength: 5, tolerance: 0.1) }),
         ("trimmed(start:end:offset:mode:tolerance:)", {

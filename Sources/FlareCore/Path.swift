@@ -194,7 +194,7 @@ func norm(_ x: Double, _ y: Double) -> Double {
     (x * x + y * y).squareRoot()
 }
 
-private func quadAt(_ p0: Point, _ p1: Point, _ p2: Point, _ t: Double) -> Point {
+func quadAt(_ p0: Point, _ p1: Point, _ p2: Point, _ t: Double) -> Point {
     let u = 1 - t
     return Point(
         x: u * u * p0.x + 2 * u * t * p1.x + t * t * p2.x,
@@ -202,7 +202,7 @@ private func quadAt(_ p0: Point, _ p1: Point, _ p2: Point, _ t: Double) -> Point
     )
 }
 
-private func cubicAt(_ p0: Point, _ p1: Point, _ p2: Point, _ p3: Point, _ t: Double) -> Point {
+func cubicAt(_ p0: Point, _ p1: Point, _ p2: Point, _ p3: Point, _ t: Double) -> Point {
     let u = 1 - t
     let w0 = u * u * u
     let w1 = 3 * u * u * t
