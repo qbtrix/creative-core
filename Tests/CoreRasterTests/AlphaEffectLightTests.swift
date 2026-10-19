@@ -176,12 +176,43 @@ import Testing
             + "exceeds 268435456 pixels; reduce the buffer")) {
             try PixelBuffer.paddedWorkSize(width: side, height: side, pad: glow.pad, cause: glow.cause, remedy: glow.remedy)
         }
-        #expect(throws: RasterError.invalid("stroke width 4.0 on 16384x16384: padded work buffer 16386x16386 "
+        #expect(throws: RasterError.invalid("stroke on 16384x16384: padded work buffer 16386x16386 "
             + "exceeds 268435456 pixels; reduce the buffer")) {
-            try PixelBuffer.paddedWorkSize(width: side, height: side, pad: 1, cause: "stroke width 4.0", remedy: nil)
+            try PixelBuffer.paddedWorkSize(width: side, height: side, pad: 1, cause: "stroke", remedy: nil)
         }
         let fits = try PixelBuffer.paddedWorkSize(width: 100, height: 50, pad: 2, cause: "glow", remedy: "radius")
         #expect(fits.width == 104 && fits.height == 54)
+    }
+
+    /// A glow pads its work copy 2 px a side, a shadow by its offset too
+    /// (here 3 px, within the blur + 3): a work limit one pixel short of that
+    /// copy throws before allocating it, and the limit itself is accepted.
+    @Test func glowPaddingPastTheLimitThrows() throws {
+        let disc = try EffectFixtures.disc(size: 16, radius: 4)
+        let fits = try PixelBuffer.$maxWorkPixels.withValue(20 * 20) {
+            try disc.glowing(color: gold, radius: 6, intensity: 1, inner: false)
+        }
+        #expect(fits == (try disc.glowing(color: gold, radius: 6, intensity: 1, inner: false)))
+        #expect(throws: RasterError.invalid("glow on 16x16: padded work buffer 20x20 exceeds 399 pixels; "
+            + "reduce the buffer")) {
+            try PixelBuffer.$maxWorkPixels.withValue(20 * 20 - 1) {
+                try disc.glowing(color: gold, radius: 1_000, intensity: 1, inner: true)
+            }
+        }
+    }
+
+    @Test func shadowPaddingPastTheLimitThrows() throws {
+        let disc = try EffectFixtures.disc(size: 16, radius: 4)
+        let fits = try PixelBuffer.$maxWorkPixels.withValue(26 * 26) {
+            try disc.shadowed(color: shade, dx: 3, dy: 0, blur: 6, inner: false)
+        }
+        #expect(fits == (try disc.shadowed(color: shade, dx: 3, dy: 0, blur: 6, inner: false)))
+        #expect(throws: RasterError.invalid("shadow at offset (3.0, 0.0) on 16x16: padded work buffer 26x26 "
+            + "exceeds 675 pixels; reduce the offset or the buffer")) {
+            try PixelBuffer.$maxWorkPixels.withValue(26 * 26 - 1) {
+                try disc.shadowed(color: shade, dx: 3, dy: 0, blur: 6, inner: true)
+            }
+        }
     }
 
     /// A glow's padding is fixed, so its too-large error is the same at any

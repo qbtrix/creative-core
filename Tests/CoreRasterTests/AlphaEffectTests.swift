@@ -2,7 +2,7 @@
 // (FX-1), on since FX-5 built `stroked`: a 4 px stroke of a radius-16 disc
 // covers 16...20 outside, 12...16 inside, 14...18 centred, area within 1%. Glow
 // and shadow are FX-6's own suite, `AlphaEffectLightTests`.
-import CoreRaster
+@testable import CoreRaster
 import Testing
 
 @Suite struct AlphaEffectTests {
@@ -125,6 +125,23 @@ import Testing
     @Test func badWidthThrows() throws {
         let disc = try EffectFixtures.disc(size: 16, radius: 4)
         for bad in [2_000.0, 1_000.5, -1, .nan, .infinity] { #expect(throws: RasterError.self) { try disc.stroked(color: blue, width: bad, position: .outside) } }
+    }
+
+    /// A stroke works on a copy padded 1 px a side: a work limit one pixel
+    /// short of that copy throws before allocating it, naming the buffer, not
+    /// the width (the padding is fixed, so only the buffer sets it).
+    @Test func strokePaddingPastTheLimitThrows() throws {
+        let disc = try EffectFixtures.disc(size: 16, radius: 4)
+        let fits = try PixelBuffer.$maxWorkPixels.withValue(18 * 18) {
+            try disc.stroked(color: blue, width: 4, position: .outside)
+        }
+        #expect(fits == (try disc.stroked(color: blue, width: 4, position: .outside)))
+        #expect(throws: RasterError.invalid("stroke on 16x16: padded work buffer 18x18 exceeds 323 pixels; "
+            + "reduce the buffer")) {
+            try PixelBuffer.$maxWorkPixels.withValue(18 * 18 - 1) {
+                try disc.stroked(color: blue, width: 1_000, position: .center)
+            }
+        }
     }
 
     @Test func fuzzNeverCrashes() throws {

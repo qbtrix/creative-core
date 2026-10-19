@@ -78,10 +78,13 @@ extension PixelBuffer {
 
     /// This buffer with its local contrast raised (positive `amount`) or
     /// lowered (negative), -100...100, against a blur of `radius` px
-    /// (0...1,000; 30 is typical). Amount or radius 0 returns the buffer
-    /// unchanged. Throws `RasterError.invalid` for a parameter that is not
-    /// finite or out of range, or a result that overflows (source components
-    /// too large).
+    /// (0...1,000; 30 is typical). The radius cap is inclusive: 1,000 is
+    /// accepted and anything past it throws `RasterError.invalid`. Below the
+    /// cap, a radius past twice the buffer's larger side less one blurs as
+    /// that (the kernel fits the clamped edge), so it does not throw. Amount
+    /// or radius 0 returns the buffer unchanged. Throws `RasterError.invalid`
+    /// for a parameter that is not finite or out of range, or a result that
+    /// overflows (source components too large).
     public func clarity(amount: Double, radius: Double) throws -> PixelBuffer {
         guard amount.isFinite, (-100...100).contains(amount) else {
             throw RasterError.invalid("clarity amount \(amount): must be finite and in -100...100")

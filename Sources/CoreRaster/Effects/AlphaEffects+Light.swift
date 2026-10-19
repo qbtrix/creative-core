@@ -22,7 +22,7 @@ extension PixelBuffer {
     /// returns the buffer unchanged. Throws `RasterError.invalid` for a colour
     /// that is not finite, a radius not finite or not in 0...1,000, an
     /// intensity not finite or not in 0...1, a buffer too large to pad for
-    /// the effect (its padded work copy passes `maxPixels`), or a result that
+    /// the effect (its padded work copy passes `maxWorkPixels`), or a result that
     /// overflows.
     public func glowing(color: RGBA, radius: Double, intensity: Double, inner: Bool) throws -> PixelBuffer {
         guard intensity.isFinite, intensity >= 0, intensity <= 1 else {
@@ -38,7 +38,7 @@ extension PixelBuffer {
     /// an inner shadow over it, clipped to its alpha, when `inner`. Throws
     /// `RasterError.invalid` for a colour or offset that is not finite, a blur
     /// not finite or not in 0...1,000, a buffer too large to pad for the
-    /// effect (its copy padded for the blur and offset passes `maxPixels`),
+    /// effect (its copy padded for the blur and offset passes `maxWorkPixels`),
     /// or a result that overflows.
     public func shadowed(color: RGBA, dx: Double, dy: Double, blur: Double, inner: Bool) throws -> PixelBuffer {
         guard dx.isFinite, dy.isFinite else {

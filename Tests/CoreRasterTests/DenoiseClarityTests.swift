@@ -192,6 +192,19 @@ import Testing
         for bad in [2_000.0, -1, .nan] { #expect(throws: RasterError.self) { try b.clarity(amount: 30, radius: bad) } }
     }
 
+    /// The radius cap is inclusive: 1,000 is accepted, the next Double up
+    /// throws. Past twice the larger side less one the kernel is capped, so
+    /// on an 8 x 8 buffer radius 1,000 blurs exactly as radius 15 does.
+    @Test func clarityRadiusCapIsInclusive() throws {
+        let small = try EffectFixtures.noisyStep(width: 8, height: 8)
+        let capped = try small.clarity(amount: 50, radius: 1_000)
+        #expect(capped == (try small.clarity(amount: 50, radius: 15)) && capped != small)
+        let past = 1_000.0.nextUp
+        #expect(throws: RasterError.invalid("clarity radius \(past): must be finite and in 0...1000")) {
+            try small.clarity(amount: 50, radius: past)
+        }
+    }
+
     @Test func fuzzNeverCrashes() throws {
         var rng = SplitMix64(seed: 0xDE_401)
         let input = try EffectFixtures.noisyStep(width: 8, height: 8)

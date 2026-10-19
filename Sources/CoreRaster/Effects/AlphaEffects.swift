@@ -11,7 +11,9 @@
 // side. Outside goes under the layer, inside goes over it clipped to its
 // alpha, centre (w / 2 each side) goes over it. Beyond the buffer reads as
 // transparent. Invariants: width is finite and in 0...1,000 (0 is identity),
-// the colour is finite, every output component is finite.
+// the colour is finite, every output component is finite, and the padded
+// work copy (here and for glow and shadow) is checked against
+// `maxWorkPixels` before it is allocated.
 
 extension PixelBuffer {
     /// The widest stroke, in pixels.
@@ -24,14 +26,15 @@ extension PixelBuffer {
     /// Width 0 returns the buffer unchanged. Throws `RasterError.invalid` for
     /// a width that is not finite or not in 0...1,000, a colour that is not
     /// finite, a buffer too large to pad for the effect (its one-pixel
-    /// padded copy passes `maxPixels`), or a result that overflows.
+    /// padded copy passes `maxWorkPixels`; the error names only the buffer,
+    /// since the width does not set the padding), or a result that overflows.
     public func stroked(color: RGBA, width strokeWidth: Double, position: StrokePosition) throws -> PixelBuffer {
         guard strokeWidth.isFinite, strokeWidth >= 0, strokeWidth <= Self.maxStrokeWidth else {
             throw RasterError.invalid("stroke width \(strokeWidth): must be finite and in 0...\(Int(Self.maxStrokeWidth))")
         }
         guard color.isFinite else { throw RasterError.invalid("stroke color \(color): must be finite") }
         guard strokeWidth > 0 else { return self }
-        let distance = try edgeDistances(cause: "stroke width \(strokeWidth)")
+        let distance = try edgeDistances()
         let src = components, c = Self.channels
         var out = src
         let paint = [color.r, color.g, color.b, color.a]
@@ -65,28 +68,36 @@ extension PixelBuffer {
         return Float(t * t * (3 - 2 * t))
     }
 
+    /// The most pixels a stroke, glow or shadow's padded work copy may have:
+    /// `maxPixels`, lowered only by tests (bound with `withValue`) so they
+    /// drive the too-large guard without allocating a buffer near the cap.
+    @TaskLocal static var maxWorkPixels = maxPixels
+
     /// The size of this buffer padded by `pad` pixels a side, the work buffer
     /// of the effect `cause` names (e.g. "shadow at offset (40.0, 0.0)").
     /// Throws `RasterError.invalid` naming the effect, the padded size and the
-    /// fix when the padded size passes `maxPixels`; `remedy` is what to reduce
-    /// besides the buffer ("offset", or nil when the padding is fixed).
+    /// fix when the padded size passes `maxWorkPixels` (or `maxPixels`);
+    /// `remedy` is what to reduce besides the buffer ("offset", or nil when
+    /// the padding is fixed). Nothing is allocated before the check.
     static func paddedWorkSize(width: Int, height: Int, pad: Int, cause: String,
                                remedy: String?) throws -> (width: Int, height: Int) {
-        let pw = width + 2 * pad, ph = height + 2 * pad
-        do { _ = try validatedSize(width: pw, height: ph) } catch {
+        let pw = width + 2 * pad, ph = height + 2 * pad, limit = min(maxWorkPixels, maxPixels)
+        let (pixels, overflow) = pw.multipliedReportingOverflow(by: ph)
+        guard !overflow, pixels <= limit else {
             let fix = remedy.map { "the \($0) or the buffer" } ?? "the buffer"
             throw RasterError.invalid("\(cause) on \(width)x\(height): padded work buffer \(pw)x\(ph) "
-                + "exceeds \(maxPixels) pixels; reduce \(fix)")
+                + "exceeds \(limit) pixels; reduce \(fix)")
         }
         return (pw, ph)
     }
 
     /// Every pixel's distance to the anti-aliased alpha edge (+infinity when
     /// there is no edge), worked on a copy padded by one transparent pixel so
-    /// a shape touching the border has an edge there. `cause` names the
-    /// effect in the error when that copy is too large.
-    func edgeDistances(cause: String) throws -> [Double] {
-        let (pw, ph) = try Self.paddedWorkSize(width: width, height: height, pad: 1, cause: cause, remedy: nil)
+    /// a shape touching the border has an edge there. That padding is fixed,
+    /// so the error when the copy is too large names the stroke and the
+    /// buffer, never the width.
+    func edgeDistances() throws -> [Double] {
+        let (pw, ph) = try Self.paddedWorkSize(width: width, height: height, pad: 1, cause: "stroke", remedy: nil)
         let src = components, c = Self.channels
         var alpha = [Double](repeating: 0, count: pw * ph)
         for y in 0..<height {
