@@ -20,7 +20,7 @@ Next: M3 (CPU composite) and M6 (exporters) building stacked; rebase and open on
 |---|---|---|---|---|---|---|---|
 | M1 | MM-a + MM-raster | MM-1 (ops share), MM-3 | Masks/MaskFeather, Masks/MaskContours, MaskFixtures, MaskOpsTests | MaskOpsTests | CoreRaster.MaskFeather, CoreRaster.MaskContours | #718 | merged |
 | M2 | MM-raster | MM-1 (composite share), MM-4 | Masks/MaskFromBuffer, Compositing/CompositeMasked, MaskCompositeTests | MaskCompositeTests | CoreRaster.CompositeMasked | #726 | merged |
-| M3 | MM-raster | MM-5 | CPUBackend+MaskedComposite, Samples+MaskedComposite, CPUMaskedCompositeTests, goldens | CPUMaskedCompositeTests | CoreRenderCPUMaskedComposite | | building, stacked on M2 |
+| M3 | MM-raster | MM-5 | CPUBackend+MaskedComposite, Samples+MaskedComposite, CPUMaskedCompositeTests, goldens | CPUMaskedCompositeTests | CoreRenderCPUMaskedComposite | #737 | in lane (3/3, 332 lines, 15 files) |
 | M4 | MM-a + MM-vector | MM-2 (commands share, fixture), MM-6 | MaskCommands.swift, MaskCommandsTests, UndoPropertyTests, Fixtures/masks.flare | MaskCommandsTests | FlareMaskCommands | #720 | merged |
 | M5 | MM-vector | MM-7 | RenderList.swift, MatteRenderListTests | MatteRenderListTests | FlareMatteRenderList | #724 | merged |
 | M6 | MM-vector | MM-8 | Export/SVGExporter+Masks, Export/LottieExporter+Masks, both suites | both | FlareMaskExport | #729 | merged 17:06 (ccd78ae6) |
@@ -32,6 +32,8 @@ Next: M3 (CPU composite) and M6 (exporters) building stacked; rebase and open on
 | 1 | a658945b | builders' gates | per plan, all caught | 39279766862 | correctness, robustness, reuse, tests+mutation, first-use clarity | 0 blockers, 5 should-fix, 7 nits (across both features) | lead/masks-mattes-r1-b1 | no |
 
 - Round-1 masks fixes: PR #730 (lead/masks-mattes-r1-b1), merged 17:34.
+
+- For the next round (from M3 #737): the CPUGoldenTests header still says "133 samples in 8 goldens" (should be 145 in 9), left out for the 15-file cap. CoreRenderDispatcherW1#3 and #4 (the flipped and applying fallbacks) escape on dev, because eachNewMethodReachesTheCPU only checks the masked composite. Fold both into the next masks PR. M3 also edits ParitySamples, ParityPack and the four W1/dispatcher/parity/CPU suites, and repointed CoreRenderDispatcherW1#5.
 
 ## Decisions
 - Rule 20: MM-1 and MM-2 (disabled checks) are not their own PRs; each slice PR adds its own failing suite as its first commit. MM-a is slice-done once M1 and M4 (which carry the fixtures) merge.
