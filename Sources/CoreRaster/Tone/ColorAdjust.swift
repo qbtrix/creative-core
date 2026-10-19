@@ -65,8 +65,6 @@ extension PixelBuffer {
         return try mappingStraight { ColorMath.shifted($0, by: shift, from: ColorMath.hsl(of: $0)) }
     }
 
-    /// An `HSLShift`'s `hue` is percent of a ±30° turn (100 = +30°), not
-    /// degrees as in `hueSaturation`; its saturation and lightness are percent.
     /// Per-hue-range HSL shifts over eight ranges centred at 0, 30, 60, 120,
     /// 180, 240, 270 and 300 degrees. A pixel's weight per range is a raised
     /// cosine from the range's centre to each neighbouring centre, so the
@@ -74,6 +72,9 @@ extension PixelBuffer {
     /// `hueSaturation`. Out-of-range values are clamped to -100...100; a
     /// non-finite one throws `RasterError.invalid` naming its band. A grey
     /// pixel (no hue) and one whose summed shift is zero pass through untouched.
+    ///
+    /// - Note: An `HSLShift`'s `hue` is percent of a ±30° turn (100 = +30°),
+    ///   not degrees as in `hueSaturation`; its saturation and lightness are percent.
     public func hsl(_ adjustment: HSLAdjustment) throws -> PixelBuffer {
         let bands = [("reds", adjustment.reds), ("oranges", adjustment.oranges), ("yellows", adjustment.yellows),
                      ("greens", adjustment.greens), ("aquas", adjustment.aquas), ("blues", adjustment.blues),
