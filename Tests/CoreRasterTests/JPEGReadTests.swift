@@ -4,7 +4,7 @@
 // 4:4:4, 4:2:2 and 4:2:0, the zigzag order, restart intervals, the EXIF
 // orientation reported but not applied, and unsupported, oversized or
 // damaged files refused; progressive codings (Annex G) read as their baseline
-// ones do. Disabled until IC-6 (baseline) and IC-7 (progressive).
+// ones do. The progressive cases are disabled until IC-7.
 @testable import CoreRaster
 import CoreColor
 import Testing
@@ -23,7 +23,7 @@ import Foundation
         #expect(e.mean <= 1 && e.max <= 4, "\(note): mean \(e.mean), max \(e.max) levels")
     }
 
-    @Test(.disabled("waits on IC-6")) func infoReadsFrame() throws {
+    @Test func infoReadsFrame() throws {
         let colour = F.Frame(width: 37, height: 21, sampling: Self.samplings[2], block: F.seeded(0x1F))
         #expect(try JPEG.info(F.baseline(colour)) == JPEGInfo(width: 37, height: 21, components: 3, progressive: false, orientation: 1))
         #expect(try JPEG.info(F.stub(colour, sof: 0xC2)).progressive)
@@ -32,7 +32,7 @@ import Foundation
     }
 
     /// DC only, the inverse DCT is flat: S00 = 16q (K.1) gives samples 128 + 2q (A.3.3, C(0)² = 1/2).
-    @Test(.disabled("waits on IC-6")) func greyDCOnly() throws {
+    @Test func greyDCOnly() throws {
         let dc = [-64, -20, 0, 1, 37, 63]
         let f = F.Frame(width: 48, height: 8, block: { _, x, _ in [dc[x]] + [Int](repeating: 0, count: 63) })
         let read = try JPEG.read(F.baseline(f))
@@ -47,7 +47,7 @@ import Foundation
 
     /// 64 blocks under a flat table of 16, block k holding DC k - 32 and only zigzag coefficient k (Figure A.6) at ±4:
     /// a swapped zigzag entry moves a coefficient to another frequency, about 11 levels off.
-    @Test(.disabled("waits on IC-6")) func zigzag() throws {
+    @Test func zigzag() throws {
         let flat = [Int](repeating: 16, count: 64)
         let f = F.Frame(width: 64, height: 64, tables: [flat, flat], block: { _, x, y in
             var q = [Int](repeating: 0, count: 64), k = y * 8 + x
@@ -58,7 +58,7 @@ import Foundation
         try check(f, F.baseline(f), "one coefficient per block")
     }
 
-    @Test(.disabled("waits on IC-6")) func ycbcrSampling() throws {
+    @Test func ycbcrSampling() throws {
         for sampling in Self.samplings {
             for (width, height) in [(13, 11), (37, 21)] {
                 let f = F.Frame(width: width, height: height, sampling: sampling, block: F.seeded(UInt64(width * 10 + sampling[0].h * 2 + sampling[0].v)))
@@ -73,7 +73,7 @@ import Foundation
 
     /// DRI (B.2.4.4): RSTm after every n MCUs, m wrapping after 7; each resets the DC predictions to 0 (F.2.1.3.1).
     /// 80 x 16 grey is 20 one-block MCUs, so interval 1 wraps m twice.
-    @Test(.disabled("waits on IC-6")) func restartResetsDC() throws {
+    @Test func restartResetsDC() throws {
         let grey = F.Frame(width: 80, height: 16, block: F.seeded(0x71))
         for n in [1, 3] { try check(grey, F.baseline(grey, restart: n), "grey every \(n)") }
         let colour = F.Frame(width: 48, height: 40, sampling: Self.samplings[2], block: F.seeded(0x72))
@@ -81,7 +81,7 @@ import Foundation
         #expect(try JPEG.read(F.baseline(colour, restart: 2)) == JPEG.read(F.baseline(colour)))
     }
 
-    @Test(.disabled("waits on IC-6")) func exifOrientation() throws {
+    @Test func exifOrientation() throws {
         let f = F.Frame(width: 13, height: 7, sampling: Self.samplings[1], block: F.seeded(0x0E))
         let plain = try JPEG.read(F.baseline(f))
         for (orientation, little) in [(6, false), (8, true), (3, false), (1, true)] {
@@ -92,7 +92,7 @@ import Foundation
     }
 
     /// Arithmetic coding (SOF9, SOF10), lossless (SOF3) and hierarchical (SOF5) frames, 12-bit samples and four components.
-    @Test(.disabled("waits on IC-6")) func unsupportedThrows() throws {
+    @Test func unsupportedThrows() throws {
         let grey = F.Frame(width: 8, height: 8, block: F.seeded(0x05))
         for marker: UInt8 in [0xC9, 0xCA, 0xC3, 0xC5] {
             let data = F.baseline(grey, sof: marker)
@@ -106,7 +106,7 @@ import Foundation
 
     /// Sizes come from SOF and are refused before any pixel buffer: the scans here are two bytes, so `tooLarge`
     /// (not `damaged`) shows the check came first. 20,000² is within the side limit and over `PixelBuffer.maxPixels`.
-    @Test(.disabled("waits on IC-6")) func refusesHuge() throws {
+    @Test func refusesHuge() throws {
         for (width, height) in [(JPEG.maxSide + 1, 1), (1, JPEG.maxSide + 1), (20_000, 20_000)] {
             for sampling in [[(1, 1)], Self.samplings[2]] {
                 let data = F.stub(F.Frame(width: width, height: height, sampling: sampling, block: F.seeded(0)))
@@ -118,7 +118,7 @@ import Foundation
         #expect(PNGFixtures.thrown { try JPEG.read(F.stub(F.Frame(width: JPEG.maxSide, height: 1, block: F.seeded(0)))) } == "damaged")
     }
 
-    @Test(.disabled("waits on IC-6")) func damagedThrows() throws {
+    @Test func damagedThrows() throws {
         let f = F.Frame(width: 16, height: 16, sampling: Self.samplings[2], block: F.seeded(0xDA))
         let good = F.baseline(f), parts = F.split(good)
         let without = { (drop: (UInt8, [UInt8]) -> Bool) -> Data in F.join(parts.segments.filter { !drop($0.marker, $0.body) }, parts.scan) }

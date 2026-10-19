@@ -3,7 +3,6 @@
 // only the entropy-coded bytes so the headers stay valid and the Huffman
 // decoder, restarts and IDCT take the damage; seeded valid streams of random
 // size, sampling and restart interval decode within the tolerance.
-// Disabled until IC-6.
 @testable import CoreRaster
 import Testing
 #if canImport(FoundationEssentials)
@@ -23,12 +22,12 @@ import Foundation
         return [F.baseline(grey, restart: 2), F.baseline(colour, orientation: 6), F.baseline(wide, restart: 1, orientation: 8, littleEndian: true)]
     }
 
-    @Test(.disabled("waits on IC-6")) func thousandMutationsThrowOrDecode() {
+    @Test func thousandMutationsThrowOrDecode() {
         fuzz(mutations(of: Self.seeds, count: 1_000, seed: 0x1E6)) { _ = try JPEG.read($0) }
         fuzz(mutations(of: Self.seeds, count: 200, seed: 0x1E7)) { _ = try JPEG.info($0) }
     }
 
-    @Test(.disabled("waits on IC-6")) func scanMutations() {
+    @Test func scanMutations() {
         var rng = SplitMix64(seed: 0x1E8)
         let cases = (0..<1_000).map { (i: Int) -> Data in
             let parts = F.split(Self.seeds[i % 3]), sosLength = 2 + (Int(parts.scan[2]) << 8 | Int(parts.scan[3]))
@@ -38,7 +37,7 @@ import Foundation
         fuzz(cases) { _ = try JPEG.read($0) }
     }
 
-    @Test(.disabled("waits on IC-6")) func seededValidStreamsDecode() throws {
+    @Test func seededValidStreamsDecode() throws {
         var rng = SplitMix64(seed: 0x1E9)
         for i in 0..<40 {
             let sampling = Self.samplings[i % 4], restart = Int.random(in: 0...3, using: &rng)

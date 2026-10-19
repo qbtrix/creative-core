@@ -38,7 +38,6 @@ import Foundation
             ("IC-4", { try PNG.info(bytes) }), ("IC-4", { try PNG.read(bytes) }),
             ("IC-5", { try PNG.write(buffer) }), ("IC-5", { try PNG.write(buffer, bitsPerChannel: 16, level: 0) }),
             ("IC-4", { try PNGCodec().decodePNG(bytes) }), ("IC-5", { try PNGCodec().encodePNG(buffer, bitsPerChannel: 8) }),
-            ("IC-6", { try JPEG.info(Data([0xFF, 0xD8])) }), ("IC-6", { try JPEG.read(Data([0xFF, 0xD8])) }),
             ("IC-8", { try JPEG.write(buffer) }), ("IC-8", { try JPEG.write(buffer, quality: 1) }),
         ]
         for (task, stub) in stubs {
