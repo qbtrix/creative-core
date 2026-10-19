@@ -8,12 +8,6 @@ import Testing
     let notBuilt = RasterError.invalid("not built")
     let red = RGBA(r: 1, g: 0, b: 0, a: 1)
 
-    @Test func blursAndToneThrowNotBuilt() throws {
-        let buffer = try PixelBuffer(width: 4, height: 4, fill: red)
-        #expect(throws: notBuilt) { try buffer.denoised(strength: 0.5, detail: 0.5) }
-        #expect(throws: notBuilt) { try buffer.clarity(amount: 30, radius: 30) }
-    }
-
     @Test func alphaEffectsThrowNotBuilt() throws {
         let buffer = try PixelBuffer(width: 4, height: 4, fill: red)
         #expect(throws: notBuilt) { try buffer.stroked(color: red, width: 2, position: .outside) }

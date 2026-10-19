@@ -1,0 +1,16 @@
+[
+  {
+    "note": "denoise ignores the range sigma, so the bilateral filter becomes a plain Gaussian and smooths across the edge, caught by DenoiseClarityTests.edgeKept",
+    "file": "Sources/CoreRaster/Effects/DenoiseClarity.swift",
+    "anchor": "return exp(-d * d / (2 * rangeSigma * rangeSigma))",
+    "replacement": "return 1",
+    "filter": "DenoiseClarityTests"
+  },
+  {
+    "note": "clarity drops the mid-tone weight, so full clarity pushes highlights past 1 and shadows below 0, caught by DenoiseClarityTests.highlightsUnclipped",
+    "file": "Sources/CoreRaster/Effects/DenoiseClarity.swift",
+    "anchor": "let gain = k * Self.midToneWeight(luma)",
+    "replacement": "let gain = k",
+    "filter": "DenoiseClarityTests"
+  }
+]
