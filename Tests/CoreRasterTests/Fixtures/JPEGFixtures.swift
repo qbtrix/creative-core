@@ -176,6 +176,46 @@ enum JPEGFixtures {
         let head = header(f, sof: sof, precision: precision, restart: restart, orientation: orientation, littleEndian: littleEndian)
         return Data(head + sos(Array(f.sampling.indices), 0, 63, 0, 0) + w.bytes + [0xFF, 0xD9])
     }
+    /// G.1.2.3, refining |coefficients| one bit (Al = 0 after Al = 1): a coefficient going 0 to 1 is (R, 1) and its
+    /// sign (1 positive), R counting only zero-history zeros; one with history gives its correction bit, held until
+    /// the next symbol. A ZRL is sent at the next non-zero once 16 zeros have passed, never after the last new
+    /// coefficient (EOB carries the rest).
+    static func refineAC(_ band: [Int], _ codes: Codes, _ w: inout Bits) {
+        let t = band.map(abs), last = t.lastIndex(of: 1) ?? -1
+        var run = 0, held: [Int] = []
+        func flush(_ w: inout Bits) { held.forEach { w.put($0, 1) }; held = [] }
+        for (k, v) in t.enumerated() {
+            if v == 0 { run += 1; continue }
+            while run > 15, k <= last { w.put(codes, 0xF0); flush(&w); run -= 16 }
+            if v > 1 { held.append(v & 1); continue }
+            w.put(codes, run << 4 | 1); w.put(band[k] > 0 ? 1 : 0, 1); flush(&w); run = 0
+        }
+        if run > 0 || !held.isEmpty { w.put(codes, 0x00); flush(&w) }
+    }
+    /// A progressive JPEG of `f` (SOF2, Annex G) coding the same coefficients as `baseline`: DC first at Al 1 and its
+    /// refinement (all components interleaved), chroma AC by spectral selection (1...5, 6...63), luma AC 1...63 at
+    /// Al 1 (divided toward zero) then refined. Every AC scan holds one component over its own block grid (A.2.2).
+    static func progressive(_ f: Frame) -> Data {
+        let all = Array(f.sampling.indices)
+        var out = header(f, sof: 0xC2, precision: 8, restart: 0, orientation: nil, littleEndian: false)
+        var prediction = all.map { _ in 0 }
+        func scan(_ cs: [Int], _ ss: Int, _ se: Int, _ ah: Int, _ al: Int, _ code: (Int, [Int], inout Bits) -> Void) {
+            var w = Bits()
+            for b in f.units(cs).joined() { let q = f.block(b.c, b.x, b.y); code(b.c, zigzag.map { q[$0] }, &w) }
+            w.align(); out += sos(cs, ss, se, ah, al) + w.bytes
+        }
+        scan(all, 0, 0, 0, 1) { c, z, w in
+            let d = magnitude((z[0] >> 1) - prediction[c]); prediction[c] = z[0] >> 1
+            w.put(huffman[min(c, 1)].dc, d.size); w.put(d.bits, d.size)
+        }
+        scan(all, 0, 0, 1, 0) { _, z, w in w.put(z[0] & 1, 1) }
+        for c in all.dropFirst() {
+            for (ss, se) in [(1, 5), (6, 63)] { scan([c], ss, se, 0, 0) { _, z, w in encodeAC(Array(z[ss...se]), huffman[1].ac, &w) } }
+        }
+        scan([0], 1, 63, 0, 1) { _, z, w in encodeAC(z.dropFirst().map { $0 < 0 ? -(-$0 >> 1) : $0 >> 1 }, huffman[0].ac, &w) }
+        scan([0], 1, 63, 1, 0) { _, z, w in refineAC(Array(z.dropFirst()), huffman[0].ac, &w) }
+        return Data(out + [0xFF, 0xD9])
+    }
     /// The header and a scan header (DC-only for SOF2) with two entropy bytes: enough for `info`, too short to decode.
     static func stub(_ f: Frame, sof: UInt8 = 0xC0) -> Data {
         let head = header(f, sof: sof, precision: 8, restart: 0, orientation: nil, littleEndian: false)
