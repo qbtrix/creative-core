@@ -1,5 +1,6 @@
 // PathOpsBudgetTests.swift: the path-geometry budgets (PG-11). On the seeded
-// 10,000-anchor scribble (PathFixtures.scribble) `nearest` takes at most 2 ms
+// 10,000-anchor hand-drawn scribble (PathFixtures.handScribble, short local
+// steps, as a pen stroke is; see the packet's PG-11 note) `nearest` takes at most 2 ms
 // (one pointer move), and dash and trim at most 5 ms each; a boolean of two
 // seeded 5,000-vertex logo outlines takes at most 50 ms. The packet's budgets
 // are release, reported, as EffectBudgetTests and AffineBudgetTests are: an
@@ -29,7 +30,7 @@ private func milliseconds(_ d: Duration) -> String {
 
 /// Serialized, so no two timed runs share cores.
 @Suite(.serialized) struct PathOpsBudgetTests {
-    static let scribble = PathFixtures.scribble()
+    static let scribble = PathFixtures.handScribble()
     /// Screen-pixel tolerance: what a drag or a stroke preview flattens at.
     static let tolerance = 0.5
     static let logoVertices = 5_000
@@ -72,10 +73,12 @@ private func milliseconds(_ d: Duration) -> String {
     }
 
     @Test func dashScribble() throws {
+        // A 2:1 pattern whose period is 1/2,000 of the length: about 2,000 dashes.
+        let period = try Self.scribble.length(tolerance: Self.tolerance) / 2_000
         let dashed = try Self.check("dash the scribble", budget: .milliseconds(5)) {
-            try Self.scribble.dashed([400, 200], phase: 50, tolerance: Self.tolerance)
+            try Self.scribble.dashed([period * 2 / 3, period / 3], phase: period / 4, tolerance: Self.tolerance)
         }
-        #expect(!dashed.elements.isEmpty)
+        #expect(dashed.elements.count(where: { if case .move = $0 { true } else { false } }) >= 1_900)
     }
 
     @Test func trimScribble() throws {

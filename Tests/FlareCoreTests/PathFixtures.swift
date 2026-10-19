@@ -3,6 +3,7 @@
 // 10,000-anchor scribble, lines and cubics only so contours round-trip exactly;
 // and a closed quad loop for the split checks.
 import FlareCore
+import Foundation
 
 private func pt(_ x: Double, _ y: Double) -> Point { Point(x: x, y: y) }
 
@@ -43,6 +44,23 @@ enum PathFixtures {
         let start = PathElement.move(to: random())
         return Path(elements: [start] + (1..<scribbleAnchors).map { _ in
             .cubic(control1: random(), control2: random(), to: random())
+        })
+    }
+
+    /// One open hand-drawn contour: a move and 9,999 cubics, each anchor a
+    /// random step of at most 20 from the last, both controls within that step
+    /// of their anchors, all inside the 1000 box. The budget input (PG-11).
+    static func handScribble(seed: UInt64 = 42) -> Path {
+        var rng = SplitMix64(seed: seed)
+        func near(_ p: Point, _ r: Double) -> Point {
+            let a = Double.random(in: 0..<(2 * Double.pi), using: &rng), d = Double.random(in: 0...r, using: &rng)
+            return pt(Swift.min(Swift.max(p.x + d * cos(a), 0), 1000), Swift.min(Swift.max(p.y + d * sin(a), 0), 1000))
+        }
+        var last = pt(500, 500)
+        return Path(elements: [.move(to: last)] + (1..<scribbleAnchors).map { _ in
+            let to = near(last, 20), step = ((to.x - last.x) * (to.x - last.x) + (to.y - last.y) * (to.y - last.y)).squareRoot()
+            defer { last = to }
+            return .cubic(control1: near(last, step), control2: near(to, step), to: to)
         })
     }
 

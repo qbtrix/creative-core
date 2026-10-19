@@ -186,6 +186,8 @@ budget time the finished ops, PG-12 is the prose task.
 | PG-11 | `PathOpsWalkTests.walk` (KJ-PG); `PathOpsBudgetTests`: nearest on the 10,000-anchor scribble ≤ 2 ms; dash and trim of it ≤ 5 ms; a 2 × 5,000-vertex boolean ≤ 50 ms (release, reported) | the ops disagree on the walk | none: walk and budgets |
 | PG-12 | the part names `PathOps/`; status line says built | – | – |
 
+PG-11 deviation (lead decision, PG-z): the budget scribble is `PathFixtures.handScribble()`, a local hand-drawn stroke (each anchor at most 20 from the last, controls within that step), not the random `scribble()`, whose controls span the whole 1000 box. That one is 8.49 M long and flattens to 401,801 points at tolerance 0.5. Flattening it alone took 5.7 ms in release, so trim (23.2 ms) and dash (43.4 ms) could not meet 5 ms. No pen stroke looks like that.
+
 ## Quality tests
 
 | quality row | budget | test |
