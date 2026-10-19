@@ -70,3 +70,4 @@ utc	stage	event	ref	note
 2026-10-19T09:31:42Z	4	fixes-launched	wf_f729ca1c-4f8	round 4: 9 confirmed (3 major); r4-b1..b3 on base 9786884
 2026-10-19T09:41:13Z	4	heartbeat	-	r4-b1..b3 fixers building (wf_f729ca1c-4f8)
 2026-10-19T10:03:23Z	4	heartbeat	-	r4-b1..b3 fixers running gates (wf_f729ca1c-4f8)
+2026-10-19T10:24:22Z	4	heartbeat	-	r4-b1 #693 merged (3207e38); r4-b2, r4-b3 running
