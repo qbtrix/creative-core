@@ -1,13 +1,9 @@
 // MaskFeather.swift: feathering a mask by a radius, the separable Gaussian of
 // sigma = radius / 3 (kernel radius ceil(radius)) with clamp-to-edge taps.
-// The weights and taps are `gaussianBlur`'s own (`PixelBuffer.gaussianKernel`
-// and `taps`), and the passes run through the same `convolved`: a mask has one
-// channel and `convolved` four, so each pass packs four lines of the mask as
-// the four channels of one line (rows for the horizontal pass, columns for the
-// vertical), padding past the last line with 0 and dropping it after.
-// Invariants: the radius is finite and at least 0 and its kernel radius at
-// most twice the larger side (as `gaussianBlur`), and every result value is a
-// convex mix of input values, kept in 0...1.
+// Weights, taps and passes are `gaussianBlur`'s own; `convolved` runs four
+// channels, so each pass packs four mask rows (then columns) as one line.
+// Invariants: the radius is finite, at least 0 and within `gaussianBlur`'s
+// limit, and every value is a convex mix of inputs, kept in 0...1.
 
 extension Mask {
     /// This mask feathered: blurred by a Gaussian of sigma `radius` / 3, so a

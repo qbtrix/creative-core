@@ -8,19 +8,14 @@ import Testing
 
 @Suite struct MaskOpsTests {
     @Test func radiusZeroReturnsSelf() throws {
-        let square = try MaskFixtures.square()
-        #expect(try square.feathered(radius: 0) == square)
+        #expect(try MaskFixtures.square().feathered(radius: 0) == MaskFixtures.square())
     }
 
     @Test func featherKeepsArea() throws {
-        let square = try MaskFixtures.square()
-        let area = try square.feathered(radius: 6).area
-        #expect(abs(area - 4096) <= 4096 * 0.01)
+        #expect(abs(try MaskFixtures.square().feathered(radius: 6).area - 4096) <= 4096 * 0.01)
     }
 
-    /// Sigma 2 (radius 6 / 3): the first pixel inside the edge, its centre
-    /// 0.5 px in, reads Φ(0.25) ≈ 0.599, the first outside 1 − that, and
-    /// the edge between them 0.5.
+    /// Sigma 2: the pixel centred 0.5 px inside reads Φ(0.25) ≈ 0.599, the one outside 1 − that.
     @Test func edgeIsHalfAtTheEdge() throws {
         let feathered = try MaskFixtures.square().feathered(radius: 6)
         let inside = try feathered.coverage(x: 16, y: 48), outside = try feathered.coverage(x: 15, y: 48)
@@ -40,8 +35,7 @@ import Testing
         #expect(try full.feathered(radius: 4) == full)
     }
 
-    /// The vertical pass must use the column length: a tall mask feathers as
-    /// the transpose of its wide transpose.
+    /// The vertical pass uses the column length: a tall mask feathers like its transpose.
     @Test func tallMaskFeathersLikeItsTranspose() throws {
         var rng = SplitMix64(seed: 0x7A11)
         let w = 7, h = 19
@@ -91,8 +85,7 @@ import Testing
         }
     }
 
-    /// The saddle cell joins the pair its mean sides with: 0.55 joins the
-    /// diagonal above 0.5, 0.45 splits it, whichever diagonal is above.
+    /// A saddle joins the pair its mean sides with: mean 0.55 joins the high diagonal, 0.45 splits it.
     @Test func saddleFollowsMean() {
         #expect(MaskFixtures.saddle(diagonal: 0.9, anti: 0.2).contours().count == 1)
         #expect(MaskFixtures.saddle(diagonal: 0.6, anti: 0.3).contours().count == 2)
@@ -102,8 +95,7 @@ import Testing
 
     @Test func emptyMaskHasNoContoursAndNoBounds() throws {
         let empty = try Mask(width: 8, height: 8)
-        #expect(empty.contours().isEmpty)
-        #expect(empty.coveredBounds == nil)
+        #expect(empty.contours().isEmpty && empty.coveredBounds == nil)
     }
 
     @Test func boundsAreExact() throws {
@@ -112,8 +104,7 @@ import Testing
         #expect(bounds.x == 3 && bounds.y == 7 && bounds.width == 10 && bounds.height == 4)
     }
 
-    /// 200 seeded masks with NaN, infinite, huge and ordinary radii: each
-    /// feather throws or returns a mask in 0...1, and contours return.
+    /// 200 seeded masks and NaN, infinite, huge or ordinary radii: feather throws or stays in 0...1.
     @Test func fuzz() throws {
         var rng = SplitMix64(seed: 0xFEA7)
         let odd: [Double] = [.nan, .infinity, -.infinity, -0.5, 1e9, .greatestFiniteMagnitude, 0]
@@ -130,8 +121,7 @@ import Testing
         }
     }
 
-    /// Consecutive points, the last back to the first included, sit in
-    /// neighbouring cells: no gap in the outline.
+    /// Consecutive points, last to first included, sit in neighbouring cells: no gap.
     private func expectClosed(_ ring: [Mask.Point]) {
         #expect(ring.count >= 3)
         guard var previous = ring.last else { return }

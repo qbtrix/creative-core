@@ -1,7 +1,5 @@
 // MaskFixtures.swift: seeded masks for the masks-mattes checks (MaskOpsTests,
-// MaskCompositeTests): a square, a ring, an ellipse, 2 x 2 saddle cells and
-// seeded random coverage. Every fixture is a fixed formula or seeded
-// SplitMix64, so it is the same on every run and platform.
+// MaskCompositeTests), each a fixed formula or seeded SplitMix64.
 @testable import CoreRaster
 
 enum MaskFixtures {
@@ -32,15 +30,12 @@ enum MaskFixtures {
         Mask(checkedWidth: width, height: height, storage: values)
     }
 
-    /// A 2 x 2 saddle: `diagonal` on the top-left and bottom-right pixels,
-    /// `anti` on the other two. At level 0.5 the cell between their centres
-    /// is a saddle when one pair is above and the other below.
+    /// A 2 x 2 saddle: `diagonal` top-left and bottom-right, `anti` on the other two.
     static func saddle(diagonal: Float, anti: Float) -> Mask {
         values(width: 2, height: 2, [diagonal, anti, anti, diagonal])
     }
 
-    /// A `width` x `height` mask of seeded random coverage in 0...1, about
-    /// half of it exactly 0 or 1 so edges and flat runs both occur.
+    /// Seeded random coverage, about half of it exactly 0 or 1.
     static func random(width: Int, height: Int, _ rng: inout SplitMix64) -> Mask {
         let storage = (0..<(width * height)).map { _ -> Float in
             switch rng.next() % 4 {

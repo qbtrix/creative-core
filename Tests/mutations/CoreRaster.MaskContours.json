@@ -2,8 +2,8 @@
   {
     "note": "the mask contour saddle is resolved by a fixed corner pairing instead of the cell mean, so a saddle whose centre joins the diagonal splits into two outlines, caught by MaskOpsTests.saddleFollowsMean",
     "file": "Sources/CoreRaster/Masks/MaskContours.swift",
-    "anchor": "pairs = centerInside == inside[0] ? [(1, 2), (3, 0)] : [(0, 1), (2, 3)]",
-    "replacement": "pairs = [(1, 2), (3, 0)]",
+    "anchor": ": centerInside == inside[0] ? [(1, 2), (3, 0)] : [(0, 1), (2, 3)]",
+    "replacement": ": [(1, 2), (3, 0)]",
     "filter": "MaskOpsTests"
   },
   {

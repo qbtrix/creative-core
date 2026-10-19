@@ -1,28 +1,18 @@
 // MaskContours.swift: a mask's outlines at a coverage level (marching
 // squares) and its covered bounds.
-// Samples sit at pixel centres (x + 0.5, y + 0.5); a ring of 0 samples
-// around the mask closes every outline. A sample is inside when its value is
-// at least `level`. Each cell between four samples gives 0, 1 or 2 segments
-// whose ends lie on the cell edges an outline crosses, placed by linear
-// interpolation; a saddle (diagonal corners inside, the others out) joins the
-// pair its mean sides with. Each segment runs with the inside on its left in
-// the mask's coordinates, so an outer outline runs counter-clockwise (positive
-// shoelace area: on screen, with y down, it reads clockwise) and a hole the
-// other way. Segments meet at shared edge crossings, keyed by edge, and are
-// chained into closed rings.
-// Invariants: every edge crossing ends one segment and starts one, so each
-// chain closes; a walk removes the links it follows, so the walks take at
-// most one step per segment, at most twice the (width + 1) x (height + 1)
-// cells.
+// Samples sit at pixel centres, ringed by 0 samples so every outline closes;
+// a sample is inside when it is at least `level`. Each cell gives 0 to 2
+// segments between interpolated edge crossings (a saddle joins the corners
+// its mean sides with), the inside on their left, chained into rings by edge.
+// Invariants: each crossing ends one segment and starts one, so every chain
+// closes, and a walk removes each link it follows, so it ends.
 
 extension Mask {
     /// The closed outlines where coverage crosses `level`, each a ring of
-    /// points (the last joins back to the first, not repeated). Outer
-    /// outlines run counter-clockwise in pixel coordinates (positive
-    /// shoelace area) and holes clockwise. Rings come in scan order of their
-    /// first segment. A level of 0 or less, above 1, or NaN has no outlines;
-    /// an outline that collapses to fewer than three points (a lone pixel
-    /// exactly at the level) is left out.
+    /// points whose last joins its first. Outer outlines run counter-clockwise
+    /// in pixel coordinates (positive shoelace area; clockwise on a y-down
+    /// screen), holes the other way. A level of 0 or less, above 1, or NaN
+    /// has none; a ring of fewer than three points is left out.
     public func contours(level: Float = 0.5) -> [[Mask.Point]] {
         let w = width, h = height
         func value(_ x: Int, _ y: Int) -> Float {
@@ -49,15 +39,10 @@ extension Mask {
                 guard inside.contains(true), inside.contains(false) else { continue }
                 let edges = [(cx, cy, false), (cx + 1, cy, true), (cx, cy + 1, false), (cx, cy, true)]
                 let crossed = (0..<4).filter { inside[($0 + 3) % 4] != inside[$0] }
-                var pairs: [(Int, Int)]
-                if crossed.count == 2 {
-                    pairs = [(crossed[0], crossed[1])]
-                } else {
-                    // A saddle: when the centre sides with corners 0 and 2 they join,
-                    // so corners 1 and 3 are cut off, else 0 and 2 are.
-                    let centerInside = v.reduce(0, +) / 4 >= level
-                    pairs = centerInside == inside[0] ? [(1, 2), (3, 0)] : [(0, 1), (2, 3)]
-                }
+                // A saddle: a centre on corner 0's side cuts off corners 1 and 3, else 0 and 2.
+                let centerInside = v.reduce(0, +) / 4 >= level
+                let pairs = crossed.count == 2 ? [(crossed[0], crossed[1])]
+                    : centerInside == inside[0] ? [(1, 2), (3, 0)] : [(0, 1), (2, 3)]
                 // From edge a to edge b the corner a (the first after a) is on the right,
                 // so an inside corner reverses the segment.
                 for (a, b) in pairs {
