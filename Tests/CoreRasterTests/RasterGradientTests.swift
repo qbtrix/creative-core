@@ -113,6 +113,39 @@ import Testing
         }
     }
 
+    /// The eyedropper flow: `sampledColor` is premultiplied, a stop is
+    /// straight alpha, so `.unpremultiplied()` round-trips a 50%-alpha colour.
+    /// Passing the sampled value directly premultiplies twice: darker.
+    @Test
+    func sampledStopRoundTrips() throws {
+        let source = try PixelBuffer(width: 4, height: 4, fill: RGBA(r: 0.3, g: 0.2, b: 0.1, a: 0.5))
+        let sampled = try source.sampledColor(at: (x: 1, y: 1), radius: 1)
+        func render(_ color: RGBA) throws -> PixelBuffer {
+            try PixelBuffer.gradient(width: 8, height: 8, shape: .linear, from: Mask.Point(x: 0, y: 0),
+                                     to: Mask.Point(x: 8, y: 0), stops: [RasterGradientStop(offset: 0, color: color),
+                                     RasterGradientStop(offset: 1, color: color)], space: .linear, dither: false)
+        }
+        let image = try render(sampled.unpremultiplied())
+        for y in 0..<8 {
+            for x in 0..<8 {
+                let got = try image.pixel(x: x, y: y)
+                #expect(abs(got.r - sampled.r) < 1e-6 && abs(got.g - sampled.g) < 1e-6 && abs(got.b - sampled.b) < 1e-6
+                            && abs(got.a - sampled.a) < 1e-6, "(\(x), \(y)): \(got), want \(sampled)")
+            }
+        }
+        let doubled = try render(sampled).pixel(x: 3, y: 3)
+        #expect(abs(doubled.r - sampled.r / 2) < 1e-6 && doubled.a == sampled.a)  // premultiplied twice
+    }
+
+    /// The stop limit is inclusive: 64 stops render, 65 throw.
+    @Test
+    func sixtyFourStopsAccepted() throws {
+        let stops = (0..<64).map { RasterGradientStop(offset: Float($0) / 63, color: Self.white) }
+        let image = try PixelBuffer.gradient(width: 8, height: 8, shape: .linear, from: FillFixtures.gradientA,
+                                             to: FillFixtures.gradientB, stops: stops)
+        #expect(image.width == 8 && image.height == 8)
+    }
+
     @Test
     func badStopsPointsOrSizeThrow() {
         let (a, b) = (FillFixtures.gradientA, FillFixtures.gradientB)

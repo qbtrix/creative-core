@@ -224,5 +224,21 @@ public enum FillTolerance: Hashable, Sendable {
     case within(Float)
 }
 
-/// The shape of a raster gradient fill.
-public enum RasterGradientShape: Hashable, Sendable { case linear, radial, angle, reflected, diamond }
+/// The shape of a raster gradient fill: how a pixel centre `p` maps to the
+/// parameter `t` from the start point `a` and end point `b`. Every `t` is then
+/// clamped to 0...1.
+public enum RasterGradientShape: Hashable, Sendable {
+    /// `t` is the projection of `p − a` onto `a→b`, over |b − a|²: 0 at `a`, 1 at `b`.
+    case linear
+    /// `t` is |p − a| / |b − a|: 0 at `a`, 1 on the circle of radius |b − a|.
+    case radial
+    /// `t` is the angle of `p − a` from the `a→b` direction, as a fraction of
+    /// one full turn in 0..<1, turning clockwise on screen (y points down).
+    case angle
+    /// The linear `t` mirrored at `a`: its absolute value, so both sides of
+    /// `a` ramp out to 1 at |b − a|.
+    case reflected
+    /// The Chebyshev distance in the `a→b` frame: the larger of the absolute
+    /// along and across coordinates of `p − a`, each over |b − a|.
+    case diamond
+}

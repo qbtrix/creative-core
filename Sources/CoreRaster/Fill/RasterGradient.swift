@@ -21,7 +21,10 @@ public enum GradientSpace: Hashable, Sendable { case linear, perceptual }
 public struct RasterGradientStop: Hashable, Sendable {
     /// Where the stop sits along the gradient, in 0...1.
     public var offset: Float
-    /// The stop's colour and alpha.
+    /// The stop's colour and alpha: straight (not premultiplied) alpha,
+    /// linear-light sRGB (not sRGB-encoded). A colour read from a buffer,
+    /// such as `sampledColor`'s, is premultiplied: call `.unpremultiplied()`
+    /// on it before using it here.
     public var color: RGBA
 
     public init(offset: Float, color: RGBA) {
@@ -39,12 +42,13 @@ extension PixelBuffer {
     /// - Parameters:
     ///   - width: at least 1; with `height`, a size `validatedSize` accepts.
     ///   - height: at least 1.
-    ///   - shape: linear, radial, angle, reflected or diamond; each maps a
-    ///     pixel centre to a parameter `t`, clamped to 0...1.
+    ///   - shape: how a pixel centre maps to a parameter `t`, clamped to
+    ///     0...1 (see each `RasterGradientShape` case).
     ///   - a: the start point, in pixel space; finite.
     ///   - b: the end point; finite and not equal to `a`.
     ///   - stops: 2...64 stops, sorted by offset, offsets in 0...1, colours
-    ///     finite. Two stops at one offset make a hard edge.
+    ///     finite. Two stops at one offset make a hard edge. Stop colours are
+    ///     straight alpha in linear light (see `RasterGradientStop.color`).
     ///   - space: the space the stops interpolate in.
     ///   - dither: `true` adds a deterministic ordered dither of +-0.5/255 so
     ///     an 8-bit encode does not band (`GradientDither`).

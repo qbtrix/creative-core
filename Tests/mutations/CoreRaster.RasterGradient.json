@@ -19,5 +19,12 @@
     "anchor": "let t = min(max(t, offsets[0]), offsets[last])",
     "replacement": "let t = max(t, offsets[0])",
     "filter": "RasterGradientTests.clampsPastEnd"
+  },
+  {
+    "note": "the gradient stop limit is half-open, so a valid 64-stop gradient throws, caught by RasterGradientTests.sixtyFourStopsAccepted",
+    "file": "Sources/CoreRaster/Fill/RasterGradient.swift",
+    "anchor": "guard (2...PixelBuffer.maxGradientStops).contains(stops.count) else {",
+    "replacement": "guard (2..<PixelBuffer.maxGradientStops).contains(stops.count) else {",
+    "filter": "RasterGradientTests.sixtyFourStopsAccepted"
   }
 ]
