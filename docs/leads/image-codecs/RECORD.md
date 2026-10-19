@@ -3,9 +3,9 @@
 Issue: #562 · Packet: docs/blueprints/core/features/image-codecs.md
 Run: act-1a1511a1174-tlch · Started: 2026-10-18T22:40Z
 Line lead for: image-codecs (#562), preview-cache (#440, already done), vector-import (#439, VI-z left)
-Stage: 4 — IC-jpeg r3 fix batch wf_63bfcf02-52b; IC-png r2 panel wf_beae1052-850 running
+Stage: 4 — IC-png r2 fix batch wf_5340cfcc-4ff; IC-jpeg r3 fix batch wf_63bfcf02-52b
 Base: 9385de9 (wave 4)
-Next: r3-jpeg-b1 PR merges, then IC-jpeg round 4 (last allowed); IC-png r2 panel result
+Next: r2-png-b1, r2-png-b2 and r3-jpeg-b1 PRs merge, then IC-png round 3 and IC-jpeg round 4 (last allowed)
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -60,3 +60,4 @@ Next: r3-jpeg-b1 PR merges, then IC-jpeg round 4 (last allowed); IC-png r2 panel
 | 1 (IC-png) | c4baa59 | PASS (1789 tests) | 8/8 (Inflate 3, PNG 3, PNGWrite 2) | - | clarity, contract, robustness, tests | 12 confirmed, 1 refuted. Major: bloated IDAT throws tooLarge("inflate: ...") not damaged; Adam7 per-pass prior-row reset untested; PNG inflate cap at IHDR bytes untested; Deflate window guard untested and no Deflate mutation plan. Minor: lower-layer messages (no IEND/IDAT), read doc alpha and throws list, tooLarge text names no limit, level range docs, Deflate golden bytes, incomplete Huffman code, six PNG refusals untested, filter tie-break untested | fix batch wf_9d39d94a-8d4: b1 reader, b2 writer, b3 zlib | no |
 | 2 (IC-jpeg) | a672a6b | PASS (1799 tests) | 25/25 (JPEG 6, JPEGProgressive 12, JPEGWrite 7) | - | clarity, contract, robustness, tests | 9 confirmed, 1 refuted. Major: progressive coefficient-store bound 384 blocks/byte (48x looser than needed, ~3.2 GB from a 33 KB file); second-SOF refusal unpinned; entropy-decoder trap guards (Huffman code space and others) untested and unplanned. Minor: scan-pass tooLarge undocumented, tooLarge texts name no limit, damaged texts use array index and joined rules, three progressiveScanChecks cases pass without their clause, short-scan guard not isolated, EXIF orientation out-of-range untested | fix batch wf_a005f679-d21: b1 JPEG.swift/JPEGWrite, b2 JPEGProgressive/JPEGDecode | no |
 | IC-jpeg | 3 | 891372e | 8 (1 major, 7 minor; 1 refuted) | fix batch r3-jpeg-b1 wf_63bfcf02-52b |
+| IC-png | 2 | 891372e | 9 (3 major, 6 minor; 0 refuted) | fix batches r2-png-b1, r2-png-b2 wf_5340cfcc-4ff |
