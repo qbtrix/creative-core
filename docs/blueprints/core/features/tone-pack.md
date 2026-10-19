@@ -24,9 +24,9 @@ EC-b: `CPUBackend+Color.swift` and `Samples+Color.swift`).
 **C4:** container `coreraster`, component `image-ops` (`Sources/CoreRaster/Tone/`);
 container `corerender`, components `contract` (`ToneAdjustment`'s colour
 cases, EC's), `cpu-backend` (`CPUBackend+Color.swift`) and `parity`
-(`Samples+Color.swift`). ⚠ Photo's `HueSaturation.swift` moves here (TP-3
-keeps its output); Photo deletes its copy in its W3 adoption. No new
-component.
+(`Samples+Color.swift`). ⚠ Photo's `HueSaturation.swift` is replaced by
+TP-3's `hueSaturation`; pixel parity with it is checked when Photo adopts it
+and deletes its copy in W3. No new component.
 
 **Clean-room.** Every formula is stated here from public colour science
 (Rec. 709 luma, HSL hue sectors, trilinear interpolation, the published
@@ -104,9 +104,14 @@ public struct AutoTone: Hashable, Sendable { public var inBlack: Float, inWhite:
 - **vibrance.** Saturation boost weighted by `1 − s` (low-saturation
   pixels move most) and damped for skin hues (hue 15°–50°) by half; negative
   amounts desaturate evenly.
-- **hueSaturation.** The formula in Photo's `HueSaturation.swift` at
-  creative-apps `origin/dev` (this suite's code), so the adoption is a swap
-  with equal pixels.
+- **hueSaturation.** The standard HSL rotate/scale/blend on the encoded
+  values, as built: hue rotates in degrees, saturation scales by
+  1 + saturation/100, lightness blends toward white or black (round 1 lead
+  decision on #432: the app repo is outside this session). Pixel parity with
+  Photo's existing `HueSaturation.swift` is checked when Photo adopts it (W3).
+- **HSLShift units.** An `HSLShift`'s `hue` is percent of a ±30° turn
+  (100 = +30°), not degrees; saturation and lightness are percent. `vibrance`
+  and `hueSaturation` throw out of range; `hsl` clamps.
 - **hsl.** Eight ranges centred at 0, 30, 60, 120, 180, 240, 270, 300
   degrees; a pixel's weight per range is a raised cosine over the
   neighbouring centres, so weights sum to 1; shifts are summed by weight.
@@ -132,7 +137,7 @@ public struct AutoTone: Hashable, Sendable { public var inBlack: Float, inWhite:
 |---|---|---|---|---|---|
 | TP-1 | feature issue | Checks first: the six suites disabled by name | `Tests/CoreRasterTests/ColorAdjustTests.swift`, `Tests/CoreRasterTests/ColorMixTests.swift`, `Tests/CoreRasterTests/ColorMapTests.swift`, `Tests/CoreRasterTests/ColorLUTTests.swift`, `Tests/CoreRasterTests/AutoToneTests.swift`, `Tests/CoreRenderTests/CPUColorTests.swift` | engine-contracts:EC-a | ~380, 6 |
 | TP-2 | – | Reference colours (hand-computed expected values per op), `.cube` fixtures (identity 17³, a warm look 33³, five damaged files), the cast photo | `Tests/CoreRasterTests/ToneFixtures.swift`, `Tests/CoreRasterTests/Fixtures/luts/` | engine-contracts:EC-a | ~200, 1 + fixtures |
-| TP-3 | – | `vibrance`, `hueSaturation` (Photo's formula), `hsl`; turns on `ColorAdjustTests` | `Sources/CoreRaster/Tone/ColorAdjust.swift`, `Tests/CoreRasterTests/ColorAdjustTests.swift`, `Tests/mutations/CoreRaster.ColorAdjust.json` | TP-1, TP-2 | ~340, 3 |
+| TP-3 | – | `vibrance`, `hueSaturation` (standard HSL formula), `hsl`; turns on `ColorAdjustTests` | `Sources/CoreRaster/Tone/ColorAdjust.swift`, `Tests/CoreRasterTests/ColorAdjustTests.swift`, `Tests/mutations/CoreRaster.ColorAdjust.json` | TP-1, TP-2 | ~340, 3 |
 | TP-4 | – | `blackAndWhite`, `channelMixer`, `colorBalance`; turns on `ColorMixTests` | `Sources/CoreRaster/Tone/ColorMix.swift`, `Tests/CoreRasterTests/ColorMixTests.swift`, `Tests/mutations/CoreRaster.ColorMix.json` | TP-1, TP-2 | ~300, 3 |
 | TP-5 | – | `gradientMap`, LUT apply, `CubeLUT.parse` with its fuzz test, `posterized`, `thresholded`, `inverted`; turns on `ColorMapTests`, `ColorLUTTests` | `Sources/CoreRaster/Tone/ColorMap.swift`, `Sources/CoreRaster/Tone/CubeLUT.swift`, `Tests/CoreRasterTests/ColorMapTests.swift`, `Tests/CoreRasterTests/ColorLUTTests.swift`, `Tests/mutations/CoreRaster.ColorMap.json`, `Tests/mutations/CoreRaster.CubeLUT.json` | TP-1, TP-2 | ~380, 6 |
 | TP-6 | – | `AutoTone.suggest`; turns on `AutoToneTests` | `Sources/CoreRaster/Tone/AutoTone.swift`, `Tests/CoreRasterTests/AutoToneTests.swift`, `Tests/mutations/CoreRaster.AutoTone.json` | TP-1, TP-2 | ~200, 3 |
@@ -160,7 +165,7 @@ walk reads them, TP-10 is the prose task.
 |---|---|---|---|
 | TP-1 | six suites compile, disabled | – | – |
 | TP-2 | every fixture parses or fails as labelled | – | – |
-| TP-3 | `ColorAdjustTests`: every op at neutral is `==` identity; vibrance 100 moves a 10%-saturated pixel more than a 90% one and a skin tone half as much; `hueSaturation` matches Photo's formula on 1,000 seeded pixels within 1e-6; `hsl` blues −100 saturation greys a pure blue and leaves a pure red; alpha and alpha-0 pixels unchanged | a range bleeds or alpha moves | `CoreRaster.ColorAdjust`: vibrance weight `s` for `1 − s` → `ColorAdjustTests.lowSaturationMovesMost`; skin damping dropped → `.skinMovesHalf`; HSL weights don't sum to 1 (cosine over one neighbour) → `.rangeWeightsSumToOne` |
+| TP-3 | `ColorAdjustTests`: every op at neutral is `==` identity; vibrance 100 moves a 10%-saturated pixel more than a 90% one and a skin tone half as much; `hueSaturationMatchesHSLReference` is a reference check of the standard HSL rotate/scale/blend on 1,000 seeded pixels within 1e-6, and `hueSaturationHandValues` pins it to hand-computed pixels; `hsl` blues −100 saturation greys a pure blue and leaves a pure red; alpha and alpha-0 pixels unchanged | a range bleeds or alpha moves | `CoreRaster.ColorAdjust`: vibrance weight `s` for `1 − s` → `ColorAdjustTests.lowSaturationMovesMost`; skin damping dropped → `.skinMovesHalf`; HSL weights don't sum to 1 (cosine over one neighbour) → `.rangeWeightsSumToOne`; range hue ×1 for ×0.3 → `.hslHueIsPercentOfThirtyDegrees`; range lightness or grey guard dropped → `.rangeHueAndLightness`; vibrance negative branch or gamut cap → `.vibranceNegativeAndCapped` |
 | TP-4 | `ColorMixTests`: default B&W of pure red is 0.40 luma-normalised; an identity matrix is identity; `monochrome` gives r == g == b; colour balance +shadows red leaves a white pixel; `preserveLuminosity` keeps luma within 1e-5 | a weight is read from the wrong channel | `CoreRaster.ColorMix`: weights indexed by channel not hue range → `ColorMixTests.redWeightIsForty`; preserve skipped → `.preserveKeepsLuma`; zone smoothstep edges swapped → `.whiteUnmovedByShadows` |
 | TP-5 | `ColorMapTests`: a black-to-white map is the luma; posterize 2 gives only 0 and 1; threshold 0.5 splits at luma 0.5; `inverted()` twice is `==`; `ColorLUTTests`: identity LUT within 1e-5; the warm look matches hand values at 8 lattice points exactly and at 8 midpoints within 1e-6; each damaged file throws (size 1, 66, short table, NaN, DOMAIN 0…2); 500 seeded mutated files throw or parse, never crash | a lattice point is off or a damaged file loads | `CoreRaster.ColorMap`: posterize rounds with `floor` → `ColorMapTests.posterizeTwoLevels`; threshold compares red not luma → `.thresholdOnLuma`. `CoreRaster.CubeLUT`: blue-fastest order → `ColorLUTTests.redFastest`; domain check skipped → `.refusesOtherDomain`; interpolation nearest → `.midpointsTrilinear` |
 | TP-6 | `AutoToneTests`: the cast photo's suggestion applied neutralises the grey patch within 2/255; a clean grey ramp suggests identity within 1e-3; an all-black buffer suggests identity, never NaN | a cast survives or a flat image gives NaN | `CoreRaster.AutoTone`: clip 1% for 0.1% → `AutoToneTests.rampIsIdentity`; division by an empty bright set → `.blackSuggestsIdentity` |

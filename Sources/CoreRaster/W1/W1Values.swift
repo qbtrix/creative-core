@@ -54,8 +54,9 @@ public enum CanvasAnchor: Hashable, Sendable {
 /// What a mask reads from a source buffer: its alpha, or its luminance.
 public enum MatteSource: Hashable, Sendable { case alpha, luminance }
 
-/// One hue band's shift. Each component is in -100...100; 0 changes nothing.
-/// The tone ops clamp a value outside that range.
+/// One hue band's shift. `hue` is percent of a ±30° turn (100 = +30°), not
+/// degrees; saturation and lightness are percent. Each component is in
+/// -100...100; 0 changes nothing. The tone ops clamp a value outside that range.
 public struct HSLShift: Hashable, Sendable {
     public var hue, saturation, lightness: Float
 

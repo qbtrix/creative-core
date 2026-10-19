@@ -19,5 +19,40 @@
     "anchor": "let span = d < 0 ? lower[i] : upper[i]",
     "replacement": "let span = upper[i]",
     "filter": "ColorAdjustTests"
+  },
+  {
+    "note": "hsl range hue taken as degrees instead of percent of a 30 degree turn, caught by ColorAdjustTests.hslHueIsPercentOfThirtyDegrees",
+    "file": "Sources/CoreRaster/Tone/ColorAdjust.swift",
+    "anchor": "hue: clamped(r.hue) * 0.3,",
+    "replacement": "hue: clamped(r.hue),",
+    "filter": "ColorAdjustTests"
+  },
+  {
+    "note": "hsl range lightness dropped, caught by ColorAdjustTests.rangeHueAndLightness",
+    "file": "Sources/CoreRaster/Tone/ColorAdjust.swift",
+    "anchor": "lightness: clamped(r.lightness))",
+    "replacement": "lightness: 0)",
+    "filter": "ColorAdjustTests"
+  },
+  {
+    "note": "hsl grey pass-through guard removed, so greys take the reds shift, caught by ColorAdjustTests.rangeHueAndLightness",
+    "file": "Sources/CoreRaster/Tone/ColorAdjust.swift",
+    "anchor": "guard hsl.s > 0 else { return p }",
+    "replacement": "",
+    "filter": "ColorAdjustTests"
+  },
+  {
+    "note": "vibrance negative branch flipped, so -100 doubles chroma, caught by ColorAdjustTests.vibranceNegativeAndCapped",
+    "file": "Sources/CoreRaster/Tone/ColorAdjust.swift",
+    "anchor": "var scale = 1 + a",
+    "replacement": "var scale = 1 - a",
+    "filter": "ColorAdjustTests"
+  },
+  {
+    "note": "vibrance gamut cap toward black removed, so a channel goes below 0, caught by ColorAdjustTests.vibranceNegativeAndCapped",
+    "file": "Sources/CoreRaster/Tone/ColorAdjust.swift",
+    "anchor": "if lo < y { cap = min(cap, y / (y - lo)) }",
+    "replacement": "",
+    "filter": "ColorAdjustTests"
   }
 ]
