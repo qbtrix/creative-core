@@ -2,9 +2,9 @@
 
 Issue: #433 · Packet: docs/blueprints/core/features/effects-engine.md
 Run: act-1a150bfbcf7-sfwy · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
-Stage: 3 wave 6 done (FX-8 merged) + 4 round 3 gating on current dev
+Stage: 4 round 3 fixes running (r3-b1 DenoiseClarity, r3-b2 AlphaEffects, r3-b3 packet, r3-b4 parity harness)
 Base: 4feaaf9fac3cc050901f8b459a0908515a927f54
-Next: round 3 panel (FX-a, FX-blur, FX-alpha, FX-cpu); FX-cpu merged-done once a green dev Linux run holds 2298d3f; then FX-9
+Next: merge r3 fixes; round 4 panel on dev; FX-cpu merged-done once a green dev Linux run holds 2298d3f; then FX-9
 
 Line lead for #434, #433 and #432 (rule 19); one wave plan across the three
 features, bookkeeping per feature. Packet v3 (has a Slices table).
@@ -55,6 +55,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 |---|---|---|---|---|---|---|---|---|---|
 | FX-a, FX-blur | 1 | 5ea5ae5 | PASS (try 5, budget retries under load) | 70/70 (BlurFamily 3/3) | - | clarity, contract, tests, robustness | 7 (2 major: motion blur not centred; box blur both-axes/three-pass untested; 5 minor), 1 refuted | #593 (r1-b1, merged; Mutate 9/9) | no |
 | FX-alpha, FX-blur, FX-a | 2 | 7d8af79 | PASS | 66/66 | - | clarity, contract, tests, robustness | 16 (4 major: LayerEffect radius unit differs per case; glow/shadow no fuzz; glow intensity and reach untested; clarity/denoise can store +inf; 12 minor), 1 refuted | r2-b1 #631 merged (be6cc41); r2-b2 #629 merged (e001b84); r2-b3 #639 merged (6199d27) | no |
+| FX-a, FX-blur, FX-alpha, FX-cpu | 3 | 2298d3f | PASS | 109/109 | - | clarity, contract, tests, robustness | 10 (1 major: denoise overflow guard has no test or mutation; 9 minor: error messages blame valid params, padded-size error, StrokePosition docs, packet glow/motion wording, diagonal edge offset untested, denoise working-set cap, parity applied path untested), 1 refuted | r3-b1..b4 running (wf_db4a67ad-272) | no |
 
 ## Decisions
 - FX-5 (#588): stroke distance measured to the sub-pixel anti-aliased edge (Gustavson & Strand 2011 edge points over the exact EDT's nearest seed + 8 neighbours); field−0.5 missed the 1% ring test by +7.2%. Shape is alpha ≥ 0.5; off-buffer is transparent; level inclusive; width 0...1000.
