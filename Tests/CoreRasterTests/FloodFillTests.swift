@@ -1,5 +1,5 @@
-// FloodFillTests.swift: fill-tools FT-3's acceptance, written first (FT-1); FT-3
-// removes the `.disabled` traits. `FillCheck` is shared with ColorRangeTests.
+// FloodFillTests.swift: fill-tools FT-3's acceptance, written first (FT-1) and
+// turned on with `floodMask` (FT-3). `FillCheck` is shared with ColorRangeTests.
 import CoreColor
 import CoreRaster
 import Testing
@@ -36,7 +36,7 @@ enum FillCheck {
 @Suite struct FloodFillTests {
     private func cover(_ mask: Mask, _ p: (x: Int, y: Int)) throws -> Float { try mask.coverage(x: p.x, y: p.y) }
 
-    @Test(.disabled("waits on FT-3"))
+    @Test
     func regionCoversExactlyItsInterior() throws {
         let scene = try FillScene()
         let mask = try scene.buffer.floodMask(from: scene.seedB, tolerance: .within(0.1))
@@ -52,7 +52,7 @@ enum FillCheck {
 
     /// The B ring is a half-and-half mix of A and B, about 0.197 from B in
     /// OKLab, so the soft edge `1 - (d - t) / t` is one half at t = d / 1.5.
-    @Test(.disabled("waits on FT-3"))
+    @Test
     func borderHalfCovered() throws {
         let scene = try FillScene()
         let d = try FillCheck.distance(FillScene.border(FillScene.colorB), FillScene.colorB)
@@ -69,7 +69,7 @@ enum FillCheck {
         #expect(try cover(soft, (x: scene.regionB.x - 2, y: scene.seedB.y)) == 0)
     }
 
-    @Test(.disabled("waits on FT-3"))
+    @Test
     func exactStopsAtFirstAntiAliasedPixel() throws {
         let scene = try FillScene()
         let mask = try scene.buffer.floodMask(from: scene.seedB, tolerance: .exact, antiAlias: false)
@@ -79,7 +79,7 @@ enum FillCheck {
     }
 
     /// `within(0)` takes a distance of exactly 0: `d <= t`, never `d < t`.
-    @Test(.disabled("waits on FT-3"))
+    @Test
     func toleranceIsInclusive() throws {
         let flat = try FillFixtures.singleColor(FillScene.colorC, width: 5, height: 3)
         let all = try flat.floodMask(from: (x: 2, y: 1), tolerance: .within(0), antiAlias: false)
@@ -90,7 +90,7 @@ enum FillCheck {
         #expect(region.area == Double(scene.regionB.width * scene.regionB.height))
     }
 
-    @Test(.disabled("waits on FT-3"))
+    @Test
     func globalIncludesDisconnectedTwin() throws {
         let scene = try FillScene()
         let local = try scene.buffer.floodMask(from: scene.seedB, tolerance: .within(0.1), antiAlias: false)
@@ -103,7 +103,7 @@ enum FillCheck {
         #expect(global.area == 2 * local.area)
     }
 
-    @Test(.disabled("waits on FT-3"))
+    @Test
     func fourConnectedStopsAtDiagonal() throws {
         let scene = try FillScene()
         let (d0, d1) = scene.diagonalPair
@@ -122,7 +122,7 @@ enum FillCheck {
         #expect(eight.area == 2 * four.area)
     }
 
-    @Test(.disabled("waits on FT-3"))
+    @Test
     func badSeedOrToleranceThrows() throws {
         let scene = try FillScene()
         for seed in [(x: 64, y: 0), (x: 0, y: 48), (x: -1, y: 5), (x: 3, y: -1), (x: Int.max, y: Int.min)] {
@@ -135,7 +135,7 @@ enum FillCheck {
 
     /// Seeded seeds and tolerances, in and out of range: a fill throws
     /// `RasterError` or gives a buffer-sized mask with coverage in 0...1.
-    @Test(.disabled("waits on FT-3"))
+    @Test
     func fuzzedArgumentsThrowOrStayInRange() throws {
         let scene = try FillScene(width: 32, height: 24)
         var rng = SplitMix64(seed: 0xF7_03)
@@ -156,7 +156,7 @@ enum FillCheck {
     /// 100 MP of one colour: the fill takes every pixel with peak memory past
     /// the input and the 4-byte-per-pixel mask of at most 2 bytes per pixel.
     /// The buffer is built inside the body, so skipping the case costs nothing.
-    @Test(.disabled("waits on FT-3"))
+    @Test
     func worstCaseMemory() throws {
         let image = try FillFixtures.singleColor()
         let pixels = FillFixtures.largeSide * FillFixtures.largeSide
