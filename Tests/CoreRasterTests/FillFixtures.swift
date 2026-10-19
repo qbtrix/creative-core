@@ -89,8 +89,25 @@ struct FillScene {
 }
 
 enum FillFixtures {
-    /// The 100 MP worst case for flood fill's memory bound: 10 000 x 10 000.
+    /// 10 000 x 10 000: the 100 MP size of flood fill's memory bound. One
+    /// colour at this size is the easy case for the seed stack (one span per
+    /// row); `comb` is the hard one.
     static let largeSide = 10_000
+
+    /// The side of the comb memory case: 16 MP, enough to measure, quick to fill.
+    static let combSide = 4_000
+
+    /// A `side` x `side` comb of colour A whose odd rows alternate A (even x)
+    /// and B (odd x): every odd row is `side / 2` one-pixel runs that join the
+    /// full rows above and below under four-connectivity, the many-runs worst
+    /// case for a scanline fill's pending seeds.
+    static func comb(side: Int) throws -> PixelBuffer {
+        var image = try PixelBuffer(width: side, height: side, fill: FillScene.colorA)
+        for y in stride(from: 1, to: side, by: 2) {
+            for x in stride(from: 1, to: side, by: 2) { try image.setPixel(x: x, y: y, FillScene.colorB) }
+        }
+        return image
+    }
 
     /// One colour everywhere. Called with no size it allocates the 100 MP
     /// buffer (1.6 GB of Float storage), so only the budget test should.

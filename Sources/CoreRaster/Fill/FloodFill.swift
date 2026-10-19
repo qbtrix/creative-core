@@ -3,13 +3,21 @@
 // recursion) over a visited bitset; global mode tests every pixel. A pixel
 // matches when its OKLab distance from the seed (alpha as a fourth axis) is at
 // most the tolerance. With anti-aliasing, a rejected pixel next to a taken one
-// gets a one-pixel soft edge `1 - (d - t) / t`. Extra memory is the bitset
-// (1 bit per pixel) and the output mask, plus the seed stack.
+// gets a one-pixel soft edge `1 - (d - t) / t`. Extra memory past the output
+// mask is bounded on any image: two bitsets (taken, queued: 1 bit per pixel
+// each) and a seed stack of at most one UInt32 per 16 pixels (or 65 536),
+// about 0.5 bytes per pixel in all. Seeds a full stack drops stay queued in
+// the bitset and later sweeps of it pick them up.
 import CoreColor
 
 /// Which neighbours a contiguous flood fill steps to: the four edge
 /// neighbours, or all eight including the diagonals.
-public enum Connectivity: Hashable, Sendable { case four, eight }
+public enum Connectivity: Hashable, Sendable {
+    /// Left, right, up and down only: regions that touch at a corner stay apart.
+    case four
+    /// The four edge neighbours plus the four diagonals: a corner joins regions.
+    case eight
+}
 
 extension PixelBuffer {
     /// A mask of the pixels a fill from `seed` takes.
@@ -33,6 +41,15 @@ extension PixelBuffer {
     ///   once unpremultiplied (so has no OKLab value); the message names it.
     public func floodMask(from seed: (x: Int, y: Int), tolerance: FillTolerance, contiguous: Bool = true,
                           connectivity: Connectivity = .four, antiAlias: Bool = true) throws -> Mask {
+        try floodMask(from: seed, tolerance: tolerance, contiguous: contiguous, connectivity: connectivity,
+                      antiAlias: antiAlias, pendingLimit: nil)
+    }
+
+    /// `floodMask` with the seed stack capped at `pendingLimit` entries
+    /// (nil: the larger of 65 536 and one per 16 pixels), so tests can force
+    /// the sweeps that pick up seeds a full stack dropped. Same mask for any cap.
+    func floodMask(from seed: (x: Int, y: Int), tolerance: FillTolerance, contiguous: Bool,
+                   connectivity: Connectivity, antiAlias: Bool, pendingLimit: Int?) throws -> Mask {
         guard (0..<width).contains(seed.x), (0..<height).contains(seed.y) else {
             throw RasterError.invalid("flood seed (\(seed.x), \(seed.y)) is outside the \(width)x\(height) buffer")
         }
@@ -57,23 +74,51 @@ extension PixelBuffer {
             if !contiguous {
                 for i in 0..<(w * h) { if try match.accepts(i) { take(i) } }
             } else {
-                // Each entry is a pixel known to match and not yet taken.
-                var stack = [seed.y * w + seed.x]
-                while let start = stack.popLast() {
-                    guard !isTaken(start) else { continue }
-                    let y = start / w, row = y * w
-                    var (left, right) = (start - row, start - row)
-                    while left > 0, !isTaken(row + left - 1), try match.accepts(row + left - 1) { left -= 1 }
-                    while right < w - 1, !isTaken(row + right + 1), try match.accepts(row + right + 1) { right += 1 }
-                    for x in left...right { take(row + x) }
-                    let (lo, hi) = (max(left - reach, 0), min(right + reach, w - 1))
-                    for ny in [y - 1, y + 1] where (0..<h).contains(ny) {
-                        var inRun = false
-                        for x in lo...hi {
-                            let i = ny * w + x
-                            let open = try !isTaken(i) && match.accepts(i)
-                            if open, !inRun { stack.append(i) }
-                            inRun = open
+                // Each stack entry is a pixel known to match, marked in `queued`
+                // when found so it is never pushed twice. The stack holds at
+                // most `limit` entries (UInt32: maxPixels fits); a pixel found
+                // while it is full stays only in `queued`, and sweeps of
+                // `queued` pick those up until a sweep drops none.
+                let limit = max(pendingLimit ?? max(1 << 16, w * h / 16), 1)
+                var queued = [UInt64](repeating: 0, count: taken.count)
+                var stack = [UInt32]()
+                stack.reserveCapacity(min(limit, w * h))
+                var dropped = false
+                func enqueue(_ i: Int) {
+                    queued[i >> 6] |= 1 << UInt64(i & 63)
+                    if stack.count < limit { stack.append(UInt32(truncatingIfNeeded: i)) } else { dropped = true }
+                }
+                func drain() throws {
+                    while let entry = stack.popLast() {
+                        let start = Int(entry)
+                        guard !isTaken(start) else { continue }
+                        let y = start / w, row = y * w
+                        var (left, right) = (start - row, start - row)
+                        while left > 0, !isTaken(row + left - 1), try match.accepts(row + left - 1) { left -= 1 }
+                        while right < w - 1, !isTaken(row + right + 1), try match.accepts(row + right + 1) { right += 1 }
+                        for x in left...right { take(row + x) }
+                        let (lo, hi) = (max(left - reach, 0), min(right + reach, w - 1))
+                        for ny in [y - 1, y + 1] where (0..<h).contains(ny) {
+                            var inRun = false
+                            for x in lo...hi {
+                                let i = ny * w + x
+                                let open = try !isTaken(i) && match.accepts(i)
+                                if open, !inRun, queued[i >> 6] & (1 << UInt64(i & 63)) == 0 { enqueue(i) }
+                                inRun = open
+                            }
+                        }
+                    }
+                }
+                enqueue(seed.y * w + seed.x)
+                try drain()
+                while dropped {
+                    dropped = false
+                    for word in queued.indices {
+                        var bits = queued[word] & ~taken[word]
+                        while bits != 0 {
+                            stack.append(UInt32(truncatingIfNeeded: word << 6 | bits.trailingZeroBitCount))
+                            bits &= bits - 1
+                            try drain()
                         }
                     }
                 }
