@@ -52,7 +52,7 @@ extension TextShape {
 }
 
 /// What the platform measured for one resolved run: one advance per grapheme
-/// (points) and the run's font ascent and descent (points, both positive).
+/// (points) and the run's font ascent and descent (points, both >= 0).
 public struct GlyphRunMetrics: Sendable, Hashable {
     public var advances: [Double], ascent: Double, descent: Double
 
@@ -87,17 +87,18 @@ public struct TextLayout: Sendable, Hashable {
     /// newline (which also adds `paragraphSpacing`), a word wider than the box
     /// breaking by grapheme. Linear in the graphemes. Throws
     /// `ModelError.invalidText` on more than `maxGraphemes` graphemes, metrics
-    /// that don't match the runs, or a non-finite or out-of-range paragraph value.
+    /// that don't match the runs, a run font size not finite and > 0, a
+    /// paragraph value out of range (`lineHeight` finite and >= 0, `tracking`
+    /// and `paragraphSpacing` finite, `boxWidth` finite and > 0; the file
+    /// format further holds `lineHeight` to 0.5...4), or sums that overflow
+    /// to a non-finite x, width, baseline or bound.
     public static func lay(_ text: TextShape, measured: [GlyphRunMetrics]) throws -> TextLayout {
+        guard text.string.dropFirst(maxGraphemes).isEmpty else {
+            throw ModelError.invalidText("more than \(maxGraphemes) graphemes; layout takes at most \(maxGraphemes)")
+        }
         let chars = Array(text.string)
-        guard chars.count <= maxGraphemes else {
-            throw ModelError.invalidText("\(chars.count) graphemes; layout takes at most \(maxGraphemes)")
-        }
         let style = text.paragraph ?? ParagraphStyle()
-        guard style.lineHeight.isFinite, style.lineHeight >= 0, style.tracking.isFinite,
-              style.paragraphSpacing.isFinite, style.boxWidth.map({ $0.isFinite && $0 > 0 }) ?? true else {
-            throw ModelError.invalidText("paragraph line height, tracking, spacing and box width must be finite (box > 0)")
-        }
+        try check(style)
         let runs = text.resolvedRuns
         guard measured.count == runs.count else {
             throw ModelError.invalidText("\(measured.count) glyph run metrics for \(runs.count) runs")
@@ -109,6 +110,9 @@ public struct TextLayout: Sendable, Hashable {
             guard metrics.advances.count == run.length else {
                 throw ModelError.invalidText("run \(r) has \(metrics.advances.count) advances for \(run.length) graphemes")
             }
+            guard run.fontSize.isFinite, run.fontSize > 0 else {
+                throw ModelError.invalidText("run \(r) font size \(run.fontSize) must be finite and > 0")
+            }
             let track = run.tracking + style.tracking
             for a in metrics.advances {
                 guard (a + track).isFinite else { throw ModelError.invalidText("run \(r) tracking \(run.tracking) is not finite") }
@@ -118,7 +122,25 @@ public struct TextLayout: Sendable, Hashable {
         }
         guard adv.count == chars.count else { throw ModelError.invalidText("runs do not cover the string") }
         let pieces = breakLines(chars, adv, box: style.boxWidth)
-        return place(pieces, chars: chars, adv: adv, runOf: runOf, runs: runs, measured: measured, style: style)
+        let layout = place(pieces, chars: chars, adv: adv, runOf: runOf, runs: runs, measured: measured, style: style)
+        let box = layout.bounds
+        guard [box.minX, box.maxX, box.maxY].allSatisfy(\.isFinite),
+              layout.lines.allSatisfy({ $0.width.isFinite && $0.baseline.isFinite && $0.x.allSatisfy(\.isFinite) }) else {
+            throw ModelError.invalidText("layout overflows: an x, width, baseline or bound is not finite")
+        }
+        return layout
+    }
+
+    /// Throws `ModelError.invalidText` naming the first paragraph field out of
+    /// the range `lay` accepts, with its value.
+    static func check(_ style: ParagraphStyle) throws {
+        func need(_ ok: Bool, _ field: String, _ value: Double, _ rule: String) throws {
+            guard ok else { throw ModelError.invalidText("paragraph \(field) \(value) must be \(rule)") }
+        }
+        try need(style.lineHeight.isFinite && style.lineHeight >= 0, "lineHeight", style.lineHeight, "finite and >= 0")
+        try need(style.tracking.isFinite, "tracking", style.tracking, "finite")
+        try need(style.paragraphSpacing.isFinite, "paragraphSpacing", style.paragraphSpacing, "finite")
+        if let width = style.boxWidth { try need(width.isFinite && width > 0, "boxWidth", width, "finite and > 0") }
     }
 
     /// A line before placement: graphemes `start ..< end`, ink up to `inkEnd`
@@ -222,9 +244,11 @@ public struct TextLayout: Sendable, Hashable {
 /// ascent is 0.8 em and descent 0.2 em, an em being the run's font size
 /// (0 when that size is not finite and positive).
 public enum FixedAdvances {
-    /// One metrics per `text.resolvedRuns`, in order.
+    /// One metrics per `text.resolvedRuns`, in order; none for a string of
+    /// more than `TextLayout.maxGraphemes` graphemes, which `lay` refuses anyway.
     public static func measure(_ text: TextShape) -> [GlyphRunMetrics] {
-        text.resolvedRuns.compactMap { run in
+        guard text.string.dropFirst(TextLayout.maxGraphemes).isEmpty else { return [] }
+        return text.resolvedRuns.compactMap { run in
             let em = run.fontSize.isFinite && run.fontSize > 0 ? run.fontSize : 0
             return try? GlyphRunMetrics(advances: Array(repeating: 0.5 * em, count: run.length),
                                         ascent: 0.8 * em, descent: 0.2 * em)
