@@ -2,9 +2,9 @@
 
 Issue: #434 · Packet: docs/blueprints/core/features/affine-composite.md
 Run: act-1a150bfbcf7-sfwy · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
-Stage: 3 wave 5 + 4 round 2 (gate on 7d8af79)
+Stage: 3 wave 6 done (AC-7 merged) + 4 round 3 gating on 77b74a1
 Base: 4feaaf9fac3cc050901f8b459a0908515a927f54
-Next: AC-7 building (wave 6); AC-comp merged-done once a green dev Linux run holds 917ffc4; round 3 of AC-comp after
+Next: round 3 panel on 77b74a1; AC-comp merged-done once a green dev Linux run holds 917ffc4; then AC-8
 
 Line lead for #434, #433 and #432 (rule 19); one wave plan across the three
 features, bookkeeping per feature. Packet v3 (has a Slices table).
