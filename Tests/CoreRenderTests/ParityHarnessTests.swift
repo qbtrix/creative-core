@@ -262,6 +262,11 @@ private struct CountingBackend: RenderBackend {
         #expect(try effect == ParityHarness.sampleSet(for: .effect) && effect.count == 12)
         #expect(Set(effect.map(\.name)).count == effect.count, "effect: names are unique")
         #expect(effect.allSatisfy { $0.backdrop == nil }, "effect: no backdrop")
+        let masked = try ParityHarness.sampleSet(for: .maskedComposite)
+        #expect(try masked == ParityHarness.sampleSet(for: .maskedComposite) && masked.count == 12)
+        #expect(Set(masked.map(\.name)).count == masked.count, "maskedComposite: names are unique")
+        #expect(masked.allSatisfy { $0.backdrop != nil }, "maskedComposite: every sample has a backdrop")
+        #expect(Set(["mask-off-left", "mask-off-top", "mask-off-right", "mask-off-bottom"]).isSubset(of: masked.map(\.name)))
         let effects = effect.flatMap { if case .applied(let list) = $0.call { list } else { [LayerEffect]() } }
         #expect(effects.count == 14, "effect: every sample applies effects, the style stack three")
         let kinds = Set(effects.map { e -> String in
@@ -291,15 +296,16 @@ private struct CountingBackend: RenderBackend {
     }
 
     @Test func w1FamiliesHaveEmptySetsAndOldFamiliesAreUnchanged() throws {
-        for op in RenderOp.notOnMetalYet.subtracting([.affine, .effect]).sorted(by: { $0.rawValue < $1.rawValue }) {
+        for op in RenderOp.notOnMetalYet.subtracting([.affine, .effect, .maskedComposite]).sorted(by: { $0.rawValue < $1.rawValue }) {
             let names = try ParityHarness.sampleSet(for: op).map(\.name)
             // tone-pack filled `.color`: 11 colour cases on the four edge-case sources.
             #expect(names.count == (op == .color ? 44 : 0), "\(op) has no samples until its feature adds them")
             #expect(Set(names).count == names.count, "\(op): names are unique")
             #expect(try ParityHarness.sampleSet(for: op) == ParityHarness.sampleSet(for: op), "\(op)")
         }
-        #expect(ParityPack.all.count == 8 && ParityPack.all.map(\.name) == ["display-blur-adjust-retouch", "composite-blendSeparable",
-                                               "blendNonSeparable", "transform", "resample", "affine", "effect", "color"])
+        #expect(ParityPack.all.count == 9 && ParityPack.all.map(\.name) == ["display-blur-adjust-retouch", "composite-blendSeparable",
+                                               "blendNonSeparable", "transform", "resample", "maskedComposite", "affine",
+                                               "effect", "color"])
         // FNV-1a over each old family's names, calls and input Float bits: the goldens were cut from these.
         var counts: [String: Int] = [:], prints: [String: UInt64] = [:]
         for op in RenderOp.allCases where !RenderOp.notOnMetalYet.contains(op) {

@@ -45,9 +45,12 @@ public enum ParityCall: Equatable, Sendable {
     case compositeThrough(AffineMatrix, mode: BlendMode, opacity: Float, filter: ResampleFilter)
     /// `applying` each effect in turn, first to last, as a layer's effect stack; never empty.
     case applied([LayerEffect])
+    /// `composite` of the source onto the backdrop at (`x`, `y`), its coverage scaled by `mask`
+    /// with the mask's top-left at (`maskX`, `maskY`) of the backdrop.
+    case maskedComposite(x: Int, y: Int, mode: BlendMode, opacity: Float, mask: Mask, maskX: Int, maskY: Int)
 }
 
-/// One named input for one op; `backdrop` is set for `.composite` and `.compositeThrough` only.
+/// One named input for one op; `backdrop` is set for the three composite calls only.
 public struct ParitySample: Equatable, Sendable {
     /// Stable name, unique within the op; goldens are filed under it.
     public let name: String
@@ -126,6 +129,11 @@ extension ParityHarness {
         case let .compositeThrough(m, mode, opacity, filter):
             out = try onto(sample, on: backend) {
                 try backend.composite(s, onto: &$0, through: m, mode: mode, opacity: opacity, filter: filter)
+            }
+        case let .maskedComposite(x, y, mode, opacity, mask, maskX, maskY):
+            out = try onto(sample, on: backend) {
+                try backend.composite(s, onto: &$0, x: x, y: y, mode: mode, opacity: opacity,
+                                      mask: mask, maskX: maskX, maskY: maskY)
             }
         case .rotated(let turn): out = try backend.rotated(s, turn)
         case let .resampled(w, h, filter): out = try backend.resampled(s, width: w, height: h, filter: filter)

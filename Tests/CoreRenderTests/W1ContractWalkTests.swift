@@ -13,10 +13,10 @@ import Testing
 
 @Suite struct W1ContractWalkTests {
     /// The W1 families whose `CPUBackend+<Family>.swift` is filled on dev:
-    /// Color (tone-pack TP-7), Affine (affine-composite AC-6) and Effect
-    /// (effects-engine FX-7). MaskedComposite is still a stub; a feature that
-    /// fills its file adds its family here.
-    static let cpuBuilt: Set<RenderOp> = [.affine, .color, .effect]
+    /// Color (tone-pack TP-7), Affine (affine-composite AC-6), Effect
+    /// (effects-engine FX-7) and MaskedComposite (masks-mattes MM-5): every
+    /// W1 family, so the stub arm below is kept for the next one.
+    static let cpuBuilt: Set<RenderOp> = [.affine, .color, .effect, .maskedComposite]
 
     /// A fake preferring every family from before W1 and none of the new ones.
     static let oldFamilies = Set(RenderOp.allCases).subtracting(RenderOp.notOnMetalYet)
