@@ -146,12 +146,12 @@ extension PNG {
 extension PNGCodec {
     /// `buffer` through `PNG.write` at `bitsPerChannel` (8 or 16) and this
     /// codec's level. Throws `CodecError.pixelCodec` for another depth or
-    /// anything `PNG.write` refuses, as `PixelCodec` asks.
+    /// anything `PNG.write` refuses (`PNG.pixelCodecText`), as `PixelCodec` asks.
     public func encodePNG(_ buffer: PixelBuffer, bitsPerChannel: Int) throws -> Data {
         do {
             return try PNG.write(buffer, bitsPerChannel: bitsPerChannel, level: level)
         } catch {
-            throw CodecError.pixelCodec("PNG write refused: \(error)")
+            throw CodecError.pixelCodec(PNG.pixelCodecText(error, writing: true))
         }
     }
 }

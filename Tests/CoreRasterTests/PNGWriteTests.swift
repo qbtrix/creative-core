@@ -108,6 +108,25 @@ import Foundation
         #expect(try PNG.write(source, level: 0) != PNG.write(source, level: 9))
     }
 
+    /// `PNGCodec` writes at its own level: level 0 stores, so it matches `PNG.write` at 0 and not at 9.
+    @Test func codecWritesAtItsLevel() throws {
+        let source = try Self.bytePixels(0x5EC, 9, 5)
+        let stored = try PNGCodec(level: 0).encodePNG(source, bitsPerChannel: 8)
+        #expect(try stored == PNG.write(source, level: 0))
+        #expect(try stored != PNG.write(source, level: 9))
+        #expect(try PNGCodec(level: 9).encodePNG(source, bitsPerChannel: 8) == PNG.write(source, level: 9))
+    }
+
+    /// Write failures through `PNGCodec` read as plain text that says it was writing.
+    @Test func codecWriteTextIsPlain() throws {
+        do {
+            _ = try PNGCodec().encodePNG(Self.bytePixels(0x5ED, 2, 2), bitsPerChannel: 12)
+            Issue.record("12-bit write returned")
+        } catch CodecError.pixelCodec(let text) {
+            #expect(text == "PNG write: unsupported: 12-bit samples: only 8 or 16")
+        }
+    }
+
     @Test func oraRoundTripThroughPNGCodec() throws {
         let layers = try (0..<3).map { PixelLayer(name: "layer \($0)", pixels: try Self.bytePixels(0x5E5 + UInt64($0), 5 + $0, 4), x: $0, y: -$0) }
         let image = LayeredImage(width: 9, height: 6, nodes: layers.map { .pixels($0) }, composite: try Self.bytePixels(0x5E9, 9, 6))

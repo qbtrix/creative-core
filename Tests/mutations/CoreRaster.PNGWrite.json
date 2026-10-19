@@ -19,5 +19,12 @@
     "anchor": "for filter in 1..<5 where costs[filter] < costs[best] { best = filter }",
     "replacement": "for filter in 1..<5 where costs[filter] <= costs[best] { best = filter }",
     "filter": "PNGWriteTests"
+  },
+  {
+    "note": "PNGCodec.encodePNG writes at level 6 whatever its level, caught by PNGWriteTests.codecWritesAtItsLevel",
+    "file": "Sources/CoreRaster/Codecs/PNGWrite.swift",
+    "anchor": "return try PNG.write(buffer, bitsPerChannel: bitsPerChannel, level: level)",
+    "replacement": "return try PNG.write(buffer, bitsPerChannel: bitsPerChannel, level: 6)",
+    "filter": "PNGWriteTests"
   }
 ]
