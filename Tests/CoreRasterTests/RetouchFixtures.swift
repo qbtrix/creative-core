@@ -7,6 +7,9 @@
 //   ring around it (FillFromSurroundingsTests, RetouchWalkTests).
 // - `gradientField`: an affine colour field with a known value at every pixel,
 //   so a heal that keeps gradients reproduces it exactly (HealTests).
+// - `texturedField`: `gradientField` plus a non-harmonic texture of period 24
+//   in x, so only a heal that keeps its source's gradients reproduces it
+//   (HealTests.keepsSourceTexture).
 // - `redEdge`: opaque red left of a column, opaque white right of it (SmudgeTests).
 // - `roundDab`, `disc`: round masks, hard or feathered (every suite).
 // - `tonePatches`: grey patches at luma 0.1, 0.5 and 0.95 plus a tinted one
@@ -108,6 +111,32 @@ enum RetouchFixtures {
         return buffer
     }
 
+    /// The texture `texturedField` adds at (x, y), the same on every colour
+    /// channel: `0.2 × (((x mod 24) × 7 + 3y) mod 11) / 11`. Its Laplacian
+    /// is not zero, so a membrane through the mask's ring cannot rebuild it,
+    /// and it repeats every 24 columns, so a heal from (−24, 0) can.
+    static func textureValue(x: Int, y: Int) -> Float {
+        0.2 * Float(((x % 24) * 7 + 3 * y) % 11) / 11
+    }
+
+    /// `fieldValue` plus `textureValue` at (x, y), opaque.
+    static func texturedValue(x: Int, y: Int) -> RGBA {
+        let f = fieldValue(x: x, y: y), t = textureValue(x: x, y: y)
+        return RGBA(r: f.r + t, g: f.g + t, b: f.b + t, a: 1)
+    }
+
+    /// A buffer holding `texturedValue` at every pixel. Keep width and height
+    /// at most 100 so every channel stays in 0...1.
+    static func texturedField(width: Int, height: Int) throws -> PixelBuffer {
+        var buffer = try PixelBuffer(width: width, height: height)
+        for y in 0..<height {
+            for x in 0..<width {
+                try buffer.setPixel(x: x, y: y, texturedValue(x: x, y: y))
+            }
+        }
+        return buffer
+    }
+
     /// Opaque red in columns below `edgeX`, opaque white from `edgeX` on.
     static func redEdge(width: Int, height: Int, edgeX: Int) throws -> PixelBuffer {
         var buffer = try PixelBuffer(width: width, height: height, fill: RGBA(r: 1, g: 1, b: 1, a: 1))
@@ -187,6 +216,11 @@ enum RetouchFixtures {
     #expect(field.width == 64 && field.height == 48)
     #expect(try field.pixel(x: 10, y: 20) == RGBA(r: 0.2 + 0.004 * 10, g: 0.3 + 0.003 * 20,
                                                   b: 0.25 + 0.002 * 30, a: 1))
+
+    let textured = try RetouchFixtures.texturedField(width: 96, height: 48)
+    #expect(try textured.pixel(x: 30, y: 5) == RetouchFixtures.texturedValue(x: 30, y: 5))
+    #expect(RetouchFixtures.textureValue(x: 30, y: 5) == RetouchFixtures.textureValue(x: 6, y: 5))
+    #expect(RetouchFixtures.textureValue(x: 30, y: 5) != RetouchFixtures.textureValue(x: 31, y: 5))
 
     let edge = try RetouchFixtures.redEdge(width: 40, height: 10, edgeX: 20)
     #expect(try edge.pixel(x: 19, y: 5) == RGBA(r: 1, g: 0, b: 0, a: 1))
