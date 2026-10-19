@@ -5,13 +5,13 @@ Run: act-1a1541f2193-03la · Session: https://claude.ai/code/session_01UoKtqjbgW
 Line lead for: layered-codecs (#438, already done by run act-1a14de006be-1kmq), masks-mattes (#431), path-geometry (#430)
 Stage: 3 wave 2
 Base: 0b5a641be359e283625fa5c798b8d02872fad344
-Next: P3 (measure) and P4 (boolean) building stacked on P2 (merged); PG-edit slice-done waits a green ci.yml run holding #723
+Next: P3 (measure) and P4 (boolean) open once their regates pass; PG-edit done (run 39289117245)
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
 |---|---|---|---|---|---|
 | PG-a | PG-1, PG-7 | nothing | done | https://github.com/qbtrix/creative-core/actions/runs/39263347459 | none |
-| PG-edit | PG-3, PG-4 (+ edit share of PG-2) | PG-a | open | | none |
+| PG-edit | PG-3, PG-4 (+ edit share of PG-2) | PG-a | done | https://github.com/qbtrix/creative-core/actions/runs/39289117245 | none |
 | PG-measure | PG-5, PG-6 (+ measure share of PG-2) | PG-a | open | | none |
 | PG-shape | PG-9, PG-10, PG-8 (+ shape share of PG-2) | PG-a | open | | none |
 | PG-z | PG-11, PG-12 (`feature-done`) | every slice above | open | | none |

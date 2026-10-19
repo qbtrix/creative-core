@@ -17,3 +17,4 @@ utc	stage	event	ref	note
 2026-10-19T16:36:43Z	anatomy	round 1 on #713 #723 #718 #726 #720 #724: 0 blockers, 5 should-fix, 7 nits; fixer lead/path-geometry-r1-b1 launched
 2026-10-19T16:51:42Z	heartbeat	builders running
 2026-10-19T17:09:48Z	heartbeat	builders running
+2026-10-19T17:11:27Z	stage3	PG-edit slice-done, run 39289117245 holds #723
