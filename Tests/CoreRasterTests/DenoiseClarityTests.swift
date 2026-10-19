@@ -47,6 +47,29 @@ import Testing
         }
     }
 
+    @Test func denoiseCoversLinesPastTheBandCount() throws {
+        // The bilateral runs its rows (then its transposed columns) in 64
+        // parallel bands, each striding through every 64th line. A region
+        // past row and column 64 is smoothed only if every band reaches its
+        // later lines in both passes.
+        let step = try EffectFixtures.noisyStep(width: 160, height: 140)
+        let far = EffectFixtures.Region(x0: 100, y0: 100, x1: 140, y1: 130)
+        let before = try EffectFixtures.stats(step, far)
+        let after = try EffectFixtures.stats(step.denoised(strength: 1, detail: 0), far)
+        #expect(after.std <= 0.4 * before.std, "std \(after.std) of \(before.std) past line 64")
+    }
+
+    @Test func detailOneSmoothsOnlyEqualGuides() throws {
+        // Detail 1 is range sigma 0: only taps with exactly the centre's luma
+        // weigh in. Every noisy pixel's luma differs, so nothing smooths.
+        let step = try EffectFixtures.noisyStep()
+        let out = try step.denoised(strength: 1, detail: 1)
+        for region in [left, right] {
+            let before = try EffectFixtures.stats(step, region), after = try EffectFixtures.stats(out, region)
+            #expect(after.std >= 0.9 * before.std, "std \(after.std) of \(before.std) at detail 1")
+        }
+    }
+
     @Test func chromaSmoothedAtTwiceSigma() throws {
         // Equal luma everywhere, colour noise per pixel: only the chroma pass
         // acts. At strength 0.5 (sigma 3) a Gaussian of sigma 6 leaves about

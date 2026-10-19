@@ -47,5 +47,19 @@
     "anchor": "guard width * height <= Self.maxDenoisePixels else {",
     "replacement": "guard width * height <= Self.maxPixels else {",
     "filter": "DenoiseClarityTests"
+  },
+  {
+    "note": "the bilateral's bands stop after their first line, so rows and columns past 64 go unfiltered, caught by DenoiseClarityTests.denoiseCoversLinesPastTheBandCount",
+    "file": "Sources/CoreRaster/Effects/DenoiseClarity.swift",
+    "anchor": "for line in stride(from: band, to: lines, by: bands) {",
+    "replacement": "for line in stride(from: band, to: min(lines, band + 1), by: bands) {",
+    "filter": "DenoiseClarityTests"
+  },
+  {
+    "note": "the range weight at sigma 0 weighs every tap 1, so detail 1 smooths like a plain Gaussian, caught by DenoiseClarityTests.detailOneSmoothsOnlyEqualGuides",
+    "file": "Sources/CoreRaster/Effects/DenoiseClarity.swift",
+    "anchor": "guard sigma > 0 else { return d == 0 ? 1 : 0 }",
+    "replacement": "guard sigma > 0 else { return 1 }",
+    "filter": "DenoiseClarityTests"
   }
 ]
