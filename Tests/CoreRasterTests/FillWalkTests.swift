@@ -48,9 +48,12 @@ import Testing
         #expect(sampled == FillScene.colorC)
         let range = try image.colorRangeMask(around: sampled, fuzziness: 0.2)
         for p in FillCheck.pixels(c) { #expect(try range.coverage(x: p.x, y: p.y) == 1) }
+        let ringC = try FillCheck.distance(FillScene.border(FillScene.colorC), FillScene.colorC)
+        let t = min(max(ringC / 0.2, 0), 1), fade = 1 - t * t * (3 - 2 * t)
+        #expect(fade > 0 && fade < 1, "ring at distance \(ringC) gets \(fade)")
         for p in FillCheck.edgeRing(c) {
             let v = try range.coverage(x: p.x, y: p.y)
-            #expect(v > 0 && v < 0.1, "C's ring at (\(p.x), \(p.y)) is \(v)")
+            #expect(abs(Double(v) - fade) < 1e-3, "C's ring at (\(p.x), \(p.y)) is \(v), want \(fade)")
         }
         for p in [scene.seedA, scene.seedB, (x: c.x - 2, y: scene.seedC.y)] {
             #expect(try range.coverage(x: p.x, y: p.y) == 0, "(\(p.x), \(p.y))")
