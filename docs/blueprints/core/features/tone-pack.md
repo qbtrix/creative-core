@@ -10,7 +10,7 @@ threshold; invert; and an auto tone that suggests levels and white balance
 from a histogram. Linux-safe; Float32 linear premultiplied in and out, like
 every op today.
 **Line:** `line:core` · **Wave:** 6 (`waves.md`) · **Lead branch:** `lead/tone-pack`
-**Status:** planned
+**Status:** built
 
 **Covers:** beta-80 plan row E3 ("vibrance, auto, HSL, B&W, mixers, LUT,
 Hue/Sat into core"); Photo blueprint 8.4 CR-5 (Hue/Saturation into
