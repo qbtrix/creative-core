@@ -82,9 +82,13 @@ import Foundation
     @Test func shortScanNamed() {
         let f = F.Frame(width: 8, height: 8, block: F.seeded(0))
         let two = F.Huffman(bits: [2] + [Int](repeating: 0, count: 15), values: [0, 0])
-        let sof = F.segment(0xC0, [8] + F.be16(8) + F.be16(8) + [1, 1, 0x11, 0])
-        let head = [0xFF, 0xD8] + F.dqt(0, f.tables[0]) + sof + F.dht(0, 0, two) + F.dht(1, 0, two)
-        let text = damagedText { try JPEG.read(Data(head + F.sos([0], 0, 63, 0, 0) + [0xFF, 0xD9])) }
+        // Built as lists of parts: one long `+` chain times out the macOS type checker.
+        let frame: [[UInt8]] = [[8], F.be16(8), F.be16(8), [1, 1, 0x11, 0]]
+        let sof = F.segment(0xC0, Array(frame.joined()))
+        let parts: [[UInt8]] = [[0xFF, 0xD8], F.dqt(0, f.tables[0]), sof, F.dht(0, 0, two), F.dht(1, 0, two),
+                                F.sos([0], 0, 63, 0, 0), [0xFF, 0xD9]]
+        let data = Data(Array(parts.joined()))
+        let text = damagedText { try JPEG.read(data) }
         #expect(text?.contains("scan ends at MCU 0") == true, "\(text ?? "no damaged")")
     }
 
