@@ -31,3 +31,4 @@ utc	stage	event	ref	note
 2026-10-19T00:42:44Z	4	slice-done	FX-blur	Belt-Slice-Done posted on #433 (https://github.com/qbtrix/creative-core/actions/runs/39180267199, dev 789025a)
 2026-10-19T00:42:44Z	3	build	FX-6	builder launched (glow, shadow)
 2026-10-19T00:43:57Z	4	fix-merged	#593	r1-b1 blur fixes merged (9/9 caught)
+2026-10-19T01:20:48Z	build	pr-open	#605	FX-6 glow and shadow (FX-alpha), Mutate 2/2; box blur in place of Gaussian (round-2 contract item)

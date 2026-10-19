@@ -4,7 +4,7 @@ Issue: #433 · Packet: docs/blueprints/core/features/effects-engine.md
 Run: act-1a150bfbcf7-sfwy · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
 Stage: 3 wave 3
 Base: 4feaaf9fac3cc050901f8b459a0908515a927f54
-Next: FX-3 building; FX-4 and FX-5 after it (3 builders max across the line); then W4 FX-6
+Next: FX-6 #605 open (FX-alpha); FX-7 after it merges; round 2 once #603 and #605 merge
 
 Line lead for #434, #433 and #432 (rule 19); one wave plan across the three
 features, bookkeeping per feature. Packet v3 (has a Slices table).
@@ -18,7 +18,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 | FX-3 | 3 | FX-blur | `boxBlurred`, `motionBlurred`; turns on `BlurFamilyTests` | `Sources/CoreRaster/Effects/BlurFamily.swift`, its tests, `Tests/mutations/CoreRaster.BlurFamily.json` | `BlurFamilyTests` | 3 (packet) | #579 | merged |
 | FX-4 | 3 | FX-blur | `denoised`, `clarity`; turns on `DenoiseClarityTests` | `Sources/CoreRaster/Effects/DenoiseClarity.swift`, its tests, `Tests/mutations/CoreRaster.DenoiseClarity.json` | `DenoiseClarityTests` | 2 (packet) | #586 | merged |
 | FX-5 | 3 | FX-alpha | `DistanceField`, `stroked`; turns on `DistanceFieldTests` and stroke cases | `Sources/CoreRaster/Effects/DistanceField.swift`, `Sources/CoreRaster/Effects/AlphaEffects.swift`, both tests, `Tests/mutations/CoreRaster.DistanceField.json` | `DistanceFieldTests`, `AlphaEffectTests` | 3 (packet) | #588 | merged |
-| FX-6 | 4 | FX-alpha | `glowing`, `shadowed`; their cases | `Sources/CoreRaster/Effects/AlphaEffects+Light.swift`, `Tests/CoreRasterTests/AlphaEffectLightTests.swift`, `Tests/mutations/CoreRaster.AlphaEffects.json` | `AlphaEffectLightTests` | 2 (packet) | | building |
+| FX-6 | 4 | FX-alpha | `glowing`, `shadowed`; their cases | `Sources/CoreRaster/Effects/AlphaEffects+Light.swift`, `Tests/CoreRasterTests/AlphaEffectLightTests.swift`, `Tests/mutations/CoreRaster.AlphaEffects.json` | `AlphaEffectLightTests` | 2 (packet) | #605 | open |
 | FX-7 | 5 | FX-cpu | `applying(_:)` over every case; the CPU body; turns on `CPUEffectTests` | `Sources/CoreRaster/Effects/Effects.swift`, `Sources/CoreRender/CPU/CPUBackend+Effect.swift`, `Tests/CoreRenderTests/CPUEffectTests.swift`, `Tests/mutations/CoreRenderCPUEffect.json` | `CPUEffectTests` | 2 (packet) | | planned |
 | FX-8 | 6 | FX-cpu | `Samples+Effect.swift` and CPU goldens | `Sources/CoreRender/Parity/Samples+Effect.swift`, `Tests/CoreRenderTests/Golden/effect/` | `CPUGoldenTests` | none: goldens | | planned |
 | FX-9 | 7 | FX-z | KJ-FX walk; `EffectBudgetTests` (release, `.serialized`, reported) | `Tests/CoreRenderTests/EffectWalkTests.swift`, `Tests/CoreRasterTests/EffectBudgetTests.swift` | `EffectWalkTests.walk` | none | | planned |
