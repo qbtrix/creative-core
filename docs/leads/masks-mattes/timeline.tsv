@@ -45,3 +45,4 @@ utc	stage	event	ref	note
 2026-10-19T20:44:21Z	round 2	#740 merged 758f0c7a
 2026-10-19T20:47:23Z	heartbeat	round 2 and builders running
 2026-10-19T21:05:35Z	heartbeat	round-2 fixes and final slices running
+2026-10-19T21:08:03Z	MM-z	M7 built 66091bb5, held; feather budget 25x over on Linux release
