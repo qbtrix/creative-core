@@ -23,8 +23,9 @@ public struct Mask: Equatable, Sendable {
 
     public let width: Int
     public let height: Int
-    /// Row-major coverage, one Float per pixel, top row first.
-    private var storage: [Float]
+    /// Row-major coverage, one Float per pixel, top row first. Readable in
+    /// this module so the mask ops in `Masks/` read it without a bounds throw.
+    private(set) var storage: [Float]
 
     /// A mask of the given size with every pixel set to `fill`. Throws
     /// `RasterError.invalid` for a size `PixelBuffer` rejects or a fill
