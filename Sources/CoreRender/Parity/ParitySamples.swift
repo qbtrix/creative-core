@@ -43,6 +43,8 @@ public enum ParityCall: Equatable, Sendable {
     /// `composite` of the source onto the backdrop through the matrix (source to backdrop
     /// pixels), `opacity` from 0 to 1.
     case compositeThrough(AffineMatrix, mode: BlendMode, opacity: Float, filter: ResampleFilter)
+    /// `applying` each effect in turn, first to last, as a layer's effect stack; never empty.
+    case applied([LayerEffect])
 }
 
 /// One named input for one op; `backdrop` is set for `.composite` and `.compositeThrough` only.
@@ -132,6 +134,7 @@ extension ParityHarness {
         case let .cloned(dx, dy, mask): out = try backend.cloned(s, offset: (dx: dx, dy: dy), through: mask)
         case let .transformed(m, w, h, filter): out = try backend.transformed(s, m, width: w, height: h, filter: filter)
         case .flipped(let axis): out = try backend.flipped(s, axis)
+        case .applied(let effects): out = try applied(effects, to: s, on: backend, sample.name)
         }
         defer { backend.release(out) }
         return try backend.read(out)
@@ -150,6 +153,24 @@ extension ParityHarness {
             throw error
         }
         return target
+    }
+
+    /// `s` with each of `effects` applied in turn on `backend`, every surface in between
+    /// released. No effects throws `RenderError.raster` naming the sample.
+    private static func applied(_ effects: [LayerEffect], to s: RenderSurface, on backend: any RenderBackend,
+                                _ name: String) throws -> RenderSurface {
+        guard let first = effects.first else { throw RenderError.raster("effect sample '\(name)' has no effects") }
+        var out = try backend.applying(s, first)
+        for effect in effects.dropFirst() {
+            let next: RenderSurface
+            do { next = try backend.applying(out, effect) } catch {
+                backend.release(out)
+                throw error
+            }
+            backend.release(out)
+            out = next
+        }
+        return out
     }
 
     /// Seeded straight colors premultiplied by `alpha` (random when nil; 0 keeps

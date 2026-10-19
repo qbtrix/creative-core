@@ -195,6 +195,7 @@ private func seededBuffer(width: Int, height: Int, seed: UInt64) throws -> Pixel
                     var backdrop = try #require(sample.backdrop)
                     try backdrop.composite(sample.source, through: m, mode: mode, opacity: opacity, filter: filter)
                     expected = backdrop
+                case .applied(let effects): expected = try effects.reduce(sample.source) { try $0.applying($1) }
                 default:
                     Issue.record("unexpected call for \(op): \(sample.name)")
                     continue

@@ -193,6 +193,24 @@ private func fill(_ w: Int, _ h: Int, _ r: Float, _ g: Float, _ b: Float, _ a: F
         #expect(try affine == ParityHarness.sampleSet(for: .affine) && affine.count == 10)
         #expect(Set(affine.map(\.name)).count == affine.count, "affine: names are unique")
         #expect(affine.allSatisfy { ($0.backdrop != nil) == $0.name.hasPrefix("through-") }, "affine: backdrop only when compositing")
+        let effect = try ParityHarness.sampleSet(for: .effect)
+        #expect(try effect == ParityHarness.sampleSet(for: .effect) && effect.count == 12)
+        #expect(Set(effect.map(\.name)).count == effect.count, "effect: names are unique")
+        #expect(effect.allSatisfy { $0.backdrop == nil }, "effect: no backdrop")
+        let effects = effect.flatMap { if case .applied(let list) = $0.call { list } else { [LayerEffect]() } }
+        #expect(effects.count == 14, "effect: every sample applies effects, the style stack three")
+        let kinds = Set(effects.map { e -> String in
+            switch e {
+            case .boxBlur: "box"
+            case .motionBlur: "motion"
+            case .denoise: "denoise"
+            case .clarity: "clarity"
+            case let .glow(_, _, _, inner): "glow-\(inner)"
+            case let .shadow(_, _, _, _, inner): "shadow-\(inner)"
+            case let .stroke(_, _, position): "stroke-\(position)"
+            }
+        })
+        #expect(kinds.count == 11, "effect: every case, both glows and shadows, every stroke position: \(kinds)")
         let tiny = try #require(try ParityHarness.sampleSet(for: .display).first { $0.name == "alpha-subnormal" })
         #expect(try tiny.source.pixel(x: 0, y: 0).a == 1e-45)
         let hue = try ParityHarness.sampleSet(for: .blendNonSeparable).map(\.name)
@@ -200,15 +218,15 @@ private func fill(_ w: Int, _ h: Int, _ r: Float, _ g: Float, _ b: Float, _ a: F
     }
 
     @Test func w1FamiliesHaveEmptySetsAndOldFamiliesAreUnchanged() throws {
-        for op in RenderOp.notOnMetalYet.subtracting([.affine]).sorted(by: { $0.rawValue < $1.rawValue }) {
+        for op in RenderOp.notOnMetalYet.subtracting([.affine, .effect]).sorted(by: { $0.rawValue < $1.rawValue }) {
             let names = try ParityHarness.sampleSet(for: op).map(\.name)
             // tone-pack filled `.color`: 11 colour cases on the four edge-case sources.
             #expect(names.count == (op == .color ? 44 : 0), "\(op) has no samples until its feature adds them")
             #expect(Set(names).count == names.count, "\(op): names are unique")
             #expect(try ParityHarness.sampleSet(for: op) == ParityHarness.sampleSet(for: op), "\(op)")
         }
-        #expect(ParityPack.all.count == 7 && ParityPack.all.map(\.name) == ["display-blur-adjust-retouch", "composite-blendSeparable",
-                                               "blendNonSeparable", "transform", "resample", "affine", "color"])
+        #expect(ParityPack.all.count == 8 && ParityPack.all.map(\.name) == ["display-blur-adjust-retouch", "composite-blendSeparable",
+                                               "blendNonSeparable", "transform", "resample", "affine", "effect", "color"])
         // FNV-1a over each old family's names, calls and input Float bits: the goldens were cut from these.
         var counts: [String: Int] = [:], prints: [String: UInt64] = [:]
         for op in RenderOp.allCases where !RenderOp.notOnMetalYet.contains(op) {

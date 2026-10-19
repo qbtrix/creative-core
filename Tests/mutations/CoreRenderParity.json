@@ -82,5 +82,12 @@
     "anchor": "case let .transformed(_, _, height, _): return height",
     "replacement": "case .transformed: return sample.source.height",
     "filter": "CPUGoldenTests"
+  },
+  {
+    "note": "effect stack render applies only the first effect and drops the rest",
+    "file": "Sources/CoreRender/Parity/ParitySamples.swift",
+    "anchor": "for effect in effects.dropFirst() {",
+    "replacement": "for effect in effects.dropFirst(effects.count) {",
+    "filter": "CPUGoldenTests"
   }
 ]
