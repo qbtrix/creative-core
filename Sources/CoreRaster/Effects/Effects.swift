@@ -5,13 +5,16 @@
 // glow and shadow (AlphaEffects+Light). No effect is computed here.
 // Invariants: every case reaches its own op with every parameter, the `inner`
 // flag and the stroke position included; a bad parameter throws that op's
-// `RasterError.invalid`, and so does a buffer too large to pad for it.
+// `RasterError.invalid`, and so does a buffer too large to pad for it or,
+// for denoise, one over `maxDenoisePixels`.
 
 extension PixelBuffer {
     /// This buffer with `effect` applied, the same size. Throws the effect
-    /// op's `RasterError.invalid` for a parameter outside its range, or a
+    /// op's `RasterError.invalid` for a parameter outside its range, a
     /// buffer too large to pad for the effect (stroke, glow and shadow work
-    /// on a padded copy that must stay within `maxPixels`).
+    /// on a padded copy that must stay within `maxPixels`), or a denoise
+    /// buffer over `maxDenoisePixels` (an eighth of `maxPixels`; denoise it
+    /// in tiles or downscale it).
     public func applying(_ effect: LayerEffect) throws -> PixelBuffer {
         switch effect {
         case .boxBlur(let radius):

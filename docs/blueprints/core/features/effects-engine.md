@@ -76,7 +76,8 @@ extension PixelBuffer {
 }
 // Sources/CoreRaster/Effects/DenoiseClarity.swift (FX-4)
 extension PixelBuffer {
-    public func denoised(strength: Double, detail: Double) throws -> PixelBuffer     // 0...1 each
+    public static let maxDenoisePixels: Int                                          // maxPixels / 8 (32 Mi px)
+    public func denoised(strength: Double, detail: Double) throws -> PixelBuffer     // 0...1 each; at most maxDenoisePixels
     public func clarity(amount: Double, radius: Double) throws -> PixelBuffer        // -100...100
 }
 // Sources/CoreRaster/Effects/DistanceField.swift (FX-5)
@@ -106,7 +107,12 @@ extension PixelBuffer {
   1,001.
 - **denoised.** A bilateral filter: spatial sigma 1 + 4 × strength px,
   range sigma (1 − detail) × 0.2 in linear luma; chroma smoothed at twice the
-  spatial sigma (colour noise goes first).
+  spatial sigma (colour noise goes first). Its scratch is about 280 bytes a
+  pixel (17.5 times the buffer), so it takes at most `maxDenoisePixels`
+  (`maxPixels` / 8, 32 Mi px, room for a 24 MP photo); a larger buffer
+  throws `RasterError.invalid` naming `maxDenoisePixels` and the remedy
+  (denoise it in tiles or downscale it), and `applying(.denoise)` throws
+  the same.
 - **clarity.** `unsharpMask` with a large radius (no default; 30 px is the recommended value), its
   amount scaled by a mid-tone weight (luma 0.2...0.8 full, 0 at the ends) so
   shadows and highlights don't clip; negative amounts blend toward the

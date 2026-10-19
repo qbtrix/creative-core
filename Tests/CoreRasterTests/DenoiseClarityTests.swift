@@ -202,4 +202,12 @@ import Testing
             try EffectFuzz.expectThrowsOrKeepsSize(input) { try $0.clarity(amount: amount, radius: radius) }
         }
     }
+
+    @Test func denoiseCapErrorNamesTheLimitAndRemedy() throws {
+        // The cap is denoise's own, not `maxPixels`: the error names it and how to get under it.
+        let b = try PixelBuffer(width: PixelBuffer.maxDenoisePixels + 1, height: 1)
+        let error = #expect(throws: RasterError.self) { try b.applying(.denoise(strength: 0.5, detail: 0.5)) }
+        guard case .invalid(let why) = try #require(error) else { return }
+        #expect(why.contains("maxDenoisePixels (\(PixelBuffer.maxDenoisePixels))") && why.contains("tiles"), "\(why)")
+    }
 }
