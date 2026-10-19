@@ -13,7 +13,7 @@ Next: P3 (measure) and P4 (boolean) open once their regates pass; PG-edit done (
 | PG-a | PG-1, PG-7 | nothing | done | https://github.com/qbtrix/creative-core/actions/runs/39263347459 | none |
 | PG-edit | PG-3, PG-4 (+ edit share of PG-2) | PG-a | done | https://github.com/qbtrix/creative-core/actions/runs/39289117245 | none |
 | PG-measure | PG-5, PG-6 (+ measure share of PG-2) | PG-a | done | https://github.com/qbtrix/creative-core/actions/runs/39300831435 | none |
-| PG-shape | PG-9, PG-10, PG-8 (+ shape share of PG-2) | PG-a | open | | none |
+| PG-shape | PG-9, PG-10, PG-8 (+ shape share of PG-2) | PG-a | merged, waits a green dev run holding e2b83d0a | | none |
 | PG-z | PG-11, PG-12 (`feature-done`) | every slice above | open | | none |
 
 ## PRs (rule 20: one PR per slice, failing test first; split where the 400-line cap forces it)
@@ -23,7 +23,7 @@ Next: P3 (measure) and P4 (boolean) open once their regates pass; PG-edit done (
 | P2 | PG-edit | PG-3, PG-4 | PathEdit.swift, PathFixtures, PathEditTests | PathEditTests | FlarePathEdit | #723 | merged |
 | P3 | PG-measure | PG-5, PG-6 | PathMeasure.swift, PathPropertySupport, PathMeasureTests, PathTrimDashTests | both | FlarePathMeasure | #735 | merged 18:10 (ffc7dfef) |
 | P4 | PG-shape | PG-9, PG-10 | PathBoolean.swift, PathBooleanTests, PathBooleanFuzzTests | both | FlarePathBoolean | #731 | merged 17:44 |
-| P5 | PG-shape | PG-8 | PathOutline.swift, PathOutlineTests | PathOutlineTests | FlarePathOutline | #739 | open, gate PASS at ce3ab4f0, 4/4 |
+| P5 | PG-shape | PG-8 | PathOutline.swift, PathOutlineTests | PathOutlineTests | FlarePathOutline | #739 | merged 19:50 (e2b83d0a) |
 | P6 | PG-z | PG-11, PG-12 | PathOpsWalkTests, PathOpsBudgetTests, geometry.json, packet | walk | none | | waits all |
 
 ## Rounds
