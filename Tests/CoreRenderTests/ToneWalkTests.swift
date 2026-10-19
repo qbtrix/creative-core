@@ -3,10 +3,12 @@
 // under a warm cast goes through every colour op the journey names, each
 // step through a RenderDispatcher whose preferred FakeBackend supports
 // `.adjust` only: auto tone's suggestion neutralises the grey patch within
-// 2/255, then vibrance 30, HSL blues -20 saturation, black and white
-// default, invert twice (`==` on every component of 0.5 or more, within one
-// ulp below it, where 1 − c rounds), a 17³ `.cube` identity LUT (within
-// 1e-5) and posterize 4 (four levels per channel). The colour cases land on
+// 2/255, then vibrance 30, HSL blues -20 saturation, hue/saturation, a
+// channel mix, colour balance, black and white default, invert twice (`==`
+// on every component of 0.5 or more, within one ulp below it, where 1 − c
+// rounds), a 17³ `.cube` identity LUT (within 1e-5), posterize 4 (four
+// levels per channel), a duotone gradient map and threshold 0.5 (pure black
+// and white only). The walk runs every colour case. The colour cases land on
 // the CPU and give their CoreRaster call's pixels with `==`; `contrast`
 // lands on the fake. The fake is not a pixel reference (its `.adjust`
 // leaves pixels as they are), so auto tone's two `.adjust` cases go through
@@ -128,6 +130,15 @@ import Testing
         (s, b) = try Self.colorStep(d, s, b, .vibrance(30)) { try $0.vibrance(30) }
         let blues = HSLAdjustment(blues: HSLShift(saturation: -20))
         (s, b) = try Self.colorStep(d, s, b, .hsl(blues)) { try $0.hsl(blues) }
+        (s, b) = try Self.colorStep(d, s, b, .hueSaturation(hue: 10, saturation: -15, lightness: 5)) {
+            try $0.hueSaturation(hue: 10, saturation: -15, lightness: 5)
+        }
+        let mixer = ChannelMatrix(red: [0.9, 0.1, 0, 0], green: [0.05, 0.9, 0.05, 0], blue: [0, 0.1, 0.9, 0.02],
+                                  monochrome: false)
+        (s, b) = try Self.colorStep(d, s, b, .channelMixer(mixer)) { try $0.channelMixer(mixer) }
+        let balance = ToneBalance(shadows: [0, 0, 10], midtones: [5, 0, -5], highlights: [-5, 0, 0],
+                                  preserveLuminosity: true)
+        (s, b) = try Self.colorStep(d, s, b, .colorBalance(balance)) { try $0.colorBalance(balance) }
         (s, b) = try Self.colorStep(d, s, b, .blackAndWhite(GrayMix())) { try $0.blackAndWhite(GrayMix()) }
         #expect(try Self.pixels(b).allSatisfy { $0.r == $0.g && $0.g == $0.b })
 
@@ -180,6 +191,15 @@ import Testing
         #expect(off == 0)
         #expect(used == [0, 1, 2, 3])
         #expect(b.width == Self.width && b.height == Self.height)
+
+        // A duotone gradient map (deep blue to warm cream), then threshold
+        // 0.5: every pixel pure black or pure white, both used.
+        let duotone = [GradientMapStop(offset: 0, color: RGBA(r: 0.02, g: 0.03, b: 0.2, a: 1)),
+                       GradientMapStop(offset: 1, color: RGBA(r: 1, g: 0.85, b: 0.6, a: 1))]
+        (s, b) = try Self.colorStep(d, s, b, .gradientMap(duotone)) { try $0.gradientMap(duotone) }
+        (s, b) = try Self.colorStep(d, s, b, .threshold(0.5)) { try $0.thresholded(0.5) }
+        let tones = Set(try Self.pixels(b).map { [$0.r, $0.g, $0.b] })
+        #expect(tones == [[0, 0, 0], [1, 1, 1]])
 
         // The fake was asked for `contrast` once and never for a colour case.
         #expect(fake.calls.filter { $0 == .op(.adjust) }.count == 1)
