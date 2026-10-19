@@ -4,8 +4,9 @@
 // what is now under the dab as the next carried patch, so the colour drags
 // and fades. Dab positions off the buffer clip; nothing traps.
 
-/// A smudge stroke in progress: the patch each dab carries to the next.
-public struct SmudgeState: Sendable {
+/// A smudge stroke in progress: the patch each dab carries to the next. Two
+/// states are equal when they have the same strength and carry the same patch.
+public struct SmudgeState: Hashable, Sendable {
     private let strength: Float
     /// The pixels under the last dab, row-major at its size; nil where the
     /// dab lay off the buffer. Nil before the first dab.
@@ -14,15 +15,18 @@ public struct SmudgeState: Sendable {
     private var carriedHeight = 0
 
     /// A new stroke. `strength` is in 0...1: how much of the carried colour
-    /// each dab lays down; 0 changes nothing.
+    /// each dab lays down; 0 changes nothing. `init` does not check it: a
+    /// strength outside 0...1, or NaN, makes every `dab` on this state throw.
     public init(strength: Float) {
         self.strength = strength
     }
 
     /// Blends the carried patch onto `buffer` under `dab` (its top-left at
     /// `x`, `y`) by strength times coverage, then picks up what is now under
-    /// the dab. The first dab of a stroke only picks up. Throws
-    /// `RasterError.invalid` for a strength outside 0...1 or NaN.
+    /// the dab. The first dab of a stroke only picks up, and so does a dab
+    /// whose mask size differs from the last dab's: it lays nothing and starts
+    /// a new pick-up at its own size. Throws `RasterError.invalid` for a
+    /// strength outside 0...1 or NaN.
     public mutating func dab(_ dab: Mask, x: Int, y: Int, on buffer: inout PixelBuffer) throws {
         guard (0...1).contains(strength) else {
             throw RasterError.invalid("smudge strength \(strength): must be in 0...1")
