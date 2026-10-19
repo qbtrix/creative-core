@@ -3,7 +3,7 @@
 Issue: #431 · Packet: docs/blueprints/core/features/masks-mattes.md
 Run: act-1a1541f2193-03la · Session: https://claude.ai/code/session_01UoKtqjbgWBMsvLqfXb3f42 · Started: 2026-10-19T12:57Z
 Line lead for: layered-codecs (#438, already done), masks-mattes (#431), path-geometry (#430)
-Stage: 4 round 2 (restarted on dev 305975a7 so it holds #735, #737 and #738; gate and mutation running)
+Stage: 4 round 2 on dev 305975a7: gate CI: PASS; mutation 136/195 caught before an OOM kill, remaining 59 re-running; critic panel running (first-use clarity, contract, undo, robustness, tests+mutation)
 Base: 0b5a641be359e283625fa5c798b8d02872fad344
 Next: M3 (CPU composite) and M6 (exporters) building stacked; rebase and open once their bases merged (both merged)
 
