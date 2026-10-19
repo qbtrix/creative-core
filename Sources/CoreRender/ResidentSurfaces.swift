@@ -2,8 +2,9 @@
 // by layer id and tile index, so a frame uploads only the tiles whose pixels
 // changed. Each entry keeps the CPU `PixelBuffer` it uploaded: a tile the app
 // has not written since shares that buffer's storage, so the dirty check is
-// `PixelBuffer ==`, which returns at once on shared storage, and a written
-// tile (copy-on-write gave it new storage) compares unequal and uploads. A
+// storage identity (`sharesStorage`, constant time), and a written tile
+// (copy-on-write gave it new storage) uploads with no pixel compare. Equal
+// pixels in new storage upload again: wasted work, never a wrong picture. A
 // tile whose components are all 0 keeps no surface (nil): there is nothing to
 // composite. The kept buffers are also what `rebuild(on:)` uploads after a
 // device loss, so the app never has to resend them. Any backend works; on the
@@ -54,15 +55,15 @@ public final class ResidentSurfaces: Sendable {
     public var count: Int { state.withLock { $0.entries.count } }
 
     /// The surface holding `pixels` for `key`, nil when every component of
-    /// `pixels` is 0. The held one when its pixels equal `pixels`, else
+    /// `pixels` is 0. The held one when its pixels share `pixels`' storage, else
     /// `pixels` uploaded now (the old surface released). Throws what the
     /// backend's `surface(_:)` throws, leaving the old entry in place.
     public func surface(_ key: ResidentKey, pixels: PixelBuffer) throws -> RenderSurface? {
         let (backend, held) = state.withLock { ($0.backend, $0.entries[key]) }
-        if let held, held.pixels == pixels { return held.surface }
+        if let held, held.pixels.sharesStorage(with: pixels) { return held.surface }
         let made = pixels.components.allSatisfy { $0 == 0 } ? nil : try backend.surface(pixels)
         return state.withLock { state -> RenderSurface? in
-            if let raced = state.entries[key], raced.pixels == pixels, state.backend.name == backend.name {
+            if let raced = state.entries[key], raced.pixels.sharesStorage(with: pixels), state.backend.name == backend.name {
                 if let made { backend.release(made) }
                 return raced.surface
             }

@@ -1,16 +1,19 @@
 // MetalBackend+Resident.swift: the Metal side of resident rendering. `blank` makes a clear tiled surface
 // with no conversion, and the batched `composite(_:onto:)` encodes every step's tile pieces, through each
-// mode's kernel (MetalBackend+Composite.swift's), into one command buffer with one wait, so a frame that
-// composites three layers over a region costs one GPU round trip, not one per tile.
+// mode's kernel (MetalBackend+Composite.swift's), into one command buffer committed with no wait, so a frame
+// that composites three layers over a region and then displays them waits on the GPU once, in the display.
 // Invariants: every step's family is checked, and every surface looked up, before anything changes; a step
 // whose surface is the backdrop runs the steps one at a time through `compositeInPlace`, which reads such a
 // source from a snapshot; evicted source tiles are staged from their shadows, evicted backdrop tiles restored
-// to textures under the lock; the command buffer is committed under the lock, so an eviction's readback blit
-// (same queue) is ordered after these writes, and waited for with it free; the budget holds after on every
-// exit; dispatches in the one serial compute encoder run in step order, so later steps blend over earlier.
+// to textures under the lock; the command buffer is committed under the lock, so every later op on the
+// queue (a display, a `read`, an eviction's readback blit) is ordered after these writes by the tiles' hazard
+// tracking; a GPU failure is recorded from the completion handler (backend failed, nothing thrown); `recover`
+// waits for the last one before it swaps queues; the budget holds after on every exit; dispatches in the one
+// serial compute encoder run in step order, so later steps blend over earlier.
 #if canImport(Metal)
 import CoreRaster
 import CoreRender
+import Foundation
 import Metal
 
 extension MetalBackend {
@@ -33,9 +36,11 @@ extension MetalBackend {
     }
 
     /// Every step composited onto `b` in order, in one command buffer: the pixels of one
-    /// `composite(_:onto:x:y:mode:opacity:)` per step. Throws `unsupported(<family>)` for a step whose
-    /// family is not in `supports` (so while unhealthy), `surfaceMismatch`, CoreRaster's opacity error, or
-    /// `deviceLost` (backend failed) when the GPU work cannot run or fails; nothing changes before the GPU runs.
+    /// `composite(_:onto:x:y:mode:opacity:)` per step. Returns once the work is committed, not done: later ops
+    /// on this backend see its pixels. Throws `unsupported(<family>)` for a step whose family is not in
+    /// `supports` (so while unhealthy), `surfaceMismatch`, CoreRaster's opacity error, or `deviceLost`
+    /// (backend failed) when the GPU work cannot be encoded; nothing changes before the GPU runs. A command
+    /// buffer that fails on the GPU marks the backend failed when it completes, so later ops throw.
     public func composite(_ steps: [CompositeStep], onto b: inout RenderSurface) throws {
         if steps.contains(where: { $0.surface == b }) {
             for step in steps {
@@ -44,7 +49,7 @@ extension MetalBackend {
             return
         }
         let target = b
-        let encoded = try withLock { () throws -> Result<(any MTLCommandBuffer)?, RenderError> in
+        let encoded = try withLock { () throws -> RenderError? in
             let backdrop = try lookup(target)
             var planned: [(step: CompositeStep, source: MetalSurface, pieces: [TilePiece], pipeline: any MTLComputePipelineState)] = []
             for step in steps {
@@ -55,32 +60,26 @@ extension MetalBackend {
                 let pieces = try CompositeMap.pieces(source: source.tiling, onto: backdrop.tiling, x: step.x, y: step.y)
                 planned.append((step, source, pieces, try pipelines.pipeline(for: kernel.key, source: kernel.source)))
             }
-            guard planned.contains(where: { !$0.pieces.isEmpty }) else { return .success(nil) }
+            guard planned.contains(where: { !$0.pieces.isEmpty }) else { return nil }
             do {
-                return .success(try encodeSteps(planned, onto: backdrop))
+                try encodeSteps(planned, onto: backdrop)
+                return nil
             } catch let error as RenderError {
-                return .failure(error)
+                return error
             }
         }
         defer { evictIfNeeded() }  // restored backdrop tiles leave again on every exit
-        let commands: (any MTLCommandBuffer)?
-        switch encoded {
-        case .success(let made): commands = made
-        case .failure(let error):
-            if case .deviceLost(let reason) = error { fail(reason) }
-            throw error
-        }
-        guard let commands else { return }
-        commands.waitUntilCompleted()
-        try recordCompletion(status: commands.status, error: commands.error, label: "batched composite")
+        guard let encoded else { return }
+        if case .deviceLost(let reason) = encoded { fail(reason) }
+        throw encoded
     }
 
-    /// Encodes and commits the planned pieces; call with the lock held. Restores evicted backdrop tiles and
+    /// Encodes and commits the planned pieces, with no wait; call with the lock held. Restores evicted backdrop tiles and
     /// stages evicted source tiles (CPU uploads, no GPU wait). Throws `deviceLost` without failing the
     /// backend (the caller does, lock free) when a texture, command buffer or encoder is unavailable.
     private func encodeSteps(_ planned: [(step: CompositeStep, source: MetalSurface, pieces: [TilePiece],
                                           pipeline: any MTLComputePipelineState)],
-                             onto backdrop: MetalSurface) throws -> any MTLCommandBuffer {
+                             onto backdrop: MetalSurface) throws {
         let clock = tick()
         backdrop.touch(clock)
         var staged: [ObjectIdentifier: [Int: any MTLTexture]] = [:]
@@ -138,8 +137,15 @@ extension MetalBackend {
             blitter.endEncoding()
         }
         #endif
+        // The handler runs on Metal's thread; `fail` takes the lock, which a readback may hold while it waits
+        // on a later buffer, so it goes to another queue rather than block Metal's completion delivery.
+        commands.addCompletedHandler { [self] done in
+            guard let reason = Self.commandBufferFailure(status: done.status, error: done.error, label: "batched composite")
+            else { return }
+            DispatchQueue.global().async { self.fail(reason) }
+        }
         commands.commit()
-        return commands
+        lastUnwaited = commands
     }
 }
 #endif

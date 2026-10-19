@@ -104,6 +104,14 @@ public struct PixelBuffer: Equatable, Sendable {
     /// Row-major premultiplied components, for this package's image operations (CoreRenderMetal uploads from it).
     package var components: [Float] { storage }
 
+    /// Whether this buffer and `other` hold one storage, a copy neither has written since: then they are
+    /// equal, checked in constant time. False says nothing about the pixels.
+    package func sharesStorage(with other: PixelBuffer) -> Bool {
+        storage.withUnsafeBufferPointer { mine in
+            other.storage.withUnsafeBufferPointer { $0.baseAddress == mine.baseAddress && $0.count == mine.count }
+        }
+    }
+
     /// Copies all of `source` into this buffer with its top left at (`x`, `y`),
     /// whole rows at a time. For this module's image operations: the caller
     /// has checked that the rectangle lies inside this buffer. `source` is a

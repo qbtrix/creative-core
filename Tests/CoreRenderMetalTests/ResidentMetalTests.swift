@@ -1,8 +1,9 @@
 // ResidentMetalTests.swift: resident rendering on the GPU. The Float16 upload encodes every component as
-// HalfFloat does, bit for bit; `blank` reads back clear; the batched composite gives the bits of one in-place
-// composite per step, resident or evicted; and ResidentSurfaces on Metal uploads
-// 0 tiles for an unchanged render, 1 for one written tile, and rebuilds every tile onto a new backend after a
-// device loss. Skipped without a device.
+// HalfFloat does, bit for bit; `blank` reads back clear; the batched composite gives
+// the bits of one in-place composite per step, resident or evicted, and a `read` straight after it (the
+// composite commits with no wait) sees those pixels even with the sources released; and ResidentSurfaces on
+// Metal uploads 0 tiles for an unchanged render, 1 for one written tile, and rebuilds every tile onto a new
+// backend after a device loss. Skipped without a device.
 #if canImport(Metal)
 import CoreRaster
 import CoreRender
@@ -58,6 +59,27 @@ private func expectBits(_ metal: MetalBackend, _ s: RenderSurface, _ expected: P
             }
             try expectBits(metal, batched, metal.read(stepped), "budget \(budget)")
         }
+        #expect(metal.isHealthy)
+    }
+
+    @Test(.enabled(if: hasDevice)) func aReadStraightAfterTheBatchedCompositeSeesItsPixels() throws {
+        let metal = try MetalBackend.onDefaultDevice()
+        guard metal.supports.contains(.composite) else { return }
+        // Big enough (12 tiles, three full-size steps) that the GPU is still at work when `read` is queued.
+        let backdrop = try PixelBuffer.seeded(width: 1024, height: 768, seed: 0x5EE)
+        let sources = try (1...3).map { try PixelBuffer.seeded(width: 1024, height: 768, seed: UInt64($0)) }
+        var batched = try metal.surface(backdrop), stepped = try metal.surface(backdrop)
+        let modes: [(BlendMode, Float)] = [(.normal, 0.5), (.multiply, 0.8), (.screen, 0.3)]
+        var surfaces = try sources.map { try metal.surface($0) }
+        try metal.composite(zip(surfaces, modes).map { CompositeStep($0, x: 0, y: 0, mode: $1.0, opacity: $1.1) }, onto: &batched)
+        surfaces.forEach(metal.release)  // the command buffer holds the source textures, not the backend
+        let seen = try metal.read(batched)
+        surfaces = try sources.map { try metal.surface($0) }
+        for (surface, mode) in zip(surfaces, modes) {
+            try metal.composite(surface, onto: &stepped, x: 0, y: 0, mode: mode.0, opacity: mode.1)
+        }
+        #expect(seen != backdrop)
+        #expect(try seen == metal.read(stepped))
         #expect(metal.isHealthy)
     }
 
