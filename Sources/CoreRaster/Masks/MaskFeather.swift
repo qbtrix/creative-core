@@ -39,7 +39,11 @@ extension Mask {
                                          dst: (lanes, h * lanes), tap: PixelBuffer.taps(kernel, length: h))
         var out = [Float](repeating: 0, count: w * h)
         for y in 0..<h {
-            for x in 0..<w { out[y * w + x] = min(max(down[((x / lanes) * h + y) * lanes + x % lanes], 0), 1) }
+            for x in 0..<w {
+                // NaN-safe clamp: a NaN reads 0 (min and max would keep it).
+                let v = down[((x / lanes) * h + y) * lanes + x % lanes]
+                out[y * w + x] = v >= 1 ? 1 : v > 0 ? v : 0
+            }
         }
         return Mask(checkedWidth: w, height: h, storage: out)
     }

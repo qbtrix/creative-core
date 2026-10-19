@@ -1,6 +1,6 @@
 // MaskOpsTests.swift: the MM-3 acceptance row. Feathering keeps area and
 // range and reads half at a hard edge; contours trace closed outlines (outer
-// counter-clockwise, holes clockwise) near the analytic shape, resolve a
+// positive shoelace area, holes negative) near the analytic shape, resolve a
 // saddle by its cell mean; covered bounds are exact. Plus a seeded fuzz of
 // NaN, infinite and huge feather radii.
 import CoreRaster
@@ -86,16 +86,16 @@ import Testing
     }
 
     /// A saddle joins the pair its mean sides with: mean 0.55 joins the high diagonal, 0.45 splits it.
-    @Test func saddleFollowsMean() {
-        #expect(MaskFixtures.saddle(diagonal: 0.9, anti: 0.2).contours().count == 1)
-        #expect(MaskFixtures.saddle(diagonal: 0.6, anti: 0.3).contours().count == 2)
-        #expect(MaskFixtures.saddle(diagonal: 0.2, anti: 0.9).contours().count == 1)
-        #expect(MaskFixtures.saddle(diagonal: 0.3, anti: 0.6).contours().count == 2)
+    @Test func saddleFollowsMean() throws {
+        #expect(try MaskFixtures.saddle(diagonal: 0.9, anti: 0.2).contours().count == 1)
+        #expect(try MaskFixtures.saddle(diagonal: 0.6, anti: 0.3).contours().count == 2)
+        #expect(try MaskFixtures.saddle(diagonal: 0.2, anti: 0.9).contours().count == 1)
+        #expect(try MaskFixtures.saddle(diagonal: 0.3, anti: 0.6).contours().count == 2)
     }
 
     @Test func emptyMaskHasNoContoursAndNoBounds() throws {
         let empty = try Mask(width: 8, height: 8)
-        #expect(empty.contours().isEmpty && empty.coveredBounds == nil)
+        #expect(try empty.contours().isEmpty && empty.coveredBounds == nil)
     }
 
     @Test func boundsAreExact() throws {
@@ -115,7 +115,7 @@ import Testing
             if let out = try? mask.feathered(radius: radius) {
                 #expect(try MaskFixtures.all(out).allSatisfy { (0...1).contains($0) })
             }
-            for ring in mask.contours(level: .random(in: -0.5...1.5, using: &rng)) {
+            for ring in try mask.contours(level: .random(in: -0.5...1.5, using: &rng)) {
                 expectClosed(ring)
             }
         }
@@ -135,7 +135,7 @@ import Testing
 
     /// Between samples 0 and 0.75 the 0.5 crossing sits 2/3 of the way, not at the midpoint.
     @Test func crossingInterpolatesTheLevel() throws {
-        let rings = MaskFixtures.values(width: 2, height: 1, [0, 0.75]).contours(level: 0.5)
+        let rings = try MaskFixtures.values(width: 2, height: 1, [0, 0.75]).contours(level: 0.5)
         let ring = try #require(rings.first)
         #expect(rings.count == 1)
         #expect(ring.contains { abs($0.x - (0.5 + 2.0 / 3)) < 1e-6 && abs($0.y - 0.5) < 1e-9 })

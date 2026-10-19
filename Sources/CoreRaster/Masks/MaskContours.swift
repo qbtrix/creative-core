@@ -5,15 +5,22 @@
 // segments between interpolated edge crossings (a saddle joins the corners
 // its mean sides with), the inside on their left, chained into rings by edge.
 // Invariants: each crossing ends one segment and starts one, so every chain
-// closes, and a walk removes each link it follows, so it ends.
+// closes, and a walk removes each link it follows, so it ends; at most
+// `maxContourSegments` segments are kept, so the link tables stay bounded.
 
 extension Mask {
+    /// The most segments `contours` builds: 4,000,000, tens of MB of links.
+    /// An ordinary shape's outline is about its perimeter in pixels (a disc
+    /// filling 4096 x 4096 gives about 13,000), so only noise reaches it.
+    public static let maxContourSegments = 4_000_000
+
     /// The closed outlines where coverage crosses `level`, each a ring of
-    /// points whose last joins its first. Outer outlines run counter-clockwise
-    /// in pixel coordinates (positive shoelace area; clockwise on a y-down
-    /// screen), holes the other way. A level of 0 or less, above 1, or NaN
-    /// has none; a ring of fewer than three points is left out.
-    public func contours(level: Float = 0.5) -> [[Mask.Point]] {
+    /// points whose last joins its first. Outer rings have positive shoelace
+    /// area in y-down pixel coordinates (clockwise as seen on screen); holes
+    /// negative. A level of 0 or less, above 1, or NaN has none; a ring of
+    /// fewer than three points is left out. Throws `RasterError.invalid` once
+    /// the outlines pass `maxContourSegments` segments.
+    public func contours(level: Float = 0.5) throws -> [[Mask.Point]] {
         let w = width, h = height
         func value(_ x: Int, _ y: Int) -> Float {
             x >= 0 && x < w && y >= 0 && y < h ? storage[y * w + x] : 0
@@ -68,6 +75,10 @@ extension Mask {
                     for k in 0..<4 where inside((k + 3) % 4) != inside(k) {
                         if first < 0 { first = k } else { segment(first, k) }
                     }
+                }
+                // A cell adds at most 2 segments, so the tables stop growing just past the cap.
+                if starts.count > Self.maxContourSegments {
+                    throw RasterError.invalid("mask contours: more than \(Self.maxContourSegments) segments")
                 }
             }
         }

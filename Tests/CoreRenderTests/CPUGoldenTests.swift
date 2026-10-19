@@ -3,8 +3,9 @@
 // backend, is checked in under Golden/ as display bytes, and the CPU backend
 // must reproduce each one with zero delta. Another backend checks its results
 // against them with `ParityHarness.compare(golden:_:)`, in bytes.
-// Layout: one golden per `ParityPack.all` entry, 133 samples in 8 goldens (affine/affine holds
-// the 10 affine samples and effect/effect the 12 effect samples, all 9 wide; color/color the 44
+// Layout: one golden per `ParityPack.all` entry, 145 samples in 9 goldens (maskedComposite/maskedComposite
+// holds the 12 masked samples, 11 wide; affine/affine the 10 affine samples and effect/effect
+// the 12 effect samples, all 9 wide; color/color the 44
 // colour samples, 11 cases on the four sources, each case's four in a row), as
 // ParityPack.swift says; `ParityGolden.band(from:op:sample:)` cuts one sample's
 // golden out of its pack. For example display/display-blur-adjust-retouch is 9

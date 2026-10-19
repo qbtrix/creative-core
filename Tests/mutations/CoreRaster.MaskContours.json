@@ -19,5 +19,19 @@
     "anchor": "let (from, to) = inside(a) ? (b, a) : (a, b)",
     "replacement": "let (from, to) = (a, b)",
     "filter": "MaskOpsTests"
+  },
+  {
+    "note": "contour crossing ignores the level and takes the midpoint, so a 0 to 0.75 edge crosses at 1/2 instead of 2/3, caught by MaskOpsTests.crossingInterpolatesTheLevel",
+    "file": "Sources/CoreRaster/Masks/MaskContours.swift",
+    "anchor": "let t = Double((level - p) / (q - p))",
+    "replacement": "let t = 0.5",
+    "filter": "MaskOpsTests"
+  },
+  {
+    "note": "mask contours drop the segment cap, so a checkerboard past maxContourSegments builds every link instead of throwing, caught by MaskOpsTests.checkerboardOverTheSegmentCapThrows",
+    "file": "Sources/CoreRaster/Masks/MaskContours.swift",
+    "anchor": "if starts.count > Self.maxContourSegments {",
+    "replacement": "if false {",
+    "filter": "MaskOpsTests"
   }
 ]

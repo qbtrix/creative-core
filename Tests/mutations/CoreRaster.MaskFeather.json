@@ -12,5 +12,12 @@
     "anchor": "tap: PixelBuffer.taps(kernel, length: h))",
     "replacement": "tap: PixelBuffer.taps(kernel, length: w))",
     "filter": "MaskOpsTests"
+  },
+  {
+    "note": "the Gaussian kernel checks only sigma 0, so a feather radius whose 2 sigma squared underflows divides by 0 and returns a NaN mask, caught by MaskOpsTests.underflowingRadiusKeepsTheMask",
+    "file": "Sources/CoreRaster/Blur.swift",
+    "anchor": "guard denominator.isNormal else { return [1] }",
+    "replacement": "guard sigma != 0 else { return [1] }",
+    "filter": "MaskOpsTests"
   }
 ]
