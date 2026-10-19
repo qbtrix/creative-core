@@ -2,9 +2,9 @@
 
 Issue: #432 · Packet: docs/blueprints/core/features/tone-pack.md
 Run: act-1a150bfbcf7-sfwy · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
-Stage: 3 wave 6 done (TP-8 merged) + 4 round 3 gating
+Stage: 4 round 3 fixes running (TP-map r3-b1 AutoTone, r3-b2 ColorMap)
 Base: 4feaaf9fac3cc050901f8b459a0908515a927f54
-Next: round 3 panel of TP-mix/TP-map; TP-cpu merged-done once a green dev Linux run holds 52b0fdc; then TP-9
+Next: merge r3-b1/r3-b2; round 4 panel on dev; TP-cpu merged-done once a green dev Linux run holds 52b0fdc; then TP-9
 
 Line lead for #434, #433 and #432 (rule 19); one wave plan across the three
 features, bookkeeping per feature. Packet v3 (has a Slices table).
@@ -55,6 +55,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 |---|---|---|---|---|---|---|---|---|---|
 | TP-a, TP-mix | 1 | 5ea5ae5 | PASS (try 5, budget retries under load) | 70/70 | - | clarity, contract, tests, robustness | 11 (7 major: HSLShift hue unit; hueSaturation parity claim; preserveLuminosity clamp breaks luma; hsl, vibrance, colorBalance, channelMixer, blackAndWhite mutants escape; 4 minor), 0 refuted | #596 (r1-b1, merged; 8/8), #597 (r1-b2, merged; 10/10) | no |
 | TP-map | 2 | 7d8af79 | PASS | 66/66 | - | clarity, contract, tests, robustness | 10 (3 major: AutoTone public docs; AutoTone levels untested; gradientMap untested; 7 minor), 0 refuted | b1 #617 merged (28b5528), b2 #628 merged (9385de9), b4 #630 merged (9cd326b), b3 #632 merged (60faf3a); round 2 fixes all merged | no |
+| TP-mix, TP-map | 3 | 77b74a1 | PASS | 133/133 | - | clarity, contract, tests, robustness | 9 (4 major: WB bright set must use non-clipped pixels; clip guard untested; brightShare untested; 5 minor), 0 refuted; excluded: TP-8 not built (stale, merged after 77b74a1), JPEG SOF2 unbounded alloc (image-codecs, out of feature) | r3-b1, r3-b2 running | no |
 
 ## Decisions
 - TP-5 (#585): map ops on encoded values via `mappingStraight`; `inverted` is a − c on linear premultiplied (exact double inversion); `.cube` parse per packet, size 2...65, domain exactly 0…1; blue-fastest mutant moved to the apply stride (parser keeps file order); ColorMix helpers made internal for reuse.

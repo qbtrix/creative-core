@@ -52,3 +52,4 @@ utc	stage	event	ref	note
 2026-10-19T04:46:50Z	4	round-3-start	77b74a1	gate+mutate on dev 77b74a1 (tmpfs)
 2026-10-19T05:04:54Z	3	merged	#638	TP-8 52b0fdc
 2026-10-19T05:25:28Z	4	panel	wf	round 3 critic panel launched on 77b74a1 (gate PASS, mutate 133/133)
+2026-10-19T05:33:49Z	4	fix-batch	wf_c145d7ae-6cd	round 3: 9 confirmed (4 major), batches r3-b1 AutoTone, r3-b2 ColorMap launched
