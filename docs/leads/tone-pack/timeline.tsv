@@ -28,3 +28,4 @@ utc	stage	event	ref	note
 2026-10-19T00:00:40Z	3	building	TP-6	builder launched
 2026-10-19T00:04:03Z	3	merged	#585	TP-5 squash 62a84e9
 2026-10-19T00:31:01Z	4	round-gate	round-1	scripts/ci PASS on 5ea5ae5 (try 5, budget retries under load); mutate 70/70 caught incl. all feature plans; critic panel launched (clarity, contract, tests, robustness)
+2026-10-19T00:41:41Z	round-1	critic panel	wf_318d8421-21e	not clean: 11 confirmed (7 major), 0 refuted; fix batches r1-b1 (ColorAdjust) and r1-b2 (ColorMix) launched (wf_815f3ba7-6f6); hueSaturation parity: packet amended to standard HSL, app parity at W3 adoption
