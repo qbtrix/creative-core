@@ -12,8 +12,19 @@ import Foundation
 /// field filled in: a run's own value where it sets one, else the shape's.
 /// Weight is 400, italic false, and tracking and baseline shift 0 where no run sets them.
 public struct ResolvedRun: Sendable, Hashable {
-    public var start: Int, length: Int, fontFamily: String, fontSize: Double
-    public var weight: Int, italic: Bool, fill: Fill, tracking: Double, baselineShift: Double
+    /// First grapheme (Character) of the run, and how many it covers.
+    public var start: Int, length: Int
+    /// Font family name, and size in points.
+    public var fontFamily: String, fontSize: Double
+    /// Font weight (100...900, 400 regular), and whether the face is italic.
+    public var weight: Int, italic: Bool
+    /// Paint for the run's glyphs.
+    public var fill: Fill
+    /// The run's own extra space after each grapheme in points, excluding `ParagraphStyle.tracking`
+    /// (`lay` adds that on top).
+    public var tracking: Double
+    /// Points the run's baseline is raised; negative lowers it.
+    public var baselineShift: Double
 
     public init(start: Int, length: Int, fontFamily: String, fontSize: Double, weight: Int = 400,
                 italic: Bool = false, fill: Fill, tracking: Double = 0, baselineShift: Double = 0) {
@@ -72,13 +83,24 @@ public struct GlyphRunMetrics: Sendable, Hashable {
 /// grapheme's x (both offsets from the shape's position), and its width
 /// without trailing spaces.
 public struct LaidLine: Sendable, Hashable {
-    public var graphemes: Range<Int>, baseline: Double, x: [Double], width: Double
+    /// The graphemes (Characters) on this line, trailing whitespace and newline included.
+    public var graphemes: Range<Int>
+    /// Baseline y in points, down from the shape's position.
+    public var baseline: Double
+    /// Pen x of each grapheme in `graphemes` before it is drawn (count equal), trailing whitespace included.
+    public var x: [Double]
+    /// Width in points from the first grapheme's x to the end of the last non-whitespace one.
+    public var width: Double
 }
 
 /// A text shape set into lines, and the rect they fill (offsets from the
 /// shape's position, like the lines).
 public struct TextLayout: Sendable, Hashable {
-    public var lines: [LaidLine], bounds: Rect
+    /// The lines, top to bottom, tiling the string in order.
+    public var lines: [LaidLine]
+    /// The rect the lines fill: minY 0 at the first line's ascent top, maxY at the last line's
+    /// descent; x spans the lines' aligned widths. All zero when there are no lines.
+    public var bounds: Rect
     /// The most graphemes `lay` and `onPath` accept; more throws.
     public static let maxGraphemes = 100_000
 
@@ -87,7 +109,7 @@ public struct TextLayout: Sendable, Hashable {
     /// newline (which also adds `paragraphSpacing`), a word wider than the box
     /// breaking by grapheme. Linear in the graphemes. Throws
     /// `ModelError.invalidText` on more than `maxGraphemes` graphemes, metrics
-    /// that don't match the runs, a run font size not finite and > 0, a
+    /// that don't match the runs, a run font size that is not finite and > 0, a
     /// paragraph value out of range (`lineHeight` finite and >= 0, `tracking`
     /// and `paragraphSpacing` finite, `boxWidth` finite and > 0; the file
     /// format further holds `lineHeight` to 0.5...4), or sums that overflow
@@ -101,14 +123,16 @@ public struct TextLayout: Sendable, Hashable {
         try check(style)
         let runs = text.resolvedRuns
         guard measured.count == runs.count else {
-            throw ModelError.invalidText("\(measured.count) glyph run metrics for \(runs.count) runs")
+            throw ModelError.invalidText(
+                "\(measured.count) GlyphRunMetrics for \(runs.count) resolved runs; measure one per text.resolvedRuns, in order")
         }
         var adv: [Double] = [], runOf: [Int] = []
         adv.reserveCapacity(chars.count)
         runOf.reserveCapacity(chars.count)
         for (r, (run, metrics)) in zip(runs, measured).enumerated() {
             guard metrics.advances.count == run.length else {
-                throw ModelError.invalidText("run \(r) has \(metrics.advances.count) advances for \(run.length) graphemes")
+                throw ModelError.invalidText("run \(r) has \(metrics.advances.count) advances for \(run.length) graphemes; "
+                    + "give one advance per Character, not per UTF-16 unit or glyph")
             }
             guard run.fontSize.isFinite, run.fontSize > 0 else {
                 throw ModelError.invalidText("run \(r) font size \(run.fontSize) must be finite and > 0")

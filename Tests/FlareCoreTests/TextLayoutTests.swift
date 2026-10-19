@@ -36,6 +36,9 @@ import Testing
         let lines = try Self.lay("abcd efghi", Self.box(30, .center)).lines
         #expect(lines.first?.x.first == 3 && lines.last?.x.first == 0)
         #expect(try Self.lay("abcd efghi", Self.box(30, .trailing)).lines.first?.x.first == 6)
+        // With no box, lines align against the widest line (24 here).
+        #expect(try Self.lay("ab\nabcd", ParagraphStyle(alignment: .center, lineHeight: 1)).lines.first?.x.first == 6)
+        #expect(try Self.lay("ab\nabcd", ParagraphStyle(alignment: .trailing, lineHeight: 1)).lines.first?.x.first == 12)
     }
     @Test func lastLineNotJustified() throws {
         let lines = try Self.lay("ab cd efghi", Self.box(36, .justified)).lines
@@ -59,6 +62,10 @@ import Testing
     @Test func newlineAddsParagraphSpacing() throws {
         let lines = try Self.lay("ab\ncd", size: 24, ParagraphStyle(lineHeight: 1, paragraphSpacing: 10)).lines
         #expect(lines.map(\.graphemes.lowerBound) == [0, 3] && Self.near(lines.map(\.baseline), [19.2, 19.2 + 34]))
+        // A soft wrap adds no spacing; only the hard break does.
+        let wrapped = try Self.lay("ab cd\nef", size: 24, ParagraphStyle(lineHeight: 1, paragraphSpacing: 10, boxWidth: 30))
+        #expect(wrapped.lines.map(\.graphemes) == [0..<3, 3..<6, 6..<8])
+        #expect(Self.near(wrapped.lines.map(\.baseline), [19.2, 43.2, 77.2]))
     }
     @Test func trackingPerGrapheme() throws {
         let runs = [TextRun(start: 0, length: 4, tracking: 1)]
@@ -86,6 +93,27 @@ import Testing
         let measured = [try GlyphRunMetrics(advances: Array(repeating: 10, count: 5), ascent: 18, descent: 6)]
         #expect(try TextLayout.lay(text, measured: measured).lines.map(\.baseline) == [18, 42])
     }
+    @Test func lineGapTakesMaxAscentAndMaxDescentSeparately() throws {
+        // Run A (ascent 10, descent 1) and run B (ascent 2, descent 8) share line 2: its gap is 10 + 8, not 11.
+        var text = TextFixtures.text("ab\ncd", runs: [TextRun(start: 4, length: 1, fontSize: 30)],
+                                     paragraph: ParagraphStyle(lineHeight: 2))
+        text.fontSize = 20
+        let measured = [try GlyphRunMetrics(advances: Array(repeating: 10, count: 4), ascent: 10, descent: 1),
+                        try GlyphRunMetrics(advances: [10], ascent: 2, descent: 8)]
+        #expect(try TextLayout.lay(text, measured: measured).lines.map(\.baseline) == [10, 10 + 2 * 18])
+    }
+    @Test func xHasOneEntryPerGraphemeWithTrailingSpace() throws {
+        let lines = try Self.lay("abcde fghij", Self.box(30)).lines
+        #expect(!lines.isEmpty && lines.allSatisfy { $0.x.count == $0.graphemes.count })
+        #expect(lines.first?.x.count == 6)
+    }
+    @Test func advancesPerUTF16UnitThrowNamingTheFix() throws {
+        let text = TextFixtures.text("a" + TextFixtures.emoji)
+        let perUnit = [try GlyphRunMetrics(advances: Array(repeating: 1, count: text.string.utf16.count), ascent: 1, descent: 1)]
+        #expect(throws: ModelError.self) { try TextLayout.lay(text, measured: perUnit) }
+        #expect(Self.message { try TextLayout.lay(text, measured: perUnit) }.contains("per Character"))
+        #expect(Self.message { try TextLayout.lay(text, measured: perUnit + perUnit) }.contains("text.resolvedRuns"))
+    }
     @Test func breaksAfterHyphen() throws {
         #expect(try Self.lay("abc-defgh", Self.box(30)).lines.map(\.graphemes) == [0..<4, 4..<9])
     }
@@ -101,7 +129,8 @@ import Testing
         #expect(throws: ModelError.self) { try TextLayout.lay(text, measured: FixedAdvances.measure(text) + [extra]) }
         #expect(throws: ModelError.self) { try TextLayout.lay(text, measured: [extra]) }
         for paragraph in [ParagraphStyle(boxWidth: 0), ParagraphStyle(boxWidth: -1), ParagraphStyle(boxWidth: .nan),
-                          ParagraphStyle(lineHeight: .infinity)] {
+                          ParagraphStyle(lineHeight: .infinity), ParagraphStyle(lineHeight: -1),
+                          ParagraphStyle(paragraphSpacing: .nan)] {
             #expect(throws: ModelError.self) { try Self.lay("ab", paragraph) }
         }
         #expect(throws: ModelError.self) { try Self.lay("ab", size: -5) }
@@ -111,6 +140,8 @@ import Testing
     @Test func badParagraphNamesField() {
         #expect(Self.message { try Self.lay("ab", ParagraphStyle(boxWidth: 0)) }.contains("boxWidth"))
         #expect(Self.message { try Self.lay("ab", ParagraphStyle(tracking: .nan)) }.contains("tracking"))
+        #expect(Self.message { try Self.lay("ab", ParagraphStyle(lineHeight: -1)) }.contains("lineHeight"))
+        #expect(Self.message { try Self.lay("ab", ParagraphStyle(paragraphSpacing: .nan)) }.contains("paragraphSpacing"))
     }
     /// The `ModelError.invalidText` message `body` throws, or "" for anything else.
     static func message(_ body: () throws -> Any) -> String {

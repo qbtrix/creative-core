@@ -81,14 +81,15 @@ public struct TextRun: Codable, Sendable, Hashable {
 }
 
 /// Line layout of a text shape. `lineHeight` is the baseline-to-baseline
-/// distance as a multiple of the line's tallest ascent + descent (one font
-/// size under `FixedAdvances`);
+/// distance to a line as a multiple of that line's largest ascent plus its
+/// largest descent (each taken over its runs);
 /// a nil `boxWidth` means one line per paragraph, with no wrapping.
 public struct ParagraphStyle: Codable, Sendable, Hashable {
     /// How each line sits in the box.
     public var alignment: TextAlignment
-    /// Baseline-to-baseline distance as a multiple of the line's tallest
-    /// ascent + descent (one font size under `FixedAdvances`), 0.5...4.
+    /// Baseline-to-baseline distance to a line, as a multiple of that line's
+    /// largest ascent plus its largest descent (each taken over its runs);
+    /// one font size under `FixedAdvances`. 0.5...4.
     public var lineHeight: Double
     /// Extra space after each grapheme, in points, for the whole shape.
     public var tracking: Double
