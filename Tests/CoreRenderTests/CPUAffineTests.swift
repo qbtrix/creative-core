@@ -1,8 +1,9 @@
 // CPUAffineTests.swift: affine-composite AC-6's acceptance, written first
 // (AC-1) and turned on by AC-6, which fills `CPUBackend+Affine.swift`: each
 // `.affine` call on the CPU `==` the CoreRaster op it wraps (non-square sizes
-// and both axes, so swapped arguments show), and a dispatcher over a fake
-// without `.affine` routes all three to the CPU.
+// and both axes, so swapped arguments show), a dispatcher over a fake
+// without `.affine` routes all three to the CPU, and a bad opacity or a
+// singular matrix throws `RenderError.raster` with `b` unchanged.
 import CoreRaster
 import CoreRender
 import Testing
@@ -12,6 +13,13 @@ private func affineLayer(width: Int, height: Int, seed: UInt64) throws -> PixelB
     var rng = SplitMix64(seed: seed)
     return try PixelBuffer(rgba8: (0..<width * height * 4).map { _ in UInt8(truncatingIfNeeded: rng.next()) },
                            width: width, height: height)
+}
+
+/// The message of the `RasterError.invalid` that `body` throws, or "" when it
+/// returns or throws anything else.
+private func rasterMessage(_ body: () throws -> Void) -> String {
+    do { try body() } catch let RasterError.invalid(message) { return message } catch {}
+    return ""
 }
 
 @Suite struct CPUAffineTests {
@@ -72,6 +80,37 @@ private func affineLayer(width: Int, height: Int, seed: UInt64) throws -> PixelB
                 cpu.release(b)
             }
         }
+    }
+
+    /// A bad opacity or a singular matrix: CoreRaster's `RasterError.invalid`
+    /// comes back as `RenderError.raster` with the same message, the composite
+    /// leaves `b`'s pixels as they were, and neither input surface changes.
+    @Test
+    func badInputThrowsRasterAndLeavesBackdrop() throws {
+        let layer = try affineLayer(width: 6, height: 5, seed: 67)
+        let backdrop = try affineLayer(width: 9, height: 7, seed: 68)
+        let singular = AffineMatrix(a: 1, b: 2, c: 2, d: 4, tx: 3, ty: 1)
+        #expect(singular.inverse == nil)
+        let m = Self.matrices[2]
+        let s = try cpu.surface(layer)
+        var b = try cpu.surface(backdrop)
+        defer { cpu.release(s); cpu.release(b) }
+        let composites: [(String, AffineMatrix, Float)] = [
+            ("opacity 1.5", m, 1.5), ("opacity nan", m, .nan), ("opacity -0.1", m, -0.1), ("singular", singular, 0.7),
+        ]
+        for (name, matrix, opacity) in composites {
+            var direct = backdrop
+            let message = rasterMessage { try direct.composite(layer, through: matrix, mode: .normal, opacity: opacity, filter: .bilinear) }
+            #expect(!message.isEmpty, "\(name) throws in CoreRaster")
+            #expect(throws: RenderError.raster(message), "\(name)") {
+                try cpu.composite(s, onto: &b, through: matrix, mode: .normal, opacity: opacity, filter: .bilinear)
+            }
+            #expect(try cpu.read(b) == backdrop, "\(name) leaves b")
+        }
+        let message = rasterMessage { _ = try layer.transformed(singular, width: 6, height: 5, filter: .bilinear) }
+        #expect(!message.isEmpty, "transformed singular throws in CoreRaster")
+        #expect(throws: RenderError.raster(message)) { try cpu.transformed(s, singular, width: 6, height: 5, filter: .bilinear) }
+        #expect(try cpu.read(s) == layer)
     }
 
     @Test
