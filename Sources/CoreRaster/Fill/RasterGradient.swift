@@ -2,9 +2,8 @@
 // (fill-tools). Each pixel centre maps to a parameter `t` by the shape (FT-5),
 // clamped to the stops (so to 0...1), and `t` picks a colour from the stops,
 // interpolated in linear light or in OKLab through CoreColor. Alpha
-// interpolates linearly and the result is premultiplied. The ordered dither
-// is FT-6's: until it lands, `dither` is accepted and the gradient renders
-// undithered.
+// interpolates linearly and the result is premultiplied. With `dither`, each
+// pixel then takes `GradientDither`'s ordered offset (FT-6).
 #if canImport(Glibc)
 import Glibc
 #elseif canImport(Musl)
@@ -48,7 +47,7 @@ extension PixelBuffer {
     ///     finite. Two stops at one offset make a hard edge.
     ///   - space: the space the stops interpolate in.
     ///   - dither: `true` adds a deterministic ordered dither of +-0.5/255 so
-    ///     an 8-bit encode does not band (FT-6; ignored until then).
+    ///     an 8-bit encode does not band (`GradientDither`).
     /// - Returns: the gradient, premultiplied like any buffer.
     /// - Throws: `RasterError.invalid` for a bad size, points or stops.
     public static func gradient(width: Int, height: Int, shape: RasterGradientShape, from a: Mask.Point, to b: Mask.Point,
@@ -69,7 +68,7 @@ extension PixelBuffer {
             for x in 0..<width {
                 let (dx, dy) = (Double(x) + 0.5 - a.x, Double(y) + 0.5 - a.y)
                 let t = gradientT(shape, dx: dx, dy: dy, vx: vx, vy: vy, length2: length2)
-                let c = try ramp.color(at: t)
+                let c = dither ? GradientDither.dithered(try ramp.color(at: t), x: x, y: y) : try ramp.color(at: t)
                 let i = (y * width + x) * channels
                 storage[i] = c.r
                 storage[i + 1] = c.g
