@@ -1,6 +1,7 @@
 // PathFixtures.swift: paths for the edit and measure checks, built in code:
 // star, ring, self-crossing figure-eight, 3-contour glyph and a seeded open
-// 10,000-anchor scribble. Lines and cubics only, so contours round-trip exactly.
+// 10,000-anchor scribble, lines and cubics only so contours round-trip exactly;
+// and a closed quad loop for the split checks.
 import FlareCore
 
 private func pt(_ x: Double, _ y: Double) -> Point { Point(x: x, y: y) }
@@ -27,6 +28,12 @@ enum PathFixtures {
         .line(to: pt(0, 40)), .close,
         .move(to: pt(20, 10)), .cubic(control1: pt(30, 5), control2: pt(40, 15), to: pt(40, 20)), .line(to: pt(20, 30)), .close,
         .move(to: pt(70, 50)), .cubic(control1: pt(75, 60), control2: pt(85, 40), to: pt(90, 50)), .line(to: pt(100, 50)),
+    ])
+
+    /// One closed contour of two quads and a line, outside `all()`: contours raise quads.
+    static let quadLoop = Path(elements: [
+        .move(to: pt(0, 0)), .quad(control: pt(50, -30), to: pt(100, 0)), .quad(control: pt(130, 50), to: pt(100, 100)),
+        .line(to: pt(0, 100)), .close,
     ])
 
     /// One open contour: a move and 9,999 random cubics.

@@ -65,13 +65,15 @@ private func anchorCount(_ path: Path) -> Int { path.contours.reduce(0) { $0 + $
     }
 
     @Test func insertKeepsShape() throws {
-        for path in [PathFixtures.figureEight, PathFixtures.glyph] {
+        // A cubic, a quad and a closing segment (element 4 of glyph and quadLoop) at a few t.
+        for path in [PathFixtures.figureEight, PathFixtures.glyph, PathFixtures.quadLoop] {
             for (element, t) in [(1, 0.3), (2, 0.75), (4, 0.5)] where element < path.elements.count {
-                let pen = try #require(path.elements[element - 1].endPoint)
-                let split = try path.inserting(at: PathLocation(element: element, t: t, point: pen, distance: 0))
+                let (pen, start) = path.pens()[element], at = try #require(pen)
+                let split = try path.inserting(at: PathLocation(element: element, t: t, point: at, distance: 0))
                 #expect(abs(exactArea(split) - exactArea(path)) < 1e-9 && anchorCount(split) == anchorCount(path) + 1)
-                guard let whole = Path.cubic(path.elements[element], from: pen, start: nil), let left = Path.cubic(split.elements[element], from: pen, start: nil),
-                      let right = Path.cubic(split.elements[element + 1], from: left.3, start: nil) else { continue }
+                let whole = try #require(Path.cubic(path.elements[element], from: at, start: start))
+                let left = try #require(Path.cubic(split.elements[element], from: at, start: start))
+                let right = try #require(Path.cubic(split.elements[element + 1], from: left.3, start: start))
                 for u in stride(from: 0.0, through: 1, by: 0.125) {
                     let l = cubicAt(left.0, left.1, left.2, left.3, u), r = cubicAt(right.0, right.1, right.2, right.3, u)
                     let wl = cubicAt(whole.0, whole.1, whole.2, whole.3, t * u)
@@ -86,6 +88,14 @@ private func anchorCount(_ path: Path) -> Int { path.contours.reduce(0) { $0 + $
         let three = [pt(0, 0), pt(10, 10), pt(0, 10)].map { PathAnchor(point: $0) }
         #expect(try square.removingAnchor(contour: 0, index: 1).contours == [PathContour(anchors: three, closed: true)])
         #expect(try Path(elements: [.move(to: pt(1, 1))]).removingAnchor(contour: 0, index: 0).elements.isEmpty)
+        // Three cubics: removing anchor 1 joins anchors 0 and 2 with their outer handles.
+        let cubics = Path(elements: [.move(to: pt(0, 0)), .cubic(control1: pt(1, 4), control2: pt(3, 5), to: pt(5, 5)),
+                                     .cubic(control1: pt(7, 5), control2: pt(9, 2), to: pt(10, 0)),
+                                     .cubic(control1: pt(11, -2), control2: pt(14, -1), to: pt(15, 0))])
+        #expect(try cubics.removingAnchor(contour: 0, index: 1).elements == [
+            .move(to: pt(0, 0)), .cubic(control1: pt(1, 4), control2: pt(9, 2), to: pt(10, 0)),
+            .cubic(control1: pt(11, -2), control2: pt(14, -1), to: pt(15, 0)),
+        ])
     }
 
     @Test func symmetricEqualizes() throws {
