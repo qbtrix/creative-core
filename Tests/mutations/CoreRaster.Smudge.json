@@ -1,0 +1,16 @@
+[
+  {
+    "note": "the carried patch is not replaced after a dab, so the first pick-up is stamped along the whole stroke, caught by SmudgeTests.colourFades",
+    "file": "Sources/CoreRaster/Heal/Smudge.swift",
+    "anchor": "carried = try Self.pickUp(dab, x: x, y: y, from: buffer)",
+    "replacement": "if carried == nil { carried = try Self.pickUp(dab, x: x, y: y, from: buffer) }",
+    "filter": "SmudgeTests"
+  },
+  {
+    "note": "the first dab of a stroke paints a clear patch instead of only picking up, caught by SmudgeTests.firstDabPicksUp",
+    "file": "Sources/CoreRaster/Heal/Smudge.swift",
+    "anchor": "if strength > 0, let patch = carried, carriedWidth == dab.width, carriedHeight == dab.height {",
+    "replacement": "if strength > 0, let patch = Optional(carried ?? [RGBA?](repeating: .clear, count: dab.width * dab.height)) {",
+    "filter": "SmudgeTests"
+  }
+]

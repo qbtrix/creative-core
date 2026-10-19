@@ -1,5 +1,5 @@
 // SmudgeTests.swift: retouch-heal RH-6's acceptance, written first by RH-1
-// (docs/blueprints/core/features/retouch-heal.md). Disabled until RH-6 lands.
+// (docs/blueprints/core/features/retouch-heal.md); RH-6 turned it on.
 import CoreRaster
 import Testing
 
@@ -23,17 +23,17 @@ import Testing
         return p.r - (p.g + p.b) / 2
     }
 
-    @Test(.disabled("waits on RH-6")) func firstDabPicksUp() throws {
+    @Test func firstDabPicksUp() throws {
         let (before, after) = try Self.stroke(strength: 1, count: 1)
         #expect(after == before)
     }
 
-    @Test(.disabled("waits on RH-6")) func colourDrags() throws {
+    @Test func colourDrags() throws {
         let (before, after) = try Self.stroke(strength: 0.6, count: 10)
         #expect(try Self.redness(before, x: 24, y: 10) == 0 && Self.redness(after, x: 24, y: 10) > 0.05)
     }
 
-    @Test(.disabled("waits on RH-6")) func colourFades() throws {
+    @Test func colourFades() throws {
         // Dab centres sit at columns 18, 20, ..., 36; past the edge the red falls strictly.
         let (_, after) = try Self.stroke(strength: 0.6, count: 10)
         let samples = try [22, 26, 30, 34].map { try Self.redness(after, x: $0, y: 10) }
@@ -43,18 +43,18 @@ import Testing
         #expect(samples.last.map { $0 > 0 } == true)
     }
 
-    @Test(.disabled("waits on RH-6")) func strengthZeroIsIdentity() throws {
+    @Test func strengthZeroIsIdentity() throws {
         let (before, after) = try Self.stroke(strength: 0, count: 10)
         #expect(after == before)
     }
 
-    @Test(.disabled("waits on RH-6")) func outsideBoundsUntouched() throws {
+    @Test func outsideBoundsUntouched() throws {
         let (before, after) = try Self.stroke(strength: 1, count: 10)
         try expectSameOutside(after, before, cx: 27, cy: 10, r: 13)
         #expect(after != before)
     }
 
-    @Test(.disabled("waits on RH-6")) func fuzzedDabsThrowOrSmudge() throws {
+    @Test func fuzzedDabsThrowOrSmudge() throws {
         var rng = SplitMix64(seed: 0x5D06)
         let positions = [Int.min, -9, -2, 0, 3, 17, 25, Int.max]
         let dab = try RetouchFixtures.roundDab(radius: 3, hardness: 0.5)

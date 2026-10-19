@@ -28,6 +28,4 @@ import Testing
     #expect(throws: RasterError.self) { try buffer.dodge(dab, x: 0, y: 0, range: .midtones, exposure: 0.5) }
     #expect(throws: RasterError.self) { try buffer.burn(dab, x: 0, y: 0, range: .shadows, exposure: 0.5) }
     #expect(throws: RasterError.self) { try buffer.sponge(dab, x: 0, y: 0, amount: 0.5) }
-    var smudge = SmudgeState(strength: 0.5)
-    #expect(throws: RasterError.self) { try smudge.dab(dab, x: 0, y: 0, on: &buffer) }
 }
