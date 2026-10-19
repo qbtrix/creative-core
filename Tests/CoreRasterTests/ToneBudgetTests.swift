@@ -112,6 +112,7 @@ enum ToneBudgetOp: String, CaseIterable, Sendable, CustomTestStringConvertible {
         let time = try median(free: { out = empty }) { out = try op.apply(photo) }
         report("\(op.rawValue) \(size) \(width)x\(height)", time, budget: budget)
         #expect(out.width == width && out.height == height)
+        #expect(out != photo, "\(op.rawValue) left the photo unchanged")
         for (x, y) in [(0, 0), (width / 2, height / 2), (width - 1, height - 1), (width / 5, height * 4 / 5)] {
             let one = try op.apply(PixelBuffer(width: 1, height: 1, fill: try photo.pixel(x: x, y: y)))
             #expect(try out.pixel(x: x, y: y) == one.pixel(x: 0, y: 0), "\(op.rawValue) at (\(x), \(y))")

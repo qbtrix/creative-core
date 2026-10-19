@@ -43,6 +43,7 @@ private func warmLUT() throws -> ColorLUT {
             (.gradientMap(stops), { try $0.gradientMap(stops) }),
             (.lut(lut), { try $0.applying(lut) }),
             (.posterize(levels: 4), { try $0.posterized(levels: 4) }),
+            (.posterize(levels: 3), { try $0.posterized(levels: 3) }),
             (.threshold(0.5), { try $0.thresholded(0.5) }),
             (.invert, { $0.inverted() }),
         ]
@@ -53,12 +54,33 @@ private func warmLUT() throws -> ColorLUT {
         let input = try seededBuffer(width: 12, height: 9, seed: 0xE1)
         let s = try cpu.surface(input)
         let all = try Self.cases()
-        #expect(all.count == 11)
+        #expect(all.count == 12)
         for (adjustment, direct) in all {
             #expect(adjustment.family == .color, "\(adjustment)")
             #expect(try cpu.read(cpu.adjusted(s, adjustment)) == direct(input), "\(adjustment)")
         }
         #expect(try cpu.read(s) == input)
+    }
+
+    /// The alpha-0 contract of every colour op (ColorAdjust, ColorMix and
+    /// ColorMap headers): an alpha-0 pixel passes through untouched, its stored
+    /// colour too. The parity golden's `<case>-alpha-zero` bands are all zero
+    /// in display bytes, so this test is what proves it on the CPU backend.
+    @Test func alphaZeroKeepsStoredColor() throws {
+        let cpu = CPUBackend()
+        var rng = SplitMix64(seed: 0xE5)
+        var input = try PixelBuffer(width: 9, height: 7)
+        for y in 0..<7 {
+            for x in 0..<9 {
+                let c = (0..<3).map { _ in Float(rng.next() % 1001) / 1000 }
+                try input.setPixel(x: x, y: y, RGBA(r: c[0], g: c[1], b: c[2], a: 0))
+            }
+        }
+        #expect(input != (try PixelBuffer(width: 9, height: 7)))
+        let s = try cpu.surface(input)
+        for (adjustment, _) in try Self.cases() {
+            #expect(try cpu.read(cpu.adjusted(s, adjustment)) == input, "\(adjustment)")
+        }
     }
 
     /// The split `ToneAdjustment` documents: `hueSaturation` throws outside
