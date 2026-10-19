@@ -53,7 +53,9 @@ public enum JPEG {
     /// or 4:2:0; restart markers) as premultiplied linear Float32 pixels with
     /// alpha 1, not rotated. Throws what `info` throws, `damaged` for a missing
     /// table, a bad Huffman code or a short scan, and `tooLarge` past `maxSide`
-    /// or `PixelBuffer.maxPixels` before allocating; a progressive scan out of
+    /// or `PixelBuffer.maxPixels` before allocating, and when the progressive
+    /// scans together pass over the frame's blocks more than 64 times (too many
+    /// progressive scans, at any image size); a progressive scan out of
     /// Annex G's order or limits is `damaged`.
     public static func read(_ data: Data) throws -> PixelBuffer {
         var d = try JPEGDecoder(data), coded: [[Int]] = []
@@ -161,7 +163,7 @@ struct JPEGDecoder {
         guard precision == 8 else { throw CodecError.unsupported("\(precision)-bit samples") }
         guard height > 0 else { throw CodecError.unsupported("height from DNL") }
         guard width > 0 else { throw CodecError.damaged("width 0") }
-        guard width <= JPEG.maxSide, height <= JPEG.maxSide else { throw CodecError.tooLarge("\(width)x\(height) pixels") }
+        guard width <= JPEG.maxSide, height <= JPEG.maxSide else { throw CodecError.tooLarge("JPEG \(width)x\(height): sides are at most \(JPEG.maxSide)") }
         guard n == 1 || n == 3 else { throw n == 0 ? CodecError.damaged("no components") : CodecError.unsupported("\(n) components") }
         var parts: [(id: Int, h: Int, v: Int, tq: Int)] = []
         for _ in 0..<n {
@@ -216,12 +218,12 @@ struct JPEGDecoder {
         let ss = Int(try r.u8()), se = Int(try r.u8()), a = Int(try r.u8())
         if coefficients.isEmpty {
             // Sides are at most maxSide, so the product cannot overflow.
-            guard f.width * f.height <= PixelBuffer.maxPixels else { throw CodecError.tooLarge("\(f.width)x\(f.height) pixels") }
-            // A sequential block takes at least a DC code and an EOB, two bits, so the bytes left bound the blocks. A
-            // progressive first scan is a DC first scan (G.1.1.1.1) of a component, a code of 1 bit or more per block,
-            // and with factors 1...4 no component has over 16 times another's blocks: 3 x 16 x 8 = 384 blocks a byte.
+            guard f.width * f.height <= PixelBuffer.maxPixels else { throw CodecError.tooLarge("JPEG \(f.width)x\(f.height): more than \(PixelBuffer.maxPixels) pixels") }
+            // A sequential block takes at least a DC code and an EOB, two bits, so the bytes left bound the blocks. In a
+            // progressive frame check() takes no AC scan of a component before its DC first scan (G.1.1.1.1), which
+            // codes each of its blocks with 1 bit or more, inside the bytes left: 8 blocks a byte over all components.
             let coded = f.components.reduce(0) { $0 + $1.blocksX * $1.blocksY }
-            guard coded <= (f.progressive ? 384 : 4) * (bytes.count - at) else { throw CodecError.damaged("\(coded) blocks in too few bytes") }
+            guard coded <= (f.progressive ? 8 : 4) * (bytes.count - at) else { throw CodecError.damaged("\(coded) blocks in too few bytes") }
             coefficients = f.components.map { [Int32](repeating: 0, count: $0.stride * $0.rows * 64) }
         }
         return JPEGScan(parts: parts, ss: ss, se: se, ah: a >> 4, al: a & 15)

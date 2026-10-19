@@ -19,7 +19,7 @@ extension JPEG {
     public static func write(_ buffer: PixelBuffer, quality: Int = 90) throws -> Data {
         guard (1...100).contains(quality) else { throw CodecError.unsupported("JPEG quality \(quality) is not in 1...100") }
         let width = buffer.width, height = buffer.height
-        guard width <= maxSide, height <= maxSide else { throw CodecError.tooLarge("\(width)x\(height) pixels") }
+        guard width <= maxSide, height <= maxSide else { throw CodecError.tooLarge("JPEG \(width)x\(height): sides are at most \(maxSide)") }
         var e = JPEGEncoder(quality: quality)
         // Sides are at most maxSide (under SOF's 65,535), so no size product below can overflow.
         let rgba = try buffer.rgba8()
