@@ -4,7 +4,7 @@ Issue: #434 · Packet: docs/blueprints/core/features/affine-composite.md
 Run: act-1a150bfbcf7-sfwy · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
 Stage: 3 wave 6 done (AC-7 merged) + 4 round 3 gating on 77b74a1
 Base: 4feaaf9fac3cc050901f8b459a0908515a927f54
-Next: round 3 panel on 77b74a1; AC-comp merged-done once a green dev Linux run holds 917ffc4; then AC-8
+Next: round 3 panel on 77b74a1; then AC-8
 
 Line lead for #434, #433 and #432 (rule 19); one wave plan across the three
 features, bookkeeping per feature. Packet v3 (has a Slices table).
@@ -44,7 +44,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 |---|---|---|---|---|---|
 | AC-a | AC-0, AC-1, AC-2 | engine-contracts:EC-a (merged on base) | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39174242588 | |
 | AC-geo | AC-3, AC-4 | AC-a | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39180267199 | |
-| AC-comp | AC-5, AC-6 | AC-geo; engine-contracts:EC-b (merged on base) | open | | |
+| AC-comp | AC-5, AC-6 | AC-geo; engine-contracts:EC-b (merged on base) | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39201658156 | |
 | AC-z | AC-7, AC-8, AC-9 | AC-comp | open | | wanted (budgets) |
 
 ## Rounds
