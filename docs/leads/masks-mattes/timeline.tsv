@@ -50,3 +50,4 @@ utc	stage	event	ref	note
 2026-10-19T21:41:46Z	heartbeat	round-2 fixes and final slices running
 2026-10-19T21:59:51Z	heartbeat	round-2 fixes and final slices running
 2026-10-19T22:00:24Z	round 2	fix PR #742 open (raster)
+2026-10-19T22:00:49Z	round 2	#742 merged 1c7ea8e1; all round-2 fixes merged
