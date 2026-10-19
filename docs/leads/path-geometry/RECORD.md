@@ -12,7 +12,7 @@ Next: P3 (measure) and P4 (boolean) open once their regates pass; PG-edit done (
 |---|---|---|---|---|---|
 | PG-a | PG-1, PG-7 | nothing | done | https://github.com/qbtrix/creative-core/actions/runs/39263347459 | none |
 | PG-edit | PG-3, PG-4 (+ edit share of PG-2) | PG-a | done | https://github.com/qbtrix/creative-core/actions/runs/39289117245 | none |
-| PG-measure | PG-5, PG-6 (+ measure share of PG-2) | PG-a | open | | none |
+| PG-measure | PG-5, PG-6 (+ measure share of PG-2) | PG-a | done | https://github.com/qbtrix/creative-core/actions/runs/39300831435 | none |
 | PG-shape | PG-9, PG-10, PG-8 (+ shape share of PG-2) | PG-a | open | | none |
 | PG-z | PG-11, PG-12 (`feature-done`) | every slice above | open | | none |
 
