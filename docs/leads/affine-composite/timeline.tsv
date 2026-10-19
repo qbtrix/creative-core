@@ -89,3 +89,4 @@ utc	stage	event	ref	note
 2026-10-19T17:38:55Z	5	waiting	wave C	feature-done builders: gates and mutation plans queued behind the shared gate lock; FX-10 branch pushed at 77f9ea05
 2026-10-19T18:00:31Z	5	waiting	wave C	builder gate/mutation under the shared lock; FX-10 #732 merged
 2026-10-19T18:13:24Z	5	pr-opened	#736	AC-9 feature-done, head a3ca18e2, CI: PASS, CompositeAffine 16/16, AffineTransform 10/10, CoreRenderCPUAffine 4/4
+2026-10-19T18:23:08Z	5	ci-queued	https://github.com/qbtrix/creative-core/actions/runs/39300831435	holds #734 and #736 (17c7cf57); the earlier run 39299995103 was cancelled (superseded)
