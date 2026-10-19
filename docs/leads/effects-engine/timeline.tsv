@@ -80,3 +80,4 @@ utc	stage	event	ref	note
 2026-10-19T11:57:38Z	4	heartbeat	wf_a0fba459-99d	r5 fixers in gate/mutation, no PR yet
 2026-10-19T13:02:35Z	4	fix-start	-	new lead run act-1a1543c8a34-t9zw; round 5 fixes (5 findings) in one batch r5-b1 on 0b5a641
 2026-10-19T15:20:18Z	4	pr-merged	#719	FX r5-b1 merged 14:22Z
+2026-10-19T15:21:41Z	4	round-start	r6	gate + critic panel on FX-z (round 2 of 4), verified
