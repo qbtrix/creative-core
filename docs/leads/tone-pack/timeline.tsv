@@ -67,3 +67,4 @@ utc	stage	event	ref	note
 2026-10-19T08:35:55Z	4	merged	#670	r4-b2 merged as f4cf85d; r4-b1, b3, b4 running
 2026-10-19T08:36:53Z	4	heartbeat	-	r4-b3 #675 merged (25915ce); r4-b1 rebasing after dev break (finisher); r4-b4 (TP-9) at its gate
 2026-10-19T08:58:38Z	4	heartbeat	-	r4-b4 (TP-9) active; r4-b1 finisher at its gate
+2026-10-19T09:05:55Z	4	pr-open	#678	r4-b1 opened after rebase: CI PASS, 14/14 mutants, footer stripped
