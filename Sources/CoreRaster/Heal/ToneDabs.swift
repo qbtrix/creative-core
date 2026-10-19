@@ -28,30 +28,37 @@ public enum TonalRange: Hashable, Sendable {
 }
 
 extension PixelBuffer {
-    /// Lightens the pixels under `dab` (its top-left at `x`, `y`) in `range`,
-    /// weighted by the dab's coverage. `exposure` is in 0...1; 0 changes
-    /// nothing. Throws `RasterError.invalid` for an exposure outside 0...1 or
-    /// NaN.
+    /// Lightens the pixels under `dab` (its top-left at `x`, `y`) in `range`:
+    /// linear colour is multiplied by `1 + exposure × weight`, the weight being
+    /// the dab's coverage times the range's weight at the pixel's luma. At
+    /// full weight, exposure 1 doubles linear colour (one stop up, clamped);
+    /// `burn` at the same exposure halves it. `exposure` is in 0...1; 0
+    /// changes nothing, and so does a dab placed wholly off the buffer.
+    /// Throws `RasterError.invalid` for an exposure outside 0...1 or NaN.
     public mutating func dodge(_ dab: Mask, x: Int, y: Int, range: TonalRange, exposure: Float) throws {
-        try Self.checkStrength("exposure", exposure, in: 0...1)
+        try ColorMath.check("exposure", exposure, in: 0...1)
         try toneDab(dab, x: x, y: y, range: range, gain: exposure)
     }
 
-    /// Darkens the pixels under `dab` (its top-left at `x`, `y`) in `range`,
-    /// weighted by the dab's coverage. `exposure` is in 0...1; 0 changes
-    /// nothing. Throws `RasterError.invalid` for an exposure outside 0...1 or
-    /// NaN.
+    /// Darkens the pixels under `dab` (its top-left at `x`, `y`) in `range`:
+    /// linear colour is multiplied by `1 − exposure × weight × 0.5`, the
+    /// weight being the dab's coverage times the range's weight at the
+    /// pixel's luma. At full weight, exposure 1 halves linear colour (one stop
+    /// down), mirroring `dodge`, which doubles it. `exposure` is in 0...1; 0
+    /// changes nothing, and so does a dab placed wholly off the buffer.
+    /// Throws `RasterError.invalid` for an exposure outside 0...1 or NaN.
     public mutating func burn(_ dab: Mask, x: Int, y: Int, range: TonalRange, exposure: Float) throws {
-        try Self.checkStrength("exposure", exposure, in: 0...1)
+        try ColorMath.check("exposure", exposure, in: 0...1)
         try toneDab(dab, x: x, y: y, range: range, gain: -0.5 * exposure)
     }
 
     /// Raises (`amount` above 0) or lowers (`amount` below 0) the saturation
     /// of the pixels under `dab` (its top-left at `x`, `y`), weighted by the
-    /// dab's coverage. `amount` is in -1...1; 0 changes nothing. Throws
-    /// `RasterError.invalid` for an amount outside -1...1 or NaN.
+    /// dab's coverage. `amount` is in -1...1; 0 changes nothing, and so does
+    /// a dab placed wholly off the buffer. Throws `RasterError.invalid` for an
+    /// amount outside -1...1 or NaN.
     public mutating func sponge(_ dab: Mask, x: Int, y: Int, amount: Float) throws {
-        try Self.checkStrength("amount", amount, in: -1...1)
+        try ColorMath.check("amount", amount, in: -1...1)
         guard amount != 0 else { return }
         try eachDabPixel(dab, x: x, y: y) { p, coverage in
             let luma = Self.luma(p)
@@ -74,15 +81,11 @@ extension PixelBuffer {
         }
     }
 
-    /// Rec. 709 luma of a premultiplied pixel (premultiplied too).
+    /// Rec. 709 luma (`Histogram.luminanceWeights`) of a premultiplied pixel
+    /// (premultiplied too).
     private static func luma(_ p: RGBA) -> Float {
-        0.2126 * p.r + 0.7152 * p.g + 0.0722 * p.b
-    }
-
-    private static func checkStrength(_ name: String, _ value: Float, in range: ClosedRange<Float>) throws {
-        guard value.isFinite, range.contains(value) else {
-            throw RasterError.invalid("\(name) \(value): must be in \(range)")
-        }
+        let w = Histogram.luminanceWeights
+        return w.r * p.r + w.g * p.g + w.b * p.b
     }
 
     /// Hands `edit` each premultiplied pixel under the dab with nonzero
