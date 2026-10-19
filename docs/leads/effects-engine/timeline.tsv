@@ -86,3 +86,4 @@ utc	stage	event	ref	note
 2026-10-19T17:06:21Z	5	gate	a77ab8c3	scripts/ci rerun on dev a77ab8c3: CI: PASS (1957 parallel + 36 budget); the r6 single failure on 88ed878 did not reproduce (wall-clock under load)
 2026-10-19T17:16:14Z	5	waiting	wave C	final-PR builders running gates/mutation under the shared lock; no PR open yet
 2026-10-19T17:38:58Z	5	waiting	wave C	feature-done builders: gates and mutation plans queued behind the shared gate lock; FX-10 branch pushed at 77f9ea05
+2026-10-19T17:53:10Z	5	pr-opened	#732	FX-10 feature-done, head 77f9ea05, CI: PASS, AlphaEffects 14/14
