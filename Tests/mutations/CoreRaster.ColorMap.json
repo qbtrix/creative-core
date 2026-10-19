@@ -12,5 +12,26 @@
     "anchor": "let v: Float = l >= level ? 1 : 0",
     "replacement": "let v: Float = Float(Self.encoded(p).x) >= level ? 1 : 0",
     "filter": "ColorMapTests"
+  },
+  {
+    "note": "gradientMap interpolates by the raw luma instead of the position between the two stops, so luma 0.375 on stops at 0.25 and 0.5 is not the half mix, caught by ColorMapTests.threeStopsInterpolateAndHold",
+    "file": "Sources/CoreRaster/Tone/ColorMap.swift",
+    "anchor": "let t = (l - offsets[hi - 1]) / (offsets[hi] - offsets[hi - 1])",
+    "replacement": "let t = l",
+    "filter": "ColorMapTests"
+  },
+  {
+    "note": "threshold splits strictly above the level, so an encoded grey of exactly 0.5 turns black at level 0.5, caught by ColorMapTests.thresholdOnLuma",
+    "file": "Sources/CoreRaster/Tone/ColorMap.swift",
+    "anchor": "let v: Float = l >= level ? 1 : 0",
+    "replacement": "let v: Float = l > level ? 1 : 0",
+    "filter": "ColorMapTests"
+  },
+  {
+    "note": "invert drops the finite clamp, so a finite pixel whose alpha minus colour overflows inverts to infinity, caught by ColorMapTests.invertStaysFinite",
+    "file": "Sources/CoreRaster/Tone/ColorMap.swift",
+    "anchor": "min(max(a - c, -big), big)",
+    "replacement": "a - c",
+    "filter": "ColorMapTests"
   }
 ]

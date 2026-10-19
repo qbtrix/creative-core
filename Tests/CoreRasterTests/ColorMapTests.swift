@@ -18,6 +18,25 @@ import Testing
         }
     }
 
+    /// Interpolation between arbitrary stops, the end colours held outside
+    /// the first and last stop, and a hard edge where two offsets are equal.
+    @Test func threeStopsInterpolateAndHold() throws {
+        let red = RGBA(r: 1, g: 0, b: 0, a: 1), green = RGBA(r: 0, g: 1, b: 0, a: 1), blue = RGBA(r: 0, g: 0, b: 1, a: 1)
+        let map = [GradientMapStop(offset: 0.25, color: red), GradientMapStop(offset: 0.5, color: green),
+                   GradientMapStop(offset: 0.75, color: blue)]
+        let greys: [Double] = [0.1, 0.9, 0.375]
+        let out = try ToneCheck.pixels(ToneCheck.row(greys.map { ToneCheck.pixel(SIMD3(repeating: $0)) }).gradientMap(map))
+        let want: [SIMD3<Double>] = [[1, 0, 0], [0, 0, 1], [0.5, 0.5, 0]]
+        for (q, w) in zip(out, want) { #expect(ToneCheck.gap(ToneCheck.encoded(q), w) <= 1e-5, "\(q)") }
+
+        let edge = [GradientMapStop(offset: 0, color: black), GradientMapStop(offset: 0.5, color: black),
+                    GradientMapStop(offset: 0.5, color: white), GradientMapStop(offset: 1, color: white)]
+        let sides = try ToneCheck.pixels(ToneCheck.row([0.49, 0.51].map { ToneCheck.pixel(SIMD3(repeating: $0)) })
+            .gradientMap(edge)).map(ToneCheck.encoded)
+        #expect(ToneCheck.gap(sides[0], [0, 0, 0]) <= 1e-6)
+        #expect(ToneCheck.gap(sides[1], [1, 1, 1]) <= 1e-6)
+    }
+
     /// Two levels give only 0 and 1, rounding to the nearer; four give thirds.
     @Test func posterizeTwoLevels() throws {
         let input = [ToneCheck.pixel([0.4, 0.6, 0.1]), ToneCheck.pixel([0.9, 0.25, 0.75])]
@@ -34,11 +53,15 @@ import Testing
         }
     }
 
+    /// Greys at 0.5 and 0.499 and a green of luma 0.5042 pin the split at luma 0.5, inclusive.
     @Test func thresholdOnLuma() throws {
         let green = ToneCheck.pixel([0, 1, 0])
-        let input = [ToneFixtures.pureRed.pixel, green, ToneFixtures.saturated10.pixel, ToneFixtures.skinTone.pixel]
+        let input = [ToneFixtures.pureRed.pixel, green, ToneFixtures.saturated10.pixel, ToneFixtures.skinTone.pixel,
+                     ToneCheck.pixel([0.5, 0.5, 0.5]), ToneCheck.pixel(SIMD3(repeating: 0.5 - 1e-3)),
+                     ToneCheck.pixel([0, 0.705, 0])]
         let out = try ToneCheck.pixels(ToneCheck.row(input).thresholded(0.5)).map(ToneCheck.encoded)
-        for (e, bright) in zip(out, [false, true, false, true]) {
+        #expect(out.count == input.count)
+        for (e, bright) in zip(out, [false, true, false, true, true, false, true]) {
             #expect(ToneCheck.gap(e, SIMD3(repeating: bright ? 1 : 0)) <= 1e-6, "\(e)")
         }
     }
@@ -54,6 +77,13 @@ import Testing
         #expect(input.inverted().inverted() == input)
         let red = ToneCheck.encoded(try ToneCheck.pixels(ToneCheck.row([ToneFixtures.pureRed.pixel]).inverted())[0])
         #expect(ToneCheck.gap(red, [0, 1, 1]) <= 1e-6)
+    }
+
+    /// a − c can overflow a finite pixel; the result stays finite.
+    @Test func invertStaysFinite() throws {
+        let out = try ToneCheck.pixels(ToneCheck.row([RGBA(r: -3e38, g: 0, b: 0, a: 3e38)]).inverted())
+        #expect(out.allSatisfy { $0.r.isFinite && $0.g.isFinite && $0.b.isFinite && $0.a.isFinite }, "\(out)")
+        #expect(out.first?.r == Float.greatestFiniteMagnitude)
     }
 
     @Test func alphaKept() throws {
