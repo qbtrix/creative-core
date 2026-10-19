@@ -5,12 +5,12 @@ Run: act-1a1511a1174-tlch · Started: 2026-10-18T22:40Z
 Line lead for: image-codecs (#562), preview-cache (#440, already done), vector-import (#439, VI-z left)
 Stage: 3 wave 3
 Base: 080366a (wave 3)
-Next: IC-3 + IC-6 building (wave 3); IC-a Slice-Done waits on dev ci run 384 (641739b, holds #607) Linux job
+Next: IC-3 + IC-6 building (wave 3); IC-a round 1 critic (clarity, check correctness) running
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
 |---|---|---|---|---|---|
-| IC-a | IC-1, IC-2 | nothing | open | | none |
+| IC-a | IC-1, IC-2 | nothing | merged-done | 384 (641739b) | none |
 | IC-png | IC-3, IC-4, IC-5 | IC-a | open | | none |
 | IC-jpeg | IC-6, IC-7, IC-8 | IC-a | open | | none |
 | IC-z | IC-9, IC-10 | IC-png, IC-jpeg | open | | wanted (release budgets) |

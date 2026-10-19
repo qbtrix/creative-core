@@ -6,3 +6,5 @@ utc	stage	event	ref	note
 2026-10-19T00:10Z	3	stage-start	62a84e9	wave 2: IC-2
 2026-10-19T03:19Z	3	pr-merged	#607	IC-2 merged (#590 #592 #594 #599) + macOS fixture fix #607 (dev-red #604)
 2026-10-19T03:19Z	3	stage-start	080366a	wave 3: IC-3, IC-6
+2026-10-19T03:21Z	3	slice-done	IC-a	dev ci run 384 (641739b) Linux green; Belt-Slice-Done posted #562 comment 6258931257
+2026-10-19T03:21Z	3	agent-launched	IC-3,IC-6	builders on lead/image-codecs-IC-3, lead/image-codecs-IC-6; IC-a R1 critic
