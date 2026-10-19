@@ -48,7 +48,8 @@ import Darwin
     }
 
     /// A hard-edged layer scaled 2 at a fractional offset, and anisotropic,
-    /// transposed, sheared and near-quarter-turn upscales: bilinear and
+    /// transposed, sheared (two with |b| != |c|, so each axis's pad reads
+    /// different entries) and near-quarter-turn upscales: bilinear and
     /// lanczos3 cover pixels just outside the corner bounds along each
     /// axis, and the through-composite must cover them too.
     @Test
@@ -61,6 +62,8 @@ import Darwin
             AffineMatrix(a: 0.3, b: 0, c: 0, d: 3, tx: 9.61, ty: 4.37),
             AffineMatrix(a: 0.2, b: 2.5, c: -2.5, d: 0.2, tx: 30.4, ty: 3.3),
             AffineMatrix(a: 2.5, b: 0.1, c: 1.8, d: 0.4, tx: 2.3, ty: 7.7),
+            AffineMatrix(a: 0.3, b: 0.05, c: 3, d: 0.4, tx: 20.3, ty: 30.7),
+            AffineMatrix(a: 0.4, b: 3, c: 0.05, d: 0.3, tx: 30.7, ty: 20.3),
         ]
         for m in matrices {
             for filter in [ResampleFilter.bilinear, .lanczos3] {
