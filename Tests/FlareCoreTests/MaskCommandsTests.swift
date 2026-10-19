@@ -1,5 +1,8 @@
-// MaskCommandsTests.swift: the mask family's ids, registry samples and undo steps
-// (CommandRegistryTests and UndoPropertyTests read all three), then the MM-6 cases on Fixtures/masks.flare.
+// MaskCommandsTests.swift: the mask family's registry ids, registry samples and
+// undo steps. A new mask command adds its id to `expectedIDs`, one sample to
+// `registrySamples()` and its random steps to `undoSteps` here;
+// CommandRegistryTests and UndoPropertyTests read all three, so neither shared
+// test file changes.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -78,8 +81,11 @@ import Testing
         try assertUndoRestoresDocument(seed: seed, steps: Self.undoSteps)
     }
 
-    @Test func familyAndSamplesListExactlyItsIDs() {
+    @Test func familyListsExactlyItsIDs() {
         #expect(MaskCommands.all.map { $0.id } == Self.expectedIDs)
+    }
+
+    @Test func samplesListExactlyItsIDs() {
         #expect(Self.registrySamples().map { type(of: $0).id } == Self.expectedIDs)
     }
 
