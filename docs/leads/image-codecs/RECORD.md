@@ -3,9 +3,9 @@
 Issue: #562 · Packet: docs/blueprints/core/features/image-codecs.md
 Run: act-1a1511a1174-tlch · Started: 2026-10-18T22:40Z
 Line lead for: image-codecs (#562), preview-cache (#440, already done), vector-import (#439, VI-z left)
-Stage: IC-png Anatomy round 4 (gate, last round); IC-jpeg Anatomy done (4 rounds; #702 merged)
+Stage: IC-png Anatomy round 4 (panel, last round); IC-jpeg Anatomy done (4 rounds; #702 merged)
 Base: 9385de9 (wave 4)
-Next: IC-png r4 gate at 64bd637 then panel; then a dev ci.yml run with green Linux holding #702 and the IC-png fixes for both Belt-Slice-Done posts
+Next: IC-png r4 panel at 64bd637, then a fix batch if needed; then a dev ci.yml run with green Linux holding #702 and the IC-png fixes for both Belt-Slice-Done posts
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |

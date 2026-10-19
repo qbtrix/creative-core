@@ -67,3 +67,4 @@ utc	stage	event	ref	note
 2026-10-19T10:27:59Z	IC-png r3	fix PRs opened	#692,#696	#692 merged 10:15Z (11/11 PNG); #696 open, clean, waiting on the lane (14/14 Inflate)
 2026-10-19T10:44:34Z	IC-png r4	gate started	64bd637	#696 merged 10:28Z; last allowed round; r4-jpeg-b1 fixer still running
 2026-10-19T10:47:05Z	IC-jpeg r4	fix merged	#702	9/9 findings fixed, 61/61 caught; IC-jpeg Anatomy done at the 4-round cap
+2026-10-19T10:56:19Z	IC-png r4	gate pass	64bd637	CI: PASS; 922 anchors; Inflate 13/13, Deflate 3/3, PNG 11/11, PNGWrite 4/4; panel started
