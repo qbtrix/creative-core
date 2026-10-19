@@ -4,3 +4,5 @@ utc	stage	event	ref	note
 2026-10-18T22:24Z	3	agent-launched	IC-1	IC-1 builder launched (worktree, branch lead/image-codecs-IC-1)
 2026-10-19T00:10Z	3	pr-merged	#575	IC-1 stubs, crc32 move
 2026-10-19T00:10Z	3	stage-start	62a84e9	wave 2: IC-2
+2026-10-19T03:19Z	3	pr-merged	#607	IC-2 merged (#590 #592 #594 #599) + macOS fixture fix #607 (dev-red #604)
+2026-10-19T03:19Z	3	stage-start	080366a	wave 3: IC-3, IC-6

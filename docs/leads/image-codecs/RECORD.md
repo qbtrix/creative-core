@@ -3,9 +3,9 @@
 Issue: #562 · Packet: docs/blueprints/core/features/image-codecs.md
 Run: act-1a1511a1174-tlch · Started: 2026-10-18T22:40Z
 Line lead for: image-codecs (#562), preview-cache (#440, already done), vector-import (#439, VI-z left)
-Stage: 3 wave 2
-Base: 62a84e9 (wave 2)
-Next: IC-2 (disabled suites, fixtures) building; wave 3 is IC-3 + IC-6 once it merges
+Stage: 3 wave 3
+Base: 080366a (wave 3)
+Next: IC-3 + IC-6 building (wave 3); IC-a Slice-Done waits on dev ci run 384 (641739b, holds #607) Linux job
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -19,9 +19,9 @@ Next: IC-2 (disabled suites, fixtures) building; wave 3 is IC-3 + IC-6 once it m
 | id | wave | behavior | files | test | mutation | PR | state |
 |---|---|---|---|---|---|---|---|
 | IC-1 | 1 | stubs Inflate, Deflate, PNG(Info, Codec), JPEG(Info); crc32 moved to ByteReader; codecs part | Codecs/{Inflate,Deflate,PNG,JPEG,ByteReader,ZipStore}.swift, ImageCodecShapeTests, codecs.json | ImageCodecShapeTests, ZipStore tests | – | #575 (2268443) | merged |
-| IC-2 | 2 | seven suites disabled, spec-built fixtures | Tests/CoreRasterTests/{Inflate,PNGRead,PNGWrite,PNGFuzz,JPEGRead,JPEGWrite,JPEGFuzz}Tests, Fixtures/{PNG,JPEG}Fixtures | suites compile | – | | building |
-| IC-3 | 3 | Inflate, Deflate bodies | Inflate.swift, Deflate.swift, InflateTests | InflateTests | CoreRaster.Inflate (3) | | open |
-| IC-6 | 3 | JPEG info, baseline read | JPEG.swift, JPEGReadTests, JPEGFuzzTests | baseline half | CoreRaster.JPEG (2) | | open |
+| IC-2 | 2 | seven suites disabled, spec-built fixtures | Tests/CoreRasterTests/{Inflate,PNGRead,PNGWrite,PNGFuzz,JPEGRead,JPEGWrite,JPEGFuzz}Tests, Fixtures/{PNG,JPEG}Fixtures | suites compile | – | #590, #592, #594, #599; macOS fix #607 | merged |
+| IC-3 | 3 | Inflate, Deflate bodies | Inflate.swift, Deflate.swift, InflateTests | InflateTests | CoreRaster.Inflate (3) | | building |
+| IC-6 | 3 | JPEG info, baseline read | JPEG.swift, JPEGReadTests, JPEGFuzzTests | baseline half | CoreRaster.JPEG (2) | | building |
 | IC-4 | 4 | PNG info, read, decodePNG | PNG.swift, PNGReadTests, PNGFuzzTests | PNGReadTests | CoreRaster.PNG (3) | | open |
 | IC-5 | 4 | PNG write, encodePNG | PNGWrite.swift, PNGWriteTests | PNGWriteTests | CoreRaster.PNGWrite (2) | | open |
 | IC-7 | 4 | progressive JPEG | JPEGProgressive.swift, JPEGReadTests | progressive half | CoreRaster.JPEGProgressive (1+) | | open |
@@ -44,3 +44,5 @@ Next: IC-2 (disabled suites, fixtures) building; wave 3 is IC-3 + IC-6 once it m
 
 ## Notes
 - 2026-10-19T00:10Z: IC-1 #575 merged 22:38Z. Helpers: `ByteReader.crc32`, internal `Deflate.adler32`; `Deflate.zlib` writes stored blocks at every level until IC-3; stubs end "waits on IC-<n>" and `ImageCodecShapeTests.stubsThrowCodecErrors` lists them, so each filling task drops its calls there; IC-10 replaces the C4 "declared stubs" sentence.
+- IC-2's fixtures failed the macOS type checker (long `[UInt8]` `+` chains, a FlattenSequence conversion): dev-red #604, runs 381/383. #607 (641739b) splits them into typed intermediates; run 384 confirms. Builders keep byte chains short and typed.
+- IC-3 and IC-6 also drop their rows from `ImageCodecShapeTests.stubsThrowCodecErrors` (that file is IC-1's, but the stub list names the filling task; one extra file each).
