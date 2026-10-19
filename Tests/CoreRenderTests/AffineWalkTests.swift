@@ -210,10 +210,29 @@ import Darwin
                 && frameHit.cols.upperBound < frameBox.x + frameBox.width + framePad, "columns \(frameHit.cols), box \(frameBox)")
         #expect(frameHit.rows.lowerBound <= frameBox.y && frameHit.rows.upperBound >= frameBox.y + frameBox.height - 1)
         #expect(frameHit.cols.lowerBound <= frameBox.x && frameHit.cols.upperBound >= frameBox.x + frameBox.width - 1)
-        let local = AffineMatrix(a: 0.25, b: 0, c: 0, d: 0.25, tx: 20, ty: 20)
+        // The canvas's 520 x 310 window at (4380, 2580), white in the padded
+        // image (the photo's box ends near x 3440, y 1850), holds the frame
+        // and its reach; on the canvas it is, bit for bit, the frame
+        // through-composited onto a white 520 x 310 at (20, 20), and that is
+        // within 1/255 of transform-then-composite.
+        let (wx, wy) = (4380, 2580)
+        let local = AffineMatrix(a: 0.25, b: 0, c: 0, d: 0.25, tx: 4400 - Double(wx), ty: 2600 - Double(wy))
         let small = try PixelBuffer(width: 520, height: 310, fill: Self.white)
+        #expect(Self.window(of: padded, x: wx, y: wy, is: small))
+        let through = try throughComposite(frame, local, onto: small)
+        #expect(Self.window(of: canvas, x: wx, y: wy, is: through))
         let whole = (x: 0, y: 0, width: 520, height: 310)
-        #expect(Self.maxDelta(try throughComposite(frame, local, onto: small),
-                              try transformThenComposite(frame, local, onto: small, window: whole)) <= 1 / 255)
+        #expect(Self.maxDelta(through, try transformThenComposite(frame, local, onto: small, window: whole)) <= 1 / 255)
+    }
+
+    /// Whether `image`'s rectangle at (`x`, `y`) the size of `part` has
+    /// `part`'s bytes, compared a row at a time.
+    static func window(of image: PixelBuffer, x: Int, y: Int, is part: PixelBuffer) -> Bool {
+        guard x >= 0, y >= 0, x + part.width <= image.width, y + part.height <= image.height else { return false }
+        let all = image.components, sub = part.components, n = part.width * 4
+        return (0..<part.height).allSatisfy { row in
+            let start = ((y + row) * image.width + x) * 4
+            return all[start..<(start + n)].elementsEqual(sub[(row * n)..<(row * n + n)]) { $0.bitPattern == $1.bitPattern }
+        }
     }
 }
