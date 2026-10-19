@@ -4,9 +4,10 @@
 // of radius 100): spot 1 is filled from surroundings, so its luma mean is
 // within 3/255 of its ring's and its variance within 25%; spot 2 is healed
 // from an offset whose tone differs, so the seam along the mask's edge has no
-// tone step (the mean gradient error across the edge, against the source's
-// own gradients, is at most 1/255 per channel, where a plain clone's is ten
-// times that); a 30-dab midtone dodge stroke across spot 3 lifts the light
+// tone step (the gradient error across the edge, against the source's own
+// gradients, is at most 1/255 per channel in the mean on the grainy photo and
+// at every edge pair on its grain-free tone, where a plain clone's is more
+// than five times that); a 30-dab midtone dodge stroke across spot 3 lifts the light
 // texture and leaves every pixel under luma 0.2 within 1/255; then a 20-dab
 // smudge from spot 3's centre drags its dark colour out past its edge.
 // Checks read only the boxes around the spots, so the walk stays quick.
@@ -66,36 +67,105 @@ import Testing
         try smudgeOut(&image, spot: spot3)
     }
 
-    /// Heals spot 2 from (-300, -300) and checks the seam: the mean, over
-    /// every covered pixel next to an uncovered one, of the healed step
-    /// across the edge minus the source's step there.
-    func healSpotTwo(_ image: inout PixelBuffer, spot: RetouchFixtures.Spot) throws {
-        let (dx, dy) = (-300, -300)
-        let before = image
-        image = try before.healed(offset: (dx: dx, dy: dy), through: spot.hole)
-        var healedError = [Double](repeating: 0, count: 3), cloneError = [Double](repeating: 0, count: 3)
+    /// The seam of a heal through `mask` from `offset`, over every covered
+    /// pixel next to an uncovered one: per channel, the largest and the mean
+    /// healed error (the healed step across the edge minus the source's step
+    /// there) and the mean error of a plain clone (which puts the source at
+    /// (x, y), so its error is the source's neighbour minus the destination's).
+    /// The largest is the packet's per-pixel bound; a mean alone lets seams of
+    /// both signs cancel.
+    static func seam(of image: PixelBuffer, from before: PixelBuffer, offset: (dx: Int, dy: Int),
+                     through mask: Mask, near spot: RetouchFixtures.Spot)
+        throws -> (edges: Int, largest: [Double], mean: [Double], cloneMean: [Double]) {
+        let (dx, dy) = offset
+        var largest = [Double](repeating: 0, count: 3), sum = largest, cloneSum = largest
         var edges = 0
-        for (x, y) in Self.around(spot, r: Int(spot.radius) + 3) where try spot.hole.coverage(x: x, y: y) > 0 {
+        for (x, y) in around(spot, r: Int(spot.radius) + 3) where try mask.coverage(x: x, y: y) > 0 {
             for (nx, ny) in [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)]
-            where try spot.hole.coverage(x: nx, y: ny) == 0 {
+            where try mask.coverage(x: nx, y: ny) == 0 {
                 let a = try image.pixel(x: x, y: y), b = try image.pixel(x: nx, y: ny)
                 let sa = try before.pixel(x: x + dx, y: y + dy), sb = try before.pixel(x: nx + dx, y: ny + dy)
                 let healed = [(a.r - b.r) - (sa.r - sb.r), (a.g - b.g) - (sa.g - sb.g), (a.b - b.b) - (sa.b - sb.b)]
-                // A plain clone puts the source at (x, y), so its error is the source's
-                // neighbour minus the destination's.
                 let clone = [sb.r - b.r, sb.g - b.g, sb.b - b.b]
                 for k in 0..<3 {
-                    healedError[k] += Double(healed[k])
-                    cloneError[k] += Double(clone[k])
+                    largest[k] = max(largest[k], abs(Double(healed[k])))
+                    sum[k] += Double(healed[k])
+                    cloneSum[k] += Double(clone[k])
                 }
                 edges += 1
             }
         }
-        #expect(edges > 400)
         let n = Double(max(edges, 1))
+        return (edges, largest, sum.map { $0 / n }, cloneSum.map { $0 / n })
+    }
+
+    /// The photo's tone without its grain: the fixture's light gradient at
+    /// every pixel.
+    static func tone(width: Int, height: Int) throws -> PixelBuffer {
+        var buffer = try PixelBuffer(width: width, height: height)
+        for y in 0..<height {
+            for x in 0..<width {
+                try buffer.setPixel(x: x, y: y, RetouchFixtures.lightGradient(x: x, y: y, width: width, height: height))
+            }
+        }
+        return buffer
+    }
+
+    /// Heals spot 2 from (-300, -300) and checks the seam. The heal is linear,
+    /// so the photo's seam is its tone's seam plus its grain's. The grain of
+    /// source and destination is independent noise of +/-0.08, which no heal
+    /// can match pair by pair, so on the photo the seam is checked in the mean
+    /// (no tone step on average, where a plain clone's mean is more than five
+    /// times 1/255). The tone step itself is checked pair by pair: the same
+    /// heal of the photo's grain-free tone keeps every edge pair's error
+    /// within 1/255 in every channel, where a plain clone's is ten times that.
+    func healSpotTwo(_ image: inout PixelBuffer, spot: RetouchFixtures.Spot) throws {
+        let offset = (dx: -300, dy: -300)
+        let before = image
+        image = try before.healed(offset: offset, through: spot.hole)
+        let seam = try Self.seam(of: image, from: before, offset: offset, through: spot.hole, near: spot)
+        #expect(seam.edges > 400)
         for k in 0..<3 {
-            #expect(abs(healedError[k] / n) <= Double(Self.tolerance), "channel \(k) seam step \(healedError[k] / n)")
-            #expect(abs(cloneError[k] / n) > 5 * Double(Self.tolerance), "channel \(k) clone step \(cloneError[k] / n)")
+            #expect(abs(seam.mean[k]) <= Double(Self.tolerance), "channel \(k) mean seam step \(seam.mean[k])")
+            #expect(abs(seam.cloneMean[k]) > 5 * Double(Self.tolerance), "channel \(k) clone step \(seam.cloneMean[k])")
+        }
+        let tone = try Self.tone(width: Self.width, height: Self.height)
+        let toneHealed = try tone.healed(offset: offset, through: spot.hole)
+        let toneSeam = try Self.seam(of: toneHealed, from: tone, offset: offset, through: spot.hole, near: spot)
+        for k in 0..<3 {
+            #expect(toneSeam.largest[k] <= Double(Self.tolerance), "channel \(k) largest tone step \(toneSeam.largest[k])")
+            #expect(abs(toneSeam.cloneMean[k]) > 5 * Double(Self.tolerance),
+                    "channel \(k) tone clone step \(toneSeam.cloneMean[k])")
+        }
+    }
+
+    /// A heal with a +/-0.02 checkerboard added along the mask's boundary
+    /// pixels has seams of both signs that cancel in the mean: a mean check
+    /// still passes, the per-pixel bound catches it.
+    @Test func perPixelSeamCatchesCancellingSteps() throws {
+        let photo = try RetouchFixtures.spottedPhoto(width: 480, height: 320, seed: 0x5EA1)
+        let spot = photo.spots[1], offset = (dx: -60, dy: -60)
+        let tone = try Self.tone(width: 480, height: 320)
+        let healed = try tone.healed(offset: offset, through: spot.hole)
+        let clean = try Self.seam(of: healed, from: tone, offset: offset, through: spot.hole, near: spot)
+        #expect(clean.largest.allSatisfy { $0 <= Double(Self.tolerance) }, "clean heal \(clean.largest)")
+        var seamed = healed
+        for (x, y) in Self.around(spot, r: Int(spot.radius) + 3) where try spot.hole.coverage(x: x, y: y) > 0 {
+            var boundary = false
+            for (nx, ny) in [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)]
+            where try spot.hole.coverage(x: nx, y: ny) == 0 { boundary = true }
+            guard boundary else { continue }
+            let d: Float = (x + y) % 2 == 0 ? 0.02 : -0.02
+            var p = try seamed.pixel(x: x, y: y)
+            p.r += d
+            p.g += d
+            p.b += d
+            try seamed.setPixel(x: x, y: y, p)
+        }
+        let bad = try Self.seam(of: seamed, from: tone, offset: offset, through: spot.hole, near: spot)
+        for k in 0..<3 {
+            #expect(abs(bad.mean[k]) <= Double(Self.tolerance), "channel \(k) mean \(bad.mean[k]) cancels")
+            #expect(bad.largest[k] > Double(Self.tolerance), "channel \(k) largest \(bad.largest[k])")
         }
     }
 
