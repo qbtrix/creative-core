@@ -49,3 +49,5 @@ utc	stage	event	ref	note
 2026-10-19T04:39:06Z	4	merged	#629	r2-b2 e001b84
 2026-10-19T04:50:04Z	3	dispatched	FX-8	builder after AC-7 merged
 2026-10-19T05:09:47Z	4	fix-merged	#639	r2-b3 merged 6199d27; round 2 fixes all merged
+2026-10-19T05:25:28Z	3	merged	#640	FX-8 merged 2298d3f
+2026-10-19T05:25:28Z	4	round-3-start	-	gate+mutate on dev head
