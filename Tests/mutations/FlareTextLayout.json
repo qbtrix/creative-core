@@ -26,5 +26,75 @@
     "anchor": "                adv.append(a + track)",
     "replacement": "                adv.append(a + (adv.isEmpty ? track : 0))",
     "filter": "TextLayoutTests.trackingPerGrapheme"
+  },
+  {
+    "note": "text layout cap guard removed, so over-cap strings lay out",
+    "file": "Sources/FlareCore/TextLayout.swift",
+    "anchor": "        guard text.string.dropFirst(maxGraphemes).isEmpty else {",
+    "replacement": "        guard true else {",
+    "filter": "TextLayoutTests.moreThanMaxGraphemesThrows"
+  },
+  {
+    "note": "fixed advances measures over-cap strings in full",
+    "file": "Sources/FlareCore/TextLayout.swift",
+    "anchor": "        guard text.string.dropFirst(TextLayout.maxGraphemes).isEmpty else { return [] }",
+    "replacement": "",
+    "filter": "TextLayoutTests.hugeStringThrowsBeforeBuildingIt"
+  },
+  {
+    "note": "text layout box guard accepts zero and negative widths",
+    "file": "Sources/FlareCore/TextLayout.swift",
+    "anchor": "try need(width.isFinite && width > 0,",
+    "replacement": "try need(!width.isNaN,",
+    "filter": "TextLayoutTests.badInputThrows"
+  },
+  {
+    "note": "text layout metrics count guard lets extra metrics through",
+    "file": "Sources/FlareCore/TextLayout.swift",
+    "anchor": "guard measured.count == runs.count else {",
+    "replacement": "guard measured.count >= runs.count else {",
+    "filter": "TextLayoutTests.badInputThrows"
+  },
+  {
+    "note": "text layout run font size guard accepts negative sizes",
+    "file": "Sources/FlareCore/TextLayout.swift",
+    "anchor": "guard run.fontSize.isFinite, run.fontSize > 0 else {",
+    "replacement": "guard run.fontSize.isFinite else {",
+    "filter": "TextLayoutTests.badInputThrows"
+  },
+  {
+    "note": "text layout returns overflowed non-finite values",
+    "file": "Sources/FlareCore/TextLayout.swift",
+    "anchor": "        guard finite else {",
+    "replacement": "        guard true else {",
+    "filter": "TextLayoutTests.badInputThrows"
+  },
+  {
+    "note": "text layout paragraph error names no field",
+    "file": "Sources/FlareCore/TextLayout.swift",
+    "anchor": "guard ok else { throw ModelError.invalidText(\"paragraph \\(field) \\(value) must be \\(rule)\") }",
+    "replacement": "guard ok else { throw ModelError.invalidText(\"bad paragraph value\") }",
+    "filter": "TextLayoutTests.badParagraphNamesField"
+  },
+  {
+    "note": "text layout no break after a hyphen",
+    "file": "Sources/FlareCore/TextLayout.swift",
+    "anchor": "if chars[j - 1] == \"-\" { break }",
+    "replacement": "if false { break }",
+    "filter": "TextLayoutTests.breaksAfterHyphen"
+  },
+  {
+    "note": "text layout bounds bottom ignores the last descent",
+    "file": "Sources/FlareCore/TextLayout.swift",
+    "anchor": "            bottom = y + descent",
+    "replacement": "            bottom = y",
+    "filter": "TextLayoutTests.boundsAndTrailingNewline"
+  },
+  {
+    "note": "text layout drops the empty line after a final newline",
+    "file": "Sources/FlareCore/TextLayout.swift",
+    "anchor": "if line.end > line.start || chars.last?.isNewline == true {",
+    "replacement": "if line.end > line.start {",
+    "filter": "TextLayoutTests.boundsAndTrailingNewline"
   }
 ]

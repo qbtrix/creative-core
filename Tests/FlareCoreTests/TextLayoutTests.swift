@@ -70,20 +70,86 @@ import Testing
         #expect(zip(lines, lines.dropFirst()).allSatisfy { $0.graphemes.upperBound == $1.graphemes.lowerBound })
         #expect(lines.allSatisfy { $0.width <= 300 })
     }
-    @Test func moreThanMaxGraphemesThrows() {
-        #expect(throws: (any Error).self) { try Self.lay(String(repeating: "a", count: TextLayout.maxGraphemes + 1)) }
+    @Test func moreThanMaxGraphemesThrows() throws {
+        let count = TextLayout.maxGraphemes + 1, text = TextFixtures.text(String(repeating: "a", count: count))
+        let measured = [try GlyphRunMetrics(advances: Array(repeating: 1, count: count), ascent: 1, descent: 1)]
+        #expect(throws: ModelError.self) { try TextLayout.lay(text, measured: measured) }
     }
-    /// Seeded mismatched metrics, odd box widths and grapheme mixes throw or lay out inside the string.
+    @Test func hugeStringThrowsBeforeBuildingIt() {
+        let text = TextFixtures.text(String(repeating: "a", count: TextLayout.maxGraphemes * 50))
+        #expect(FixedAdvances.measure(text).isEmpty)
+        #expect(throws: ModelError.self) { try TextLayout.lay(text, measured: FixedAdvances.measure(text)) }
+    }
+    @Test func lineHeightUsesAscentPlusDescent() throws {
+        var text = TextFixtures.text("ab\ncd", paragraph: ParagraphStyle(lineHeight: 1))
+        text.fontSize = 20
+        let measured = [try GlyphRunMetrics(advances: Array(repeating: 10, count: 5), ascent: 18, descent: 6)]
+        #expect(try TextLayout.lay(text, measured: measured).lines.map(\.baseline) == [18, 42])
+    }
+    @Test func breaksAfterHyphen() throws {
+        #expect(try Self.lay("abc-defgh", Self.box(30)).lines.map(\.graphemes) == [0..<4, 4..<9])
+    }
+    @Test func boundsAndTrailingNewline() throws {
+        let bounds = try Self.lay("abcd efgh", Self.box(30, .center)).bounds
+        #expect(Self.near([bounds.minX, bounds.minY, bounds.maxX, bounds.maxY], [3, 0, 27, 24]))
+        let lines = try Self.lay("ab\n", ParagraphStyle(lineHeight: 1)).lines
+        #expect(lines.map(\.graphemes) == [0..<3, 3..<3] && Self.near(lines.map(\.baseline), [9.6, 21.6]))
+    }
+    @Test func badInputThrows() throws {
+        let text = TextFixtures.text("ab")
+        let extra = try GlyphRunMetrics(advances: [1], ascent: 1, descent: 1)
+        #expect(throws: ModelError.self) { try TextLayout.lay(text, measured: FixedAdvances.measure(text) + [extra]) }
+        #expect(throws: ModelError.self) { try TextLayout.lay(text, measured: [extra]) }
+        for paragraph in [ParagraphStyle(boxWidth: 0), ParagraphStyle(boxWidth: -1), ParagraphStyle(boxWidth: .nan),
+                          ParagraphStyle(lineHeight: .infinity)] {
+            #expect(throws: ModelError.self) { try Self.lay("ab", paragraph) }
+        }
+        #expect(throws: ModelError.self) { try Self.lay("ab", size: -5) }
+        let huge = [try GlyphRunMetrics(advances: [1e308, 1e308], ascent: 1e308, descent: 1e308)]
+        #expect(throws: ModelError.self) { try TextLayout.lay(text, measured: huge) }
+    }
+    @Test func badParagraphNamesField() {
+        #expect(Self.message { try Self.lay("ab", ParagraphStyle(boxWidth: 0)) }.contains("boxWidth"))
+        #expect(Self.message { try Self.lay("ab", ParagraphStyle(tracking: .nan)) }.contains("tracking"))
+    }
+    /// The `ModelError.invalidText` message `body` throws, or "" for anything else.
+    static func message(_ body: () throws -> Any) -> String {
+        do { _ = try body() } catch ModelError.invalidText(let message) { return message } catch {}
+        return ""
+    }
+    /// Seeded strings, box widths, font sizes, extra metrics and huge advances:
+    /// a bad value throws, and every layout that succeeds is finite inside the string.
     @Test(arguments: 0..<50 as Range<UInt64>) func fuzz(seed: UInt64) throws {
         var rng = SplitMix64(seed: seed)
         let pieces = ["a", " ", "\n", "-", TextFixtures.emoji, TextFixtures.combining]
         let string = (0..<Int.random(in: 0...40, using: &rng)).map { _ in pieces.randomElement(using: &rng) ?? "" }.joined()
-        let widths: [Double] = [-1, 0, .nan, .infinity, 1, 50]
+        let widths: [Double] = [-1, 0, .nan, .infinity, 1, 50], sizes: [Double] = [24, -5]
         let width = widths.randomElement(using: &rng) ?? 1
-        let text = TextFixtures.text(string, paragraph: ParagraphStyle(alignment: .justified, boxWidth: width))
+        var text = TextFixtures.text(string, paragraph: ParagraphStyle(alignment: .justified, boxWidth: width))
+        text.fontSize = sizes.randomElement(using: &rng) ?? 24
         var measured = FixedAdvances.measure(text)
-        if Bool.random(using: &rng) { measured.append(try GlyphRunMetrics(advances: [1], ascent: 1, descent: 1)) }
-        guard let layout = try? TextLayout.lay(text, measured: measured) else { return }
-        #expect(layout.lines.allSatisfy { $0.graphemes.upperBound <= string.count && $0.baseline.isFinite })
+        let big = Bool.random(using: &rng)
+        if big {
+            let values: [Double] = [0, 1, 1e308, .greatestFiniteMagnitude]
+            let pick = { (rng: inout SplitMix64) in values.randomElement(using: &rng) ?? 0 }
+            measured = try measured.map { m in
+                try GlyphRunMetrics(advances: m.advances.map { _ in pick(&rng) }, ascent: pick(&rng), descent: pick(&rng))
+            }
+        }
+        let padded = Bool.random(using: &rng)
+        if padded { measured.append(try GlyphRunMetrics(advances: [1], ascent: 1, descent: 1)) }
+        if padded || !(width.isFinite && width > 0) || (text.fontSize <= 0 && !string.isEmpty) {
+            #expect(throws: ModelError.self) { try TextLayout.lay(text, measured: measured) }
+            return
+        }
+        // Huge metrics may overflow and throw; ordinary ones must lay out.
+        let result: TextLayout? = big ? try? TextLayout.lay(text, measured: measured) : try TextLayout.lay(text, measured: measured)
+        guard let layout = result else { return }
+        let b = layout.bounds, boundsFinite = [b.minX, b.minY, b.maxX, b.maxY].allSatisfy { $0.isFinite }
+        let linesOK = layout.lines.allSatisfy { line in
+            line.graphemes.upperBound <= string.count && line.baseline.isFinite && line.width.isFinite
+                && line.x.allSatisfy { $0.isFinite }
+        }
+        #expect(boundsFinite && linesOK)
     }
 }
