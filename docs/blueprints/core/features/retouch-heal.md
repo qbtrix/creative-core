@@ -54,7 +54,10 @@ Engine only. KJ-RH (`RetouchWalkTests.walk`, RH-7): a 2400 × 1600 textured
 fixture with three dark spots and a known smooth light gradient; spot 1
 filled from surroundings (the spot's mean within 3/255 of its ring's mean,
 its texture variance within 25% of the ring's); spot 2 healed from an
-offset (the seam's gradient error ≤ 1/255 per pixel along the mask edge);
+offset (on the photo, the mean seam step along the mask edge ≤ 1/255 per
+channel; on the photo's grain-free tone healed from the same offset, every
+edge pair's gradient error ≤ 1/255: the photo's independent ±0.08 grain
+makes a per-pixel bound on the photo itself impossible);
 a 30-dab dodge stroke on midtones lifts midtones and leaves pixels under
 luma 0.2 within 1/255; a 20-dab smudge moves the colour along the stroke.
 
@@ -67,7 +70,8 @@ None.
 ```swift
 // Sources/CoreRaster/Heal/Heal.swift (RH-3)
 extension PixelBuffer {
-    public static let maxHealPixels = 4_000_000                                       // the mask's covered area; more throws
+    public static let maxHealPixels = 4_000_000   // the mask's covered bounds (width × height), not its area; more throws.
+                                                  // filledFromSurroundings counts those bounds plus a one-pixel ring.
     public func healed(offset: (dx: Int, dy: Int), through mask: Mask) throws -> PixelBuffer     // CR-7; only the mask's bounds change
 }
 // Sources/CoreRaster/Heal/FillFromSurroundings.swift (RH-4)
@@ -88,11 +92,16 @@ public struct SmudgeState: Sendable { public init(strength: Float)              
 
 - **healed.** Copy the source (the buffer shifted by `offset`) inside the
   mask's bounds; per channel solve `Δf = Δg` inside the mask (g the source)
-  with `f = destination` on the mask's boundary, by successive
-  over-relaxation (ω 1.9) on premultiplied linear values, iterating until
-  the largest change is < 1e-5 or 500 sweeps; feathered masks blend the
-  solved result by coverage. Pixels outside the bounds are copied, never
-  recomputed. More than `maxHealPixels` covered throws.
+  with `f = destination` on the mask's boundary. It solves for the
+  correction `h = f − g` (`Δh = 0` inside, `h = destination − source` on
+  the one-pixel ring) with `HealSolver`'s multigrid on premultiplied linear
+  values, V-cycles until no correction moves by 1e-5 (`healTolerance`) or
+  40 V-cycles (`healMaxCycles`), returning the last iterate if it has not
+  converged by then; feathered masks blend the solved result by coverage.
+  Pixels outside the bounds are copied, never recomputed. Covered bounds
+  (width × height) over `maxHealPixels` throw, whatever the covered area,
+  because the solve's work scales with the bounds: a sparse mask over a
+  wide box throws.
 - **filledFromSurroundings.** Dilate the mask by `patchRadius`; for each
   hole pixel, a randomized nearest-neighbour search (seeded SplitMix64; 5
   iterations of propagation and random search) for the best `2r + 1` patch
@@ -148,7 +157,7 @@ task.
 | id | test | fails when | mutations (plan: label → filter) |
 |---|---|---|---|
 | RH-1, RH-2 | suites compile, disabled; fixtures build | – | – |
-| RH-3 | `HealTests`: healing a patch of the known gradient field from an offset reproduces the field inside the mask within 1/255 (the texture's gradients kept, the tone matched); pixels outside the mask's bounds `==` the input; a mask over `maxHealPixels` throws; a zero offset with a full mask is identity; an offset off the buffer throws | a seam shows or pixels outside change | `CoreRaster.Heal`: boundary condition from the source not the destination → `HealTests.matchesDestinationEdge`; convergence test `>` for `<` (one sweep) → `.reproducesField`; bounds loop over the whole buffer → `.outsideBoundsUntouched` |
+| RH-3 | `HealTests`: healing a patch of the known gradient field from an offset reproduces the field inside the mask within 1/255 (the tone matched), and healing a damaged disc of that field plus a non-harmonic texture from a period of the texture reproduces the clean input within 1/255 (`.keepsSourceTexture`: the texture's gradients kept); pixels outside the mask's bounds `==` the input; a mask over `maxHealPixels` throws; a zero offset with a full mask is identity; an offset off the buffer throws | a seam shows or pixels outside change | `CoreRaster.Heal`: boundary condition from the source not the destination → `HealTests.matchesDestinationEdge`; convergence test `>` for `<` (one sweep) → `.reproducesField`; bounds loop over the whole buffer → `.outsideBoundsUntouched` |
 | RH-4 | `FillFromSurroundingsTests`: spot 1's mean within 3/255 of its ring, variance within 25%; same seed `==`, another seed differs; no hole pixel is copied from inside the hole; an empty mask is identity | a hole fills from itself or a seam shows | `CoreRaster.FillFromSurroundings`: candidate patches allowed inside the hole → `FillFromSurroundingsTests.neverCopiesFromHole`; heal step skipped → `.toneMeetsRing`; seed ignored (fixed) → `.seedChangesFill` |
 | RH-5 | `ToneDabTests`: a midtone dodge lifts luma 0.5 and leaves luma 0.1 and 0.95 within 1/255; burn mirrors; sponge +1 raises chroma, −1 greys; alpha never changes; exposure 0 is identity | the wrong range moves | `CoreRaster.ToneDabs`: midtone weight `|2l − 1|` (inverted) → `ToneDabTests.midtonesOnly`; coverage ignored → `.dabCoverageWeights`; burn gain `−exposure` → `.dodgeBurnMagnitude`; weight on premultiplied luma, colour clamped to 1 → `.translucentUsesStraightLuma` |
 | RH-6 | `SmudgeTests`: the first dab changes nothing; ten dabs along a line move a red edge's colour forward and its strength fades monotonically; strength 0 is identity | colour doesn't drag or never fades | `CoreRaster.Smudge`: carried patch not replaced after a dab → `SmudgeTests.colourFades`; first dab paints → `.firstDabPicksUp` |
@@ -175,6 +184,11 @@ Per slice as usual; RH-z's budgets on the Mac (`Mac-Finish-Wanted: RH-z`).
 `PhotoRetouch.swift`), spot heal, patch, dodge, burn, sponge and smudge
 (P+4.4), each spaced by kernel `Stroke` and drawn with its brush cursor;
 Library's spot removal later costs one adopt slice.
+
+## Follow-ups
+
+- Dedupe `FillRandom` (CoreRaster) with `ParityRandom` (CoreRender) into one
+  CoreRaster `SplitMix64`.
 
 ## Not in this packet
 

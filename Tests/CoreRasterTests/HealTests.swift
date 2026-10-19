@@ -28,6 +28,33 @@ func expectSameOutside(_ a: PixelBuffer, _ b: PixelBuffer, cx: Int, cy: Int, r: 
         }
     }
 
+    @Test func keepsSourceTexture() throws {
+        // The field plus a texture of period 24 in x, with a disc painted out
+        // where it is fully covered: healed from one period to the left, the
+        // texture comes back from the source and the tone from the edge. A
+        // heal that ignored the source (a membrane through the ring, or the
+        // destination kept) would leave the disc smooth or dark.
+        let clean = try RetouchFixtures.texturedField(width: 96, height: 48)
+        let mask = try RetouchFixtures.disc(width: 96, height: 48, centerX: 60, centerY: 24, radius: 8)
+        var damaged = clean
+        for y in 0..<48 {
+            for x in 0..<96 where try mask.coverage(x: x, y: y) >= 1 {
+                try damaged.setPixel(x: x, y: y, RetouchFixtures.spotColor)
+            }
+        }
+        let healed = try damaged.healed(offset: (dx: -24, dy: 0), through: mask)
+        var inside = 0
+        for y in 0..<48 {
+            for x in 0..<96 where try mask.coverage(x: x, y: y) > 0 {
+                let p = try healed.pixel(x: x, y: y), c = try clean.pixel(x: x, y: y)
+                let gap = max(abs(p.r - c.r), abs(p.g - c.g), abs(p.b - c.b), abs(p.a - c.a))
+                #expect(gap <= Self.tolerance, "(\(x), \(y)) off the textured input by \(gap)")
+                inside += 1
+            }
+        }
+        #expect(inside > 150)
+    }
+
     @Test func matchesDestinationEdge() throws {
         // The source half is the field lifted by 0.2: the same gradients, the
         // wrong tone. The edge comes from the destination, so no seam shows.
@@ -72,6 +99,21 @@ func expectSameOutside(_ a: PixelBuffer, _ b: PixelBuffer, cx: Int, cy: Int, r: 
         let atCap = try PixelBuffer(width: 2000, height: 2000, fill: RGBA(r: 0.5, g: 0.5, b: 0.5, a: 1))
         let full = try Mask(width: 2000, height: 2000, fill: 1)
         #expect(try atCap.healed(offset: (dx: 0, dy: 0), through: full) == atCap)
+    }
+
+    @Test func capCountsCoveredBoundsPerOp() throws {
+        // Two dots at opposite corners: area 2, covered bounds exactly
+        // maxHealPixels (2000 x 2000). `healed` counts the bounds and heals;
+        // `filledFromSurroundings` counts the bounds plus a one-pixel ring
+        // (2002 x 2002 on this buffer) and throws.
+        let n = 2002, side = 2000
+        #expect(side * side == PixelBuffer.maxHealPixels)
+        let buffer = try PixelBuffer(width: n, height: n, fill: RGBA(r: 0.5, g: 0.5, b: 0.5, a: 1))
+        var mask = try Mask.rectangle(width: n, height: n, x: 1, y: 1, w: 1, h: 1)
+        try mask.add(Mask.rectangle(width: n, height: n, x: Double(side), y: Double(side), w: 1, h: 1))
+        #expect(mask.area == 2)
+        #expect(try buffer.healed(offset: (dx: 0, dy: 0), through: mask) == buffer)
+        #expect(throws: RasterError.self) { try buffer.filledFromSurroundings(mask, seed: 1) }
     }
 
     @Test func sparseMaskOverBoxCapThrows() throws {
@@ -144,6 +186,11 @@ func expectSameOutside(_ a: PixelBuffer, _ b: PixelBuffer, cx: Int, cy: Int, r: 
         for offset in [(dx: -15, dy: 0), (dx: 1000, dy: 0), (dx: 0, dy: 30), (dx: Int.min, dy: Int.max)] {
             #expect(throws: RasterError.self) { try field.healed(offset: offset, through: mask) }
         }
+        // A 10-column box at x 40...49: from dx 14 its source's right column
+        // is x 63, the last on the buffer; from dx 15 it is x 64 == width.
+        let box = try Mask.rectangle(width: 64, height: 48, x: 40, y: 20, w: 10, h: 8)
+        #expect(try field.healed(offset: (dx: 14, dy: 0), through: box).width == 64)
+        #expect(throws: RasterError.self) { try field.healed(offset: (dx: 15, dy: 0), through: box) }
         let small = try Mask(width: 10, height: 10, fill: 1)
         #expect(throws: RasterError.self) { try field.healed(offset: (dx: 0, dy: 0), through: small) }
     }

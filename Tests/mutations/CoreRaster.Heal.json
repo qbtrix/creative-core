@@ -40,5 +40,19 @@
     "anchor": "let out = c >= 1 ? f : dest + (f - dest) * c",
     "replacement": "let out = c >= 1 ? f : f + (dest - dest) * c",
     "filter": "HealTests.featherBlendsByCoverage"
+  },
+  {
+    "note": "the heal clones nothing from its source, keeping the destination under the solved correction (a membrane through the ring), so the texture is lost, caught by HealTests.keepsSourceTexture",
+    "file": "Sources/CoreRaster/Heal/Heal.swift",
+    "anchor": "let f = c > 0 ? vector(x + dx, y + dy) + solver.value(gx, gy) : dest",
+    "replacement": "let f = c > 0 ? dest + solver.value(gx, gy) : dest",
+    "filter": "HealTests.keepsSourceTexture"
+  },
+  {
+    "note": "the heal's source guard lets the right column land one past the buffer's edge, <= width for < width, so an off-buffer source reads the next row, caught by HealTests.offsetOffBufferThrows",
+    "file": "Sources/CoreRaster/Heal/Heal.swift",
+    "anchor": "right.partialValue < width,",
+    "replacement": "right.partialValue <= width,",
+    "filter": "HealTests.offsetOffBufferThrows"
   }
 ]
