@@ -59,3 +59,4 @@ utc	stage	event	ref	note
 2026-10-19T06:21Z	4	merged	#643	r3-b1 33e9202; round 3 fixes all merged
 2026-10-19T06:42Z	4	heartbeat	d902951	round 4 gate CI: PASS; mutation running
 2026-10-19T07:05:34Z	4	heartbeat	-	round 4 mutation on d902951
+2026-10-19T07:10:09Z	4	round 4 gate	d902951	CI PASS, mutate 148/148; panel wf_6161a746-3ae
