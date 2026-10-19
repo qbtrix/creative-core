@@ -2,7 +2,7 @@
 
 Issue: #433 · Packet: docs/blueprints/core/features/effects-engine.md
 Run: act-1a150bfbcf7-sfwy · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
-Stage: 4 round 5 gate + mutation running on 8613770 (all r4 fixes and FX-9 merged; FX-a, FX-blur at round cap, round 5 covers FX-alpha, FX-cpu, FX-z)
+Stage: 4 round 5 panel running (wf_375316d3-50a) on 8613770: gate PASS, mutants 37/37
 Base: 4feaaf9fac3cc050901f8b459a0908515a927f54
 Next: round 5 panel; then FX-10 (feature-done), Belt-Slice-Done FX-z, Mac-Finish-Wanted FX-z
 

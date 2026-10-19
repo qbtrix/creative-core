@@ -72,3 +72,4 @@ utc	stage	event	ref	note
 2026-10-19T10:37:31Z	4	merged	#699	FX-9 walk + budgets merged (8613770); round 4 fixes all merged
 2026-10-19T10:37:31Z	4	round-start	8613770	round 5 (FX-alpha, FX-cpu, FX-z)
 2026-10-19T10:46:11Z	4	heartbeat	-	round 5 gate + mutation running on 8613770
+2026-10-19T11:11:18Z	4	round-gate	8613770	round 5 CI PASS, mutation 37/37; panel wf_375316d3-50a
