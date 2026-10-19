@@ -8,12 +8,6 @@ import Testing
     let notBuilt = RasterError.invalid("not built")
     let red = RGBA(r: 1, g: 0, b: 0, a: 1)
 
-    @Test func glowAndShadowThrowNotBuilt() throws {
-        let buffer = try PixelBuffer(width: 4, height: 4, fill: red)
-        #expect(throws: notBuilt) { try buffer.glowing(color: red, radius: 4, intensity: 1, inner: false) }
-        #expect(throws: notBuilt) { try buffer.shadowed(color: red, dx: 2, dy: 2, blur: 3, inner: true) }
-    }
-
     @Test func applyingThrowsNotBuiltForEveryCase() throws {
         let buffer = try PixelBuffer(width: 4, height: 4, fill: red)
         let effects: [LayerEffect] = [

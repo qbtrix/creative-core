@@ -1,0 +1,16 @@
+[
+  {
+    "note": "the glow and shadow mask is read at y plus dy instead of y minus dy, so a drop shadow with positive dy moves up, caught by AlphaEffectLightTests.shadowMovesDown",
+    "file": "Sources/CoreRaster/Effects/AlphaEffects+Light.swift",
+    "anchor": "mask.sample(Double(x) - dx, Double(y) - dy)",
+    "replacement": "mask.sample(Double(x) - dx, Double(y) + dy)",
+    "filter": "AlphaEffectLightTests"
+  },
+  {
+    "note": "the inner glow and shadow are not clipped by the layer alpha, so an inner shadow paints the transparent pixels around the shape, caught by AlphaEffectLightTests.innerStaysInside",
+    "file": "Sources/CoreRaster/Effects/AlphaEffects+Light.swift",
+    "anchor": "if inner { cover *= layerAlpha }",
+    "replacement": "if inner { cover *= 1 }",
+    "filter": "AlphaEffectLightTests"
+  }
+]
