@@ -1,25 +1,11 @@
 // PathOpsShapeTests.swift: the PathOps contract exists with the packet's
-// signatures. Each entry point whose body has not landed throws
-// GeometryError.notBuilt naming itself; a slice that builds a body removes
-// its row here and its own suite takes over.
+// signatures. Every entry point has a body now and its own suite; what is
+// left here is the value types and errors the slices share.
 import FlareCore
 import Testing
 
 @Suite struct PathOpsShapeTests {
     static let square = Path(polyline: [Point(x: 0, y: 0), Point(x: 10, y: 0), Point(x: 10, y: 10)], closed: true)
-
-    /// (expected name, call) for every stubbed entry point.
-    static let stubs: [(String, @Sendable () throws -> Void)] = [
-        ("outlined(width:join:cap:miterLimit:tolerance:)", {
-            _ = try square.outlined(width: 4, join: .round, cap: .butt, miterLimit: 4, tolerance: 0.1)
-        }),
-    ]
-
-    @Test(arguments: 0..<stubs.count)
-    func stubThrowsNotBuiltNamingItself(_ index: Int) {
-        let (name, call) = Self.stubs[index]
-        #expect(throws: GeometryError.notBuilt(name)) { try call() }
-    }
 
     @Test func anchorsViewAndValueTypes() {
         let contours: [PathContour] = Self.square.contours
