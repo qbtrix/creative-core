@@ -2,9 +2,9 @@
 
 Issue: #432 · Packet: docs/blueprints/core/features/tone-pack.md
 Run: act-1a1543c8a5f-6y14 (relaunch; first run act-1a150bfbcf7-sfwy) · Started: 2026-10-18T20:45Z · Relaunched: 2026-10-19T13:05Z
-Stage: 4 round 7 fixes (TP-cpu 4/4 done, TP-z 3/4) on 0b96aa5: fix batch r7 running (fix/tone-pack-r7, feature-done)
-Base: 0b96aa5c
-Next: when the r7 fix PR merges (feature-done, it dispatches dev CI), run round 8 (TP-z 4/4, last) on the new dev SHA with the same panel; then if that dev CI run is green: Belt-Slice-Done TP-z, Mac-Finish-Wanted TP-z, contact sheet on #432; findings left after round 8 become gap issues
+Stage: 4 round 8 (TP-z 4/4, last) on a2157a4: gate, mutation and critic panel running
+Base: a2157a4c
+Next: read round 8 (scratchpad round-8 ci.log, mutate.log, panel wf_f0e6ad25-fff); #725 merged without feature-done, so open one last PR (round-8 fixes if any, else the RECORD summary in the packet) labelled feature-done; when its dev CI run is green: Belt-Slice-Done TP-z, Mac-Finish-Wanted TP-z, contact sheet on #432; findings left after round 8 become gap issues
 
 Line lead for #434, #433 and #432 (rule 19); one wave plan across the three
 features, bookkeeping per feature. Packet v3 (has a Slices table).
@@ -59,9 +59,10 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 | TP-mix, TP-map, TP-cpu | 4 | d902951 | PASS | 148/148 | - | clarity, contract, tests, robustness | 8 (1 major: TP-9 unbuilt; 7 minor), 0 refuted | r4-b2 #670 merged (f4cf85d), r4-b3 #675 merged (25915ce); r4-b1 #678 merged (3197e99), r4-b4 #698 merged (7f81db8) | no |
 | TP-mix, TP-map, TP-cpu, TP-z | 5 | 7f81db8 | PASS | 40/40 (tone plans) | - | clarity, contract, tests, robustness | 9 (1 major: colour ops miss release budgets 4-70x and ToneBudgetTests disabled in every optimized build; 8 minor: ToneAdjustment doc names wrong file, invert space unstated, gradientMap stop error lacks index, W1 tone value inits undocumented, walk auto tone skips dispatcher, AutoTone gamma/minimumSpan/white-balance pass-two untested), 4 refuted | r5-b1 #714 merged (f1089c4), r5-b2 #715 merged (d2f4262), r5-b3 #717 merged (9df2695; ops 1.3-3x faster bit-exact, still over budget on loaded Linux, budgets reported, Mac gates) | no |
 | TP-cpu, TP-z | 6 | 4b238e0 | PASS (1957 tests) | 47/47 (7 tone plans) | - | clarity, contract, tests, robustness | 11 (1 major: CPU posterize ignores its level count undetected, every path uses 4; 10 minor: budget report labels debug rows as full-size, ToneBudgetOp doc cites the walk, warm33 parse error dropped, Samples+Color tolerance doc, walk header promises `==` for invert, alpha-zero golden bands all zero, no mutation for lowest-band error, budget run accepts a no-op, ToneBandTests skips a wrong error case), 2 refuted | #722 merged (r6 fixes + TP-10, feature-done) | no |
-| TP-cpu, TP-z | 7 | 0b96aa5 | PASS (1971 tests) | 49/49 (7 tone plans) | 39279766862 (green: Linux, macOS, Mutation) | clarity, contract, tests, robustness | 2 minor (walk misses 5 ops vs TP-z sentence; no mutation on alpha-0 guard), 0 refuted | fix/tone-pack-r7 (running) | yes |
+| TP-cpu, TP-z | 7 | 0b96aa5 | PASS (1971 tests) | 49/49 (7 tone plans) | 39279766862 (green: Linux, macOS, Mutation) | clarity, contract, tests, robustness | 2 minor (walk misses 5 ops vs TP-z sentence; no mutation on alpha-0 guard), 0 refuted | #725 merged (a2157a4) | yes |
 
 ## Decisions
+- #725 (r7 fixes) merged at once without the feature-done label, so the feature-done CI run comes from one last PR after round 8.
 - TP-5 (#585): map ops on encoded values via `mappingStraight`; `inverted` is a − c on linear premultiplied (exact double inversion); `.cube` parse per packet, size 2...65, domain exactly 0…1; blue-fastest mutant moved to the apply stride (parser keeps file order); ColorMix helpers made internal for reuse.
 - TP-4 (#582): B&W gray = min + (max − min) × w, w blending the two neighbouring hue-range weights by hue, on encoded values (red 0.40, blue 0.20, greys stay grey); colour balance: shift 100 at full zone weight moves a channel halfway to 1 or 0 (packet gives no strength; Anatomy TP-mix critics to check); channel mixer on linear values. Made ColorAdjust mappingStraight and Adjustments smoothstep internal for reuse.
 - TP-3 (#578) packet calls: vibrance's 1 − s weight uses linear saturation (display saturation failed lowSaturationMovesMost); skin range 15°–50° on display hue; hsl range hue 100 = 30°; grey pixels pass hsl untouched; hueSaturation hue −180...180 throws outside, other sliders −100...100; HSLShift clamps. Standard HSL math; Photo pixel-equality check stays with the adoption.
