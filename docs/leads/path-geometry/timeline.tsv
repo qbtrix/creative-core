@@ -1,3 +1,4 @@
 utc	stage	event	ref	note
 2026-10-19T12:58Z	0	stage-start	-	run act-1a1541f2193-03la on dev 0b5a641; packet read, slice PR plan written
 2026-10-19T12:58Z	3	stage-start	-	wave 1 builders launching
+2026-10-19T13:00:10Z	wave1	builders launched
