@@ -213,8 +213,13 @@ public enum LayerEffect: Hashable, Sendable {
     /// Local contrast by `amount` against a blur whose total reach is `radius` px (sigma radius / 3).
     case clarity(amount: Double, radius: Double)
     /// A glow whose total reach is `radius` px (sigma about radius / 3).
+    /// `intensity` 0...1 scales its opacity (0 is identity); `inner` paints
+    /// from the edges inward over the layer, clipped to its alpha, otherwise
+    /// outward under it.
     case glow(color: RGBA, radius: Double, intensity: Double, inner: Bool)
     /// A shadow offset by any finite (`dx`, `dy`) px, +y down, whose blur reaches `blur` px in total (sigma about blur / 3).
+    /// `inner` is an inner shadow over the layer, clipped to its alpha;
+    /// otherwise a drop shadow under it.
     case shadow(color: RGBA, dx: Double, dy: Double, blur: Double, inner: Bool)
     /// A stroke `width` px wide at `position` on the alpha edge.
     case stroke(color: RGBA, width: Double, position: StrokePosition)

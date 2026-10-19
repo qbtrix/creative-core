@@ -164,15 +164,17 @@ import Testing
     @Test func tooLargeToPadNamesTheEffect() throws {
         // 132,000 x 1 is small, but a 1,000 px blur and offset pad it 1,002 px a side.
         let strip = try PixelBuffer(width: 132_000, height: 1)
-        #expect(throws: RasterError.invalid("shadow blur 1000.0 at offset (1000.0, 0.0) on 132000x1: padded work "
-            + "buffer 134004x2005 exceeds 268435456 pixels; reduce the blur, the offset or the buffer")) {
+        // The offset is within the blur + 3, so the offset alone sets the padding.
+        #expect(throws: RasterError.invalid("shadow at offset (1000.0, 0.0) on 132000x1: padded work "
+            + "buffer 134004x2005 exceeds 268435456 pixels; reduce the offset or the buffer")) {
             try strip.shadowed(color: shade, dx: 1_000, dy: 0, blur: 1_000, inner: false)
         }
         // A glow pads 2 px a side, a stroke 1: at the largest square buffer both pass the limit.
         let side = 16_384
-        #expect(throws: RasterError.invalid("glow radius 1000.0 on 16384x16384: padded work buffer 16388x16388 "
-            + "exceeds 268435456 pixels; reduce the radius or the buffer")) {
-            try PixelBuffer.paddedWorkSize(width: side, height: side, pad: 2, cause: "glow radius 1000.0", remedy: "radius")
+        let glow = PixelBuffer.lightWork(effect: "glow", reachName: "radius", reach: 1_000, dx: 0, dy: 0)
+        #expect(throws: RasterError.invalid("glow on 16384x16384: padded work buffer 16388x16388 "
+            + "exceeds 268435456 pixels; reduce the buffer")) {
+            try PixelBuffer.paddedWorkSize(width: side, height: side, pad: glow.pad, cause: glow.cause, remedy: glow.remedy)
         }
         #expect(throws: RasterError.invalid("stroke width 4.0 on 16384x16384: padded work buffer 16386x16386 "
             + "exceeds 268435456 pixels; reduce the buffer")) {
@@ -180,6 +182,30 @@ import Testing
         }
         let fits = try PixelBuffer.paddedWorkSize(width: 100, height: 50, pad: 2, cause: "glow", remedy: "radius")
         #expect(fits.width == 104 && fits.height == 54)
+    }
+
+    /// A glow's padding is fixed, so its too-large error is the same at any
+    /// radius and never tells the caller to reduce it; a shadow names the
+    /// blur only when the blur, not the offset, sets the padding.
+    @Test func tooLargeNamesOnlyWhatSetsThePadding() throws {
+        let side = 16_384
+        func message(_ work: (pad: Int, cause: String, remedy: String?)) -> String {
+            do {
+                _ = try PixelBuffer.paddedWorkSize(width: side, height: side, pad: work.pad, cause: work.cause,
+                                                   remedy: work.remedy)
+                return ""
+            } catch { return "\(error)" }
+        }
+        let wide = PixelBuffer.lightWork(effect: "glow", reachName: "radius", reach: 1_000, dx: 0, dy: 0)
+        let narrow = PixelBuffer.lightWork(effect: "glow", reachName: "radius", reach: 1, dx: 0, dy: 0)
+        #expect(wide.pad == 2 && narrow.pad == 2)
+        #expect(message(wide) == message(narrow) && message(wide).contains("16388x16388"))
+        #expect(!message(wide).contains("radius"))
+        let farOff = PixelBuffer.lightWork(effect: "shadow", reachName: "blur", reach: 10, dx: -2_000, dy: 5)
+        #expect(farOff.pad == 15 && farOff.remedy == "blur, the offset")
+        #expect(farOff.cause == "shadow blur 10.0 at offset (-2000.0, 5.0)")
+        let near = PixelBuffer.lightWork(effect: "shadow", reachName: "blur", reach: 10, dx: 4, dy: -13)
+        #expect(near.pad == 15 && near.remedy == "offset" && near.cause == "shadow at offset (4.0, -13.0)")
     }
 
     @Test func hugeOffsetFallsOffTheCanvas() throws {
