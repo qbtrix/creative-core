@@ -1,10 +1,10 @@
 # effects-engine lead record
 
 Issue: #433 · Packet: docs/blueprints/core/features/effects-engine.md
-Run: act-1a150bfbcf7-sfwy · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
-Stage: 4 round 5 panel done (5 confirmed); fixes r5-b1..b3 running (wf_a0fba459-99d). FX-alpha reaches its round cap (rounds 2-5); FX-cpu 3 rounds; FX-z 1
+Run: act-1a1543c8a34-t9zw (previous act-1a150bfbcf7-sfwy / act-1a1511a1174-tlch) · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
+Stage: 4 round 5 fixes r5-b1 building (run act-1a1543c8a34-t9zw, dev 0b5a641; old wf_a0fba459-99d pushed nothing). FX-alpha at its round cap; FX-cpu 3; FX-z 1
 Base: 4feaaf9fac3cc050901f8b459a0908515a927f54
-Next: round 5 panel; then FX-10 (feature-done), Belt-Slice-Done FX-z, Mac-Finish-Wanted FX-z
+Next: r5-b1 PR merges; round 6 on FX-z; FX-10 (feature-done); Belt-Slice-Done FX-z; Mac-Finish-Wanted FX-z
 
 Line lead for #434, #433 and #432 (rule 19); one wave plan across the three
 features, bookkeeping per feature. Packet v3 (has a Slices table).
