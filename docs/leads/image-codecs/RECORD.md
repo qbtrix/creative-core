@@ -5,7 +5,7 @@ Run: act-1a1511a1174-tlch · Started: 2026-10-18T22:40Z
 Line lead for: image-codecs (#562), preview-cache (#440, already done), vector-import (#439, VI-z left)
 Stage: 4 round 1 (IC-jpeg); wave 4 IC-png PRs waiting on lane
 Base: 9385de9 (wave 4)
-Next: IC-jpeg r1 fix batch (3 PRs) merges, then IC-jpeg round 2; IC-png round once #636 and #637 merge
+Next: IC-jpeg r1 fix batch (3 PRs) merges, then IC-jpeg round 2; IC-png round 1 once #636 merges
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -23,7 +23,7 @@ Next: IC-jpeg r1 fix batch (3 PRs) merges, then IC-jpeg round 2; IC-png round on
 | IC-3 | 3 | Inflate, Deflate bodies | Inflate.swift, Deflate.swift, InflateTests | InflateTests | CoreRaster.Inflate (3) | #625 (526da94) | merged |
 | IC-6 | 3 | JPEG info, baseline read | JPEG.swift, JPEGReadTests, JPEGFuzzTests | baseline half | CoreRaster.JPEG (2) | #627 (22a5fdd) | merged |
 | IC-4 | 4 | PNG info, read, decodePNG | PNG.swift, PNGReadTests, PNGFuzzTests | PNGReadTests | CoreRaster.PNG (3) | #637 (b4d80e2) | merged 05:14Z |
-| IC-5 | 4 | PNG write, encodePNG | PNGWrite.swift, PNGWriteTests | PNGWriteTests | CoreRaster.PNGWrite (2) | #636 (48a0e61) | rebasing onto IC-4, enabling 4 round-trip tests |
+| IC-5 | 4 | PNG write, encodePNG | PNGWrite.swift, PNGWriteTests | PNGWriteTests | CoreRaster.PNGWrite (2) | #636 (a4df142) | rebased on IC-4, 4 round-trip tests enabled, CI PASS 1776, waiting on lane |
 | IC-7 | 4 | progressive JPEG | JPEGProgressive.swift, JPEGReadTests | progressive half | CoreRaster.JPEGProgressive (1+) | #635 (a686651) | merged (dev 81ae63c) |
 | IC-8 | 4 | baseline JPEG write | JPEGWrite.swift, JPEGWriteTests | JPEGWriteTests | CoreRaster.JPEGWrite (2) | #634 (8e31fe9) | merged |
 | IC-9 | 5 | KJ-IC walk, budgets | ImageCodecWalkTests, ImageCodecBudgetTests | walk | – | | open |
@@ -55,3 +55,4 @@ Next: IC-jpeg r1 fix batch (3 PRs) merges, then IC-jpeg round 2; IC-png round on
 - IC-4 #637: reader in new PNGRead.swift (PNG.swift forwards); 3/3 CoreRaster.PNG; 12 MP decode 0.78 s release (budget 1.5 s). Whichever of #636/#637 merges second enables the four "waits on IC-4" PNGWriteTests.
 - The GitHub MCP server appends an attribution footer to every PR body it creates; each builder strips it with update_pull_request after create.
 - Stray: Tests/CoreRasterTests/ZZBench.swift came in with #625 (48 MB benchmark printing timings each test run). Route its removal into the IC-png/IC-jpeg Anatomy fix batch.
+- #636 rebase: duplicate PNG.paeth (reader and writer) collapsed to the reader's copy; stubsThrowCodecErrors deleted (no stubs remain); head a4df142, CI PASS (1776 tests), PNGWrite 2/2, PNG 3/3.

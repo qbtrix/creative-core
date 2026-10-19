@@ -26,3 +26,4 @@ utc	stage	event	ref	note
 2026-10-19T05:38:41Z	stage-3	pr-merged	#637	IC-4 PNG read merged; #636 dirty, builder rebasing and enabling the 4 waits-on-IC-4 tests
 2026-10-19T05:39:06Z	stage-4	heartbeat	IC-jpeg r1	fix batch wf_4cb93cd0-ecb running (3 fixers); #636 rebase builder running; #637 merged
 2026-10-19T05:58:50Z	stage-4	heartbeat	IC-jpeg r1	fixers still running (no fix PRs yet); #636 rebase builder still running
+2026-10-19T06:10:39Z	stage-3	pr-updated	#636	rebased a4df142, CI PASS, 4 round-trip tests enabled; lane check running
