@@ -193,6 +193,20 @@ PR, plans scored with no escape; TP-z's budgets on the Mac
 (`Mac-Finish-Wanted: TP-z`). Then the contact sheet with each op's 24 MP
 time.
 
+## Build record
+
+Lead run `act-1a1543c8a5f-6y14` (lead record: `docs/leads/tone-pack/RECORD.md`
+on `lead/tone-pack`). Tasks: TP-0 #561, TP-2 #569, TP-1 #576 and #581,
+TP-3 #578, TP-4 #582, TP-5 #585, TP-6 #600, TP-7 #609, TP-8 #638, TP-9
+#698, TP-10 #722. Eight review rounds; the round fixes were #596, #597,
+#617, #628, #630, #632, #642, #643, #670, #675, #678, #714, #715, #717,
+#722 and #725. Rounds 7 and 8 were clean: no blocker or major finding,
+`scripts/ci` passing (1,984 tests in round 8) and 50 of 50 planted mutants caught over
+the seven tone plans (`CoreRaster.AutoTone`, `.ColorAdjust`, `.ColorMap`,
+`.ColorMix`, `.CubeLUT`, `CoreRenderCPUColor`, `CoreRenderToneProgram`).
+Open for the Mac finisher: TP-z's time budgets (`ToneBudgetTests`, release),
+which loaded Linux runners only report.
+
 ## Adopted later
 
 - **W2:** S1 tone and colour adjustments as inspector rows and adjustment
