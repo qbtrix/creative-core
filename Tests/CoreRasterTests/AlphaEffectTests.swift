@@ -1,5 +1,5 @@
 // AlphaEffectTests.swift: effects-engine FX-5's stroke acceptance, written first
-// (FX-1), disabled until FX-5 builds `stroked`: a 4 px stroke of a radius-16 disc
+// (FX-1), on since FX-5 built `stroked`: a 4 px stroke of a radius-16 disc
 // covers 16...20 outside, 12...16 inside, 14...18 centred, area within 1%. Glow
 // and shadow are FX-6's own suite, `AlphaEffectLightTests`.
 import CoreRaster
@@ -31,25 +31,25 @@ import Testing
         }
     }
 
-    @Test(.disabled("waits on FX-5")) func outsideStrokeIsOutside() throws { try expectRing(.outside, inner: 16, outer: 20) { $0 == 1 } }
+    @Test func outsideStrokeIsOutside() throws { try expectRing(.outside, inner: 16, outer: 20) { $0 == 1 } }
 
-    @Test(.disabled("waits on FX-5")) func insideStrokeIsInside() throws { try expectRing(.inside, inner: 12, outer: 16) { $0 == 0 } }
+    @Test func insideStrokeIsInside() throws { try expectRing(.inside, inner: 12, outer: 16) { $0 == 0 } }
 
-    @Test(.disabled("waits on FX-5")) func centerStrokeStraddlesEdge() throws { try expectRing(.center, inner: 14, outer: 18) { _ in false } }
+    @Test func centerStrokeStraddlesEdge() throws { try expectRing(.center, inner: 14, outer: 18) { _ in false } }
 
-    @Test(.disabled("waits on FX-5")) func zeroWidthIsIdentity() throws {
+    @Test func zeroWidthIsIdentity() throws {
         let disc = try EffectFixtures.disc(size: 32, radius: 8)
         for position: StrokePosition in [.outside, .inside, .center] {
             #expect(try disc.stroked(color: blue, width: 0, position: position) == disc)
         }
     }
 
-    @Test(.disabled("waits on FX-5")) func badWidthThrows() throws {
+    @Test func badWidthThrows() throws {
         let disc = try EffectFixtures.disc(size: 16, radius: 4)
         for bad in [2_000.0, 1_000.5, -1, .nan, .infinity] { #expect(throws: RasterError.self) { try disc.stroked(color: blue, width: bad, position: .outside) } }
     }
 
-    @Test(.disabled("waits on FX-5")) func fuzzNeverCrashes() throws {
+    @Test func fuzzNeverCrashes() throws {
         var rng = SplitMix64(seed: 0x57_80CE)
         let glyph = try EffectFixtures.glyphMask()
         let positions: [StrokePosition] = [.outside, .inside, .center]
