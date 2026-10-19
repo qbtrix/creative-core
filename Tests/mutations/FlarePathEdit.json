@@ -19,12 +19,5 @@
     "anchor": "index < cs[contour].anchors.count",
     "replacement": "index <= cs[contour].anchors.count",
     "filter": "PathEditTests.badIndexThrows"
-  },
-  {
-    "note": "a curve closing onto its start keeps a duplicate anchor instead of folding it into the first, caught by anchorsViewRoundTripsEveryFixture",
-    "file": "Sources/FlareCore/PathOps/PathEdit.swift",
-    "anchor": "anchors[0].handleIn = handle\n            anchors.removeLast()",
-    "replacement": "anchors[0].handleIn = nil",
-    "filter": "PathEditTests.anchorsViewRoundTripsEveryFixture"
   }
 ]

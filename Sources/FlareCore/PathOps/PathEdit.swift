@@ -2,48 +2,32 @@
 // inserting, removing and converting an anchor.
 //
 // Invariants:
-// - `Path(contours: p.contours)` draws the same shape as `p` (quads come back
-//   as the same curve raised to cubics)
+// - `Path(contours: p.contours)` draws the same shape as `p`
 // - inserting a point never moves the drawn shape
 // - a bad contour, anchor or element index, or a t outside 0...1, throws
 //   GeometryError.invalidLocation
-// - the pen before each element is the one `flattened` uses (`pens`)
 
 extension Path {
     /// The path as contours of anchors. Quads are raised to cubics; a handle
-    /// equal to its point is nil. A closed contour whose last anchor lands on
-    /// its first by a curve folds the two into one anchor.
+    /// equal to its point is nil; a curve closing onto the start folds into it.
     public var contours: [PathContour] {
-        var result: [PathContour] = []
-        var current: PathContour?
+        var result: [PathContour] = [], current: PathContour?
         func start(_ p: Point) {
             if let c = current { result.append(c) }
             current = PathContour(anchors: [PathAnchor(point: p)], closed: false)
         }
         for (element, pen) in zip(elements, pens()) {
-            switch element {
-            case .move(let to): start(to)
-            case .close: current?.close()
-            default:
-                guard let from = pen.pen, let to = element.endPoint else {
-                    if let to = element.endPoint { start(to) }
-                    continue
-                }
-                if current?.closed ?? true { start(from) }
-                switch element {
-                case .quad(let c, _):
-                    current?.append(lerp(from, c, 2.0 / 3), lerp(to, c, 2.0 / 3), to)
-                case .cubic(let c1, let c2, _): current?.append(c1, c2, to)
-                default: current?.append(nil, nil, to)
-                }
+            guard let to = element.endPoint else { current?.close(); continue }
+            guard let from = pen.pen else { start(to); continue }
+            if current?.closed ?? true { start(from) }
+            if case .line = element {
+                current?.append(nil, nil, to)
+            } else if let c = Self.cubic(element, from: from, start: nil) {
+                current?.append(c.1, c.2, to)
             }
         }
         if let c = current { result.append(c) }
-        return result.map { contour in
-            var c = contour
-            for i in c.anchors.indices { c.anchors[i].kind = c.anchors[i].measuredKind }
-            return c
-        }
+        return result.map { c in PathContour(anchors: c.anchors.map { $0.measured }, closed: c.closed) }
     }
 
     /// The path that draws `contours`: a move per contour, a line where both
@@ -58,10 +42,9 @@ extension Path {
                 elements.append(Self.segment(previous, anchor))
                 previous = anchor
             }
-            if contour.closed {
-                if previous.handleOut != nil || first.handleIn != nil { elements.append(Self.segment(previous, first)) }
-                elements.append(.close)
-            }
+            guard contour.closed else { continue }
+            if previous.handleOut != nil || first.handleIn != nil { elements.append(Self.segment(previous, first)) }
+            elements.append(.close)
         }
         self.init(elements: elements)
     }
@@ -77,8 +60,8 @@ extension Path {
         var best: PathLocation?
         for (i, (element, pen)) in zip(elements, pens()).enumerated() {
             guard let from = pen.pen, let c = Self.cubic(element, from: from, start: pen.start) else { continue }
-            let found = Self.closest(c, to: p, tolerance: tolerance)
-            if found.distance < best?.distance ?? .infinity { best = PathLocation(element: i, t: found.t, point: found.point, distance: found.distance) }
+            let (t, point, distance) = try Self.closest(c, to: p, tolerance: tolerance)
+            if distance < best?.distance ?? .infinity { best = PathLocation(element: i, t: t, point: point, distance: distance) }
         }
         return best
     }
@@ -91,12 +74,12 @@ extension Path {
     public func inserting(at location: PathLocation) throws -> Path {
         let i = location.element, t = location.t
         guard i >= 0, i < elements.count, t.isFinite, t >= 0, t <= 1,
-              let from = pens()[i].pen else { throw GeometryError.invalidLocation }
+              case let (from?, start) = pens()[i] else { throw GeometryError.invalidLocation }
         let parts: [PathElement]
         switch elements[i] {
         case .move: throw GeometryError.invalidLocation
         case .line(let to): parts = [.line(to: lerp(from, to, t)), .line(to: to)]
-        case .close: parts = [.line(to: lerp(from, pens()[i].start ?? from, t)), .close]
+        case .close: parts = [.line(to: lerp(from, start ?? from, t)), .close]
         case .quad(let c, let to):
             parts = [.quad(control: lerp(from, c, t), to: quadAt(from, c, to, t)), .quad(control: lerp(c, to, t), to: to)]
         case .cubic(let p1, let p2, let to):
@@ -125,62 +108,54 @@ extension Path {
 
     /// The path with anchor `index` of contour `contour` made `kind`: corner
     /// drops both handles, smooth lines them up, symmetric also equalizes them.
-    /// Smooth keeps each handle's length and turns the pair onto the line that
-    /// bisects them, so the out handle stays on the out side; a missing handle
-    /// starts a third of the way to its neighbour.
+    /// Smooth turns both onto their bisector, keeping lengths and sides; a
+    /// missing handle starts a third of the way to its neighbour.
     ///
     /// Throws `GeometryError.invalidLocation` for an index out of range.
     public func converting(contour: Int, index: Int, to kind: AnchorKind) throws -> Path {
         var cs = contours
         try Self.checkAnchor(cs, contour, index)
-        let anchors = cs[contour].anchors, closed = cs[contour].closed, a = anchors[index], p = a.point
-        guard kind != .corner else {
-            cs[contour].anchors[index].handleIn = nil
-            cs[contour].anchors[index].handleOut = nil
-            return Path(contours: cs)
+        let anchors = cs[contour].anchors, closed = cs[contour].closed, n = anchors.count
+        var a = anchors[index]
+        let p = a.point
+        func arm(_ handle: Point?, _ j: Int) -> (Double, Double)? {
+            let neighbour: Point? = anchors.indices.contains(j) || closed ? anchors[(j + n) % n].point : nil
+            let q = handle ?? neighbour.map { lerp(p, $0, 1.0 / 3) }
+            return q.flatMap { $0 == p ? nil : ($0.x - p.x, $0.y - p.y) }
         }
-        func neighbour(_ j: Int) -> Point? {
-            anchors.indices.contains(j) ? anchors[j].point : closed ? anchors[(j + anchors.count) % anchors.count].point : nil
+        let flip: ((Double, Double)) -> (Double, Double) = { (-$0.0, -$0.1) }
+        if kind == .corner {
+            (a.handleIn, a.handleOut) = (nil, nil)
+        } else if let rawOut = arm(a.handleOut, index + 1) ?? arm(a.handleIn, index - 1).map(flip),
+                  let rawIn = arm(a.handleIn, index - 1) ?? arm(a.handleOut, index + 1).map(flip) {
+            let lengthIn = norm(rawIn.0, rawIn.1), lengthOut = norm(rawOut.0, rawOut.1)
+            let (li, lo) = kind == .symmetric ? ((lengthIn + lengthOut) / 2, (lengthIn + lengthOut) / 2) : (lengthIn, lengthOut)
+            var ux = rawOut.0 / lengthOut - rawIn.0 / lengthIn, uy = rawOut.1 / lengthOut - rawIn.1 / lengthIn
+            if norm(ux, uy) < 1e-12 { (ux, uy) = (rawOut.0 / lengthOut, rawOut.1 / lengthOut) }
+            let u = norm(ux, uy)
+            a.handleOut = Point(x: p.x + ux / u * lo, y: p.y + uy / u * lo)
+            a.handleIn = Point(x: p.x - ux / u * li, y: p.y - uy / u * li)
         }
-        func arm(_ handle: Point?, _ next: Int) -> (Double, Double)? {
-            let q = handle ?? neighbour(next).map { lerp(p, $0, 1.0 / 3) }
-            return q.flatMap { q in q == p ? nil : (q.x - p.x, q.y - p.y) }
-        }
-        guard let rawOut = arm(a.handleOut, index + 1) ?? arm(a.handleIn, index - 1).map({ (-$0.0, -$0.1) }),
-              let rawIn = arm(a.handleIn, index - 1) ?? arm(a.handleOut, index + 1).map({ (-$0.0, -$0.1) })
-        else { return Path(contours: cs) }
-        let lengthIn = norm(rawIn.0, rawIn.1), lengthOut = norm(rawOut.0, rawOut.1)
-        let (li, lo) = kind == .symmetric ? ((lengthIn + lengthOut) / 2, (lengthIn + lengthOut) / 2) : (lengthIn, lengthOut)
-        var ux = rawOut.0 / lengthOut - rawIn.0 / lengthIn, uy = rawOut.1 / lengthOut - rawIn.1 / lengthIn
-        if norm(ux, uy) < 1e-12 { (ux, uy) = (rawOut.0 / lengthOut, rawOut.1 / lengthOut) }
-        let u = norm(ux, uy)
-        cs[contour].anchors[index].handleOut = Point(x: p.x + ux / u * lo, y: p.y + uy / u * lo)
-        cs[contour].anchors[index].handleIn = Point(x: p.x - ux / u * li, y: p.y - uy / u * li)
+        cs[contour].anchors[index] = a
         return Path(contours: cs)
     }
 
-    /// For each element, the pen it draws from (nil when there is none) and
-    /// its subpath's start, walked the way `flattened` walks them.
+    /// For each element, the pen it draws from (nil for a move or when there
+    /// is none) and its subpath's start, walked as `flattened` walks them.
     func pens() -> [(pen: Point?, start: Point?)] {
-        var result: [(pen: Point?, start: Point?)] = []
-        result.reserveCapacity(elements.count)
         var last: Point?, start: Point?
-        for element in elements {
+        return elements.map { element in
+            let entry: (pen: Point?, start: Point?)
             switch element {
-            case .move(let to):
-                result.append((nil, start))
-                (last, start) = (to, to)
-            case .close:
-                result.append((last, start))
-                last = nil
+            case .move(let to): (entry, last, start) = ((nil, start), to, to)
+            case .close: (entry, last) = ((last, start), nil)
             default:
-                let from = last ?? start
-                result.append((from, start))
-                if from == nil { start = element.endPoint }
+                entry = (last ?? start, start)
+                if entry.pen == nil { start = element.endPoint }
                 last = element.endPoint
             }
+            return entry
         }
-        return result
     }
 
     private static func checkAnchor(_ cs: [PathContour], _ contour: Int, _ index: Int) throws {
@@ -195,8 +170,8 @@ extension Path {
     }
 
     /// A drawing element from `from` as the cubic with the same points at the
-    /// same t: a line or close at thirds, a quad raised.
-    private static func cubic(_ e: PathElement, from: Point, start: Point?) -> (Point, Point, Point, Point)? {
+    /// same t: a line (or close back to `start`) at thirds, a quad raised.
+    static func cubic(_ e: PathElement, from: Point, start: Point?) -> (Point, Point, Point, Point)? {
         switch e {
         case .move: return nil
         case .line(let to): return (from, lerp(from, to, 1.0 / 3), lerp(from, to, 2.0 / 3), to)
@@ -206,36 +181,36 @@ extension Path {
         }
     }
 
-    /// The closest point of cubic `c` to `p`: the best of its flattening
-    /// samples, then golden-section search between that sample's neighbours.
-    private static func closest(_ c: (Point, Point, Point, Point), to p: Point, tolerance: Double) -> (t: Double, point: Point, distance: Double) {
-        func at(_ t: Double) -> (Point, Double) {
+    /// The closest point of cubic `c` to `p`: the nearest flattened point (equal
+    /// t steps), then golden-section search between its neighbours.
+    private static func closest(_ c: (Point, Point, Point, Point), to p: Point, tolerance: Double) throws -> (Double, Point, Double) {
+        func distance(_ q: Point) -> Double { norm(q.x - p.x, q.y - p.y) }
+        func at(_ t: Double) -> (t: Double, point: Point, distance: Double) {
             let q = cubicAt(c.0, c.1, c.2, c.3, t)
-            return (q, norm(q.x - p.x, q.y - p.y))
+            return (t, q, distance(q))
         }
-        let n = max(cubicSegmentCount(c.0, c.1, c.2, c.3, tolerance: tolerance), 8)
-        let k = (0...n).min { at(Double($0) / Double(n)).1 < at(Double($1) / Double(n)).1 } ?? 0
+        let samples = try Path(elements: [.move(to: c.0), .cubic(control1: c.1, control2: c.2, to: c.3)])
+            .flattened(tolerance: tolerance).first ?? []
+        let n = max(samples.count - 1, 1)
+        let k = samples.indices.min { distance(samples[$0]) < distance(samples[$1]) } ?? 0
         var lo = Double(max(k - 1, 0)) / Double(n), hi = Double(min(k + 1, n)) / Double(n)
         let g = (5.0.squareRoot() - 1) / 2
         for _ in 0..<80 {
             let a = hi - g * (hi - lo), b = lo + g * (hi - lo)
-            if at(a).1 < at(b).1 { hi = b } else { lo = a }
+            if at(a).distance < at(b).distance { hi = b } else { lo = a }
         }
-        let t = (lo + hi) / 2, (q, d) = at(t)
-        return (t, q, d)
+        return at((lo + hi) / 2)
     }
 }
 
 extension PathContour {
-    /// Appends a segment with handles `c1` and `c2` to `to`; a handle on its
-    /// own point is dropped.
+    /// Appends a segment with handles `c1`, `c2` to `to`; a handle on its own point is dropped.
     fileprivate mutating func append(_ c1: Point?, _ c2: Point?, _ to: Point) {
         if let k = anchors.indices.last, let c1, c1 != anchors[k].point { anchors[k].handleOut = c1 }
         anchors.append(PathAnchor(point: to, handleIn: c2 == to ? nil : c2))
     }
 
-    /// Closes the contour, folding a last anchor that a curve brought back
-    /// onto the first into the first.
+    /// Closes the contour, folding a last anchor that a curve brought back onto the first into it.
     fileprivate mutating func close() {
         guard !closed else { return }
         closed = true
@@ -248,14 +223,15 @@ extension PathContour {
 }
 
 extension PathAnchor {
-    /// The kind the handles show: opposite and collinear is smooth, and also
-    /// of equal length is symmetric (both to 1e-9, relative).
-    fileprivate var measuredKind: AnchorKind {
-        guard let i = handleIn, let o = handleOut else { return .corner }
+    /// The anchor with the kind its handles show: opposite and collinear is
+    /// smooth, and also of equal length is symmetric (both to 1e-9, relative).
+    fileprivate var measured: PathAnchor {
+        guard let i = handleIn, let o = handleOut else { return PathAnchor(point: point, handleIn: handleIn, handleOut: handleOut) }
         let (ix, iy, ox, oy) = (i.x - point.x, i.y - point.y, o.x - point.x, o.y - point.y)
         let li = norm(ix, iy), lo = norm(ox, oy)
-        guard ix * ox + iy * oy < 0, abs(ix * oy - iy * ox) <= 1e-9 * li * lo else { return .corner }
-        return abs(li - lo) <= 1e-9 * max(li, lo) ? .symmetric : .smooth
+        let smooth = ix * ox + iy * oy < 0 && abs(ix * oy - iy * ox) <= 1e-9 * li * lo
+        let kind: AnchorKind = !smooth ? .corner : abs(li - lo) <= 1e-9 * max(li, lo) ? .symmetric : .smooth
+        return PathAnchor(point: point, handleIn: i, handleOut: o, kind: kind)
     }
 }
 
