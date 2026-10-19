@@ -2,7 +2,7 @@
 
 Issue: #434 · Packet: docs/blueprints/core/features/affine-composite.md
 Run: act-1a150bfbcf7-sfwy · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
-Stage: 4 round 5 panel running (wf_8b368d65-964) on 64bd637: gate PASS (rerun after OOM kill), mutants 48/48
+Stage: 4 round 5 panel done (5 confirmed); fixes r5-b1, r5-b2 queued. AC-comp reaches its round cap (rounds 2-5); AC-z 2 rounds
 Base: 4feaaf9fac3cc050901f8b459a0908515a927f54
 Next: round 5 panel; then AC-9 (feature-done), Belt-Slice-Done AC-z, Mac-Finish-Wanted AC-z
 
@@ -54,6 +54,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 | AC-comp | 2 | 7d8af79 | PASS | 66/66 | - | clarity, contract, tests, robustness | 5 (2 major: through-composite misses kernel reach past bounds on hard edges; ±2^52 clamp untested; 3 minor), 0 refuted | #621 merged (f31d178), 5/5 mutate | no |
 | AC-a, AC-geo, AC-comp | 3 | 77b74a1 | PASS | 133/133 | - | clarity, contract, tests, robustness | 8 (2 major: reach formula mutants escape on anisotropic/sheared upscales; rows-outside test blind to clip removal; 6 minor: matrix direction docs, split singular/non-finite errors, padded doc, packet reach wording, opacity guard mutation, CPU affine bad input), 0 refuted | r3-b1 #672 merged (c53dfcf), r3-b2 #674 merged (813d92d), r3-b3 #669 merged (13a82ad); round 3 fixes all merged | no |
 | AC-comp, AC-z | 4 | 813d92d | PASS | 33/33 (affine plans) | - | clarity, contract, tests, robustness | 9 (3 major: box-sized intermediate in composite(through:); AC-8 unbuilt; 2^52 reach clamp untested; 6 minor), 0 refuted | r4-b1 #693 merged (3207e38), r4-b2 #695 merged (b94f827); r4-b3 #700 merged (64bd637) | no |
+| AC-comp, AC-z | 5 | 64bd637 | PASS (rerun after OOM kill) | 48/48 | - | clarity, contract, tests, robustness | 5 (1 major: the only lanczos3 composite-through golden uses an alpha-zero source, so a fixed filter passes every test; 4 minor: partial-write on throw undocumented at backend level, widened write box not public, noFullSizeIntermediate measures no memory, overshoot rows-untouched unchecked), 1 refuted | r5-b1, r5-b2 queued (RAM) | no |
 
 ## Decisions
 - AC-4 (#584): `padded` places the source with whole-pixel `transformed` at floor offsets per anchor; `CanvasSizeTests.swift` was created (packet lists it, file did not exist).
