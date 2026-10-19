@@ -75,9 +75,9 @@ import Testing
         #expect(try FlareFormat.encode(FlareFormat.decode(original)) == original)
         let data = try FlareFormat.encode(Self.withText())
         #expect(try FlareFormat.decode(data) == Self.withText())
-        // Exporters throw rather than drop the text.
+        // SVG writes the text; Lottie throws rather than drop it.
         let scene = Self.withText().scenes[0]
-        #expect(throws: SVGExportError.unsupported("text")) { try SVGExporter.export(scene: scene, frame: 0) }
+        #expect(try SVGExporter.export(scene: scene, frame: 0).contains("<text "))
         #expect(throws: LottieExportError.unsupported("text")) { try LottieExporter.export(scene: scene) }
     }
 

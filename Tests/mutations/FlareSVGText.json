@@ -1,0 +1,4 @@
+[
+  {"note": "svg text font-weight from the shape, not the run", "file": "Sources/FlareCore/Export/SVGExporter+Text.swift", "anchor": "if run.weight != 400 { attrs += \" font-weight=\\\"\\(run.weight)\\\"\" }", "replacement": "if run.weight != 400 { attrs += \" font-weight=\\\"400\\\"\" }", "filter": "SVGTextExportTests.runWeightWritten"},
+  {"note": "svg text baseline from line index times size, not the layout", "file": "Sources/FlareCore/Export/SVGExporter+Text.swift", "anchor": "y=\\\"\\(try number(origin.y + line.baseline))\\\"", "replacement": "y=\\\"\\(try number(origin.y + Double(layout.lines.firstIndex(of: line) ?? 0) * text.fontSize))\\\"", "filter": "SVGTextExportTests.baselinesFromLayout"}
+]

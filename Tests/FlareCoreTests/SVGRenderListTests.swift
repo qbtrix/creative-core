@@ -84,11 +84,9 @@ import Testing
         #expect(try SVGExporter.export(scene: scene, frame: frame, symbols: NestedScene.symbols) == Self.nested)
     }
 
-    @Test func textAndMissingSymbolStillThrow() {
+    @Test func textPathAndMissingSymbolStillThrow() throws {
         let withText = NestedScene.scene(withText: true, withMissing: false)
-        #expect(throws: SVGExportError.unsupported("text")) {
-            try SVGExporter.export(scene: withText, frame: 0, symbols: NestedScene.symbols)
-        }
+        #expect(try SVGExporter.export(scene: withText, frame: 0, symbols: NestedScene.symbols).contains(">Hi</tspan>"))
         let withMissing = NestedScene.scene(withText: false, withMissing: true)
         #expect(throws: SVGExportError.unresolvedSymbol("missing")) {
             try SVGExporter.export(scene: withMissing, frame: 0, symbols: NestedScene.symbols)
@@ -100,12 +98,14 @@ import Testing
         #expect(throws: SVGExportError.unresolvedSymbol("gone")) {
             try SVGExporter.export(scene: scene, frame: 0, symbols: [outer, NestedScene.inner])
         }
-        // The text check comes first, as before: a layer holding both text and
-        // a missing instance reports the text.
+        // The type-on-a-path check comes first: a layer holding both text on a
+        // path and a missing instance reports the path.
         var both = scene
-        both.layers[0].texts = [TextShape(string: "a", fontFamily: "Serif", fontSize: 9, position: Point(x: 0, y: 0))]
+        let line = Path(elements: [.move(to: Point(x: 0, y: 0)), .line(to: Point(x: 9, y: 0))])
+        both.layers[0].texts = [TextShape(string: "a", fontFamily: "Serif", fontSize: 9, position: Point(x: 0, y: 0),
+                                          onPath: TextOnPath(path: line))]
         both.layers[0].instances = [Instance(symbolID: "missing")]
-        #expect(throws: SVGExportError.unsupported("text")) {
+        #expect(throws: SVGExportError.unsupported("textPath")) {
             try SVGExporter.export(scene: both, frame: 0, symbols: NestedScene.symbols)
         }
     }
