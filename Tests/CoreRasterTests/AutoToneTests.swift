@@ -48,4 +48,30 @@ import Testing
         Self.expectIdentity(try AutoTone.suggest(for: black), "black")
         Self.expectIdentity(try AutoTone.suggest(for: PixelBuffer(width: 32, height: 32)), "transparent")
     }
+
+    /// A grey ramp over 0.2...0.6 whose lower half fills 0.2...0.3 and upper
+    /// half 0.3...0.6, so the median is 0.3: black ≈ 0.2, white ≈ 0.6, and
+    /// t = 0.25 wants gamma log(0.25)/log(0.5) = 2, which lifts the median to 0.5.
+    @Test func levelsStretchAndCentreMedian() throws {
+        var ramp = try PixelBuffer(width: 1024, height: 4)
+        for y in 0..<4 {
+            for x in 0..<1024 {
+                let low = 0.2 + 0.1 * (Float(x) + 0.5) / 512, high = 0.3 + 0.3 * (Float(x - 512) + 0.5) / 512
+                let v = x < 512 ? low : high
+                try ramp.setPixel(x: x, y: y, RGBA(r: v, g: v, b: v, a: 1))
+            }
+        }
+        let t = try AutoTone.suggest(for: ramp)
+        #expect(abs(t.inBlack - 0.2) <= 1e-2, "\(t)")
+        #expect(abs(t.inWhite - 0.6) <= 1e-2, "\(t)")
+        #expect(abs(t.gamma - 2) <= 1e-2, "\(t)")
+        #expect(abs(t.temperature) <= 1e-3 && abs(t.tint) <= 1e-3, "\(t)")
+        let fixed = try ramp.whiteBalance(temperature: t.temperature, tint: t.tint)
+            .levels(inBlack: t.inBlack, inWhite: t.inWhite, gamma: t.gamma, outBlack: 0, outWhite: 1)
+        var row = [Float]()
+        for x in 0..<1024 { row.append(try fixed.pixel(x: x, y: 0).r) }
+        row.sort()
+        let median = (row[511] + row[512]) / 2
+        #expect(abs(median - 0.5) <= 1e-2, "median \(median), \(t)")
+    }
 }
