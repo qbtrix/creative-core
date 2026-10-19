@@ -2,15 +2,15 @@
   {
     "note": "the mask feather uses sigma = radius instead of radius / 3, so the edge fades three times too far and the first pixel inside reads well under 0.6, caught by MaskOpsTests.edgeIsHalfAtTheEdge",
     "file": "Sources/CoreRaster/Masks/MaskFeather.swift",
-    "anchor": "PixelBuffer.gaussianKernel(sigma: radius / 3, width: width, height: height)",
-    "replacement": "PixelBuffer.gaussianKernel(sigma: radius, width: width, height: height)",
+    "anchor": "let sigma = radius / 3",
+    "replacement": "let sigma = radius",
     "filter": "MaskOpsTests"
   },
   {
-    "note": "the mask feather's vertical pass clamps its taps to the row length instead of the column length, so a tall mask no longer feathers like its transpose, caught by MaskOpsTests.tallMaskFeathersLikeItsTranspose",
+    "note": "the mask feather's column pass steps its samples along a row instead of down the column, so a tall mask no longer feathers like its transpose, caught by MaskOpsTests.tallMaskFeathersLikeItsTranspose",
     "file": "Sources/CoreRaster/Masks/MaskFeather.swift",
-    "anchor": "tap: PixelBuffer.taps(kernel, length: h))",
-    "replacement": "tap: PixelBuffer.taps(kernel, length: w))",
+    "anchor": "sampleStep = alongRows ? 1 : w",
+    "replacement": "sampleStep = 1",
     "filter": "MaskOpsTests"
   },
   {
@@ -19,5 +19,19 @@
     "anchor": "guard denominator.isNormal else { return [1] }",
     "replacement": "guard sigma != 0 else { return [1] }",
     "filter": "MaskOpsTests"
+  },
+  {
+    "note": "the extended box's end weight uses t instead of 3 t, so the passes' variance misses sigma squared, caught by MaskFeatherBoxTests.extendedBoxMatchesTheVariance",
+    "file": "Sources/CoreRaster/Blur.swift",
+    "anchor": "(2 * l + 1) * (l * (l + 1) - 3 * t)",
+    "replacement": "(2 * l + 1) * (l * (l + 1) - t)",
+    "filter": "MaskFeatherBoxTests"
+  },
+  {
+    "note": "the mask feather takes the boxes at every sigma, so a small radius drifts far from its Gaussian, caught by MaskFeatherBoxTests.boxFeatherStaysNearTheGaussian",
+    "file": "Sources/CoreRaster/Masks/MaskFeather.swift",
+    "anchor": "sigma <= Self.exactSigma ? kernel : []",
+    "replacement": "sigma < 0 ? kernel : []",
+    "filter": "MaskFeatherBoxTests"
   }
 ]
