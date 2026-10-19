@@ -8,8 +8,10 @@
 // 1e-5) and posterize 4 (four levels per channel). The colour cases land on
 // the CPU and give their CoreRaster call's pixels with `==`; `contrast`
 // lands on the fake. The fake is not a pixel reference (its `.adjust`
-// leaves pixels as they are), so auto tone's two `.adjust` cases run on the
-// dispatcher's own CPU fallback, `d.fallback`.
+// leaves pixels as they are), so auto tone's two `.adjust` cases go through
+// a second dispatcher over an unhealthy copy of the same fake and the same
+// CPU backend: each falls back to the CPU and gives its CoreRaster call's
+// pixels with `==`.
 import CoreColor
 import CoreRaster
 import CoreRender
@@ -77,14 +79,15 @@ import Testing
         return lines.joined(separator: "\n") + "\n"
     }
 
-    /// One colour step: `adjustment` through the dispatcher on `s`, which
-    /// holds `input`. It must land on the CPU and equal `direct(input)`.
+    /// One step: `adjustment` through the dispatcher on `s`, which holds
+    /// `input`. It must fall back to the CPU for its family and equal
+    /// `direct(input)`.
     static func colorStep(_ d: RenderDispatcher, _ s: RenderSurface, _ input: PixelBuffer,
                           _ adjustment: ToneAdjustment,
                           _ direct: (PixelBuffer) throws -> PixelBuffer) throws -> (RenderSurface, PixelBuffer) {
         let out = try d.adjusted(s, adjustment)
         #expect(out.backend == d.fallback.name, "\(adjustment)")
-        #expect(d.lastFallback?.op == .color, "\(adjustment)")
+        #expect(d.lastFallback?.op == adjustment.family, "\(adjustment)")
         let pixels = try d.read(out)
         let same = pixels == (try direct(input))  // a Bool, so a miss does not print both buffers
         #expect(same, "\(adjustment)")
@@ -97,13 +100,22 @@ import Testing
         let photo = try Self.castPhoto()
         #expect(try Self.patchSpread(photo) > 2.0 / 255)
 
-        // Auto tone: the suggestion, white balance then levels, on the CPU.
+        // Auto tone: the suggestion's two `.adjust` cases, white balance then
+        // levels, through a dispatcher whose copy of the fake is unhealthy, so
+        // both fall back to the shared CPU backend and match CoreRaster.
         let t = try AutoTone.suggest(for: photo)
-        let cpu = d.fallback
-        let balanced = try cpu.adjusted(cpu.surface(photo), .whiteBalance(temperature: t.temperature, tint: t.tint))
-        var s = try cpu.adjusted(balanced, .levels(inBlack: t.inBlack, inWhite: t.inWhite, gamma: t.gamma,
-                                                   outBlack: 0, outWhite: 1))
-        var b = try cpu.read(s)
+        var unhealthy = fake
+        unhealthy.healthy = false
+        let auto = RenderDispatcher(preferred: unhealthy, fallback: d.fallback)
+        var s = try auto.surface(photo), b = photo
+        (s, b) = try Self.colorStep(auto, s, b, .whiteBalance(temperature: t.temperature, tint: t.tint)) {
+            try $0.whiteBalance(temperature: t.temperature, tint: t.tint)
+        }
+        (s, b) = try Self.colorStep(auto, s, b, .levels(inBlack: t.inBlack, inWhite: t.inWhite, gamma: t.gamma,
+                                                        outBlack: 0, outWhite: 1)) {
+            try $0.levels(inBlack: t.inBlack, inWhite: t.inWhite, gamma: t.gamma, outBlack: 0, outWhite: 1)
+        }
+        #expect(auto.lastFallback?.reason == RenderDispatcher.reasonUnhealthy)
         #expect(try Self.patchSpread(b) <= 2.0 / 255, "\(t)")
 
         // Contrast is `.adjust`: the fake has it, so the dispatcher sends it there.

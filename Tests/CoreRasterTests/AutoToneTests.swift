@@ -82,6 +82,59 @@ import Darwin
         #expect(abs(median - 0.5) <= 1e-2, "median \(median), \(t)")
     }
 
+    /// A 1024 x 4 grey buffer whose column `x` is `value(x)`.
+    static func greyColumns(_ value: (Int) -> Float) throws -> PixelBuffer {
+        var b = try PixelBuffer(width: 1024, height: 4)
+        for y in 0..<4 {
+            for x in 0..<1024 {
+                let v = value(x)
+                try b.setPixel(x: x, y: y, RGBA(r: v, g: v, b: v, a: 1))
+            }
+        }
+        return b
+    }
+
+    /// 600 of 1024 columns sit on 0.2 and the rest ramp 0.2...0.9, so the
+    /// black point and the median share 0.2's bin: within it the quantiles
+    /// interpolate to (819 + p·1024/600)/4096, so t = (0.499·1024/600)/4096/0.7
+    /// ≈ 2.97e-4 and log2(1/t) ≈ 11.7 is past the gamma cap: gamma is 10.
+    @Test func gammaClampsToTen() throws {
+        let b = try Self.greyColumns { x in x < 600 ? 0.2 : 0.2 + 0.7 * Float(x - 600) / 423 }
+        let t = try AutoTone.suggest(for: b)
+        #expect(abs(t.inBlack - 0.2) <= 1e-3, "\(t)")
+        #expect(t.gamma == 10, "\(t)")
+    }
+
+    /// A ramp over 0.5...0.502 spans 0.002, under the 1/256 guard: the levels
+    /// stay at identity (0, 1, 1) instead of stretching the noise to 0...1.
+    @Test func narrowRangeKeepsIdentityLevels() throws {
+        let b = try Self.greyColumns { x in 0.5 + 0.002 * Float(x) / 1023 }
+        Self.expectIdentity(try AutoTone.suggest(for: b), "narrow")
+        // Just past the guard (span 0.01), the levels do stretch.
+        let wide = try AutoTone.suggest(for: Self.greyColumns { x in 0.5 + 0.01 * Float(x) / 1023 })
+        #expect(abs(wide.inBlack - 0.5) <= 1e-3 && abs(wide.inWhite - 0.51) <= 1e-3, "\(wide)")
+    }
+
+    /// The levels are read after the white balance. Every pixel is v·(1, 1.4, 1)
+    /// for v on a ramp 0.1...0.7, so the balance is temperature 0, tint
+    /// 100·log2(1.96), gains (1, 1/1.4, 1)/N with N = 0.2126 + 0.7152/1.4 +
+    /// 0.0722 = 0.795657: each pixel turns grey with luma v/N = 1.25682·v,
+    /// where the unbalanced luma is 1.28608·v. With the 0.1% clip the points
+    /// sit at v ≈ 0.1006 and 0.6994: inBlack 0.12644, inWhite 0.87902.
+    @Test func levelsReadAfterWhiteBalance() throws {
+        var b = try PixelBuffer(width: 1024, height: 4)
+        for y in 0..<4 {
+            for x in 0..<1024 {
+                let v = 0.1 + 0.6 * Float(x) / 1023
+                try b.setPixel(x: x, y: y, RGBA(r: v, g: v * 1.4, b: v, a: 1))
+            }
+        }
+        let t = try AutoTone.suggest(for: b)
+        #expect(t.temperature == 0 && abs(t.tint - 97.085) <= 1e-2, "\(t)")
+        #expect(abs(t.inBlack - 0.12644) <= 5e-4, "\(t)")
+        #expect(abs(t.inWhite - 0.87902) <= 5e-4, "\(t)")
+    }
+
     /// Applies `t` as a suggestion is applied: white balance, then levels.
     static func applied(_ t: AutoTone, to b: PixelBuffer) throws -> PixelBuffer {
         try b.whiteBalance(temperature: t.temperature, tint: t.tint)
