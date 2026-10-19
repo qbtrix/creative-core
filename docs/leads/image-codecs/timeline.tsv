@@ -20,3 +20,4 @@ utc	stage	event	ref	note
 2026-10-19T04:58:26Z	build	pr-open	#637	IC-4 3/3, 0.78 s decode; dirty + footer, sent back
 2026-10-19T05:09:37Z	build	pr-ready	#636	IC-5 rebased 48a0e61, CI PASS, 2/2, footer gone, mergeable clean
 2026-10-19T05:09:47Z	build	pr-ready	#635	IC-7 rebased a686651, CI PASS, 3/3, footer gone, mergeable clean
+2026-10-19T05:16:48Z	stage-4	round-start	IC-jpeg r1	dev 81ae63c; IC-6/7/8 all merged; gate+mutate running
