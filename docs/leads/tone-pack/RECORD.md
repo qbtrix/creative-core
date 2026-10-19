@@ -1,9 +1,9 @@
 # tone-pack lead record
 
 Issue: #432 · Packet: docs/blueprints/core/features/tone-pack.md
-Run: act-1a150bfbcf7-sfwy · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
-Stage: 4 round 5 fixes running (wf_206056b3-8d3: r5-b1 clarity, r5-b2 auto tone tests + walk routing, r5-b3 colour-op perf + release budgets on)
-Base: 4feaaf9fac3cc050901f8b459a0908515a927f54
+Run: act-1a1543c8a5f-6y14 (relaunch; first run act-1a150bfbcf7-sfwy) · Started: 2026-10-18T20:45Z · Relaunched: 2026-10-19T13:05Z
+Stage: 4 round 5 fixes re-dispatched after relaunch (first run's wf_206056b3-8d3 died: r5-b1 left a commit on lead/tone-pack-r5-b1 with no PR, r5-b2 and r5-b3 pushed nothing)
+Base: 0b5a641be359e283625fa5c798b8d02872fad344
 Next: r5 fixes merge; round 6 for TP-cpu, TP-z only (TP-a, TP-mix, TP-map at round cap); then TP-10 (feature-done), Belt-Slice-Done TP-z, Mac-Finish-Wanted TP-z
 
 Line lead for #434, #433 and #432 (rule 19); one wave plan across the three
@@ -68,6 +68,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 - Added TP-0 (rule 18): the contract slice's ops don't exist yet, so TP-1's suites couldn't compile; TP-0 declares them as stubs, TP-3..6 fill the bodies.
 - TP-2's `.cube` fixtures are generated as text in `ToneFixtures.swift`, not files under `Fixtures/luts/`: a 33³ table is ~36,000 lines (over the 400-line cap) and test resources would need a `Package.swift` edit (protected).
 - `Tone/` is already owned by `image-ops`; no C4 edit.
+- Relaunch (2026-10-19T13:05Z, run act-1a1543c8a5f-6y14): this run leads #432 only; lead/tone-pack rebased onto dev 0b5a641. r5-b3 speeds the colour ops without changing a pixel (unsafe loops, rows in parallel), so the goldens and 1e-6 pins hold; the release budget runs come back on as reported rows (packet: time budgets reported, Mac finisher records them).
 - Combined wave plan: see affine-composite's RECORD (W1 TP-0, TP-2 · W2 TP-1 · W3 TP-3..6 · W5 TP-7 · W6 TP-8 · W7 TP-9 · W8 TP-10).
 
 ## Open
