@@ -2,9 +2,9 @@
 
 Issue: #432 · Packet: docs/blueprints/core/features/tone-pack.md
 Run: act-1a1543c8a5f-6y14 (relaunch; first run act-1a150bfbcf7-sfwy) · Started: 2026-10-18T20:45Z · Relaunched: 2026-10-19T13:05Z
-Stage: 4 round 8 (TP-z 4/4, last) on a2157a4: gate, mutation and critic panel running
+Stage: 5 finish: #727 (packet build record, feature-done) open on the lane; waiting for its dev ci.yml run
 Base: a2157a4c
-Next: read round 8 (scratchpad round-8 ci.log, mutate.log, panel wf_f0e6ad25-fff); #725 merged without feature-done, so open one last PR (round-8 fixes if any, else the RECORD summary in the packet) labelled feature-done; when its dev CI run is green: Belt-Slice-Done TP-z, Mac-Finish-Wanted TP-z, contact sheet on #432; findings left after round 8 become gap issues
+Next: once #727 merges, find the dispatched ci.yml run on dev; when Linux, macOS and Mutation are green, post Belt-Slice-Done TP-z, Mac-Finish-Wanted TP-z and Belt-Contact-Sheet on #432, mark TP-z merged-done, then Next: Mac finisher verifies TP-z. If it is red in feature files, file gap issues (round budget spent)
 
 Line lead for #434, #433 and #432 (rule 19); one wave plan across the three
 features, bookkeeping per feature. Packet v3 (has a Slices table).
@@ -60,6 +60,7 @@ features, bookkeeping per feature. Packet v3 (has a Slices table).
 | TP-mix, TP-map, TP-cpu, TP-z | 5 | 7f81db8 | PASS | 40/40 (tone plans) | - | clarity, contract, tests, robustness | 9 (1 major: colour ops miss release budgets 4-70x and ToneBudgetTests disabled in every optimized build; 8 minor: ToneAdjustment doc names wrong file, invert space unstated, gradientMap stop error lacks index, W1 tone value inits undocumented, walk auto tone skips dispatcher, AutoTone gamma/minimumSpan/white-balance pass-two untested), 4 refuted | r5-b1 #714 merged (f1089c4), r5-b2 #715 merged (d2f4262), r5-b3 #717 merged (9df2695; ops 1.3-3x faster bit-exact, still over budget on loaded Linux, budgets reported, Mac gates) | no |
 | TP-cpu, TP-z | 6 | 4b238e0 | PASS (1957 tests) | 47/47 (7 tone plans) | - | clarity, contract, tests, robustness | 11 (1 major: CPU posterize ignores its level count undetected, every path uses 4; 10 minor: budget report labels debug rows as full-size, ToneBudgetOp doc cites the walk, warm33 parse error dropped, Samples+Color tolerance doc, walk header promises `==` for invert, alpha-zero golden bands all zero, no mutation for lowest-band error, budget run accepts a no-op, ToneBandTests skips a wrong error case), 2 refuted | #722 merged (r6 fixes + TP-10, feature-done) | no |
 | TP-cpu, TP-z | 7 | 0b96aa5 | PASS (1971 tests) | 49/49 (7 tone plans) | 39279766862 (green: Linux, macOS, Mutation) | clarity, contract, tests, robustness | 2 minor (walk misses 5 ops vs TP-z sentence; no mutation on alpha-0 guard), 0 refuted | #725 merged (a2157a4) | yes |
+| TP-z | 8 | a2157a4 | PASS (1984 tests) | 50/50 (7 tone plans) | (from #727 feature-done run) | clarity, contract, tests, robustness | 0 findings | #727 (packet build record, feature-done) | yes |
 
 ## Decisions
 - #725 (r7 fixes) merged at once without the feature-done label, so the feature-done CI run comes from one last PR after round 8.
