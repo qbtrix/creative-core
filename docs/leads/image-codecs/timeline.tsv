@@ -39,3 +39,4 @@ utc	stage	event	ref	note
 2026-10-19T06:50:15Z	stage-4	gate-pass	a672a6b	IC-jpeg r2: CI PASS 1799 tests, 805 anchors, JPEG 6/6, JPEGProgressive 12/12, JPEGWrite 7/7; panel wf_eff5142c-708
 2026-10-19T06:54:20Z	stage-4	panel-done	wf_eff5142c-708	IC-jpeg r2: 9 confirmed (3 major), 1 refuted; not clean
 2026-10-19T06:54:20Z	stage-4	fix-batch	wf_a005f679-d21	IC-jpeg r2: b1 header/writer, b2 progressive/entropy
+2026-10-19T07:01:18Z	stage-4	heartbeat	-	fix batches wf_9d39d94a-8d4 (IC-png r1) and wf_a005f679-d21 (IC-jpeg r2) running; no image-codecs PR open to dev yet
