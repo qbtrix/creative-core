@@ -71,10 +71,7 @@ private func milliseconds(_ d: Duration) -> String {
         #expect(try #require(found).distance.isFinite)
     }
 
-    /// Optimized builds only for now: each dash's cut scans the whole
-    /// 400,000-point polyline, so a debug run takes minutes in the gate.
-    @Test(.enabled(if: optimized, "the dash cut is quadratic in debug until the r2 cut lands"))
-    func dashScribble() throws {
+    @Test func dashScribble() throws {
         let dashed = try Self.check("dash the scribble", budget: .milliseconds(5)) {
             try Self.scribble.dashed([400, 200], phase: 50, tolerance: Self.tolerance)
         }
