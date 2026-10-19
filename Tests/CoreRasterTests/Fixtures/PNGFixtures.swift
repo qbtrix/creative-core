@@ -104,7 +104,8 @@ enum PNGFixtures {
         let size = (stream.count + idats - 1) / idats
         let parts = stride(from: 0, to: stream.count, by: size).map { chunk("IDAT", Array(stream[$0..<min($0 + size, stream.count)])) }
         let head = chunk("IHDR", ihdr(pixels.first?.count ?? 0, pixels.count, depth: depth, colorType: colorType, interlace: interlaced ? 1 : 0))
-        return Data(signature + head + extra.joined() + parts.joined() + chunk("IEND", []))
+        let bytes: [UInt8] = signature + head + Array(extra.joined()) + Array(parts.joined()) + chunk("IEND", [])
+        return Data(bytes)
     }
 
     /// A `width` x `height` grid whose samples run through every value a depth holds, distinct per channel.
