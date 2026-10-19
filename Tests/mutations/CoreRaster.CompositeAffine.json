@@ -12,5 +12,26 @@
     "anchor": "try composite(piece, x: x0, y: y0, mode: mode, opacity: opacity)",
     "replacement": "try composite(piece, x: x0, y: y0, mode: mode, opacity: opacity * opacity)",
     "filter": "CompositeAffineTests"
+  },
+  {
+    "note": "bounds edges skip the 2^52 clamp so a huge finite matrix traps converting to Int, caught by CompositeAffineTests.hugeFiniteMatrixIsClampedAndOffBackdrop as a crash",
+    "file": "Sources/CoreRaster/Compositing/CompositeAffine.swift",
+    "anchor": "Int(min(max(v.rounded(rule), -limit), limit))",
+    "replacement": "Int(v.rounded(rule))",
+    "filter": "CompositeAffineTests"
+  },
+  {
+    "note": "the matrix guard drops the inverse check so a singular matrix mapped off the backdrop returns without throwing, caught by CompositeAffineTests.badInputThrowsAndLeavesBackdrop",
+    "file": "Sources/CoreRaster/Compositing/CompositeAffine.swift",
+    "anchor": "allSatisfy(\\.isFinite), let inv = m.inverse else {",
+    "replacement": "allSatisfy(\\.isFinite), let inv = m.inverse ?? Optional(m) else {",
+    "filter": "CompositeAffineTests"
+  },
+  {
+    "note": "the work piece is clipped to the corner bounds without the filter's reach, dropping coverage past a hard edge, caught by CompositeAffineTests.hardEdgeKernelReachPastCorners",
+    "file": "Sources/CoreRaster/Compositing/CompositeAffine.swift",
+    "anchor": "func pad(_ v: Double) -> Int { Int(min(v.rounded(.up) + 1, limit)) }",
+    "replacement": "func pad(_ v: Double) -> Int { 0 }",
+    "filter": "CompositeAffineTests"
   }
 ]
