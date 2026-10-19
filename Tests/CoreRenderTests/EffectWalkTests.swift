@@ -53,19 +53,6 @@ import Testing
         .clarity(amount: 30, radius: 30),
     ]
 
-    /// `effect` through the CoreRaster op it names, not through `applying`.
-    static func direct(_ input: PixelBuffer, _ effect: LayerEffect) throws -> PixelBuffer {
-        switch effect {
-        case .boxBlur(let r): try input.boxBlurred(radius: r)
-        case let .motionBlur(deg, dist): try input.motionBlurred(degrees: deg, distance: dist)
-        case let .denoise(s, d): try input.denoised(strength: s, detail: d)
-        case let .clarity(a, r): try input.clarity(amount: a, radius: r)
-        case let .glow(c, r, i, inner): try input.glowing(color: c, radius: r, intensity: i, inner: inner)
-        case let .shadow(c, dx, dy, b, inner): try input.shadowed(color: c, dx: dx, dy: dy, blur: b, inner: inner)
-        case let .stroke(c, w, p): try input.stroked(color: c, width: w, position: p)
-        }
-    }
-
     @Test func walk() throws {
         let fake = FakeBackend(supports: Set(RenderOp.allCases).subtracting([.effect]))
         let dispatcher = RenderDispatcher(preferred: fake, fallback: CPUBackend())
@@ -74,7 +61,8 @@ import Testing
         var results: [PixelBuffer] = []
         for effect in Self.steps {
             surface = try dispatcher.applying(surface, effect)
-            expected = try Self.direct(expected, effect)
+            // The CoreRaster op the case names, not `applying` (CPUEffectTests' helper).
+            expected = try CPUEffectTests().direct(expected, effect)
             let got = try dispatcher.read(surface)
             #expect(got == expected, "\(effect) through the dispatcher differs from the direct call")
             #expect(dispatcher.lastFallback?.op == .effect && dispatcher.lastFallback?.reason == RenderDispatcher.reasonUnsupported)
