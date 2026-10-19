@@ -19,5 +19,54 @@
     "anchor": "let shadows = 1 - Self.smoothstep(0, 0.33, l)",
     "replacement": "let shadows = 1 - Self.smoothstep(0.33, 0, l)",
     "filter": "ColorMixTests"
+  },
+  {
+    "note": "colorBalance preserveLuminosity drops the chroma limit k and lets the clamp cut a channel above 1, losing luma, caught by ColorMixTests.preserveKeepsLuma",
+    "file": "Sources/CoreRaster/Tone/ColorMix.swift",
+    "anchor": "let k = s.max() > 1 ? (1 - l) / (s.max() - l) : 1",
+    "replacement": "let k: Float = 1",
+    "filter": "ColorMixTests"
+  },
+  {
+    "note": "colorBalance moves the highlights smoothstep edge down to 0.33, so midtones take highlight weight, caught by ColorMixTests.highlightsAndMidtonesByZone",
+    "file": "Sources/CoreRaster/Tone/ColorMix.swift",
+    "anchor": "let highlights = Self.smoothstep(0.66, 1, l)",
+    "replacement": "let highlights = Self.smoothstep(0.33, 1, l)",
+    "filter": "ColorMixTests"
+  },
+  {
+    "note": "colorBalance moves a negative shift toward 0 by the headroom 1 - c instead of c, caught by ColorMixTests.highlightsAndMidtonesByZone",
+    "file": "Sources/CoreRaster/Tone/ColorMix.swift",
+    "anchor": "var out = c + d * c.replacing(with: 1 - c, where: d .> 0)",
+    "replacement": "var out = c + d * (1 - c)",
+    "filter": "ColorMixTests"
+  },
+  {
+    "note": "channelMixer drops the constant column, so a row's fourth weight adds nothing, caught by ColorMixTests.matrixRowsAndConstant",
+    "file": "Sources/CoreRaster/Tone/ColorMix.swift",
+    "anchor": "let v = SIMD4(p.r, p.g, p.b, 1)",
+    "replacement": "let v = SIMD4(p.r, p.g, p.b, 0)",
+    "filter": "ColorMixTests"
+  },
+  {
+    "note": "channelMixer swaps the green and blue rows in the output, caught by ColorMixTests.matrixRowsAndConstant",
+    "file": "Sources/CoreRaster/Tone/ColorMix.swift",
+    "anchor": "return RGBA(r: sum(red), g: sum(green), b: sum(blue), a: p.a)",
+    "replacement": "return RGBA(r: sum(red), g: sum(blue), b: sum(green), a: p.a)",
+    "filter": "ColorMixTests"
+  },
+  {
+    "note": "blackAndWhite drops the hue interpolation and takes only the lower range's weight, caught by ColorMixTests.betweenRangesAndTint",
+    "file": "Sources/CoreRaster/Tone/ColorMix.swift",
+    "anchor": "let w = weights[i] * (1 - f) + weights[(i + 1) % 6] * f",
+    "replacement": "let w = weights[i]",
+    "filter": "ColorMixTests"
+  },
+  {
+    "note": "blackAndWhite ignores the tint alpha and applies the full soft-light tint, caught by ColorMixTests.betweenRangesAndTint",
+    "file": "Sources/CoreRaster/Tone/ColorMix.swift",
+    "anchor": "out += (SIMD3(soft.r, soft.g, soft.b) - out) * tint.a",
+    "replacement": "out += (SIMD3(soft.r, soft.g, soft.b) - out)",
+    "filter": "ColorMixTests"
   }
 ]
