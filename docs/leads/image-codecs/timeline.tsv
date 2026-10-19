@@ -34,3 +34,5 @@ utc	stage	event	ref	note
 2026-10-19T06:27:43Z	stage-4	panel	wf_e82f2b46-79e	IC-png r1 lenses clarity contract robustness tests
 2026-10-19T06:41:33Z	stage-4	pr-merged	#648 #651	IC-jpeg r1 fixes merged 06:21Z
 2026-10-19T06:41:33Z	stage-4	round-start	IC-jpeg r2	gate on a672a6b
+2026-10-19T06:45:05Z	stage-4	panel-done	wf_e82f2b46-79e	IC-png r1: 12 confirmed (4 major), 1 refuted; not clean
+2026-10-19T06:45:05Z	stage-4	fix-batch	wf_9d39d94a-8d4	IC-png r1: b1 reader, b2 writer, b3 zlib

@@ -3,9 +3,9 @@
 Issue: #562 · Packet: docs/blueprints/core/features/image-codecs.md
 Run: act-1a1511a1174-tlch · Started: 2026-10-18T22:40Z
 Line lead for: image-codecs (#562), preview-cache (#440, already done), vector-import (#439, VI-z left)
-Stage: 4 — IC-png r1 panel wf_e82f2b46-79e on c4baa59; IC-jpeg r2 gate on a672a6b
+Stage: 4 — IC-png r1 fix batch wf_9d39d94a-8d4 (3 PRs); IC-jpeg r2 gate on a672a6b
 Base: 9385de9 (wave 4)
-Next: IC-png r1 findings → fix batch; IC-jpeg r2 panel
+Next: IC-png r1 fixes merge, then IC-png round 2; IC-jpeg r2 panel once its gate passes
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -57,3 +57,4 @@ Next: IC-png r1 findings → fix batch; IC-jpeg r2 panel
 - Stray: Tests/CoreRasterTests/ZZBench.swift came in with #625 (48 MB benchmark printing timings each test run). Route its removal into the IC-png/IC-jpeg Anatomy fix batch.
 - #636 rebase: duplicate PNG.paeth (reader and writer) collapsed to the reader's copy; stubsThrowCodecErrors deleted (no stubs remain); head a4df142, CI PASS (1776 tests), PNGWrite 2/2, PNG 3/3.
 - IC-jpeg r1 fix batch wf_4cb93cd0-ecb: b1 #648 (54e1a55, 12/12 JPEGProgressive, adds 64-pass scan budget), b2 #651 (4130d91, 5/5 JPEG), b3 #645 (c68428c, 7/7 JPEGWrite, merged 06:16Z). Branches use lead/image-codecs-r1-jpeg-bN (a nested name clashes with lead/image-codecs).
+| 1 (IC-png) | c4baa59 | PASS (1789 tests) | 8/8 (Inflate 3, PNG 3, PNGWrite 2) | - | clarity, contract, robustness, tests | 12 confirmed, 1 refuted. Major: bloated IDAT throws tooLarge("inflate: ...") not damaged; Adam7 per-pass prior-row reset untested; PNG inflate cap at IHDR bytes untested; Deflate window guard untested and no Deflate mutation plan. Minor: lower-layer messages (no IEND/IDAT), read doc alpha and throws list, tooLarge text names no limit, level range docs, Deflate golden bytes, incomplete Huffman code, six PNG refusals untested, filter tie-break untested | fix batch wf_9d39d94a-8d4: b1 reader, b2 writer, b3 zlib | no |
