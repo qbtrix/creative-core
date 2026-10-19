@@ -25,7 +25,7 @@ extension JPEGDecoder {
         var pred = [Int32](repeating: 0, count: scan.parts.count), eobrun = 0
         try walk(scan, intervals, restart: { pred = pred.map { _ in 0 }; eobrun = 0 }) { bits, j, store, base in
             if scan.ss == 0, scan.ah > 0 { store[base] |= bits.bits(1) << scan.al; return }
-            guard let table = scan.ss == 0 ? scan.parts[j].dc : scan.parts[j].ac else { throw CodecError.damaged("no DHT for the scan") }
+            guard let table = scan.ss == 0 ? scan.parts[j].dc : scan.parts[j].ac else { throw CodecError.damaged("no DHT \(scan.ss == 0 ? "DC" : "AC") table") }
             switch (scan.ss, scan.ah) {
             case (0, _): try bits.dcFirst(table, scan.al, &pred[j], &store, base)
             case (_, 0): try bits.acFirst(table, scan, &eobrun, &store, base)
@@ -42,14 +42,18 @@ extension JPEGDecoder {
         let n = f.components.count
         if coded.count != n + 1 { coded = f.components.map { _ in [Int](repeating: -1, count: 64) } + [[0]] }
         let (ss, se, ah, al) = (scan.ss, scan.se, scan.ah, scan.al)
-        guard ss <= se, se <= 63, al <= 13, ss == 0 ? se == 0 : scan.parts.count == 1, ah == 0 || ah == al + 1 else {
-            throw CodecError.damaged("scan of \(ss)...\(se) at Ah \(ah), Al \(al)")
+        guard ss <= se, se <= 63 else { throw CodecError.damaged("scan band \(ss)...\(se): a band must run up within 0...63") }
+        guard al <= 13 else { throw CodecError.damaged("scan Al \(al): a scan's Al must be 0...13") }
+        guard ss == 0 ? se == 0 : scan.parts.count == 1 else {
+            throw CodecError.damaged(ss == 0 ? "DC scan band 0...\(se): a DC scan must have se 0"
+                                             : "AC scan of \(scan.parts.count) components: an AC scan must code one component")
         }
+        guard ah == 0 || ah == al + 1 else { throw CodecError.damaged("refinement scan at Ah \(ah), Al \(al): a refinement must have Al = Ah - 1") }
         for part in scan.parts {
             guard part.index < n else { throw CodecError.damaged("scan component \(part.index)") }
             let want = ah == 0 ? -1 : ah
             guard ss == 0 || coded[part.index][0] >= 0, coded[part.index][ss...se].allSatisfy({ $0 == want }) else {
-                throw CodecError.damaged("component \(part.index) coefficients \(ss)...\(se) out of order")
+                throw CodecError.damaged("component \(f.components[part.index].id) coefficients \(ss)...\(se) out of order")
             }
             for k in ss...se { coded[part.index][k] = al }
         }
@@ -58,7 +62,7 @@ extension JPEGDecoder {
             let c = f.components[$1.index]
             return $0 + (scan.parts.count == 1 ? c.blocksX * c.blocksY : c.stride * c.rows)
         }
-        guard walked <= Self.passes * blocks else { throw CodecError.tooLarge("scans walk over \(Self.passes) passes of \(blocks) blocks") }
+        guard walked <= Self.passes * blocks else { throw CodecError.tooLarge("progressive scans revisit the \(blocks) blocks more than \(Self.passes) times") }
         coded[n] = [walked]
     }
 }

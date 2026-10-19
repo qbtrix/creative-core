@@ -68,7 +68,7 @@ struct JPEGBits {
             let code = peek(length)
             if code <= t.maxCode[length] { skip(length); return Int(t.values[code + t.offset[length]]) }
         }
-        throw CodecError.damaged("no Huffman code")
+        throw CodecError.damaged("no Huffman code in its DHT table matches the next 16 bits")
     }
 
     /// F.2.2: one sequential block's DC difference and AC run/size symbols into `store` at `base`, zigzag undone.
@@ -109,13 +109,14 @@ extension JPEGDecoder {
     mutating func baselineScan(_ scan: JPEGScan, _ intervals: [[UInt8]]) throws {
         var pred = [Int32](repeating: 0, count: scan.parts.count)
         try walk(scan, intervals, restart: { pred = pred.map { _ in 0 } }) { bits, j, store, base in
-            guard let dc = scan.parts[j].dc, let ac = scan.parts[j].ac else { throw CodecError.damaged("no DHT for the scan") }
+            guard let dc = scan.parts[j].dc, let ac = scan.parts[j].ac else { throw CodecError.damaged("no DHT \(scan.parts[j].dc == nil ? "DC" : "AC") table") }
             try bits.block(dc, ac, &pred[j], &store, base)
         }
     }
 
     /// A scan's blocks in coding order (A.2): its MCUs, or one component's own blocks, each passed as the bits, the scan
-    /// part, that component's store and the block's offset in it; `reset` runs at each restart interval's start.
+    /// part, that component's store and the block's offset in it; `reset` runs at each restart interval's start. A
+    /// block's `damaged` message gains the SOF component id and the unit, so it can be matched to the file.
     mutating func walk(_ scan: JPEGScan, _ intervals: [[UInt8]], restart reset: () -> Void,
                        _ block: (inout JPEGBits, Int, inout [Int32], Int) throws -> Void) throws {
         guard let f = frame, let lead = scan.parts.first else { return }
@@ -135,7 +136,9 @@ extension JPEGDecoder {
                 let x0 = single ? m % c.blocksX : m % f.mcusX * c.h, y0 = single ? m / c.blocksX : m / f.mcusX * c.v
                 for k in 0..<count {
                     let base = ((y0 + k / c.h) * c.stride + x0 + k % c.h) * 64
-                    try block(&bits, j, &coefficients[part.index], base)
+                    do { try block(&bits, j, &coefficients[part.index], base) } catch CodecError.damaged(let text) {
+                        throw CodecError.damaged("\(text), component \(c.id) unit \(m)")
+                    }
                 }
             }
             guard !bits.overrun else { throw CodecError.damaged("scan ends at MCU \(m)") }

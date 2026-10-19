@@ -220,7 +220,11 @@ import Foundation
         let firsts = (1...63).flatMap { (k: Int) -> [UInt8] in F.sos([0], k, k, 0, 1) + [0xAF] }
         let scans = head + F.sos([0], 0, 0, 0, 0) + [UInt8](repeating: 0, count: 8) + firsts
         #expect(PNGFixtures.thrown { try JPEG.read(Data(scans + [0xFF, 0xD9])) } == "returned")
-        #expect(PNGFixtures.thrown { try JPEG.read(Data(scans + F.sos([0], 1, 1, 1, 0) + [0xAF, 0xFF, 0xD9])) } == "tooLarge")
+        let over = Data(scans + F.sos([0], 1, 1, 1, 0) + [0xAF, 0xFF, 0xD9])
+        #expect(PNGFixtures.thrown { try JPEG.read(over) } == "tooLarge")
+        do { _ = try JPEG.read(over) } catch CodecError.tooLarge(let text) {
+            #expect(text.contains("progressive scans"), "\(text)")
+        } catch { Issue.record("\(error)") }
     }
 
     /// B.2.3 and G.1.1.1 on an 8 x 8 grey SOF2: DC first, its refinement and an AC band (one EOB) decode; each bad scan
@@ -237,6 +241,11 @@ import Foundation
             ("refinement of an uncoded band", F.sos([0], 1, 63, 1, 0)),
         ]
         for (name, scan) in bad { #expect(read(dc, scan + zeros) == "damaged", "\(name)") }
+        // Each a first scan with nothing coded before it, or a refinement whose Ah matches what was coded, so only
+        // its own G.1.1.1 clause refuses it: Al over 13, a DC band past 0, and Ah 2 with Al 0 (not Ah - 1).
+        #expect(read(F.sos([0], 0, 0, 0, 14) + zeros) == "damaged", "Al 14 first")
+        #expect(read(F.sos([0], 0, 5, 0, 0) + zeros) == "damaged", "DC band 0...5 first")
+        #expect(read(F.sos([0], 0, 0, 0, 2) + zeros, F.sos([0], 0, 0, 2, 0) + zeros) == "damaged", "Ah 2, Al 0 after Al 2")
         #expect(read(F.sos([0], 1, 63, 0, 0) + zeros) == "damaged", "AC before DC")
         // 8 x 8 YCbCr: after an interleaved DC first scan, an AC scan of all three (each block one EOB, 0xA0) is damaged.
         let colour = F.Frame(width: 8, height: 8, sampling: Self.samplings[0], block: F.seeded(0x99))
