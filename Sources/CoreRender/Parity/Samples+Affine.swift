@@ -1,8 +1,9 @@
 // Samples+Affine.swift: the parity samples and golden pack of `RenderOp.affine` (affine-composite
 // AC-7): `transformed` through a rotate-scale, a shear, the identity and a non-square shrink,
 // with bilinear and lanczos3; `flipped` on each axis; and the composite through a matrix in a
-// separable non-normal mode below full opacity. The inputs are the 9x7 edge-case buffers the
-// other families use (random, alpha 0 with color left, subnormal alpha, opaque rows). A pack
+// separable non-normal mode below full opacity. The inputs are 9x7 seeded buffers: random,
+// fully opaque (every pixel its own color, so hard edges everywhere and lanczos3's ringing
+// differs from bilinear in the lanczos3 composite), subnormal alpha and opaque rows. A pack
 // stacks one width, so every result is 9 wide: outputs are 9 wide and the backdrop is 9x8.
 // Matrices are literals and arithmetic, no trig, so the inputs match bit for bit everywhere.
 import CoreRaster
@@ -12,8 +13,8 @@ enum AffineSamples {
     /// Every sample, in golden band order; throws as building a sample's buffers may.
     static var all: [ParitySample] {
         get throws {
-            let names = ["random", "alpha-zero", "alpha-subnormal", "opaque-rows"]
-            let alphas: [Float?] = [nil, 0, 1e-45, nil]
+            let names = ["random", "opaque", "alpha-subnormal", "opaque-rows"]
+            let alphas: [Float?] = [nil, 1, 1e-45, nil]
             let s = try names.indices.map {
                 try ParityHarness.seeded(9, 7, seed: 0xAF00 + UInt64($0), alpha: alphas[$0], opaqueRows: $0 == 3)
             }
@@ -44,7 +45,7 @@ enum AffineSamples {
                 onto("through-multiply-bilinear",
                      .compositeThrough(through, mode: .multiply, opacity: 0.6, filter: .bilinear), s[0]),
                 onto("through-screen-lanczos3",
-                     .compositeThrough(through, mode: .screen, opacity: 0.5, filter: .lanczos3), s[1]),
+                     .compositeThrough(through, mode: .screen, opacity: 0.5, filter: .lanczos3), s[1]),  // opaque
             ]
         }
     }

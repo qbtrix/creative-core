@@ -86,7 +86,7 @@
   {
     "note": "the box clip is dropped so the whole backdrop is resampled and blended, rows outside the bounds written, caught by CompositeAffineTests.rowsOutsideBoundsAreUntouched",
     "file": "Sources/CoreRaster/Compositing/CompositeAffine.swift",
-    "anchor": "let x0 = max(box.x - pad.x, 0), x1 = min(box.x + box.width + pad.x, width)\n        let y0 = max(box.y - pad.y, 0), y1 = min(box.y + box.height + pad.y, height)",
+    "anchor": "let x0 = max(wide.x, 0), x1 = min(wide.x + wide.width, width)\n        let y0 = max(wide.y, 0), y1 = min(wide.y + wide.height, height)",
     "replacement": "let x0 = 0, x1 = width\n        let y0 = 0, y1 = height",
     "filter": "CompositeAffineTests.rowsOutsideBoundsAreUntouched"
   },
@@ -96,5 +96,19 @@
     "anchor": "guard (0...1).contains(opacity) else {",
     "replacement": "guard true else {",
     "filter": "CompositeAffineTests"
+  },
+  {
+    "note": "the row resample ignores the caller's filter and always samples bilinear, so a lanczos3 composite through rings like bilinear, caught by CompositeAffineTests.lanczos3ThroughIsNotBilinear",
+    "file": "Sources/CoreRaster/Compositing/CompositeAffine.swift",
+    "anchor": "row = try src.transformed(local, width: x1 - x0, height: 1, filter: filter)",
+    "replacement": "row = try src.transformed(local, width: x1 - x0, height: 1, filter: .bilinear)",
+    "filter": "CompositeAffineTests.lanczos3ThroughIsNotBilinear"
+  },
+  {
+    "note": "writeBounds widens each side by the pad once in total instead of on both sides, so the box's right and bottom miss the reach, caught by CompositeAffineTests.rowsOutsideBoundsAreUntouched",
+    "file": "Sources/CoreRaster/Compositing/CompositeAffine.swift",
+    "anchor": "return (box.x - pad.x, box.y - pad.y, box.width + 2 * pad.x, box.height + 2 * pad.y)",
+    "replacement": "return (box.x - pad.x, box.y - pad.y, box.width + pad.x, box.height + pad.y)",
+    "filter": "CompositeAffineTests.rowsOutsideBoundsAreUntouched"
   }
 ]
