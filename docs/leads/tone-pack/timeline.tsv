@@ -27,3 +27,4 @@ utc	stage	event	ref	note
 2026-10-19T00:00:40Z	3	pr-open	#585	TP-5 head 19e7674, 5/5 mutants
 2026-10-19T00:00:40Z	3	building	TP-6	builder launched
 2026-10-19T00:04:03Z	3	merged	#585	TP-5 squash 62a84e9
+2026-10-19T00:31:01Z	4	round-gate	round-1	scripts/ci PASS on 5ea5ae5 (try 5, budget retries under load); mutate 70/70 caught incl. all feature plans; critic panel launched (clarity, contract, tests, robustness)
