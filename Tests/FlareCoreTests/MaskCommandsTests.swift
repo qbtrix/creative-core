@@ -41,10 +41,11 @@ import Testing
          SetTrackMatte(owner: o, layerID: "ball", matte: TrackMatte(sourceLayerID: "bg", kind: .luma))]
     }
 
-    /// A mask index of `layer` in `owner`, sometimes one past the end or negative.
+    /// A mask index of `layer` in `owner`, about one time in eight one past the end or negative.
     static func anyIndex(_ e: CommandEngine, _ owner: LayerOwner, _ layer: String, _ rng: inout SplitMix64) -> Int {
         let count = e.document.layers(of: owner)?.first { $0.id == layer }?.masks.count ?? 0
-        return Int.random(in: -1...count, using: &rng)
+        guard count > 0, Int.random(in: 0..<8, using: &rng) > 0 else { return [-1, count].randomElement(using: &rng) ?? -1 }
+        return Int.random(in: 0..<count, using: &rng)
     }
 
     /// A mask with a random inset, mode and feather, the feather sometimes negative or not finite.
