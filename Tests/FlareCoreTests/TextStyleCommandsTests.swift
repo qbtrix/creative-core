@@ -68,11 +68,15 @@ import Testing
                                        start: TextFixtures.document(Self.boldMid))
     }
 
-    /// A combining mark inserted after a letter would fuse two graphemes, so it is refused.
+    /// A combining mark inserted after a letter would fuse two graphemes, so it
+    /// is refused with a message naming the grapheme offset of the edit.
     @Test func fusingInsertRefused() {
-        var engine = CommandEngine(document: TextFixtures.document())
-        #expect(throws: CommandError.self) { try engine.perform(Self.edit(1..<1, "\u{301}")) }
-        #expect(engine.document == TextFixtures.document() && !engine.canUndo)
+        let start = TextFixtures.document(TextFixtures.text("e"))
+        var engine = CommandEngine(document: start)
+        var message = ""
+        do { try engine.perform(Self.edit(1..<1, "\u{301}")) } catch CommandError.invalidDocument(let text) { message = text } catch {}
+        #expect(message.contains("grapheme 1"))
+        #expect(engine.document == start && !engine.canUndo)
     }
 
     @Test func familyListsExactlyItsIDs() {
@@ -141,11 +145,23 @@ import Testing
     }
     @Test func rangePastEndRefused() throws {
         #expect(try Self.run([Self.apply(10..<15)])?.runs == [Self.bold(10, 5)])
-        for command in [Self.apply(10..<16), Self.clear(14..<16), Self.edit(15..<16, "x")] as [any Command] {
+        for command in [Self.apply(10..<16), Self.apply(-1..<2), Self.clear(14..<16), Self.edit(15..<16, "x")] as [any Command] {
             var engine = CommandEngine(document: TextFixtures.document())
             #expect(throws: CommandError.self) { try engine.perform(command) }
             #expect(engine.document == TextFixtures.document() && !engine.canUndo)
         }
+    }
+    /// A range past the string throws `invalidIndex` carrying the offending grapheme offset.
+    @Test func rangePastEndNamesOffset() {
+        let start = TextFixtures.document(TextFixtures.text("Bring"))
+        var engine = CommandEngine(document: start)
+        #expect(throws: CommandError.invalidIndex(9)) { try engine.perform(Self.apply(3..<9)) }
+        #expect(throws: CommandError.invalidIndex(-1)) { try engine.perform(Self.apply(-1..<2)) }
+        #expect(engine.document == start && !engine.canUndo)
+    }
+    /// Setting a field back to regular removes it: weight 400 over a bold range leaves no runs.
+    @Test func unboldBySettingRegular() throws {
+        #expect(try Self.run([Self.apply(6..<11), Self.apply(6..<11, TextRunStyle(weight: 400))])?.runs == [])
     }
     @Test func lockedLayerRefused() {
         var locked = TextFixtures.document()

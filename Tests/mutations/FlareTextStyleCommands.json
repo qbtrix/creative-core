@@ -19,5 +19,19 @@
     "anchor": "        if string.count < range.upperBound { throw CommandError.invalidIndex(range.upperBound) }",
     "replacement": "        if string.count <= range.upperBound { throw CommandError.invalidIndex(range.upperBound) }",
     "filter": "TextStyleCommandsTests.rangePastEndRefused"
+  },
+  {
+    "note": "text fusing grapheme guard weakened to true, so a combining mark insert fuses silently",
+    "file": "Sources/FlareCore/TextStyleCommands.swift",
+    "anchor": "        guard edited.count == count + delta else {",
+    "replacement": "        guard true else {",
+    "filter": "TextStyleCommandsTests.fusingInsertRefused"
+  },
+  {
+    "note": "text range lower bound check uses < -1 for < 0, so a range starting at -1 is accepted",
+    "file": "Sources/FlareCore/TextStyleCommands.swift",
+    "anchor": "        if range.lowerBound < 0 { throw CommandError.invalidIndex(range.lowerBound) }",
+    "replacement": "        if range.lowerBound < -1 { throw CommandError.invalidIndex(range.lowerBound) }",
+    "filter": "TextStyleCommandsTests.rangePastEndNamesOffset"
   }
 ]
