@@ -89,5 +89,19 @@
     "anchor": "for effect in effects.dropFirst() {",
     "replacement": "for effect in effects.dropFirst(effects.count) {",
     "filter": "CPUGoldenTests"
+  },
+  {
+    "note": "effect stack render keeps each intermediate surface instead of releasing it",
+    "file": "Sources/CoreRender/Parity/ParitySamples.swift",
+    "anchor": "            backend.release(out)\n            out = next",
+    "replacement": "            out = next",
+    "filter": "ParityHarnessTests"
+  },
+  {
+    "note": "effect stack render leaks the surface before a throwing effect",
+    "file": "Sources/CoreRender/Parity/ParitySamples.swift",
+    "anchor": "            do { next = try backend.applying(out, effect) } catch {\n                backend.release(out)\n",
+    "replacement": "            do { next = try backend.applying(out, effect) } catch {\n",
+    "filter": "ParityHarnessTests"
   }
 ]
