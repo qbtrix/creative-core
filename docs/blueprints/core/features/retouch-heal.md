@@ -99,11 +99,18 @@ public struct SmudgeState: Sendable { public init(strength: Float)              
   centred outside the hole; fill from the matches coarse to fine on a
   3-level pyramid; then heal the filled region against the ring, so its
   tone meets the edge. Same seed, same pixels.
-- **Tone dabs.** Weight per pixel: dab coverage × range weight (shadows:
-  `1 − smoothstep(0, 0.5, luma)`, midtones: `1 − |2 luma − 1|`,
-  highlights: `smoothstep(0.5, 1, luma)`); dodge multiplies linear colour by
-  `1 + exposure × weight`, burn by `1 − exposure × weight × 0.5`; sponge
-  scales chroma by `1 + amount × coverage`. Alpha unchanged.
+- **Tone dabs.** Weight per pixel: dab coverage × range weight at the
+  pixel's straight Rec. 709 luma (shadows: `1 − smoothstep(0.2, 0.4, luma)`,
+  midtones: `smoothstep(0.2, 0.4, luma) × (1 − smoothstep(0.6, 0.8, luma))`,
+  highlights: `smoothstep(0.6, 0.8, luma)`; the three sum to 1). The
+  windows are this narrow because the acceptance needs exactly zero weight
+  outside a range: a midtone dab must leave luma 0.1 and 0.95 within 1/255
+  (RH-5) and pixels under luma 0.2 within 1/255 (the walk), which a
+  triangular `1 − |2 luma − 1|` midtone (weight 0.2 at luma 0.1) cannot
+  pass. Dodge multiplies linear colour by `1 + exposure × weight`, burn by
+  `1 − exposure × weight × 0.5`, so at full weight exposure 1 doubles
+  (dodge) or halves (burn) it; sponge scales chroma by
+  `1 + amount × coverage`. Colour clamps to 0...alpha; alpha unchanged.
 - **Smudge.** Hold a carried patch the dab's size; each dab blends the
   carried patch onto the buffer by `strength × coverage`, then replaces the
   carried patch with what is now under the dab (so the colour drags and
@@ -143,7 +150,7 @@ task.
 | RH-1, RH-2 | suites compile, disabled; fixtures build | – | – |
 | RH-3 | `HealTests`: healing a patch of the known gradient field from an offset reproduces the field inside the mask within 1/255 (the texture's gradients kept, the tone matched); pixels outside the mask's bounds `==` the input; a mask over `maxHealPixels` throws; a zero offset with a full mask is identity; an offset off the buffer throws | a seam shows or pixels outside change | `CoreRaster.Heal`: boundary condition from the source not the destination → `HealTests.matchesDestinationEdge`; convergence test `>` for `<` (one sweep) → `.reproducesField`; bounds loop over the whole buffer → `.outsideBoundsUntouched` |
 | RH-4 | `FillFromSurroundingsTests`: spot 1's mean within 3/255 of its ring, variance within 25%; same seed `==`, another seed differs; no hole pixel is copied from inside the hole; an empty mask is identity | a hole fills from itself or a seam shows | `CoreRaster.FillFromSurroundings`: candidate patches allowed inside the hole → `FillFromSurroundingsTests.neverCopiesFromHole`; heal step skipped → `.toneMeetsRing`; seed ignored (fixed) → `.seedChangesFill` |
-| RH-5 | `ToneDabTests`: a midtone dodge lifts luma 0.5 and leaves luma 0.1 and 0.95 within 1/255; burn mirrors; sponge +1 raises chroma, −1 greys; alpha never changes; exposure 0 is identity | the wrong range moves | `CoreRaster.ToneDabs`: midtone weight `|2l − 1|` (inverted) → `ToneDabTests.midtonesOnly`; coverage ignored → `.dabCoverageWeights` |
+| RH-5 | `ToneDabTests`: a midtone dodge lifts luma 0.5 and leaves luma 0.1 and 0.95 within 1/255; burn mirrors; sponge +1 raises chroma, −1 greys; alpha never changes; exposure 0 is identity | the wrong range moves | `CoreRaster.ToneDabs`: midtone weight `|2l − 1|` (inverted) → `ToneDabTests.midtonesOnly`; coverage ignored → `.dabCoverageWeights`; burn gain `−exposure` → `.dodgeBurnMagnitude`; weight on premultiplied luma, colour clamped to 1 → `.translucentUsesStraightLuma` |
 | RH-6 | `SmudgeTests`: the first dab changes nothing; ten dabs along a line move a red edge's colour forward and its strength fades monotonically; strength 0 is identity | colour doesn't drag or never fades | `CoreRaster.Smudge`: carried patch not replaced after a dab → `SmudgeTests.colourFades`; first dab paints → `.firstDabPicksUp` |
 | RH-7 | `RetouchWalkTests.walk`; `RetouchBudgetTests`: heal of a 200 px dab ≤ 12 ms; fill from surroundings of a 300 × 300 spot ≤ 400 ms; a tone dab of 200 px ≤ 1 ms (release, reported) | the walk's checks fail | none |
 | RH-8 | status line says built | – | – |

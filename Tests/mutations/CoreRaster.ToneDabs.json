@@ -12,5 +12,26 @@
     "anchor": "let factor = 1 + gain * coverage * range.weight(luma: Self.luma(p) / p.a)",
     "replacement": "let factor = 1 + gain * range.weight(luma: Self.luma(p) / p.a)",
     "filter": "ToneDabTests"
+  },
+  {
+    "note": "tone dab burn gain drops the packet's 0.5, so burn at exposure 1 blacks out a midtone instead of halving it, caught by ToneDabTests.dodgeBurnMagnitude",
+    "file": "Sources/CoreRaster/Heal/ToneDabs.swift",
+    "anchor": "try toneDab(dab, x: x, y: y, range: range, gain: -0.5 * exposure)",
+    "replacement": "try toneDab(dab, x: x, y: y, range: range, gain: -exposure)",
+    "filter": "ToneDabTests.dodgeBurnMagnitude"
+  },
+  {
+    "note": "tone dab range weight read on premultiplied luma (no divide by alpha), so a translucent midtone barely lifts, caught by ToneDabTests.translucentUsesStraightLuma",
+    "file": "Sources/CoreRaster/Heal/ToneDabs.swift",
+    "anchor": "range.weight(luma: Self.luma(p) / p.a)",
+    "replacement": "range.weight(luma: Self.luma(p))",
+    "filter": "ToneDabTests.translucentUsesStraightLuma"
+  },
+  {
+    "note": "tone dab red channel clamped to 1 instead of alpha, so a translucent highlight dodge leaves premultiplied colour above alpha, caught by ToneDabTests.translucentUsesStraightLuma",
+    "file": "Sources/CoreRaster/Heal/ToneDabs.swift",
+    "anchor": "p.r = min(max(p.r, 0), alpha)",
+    "replacement": "p.r = min(max(p.r, 0), 1)",
+    "filter": "ToneDabTests.translucentUsesStraightLuma"
   }
 ]

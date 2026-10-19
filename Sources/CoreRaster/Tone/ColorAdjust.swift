@@ -129,8 +129,13 @@ enum ColorMath {
 
     /// Throws unless `value` is finite and within ±`limit`.
     static func check(_ name: String, _ value: Float, limit: Float) throws {
-        guard value.isFinite, (-limit...limit).contains(value) else {
-            throw RasterError.invalid("\(name) \(value): must be in \(-limit)...\(limit)")
+        try check(name, value, in: -limit...limit)
+    }
+
+    /// Throws `RasterError.invalid` unless `value` is finite and in `range`.
+    static func check(_ name: String, _ value: Float, in range: ClosedRange<Float>) throws {
+        guard value.isFinite, range.contains(value) else {
+            throw RasterError.invalid("\(name) \(value): must be in \(range)")
         }
     }
 

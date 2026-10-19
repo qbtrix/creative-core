@@ -54,6 +54,40 @@ private func chroma(_ p: RGBA) -> Float { max(p.r, p.g, p.b) - min(p.r, p.g, p.b
         #expect(try abs(Self.centre(dark, patch: 2).r - 0.95) <= Self.tolerance)
     }
 
+    /// Dodge multiplies linear colour by 1 + exposure × weight, burn by
+    /// 1 − exposure × weight × 0.5: at full weight, exposure 1 doubles (dodge)
+    /// or halves (burn) patch 1 (luma 0.5, midtone weight 1).
+    @Test func dodgeBurnMagnitude() throws {
+        let cases: [(DabOp, Float)] = [
+            ({ try $0.dodge($1, x: $2, y: $3, range: .midtones, exposure: 0.5) }, 0.75),
+            ({ try $0.dodge($1, x: $2, y: $3, range: .midtones, exposure: 1) }, 1),
+            ({ try $0.burn($1, x: $2, y: $3, range: .midtones, exposure: 1) }, 0.25),
+            ({ try $0.burn($1, x: $2, y: $3, range: .midtones, exposure: 0.5) }, 0.375),
+        ]
+        for (op, expected) in cases {
+            let p = try Self.centre(Self.patchesAfter(op), patch: 1)
+            #expect(abs(p.r - expected) <= Self.tolerance, "got \(p.r), expected \(expected)")
+            #expect(p.r == p.g && p.g == p.b)
+        }
+    }
+
+    /// The range weight reads straight luma, not premultiplied, and colour
+    /// clamps to alpha: straight grey 0.5 at alpha 0.5 is a full midtone, so
+    /// exposure 1 doubles it to alpha; a translucent highlight never passes alpha.
+    @Test func translucentUsesStraightLuma() throws {
+        let dab = try Mask(width: 4, height: 4, fill: 1)
+        var mid = try PixelBuffer(width: 4, height: 4, fill: RGBA(r: 0.25, g: 0.25, b: 0.25, a: 0.5))
+        try mid.dodge(dab, x: 0, y: 0, range: .midtones, exposure: 1)
+        let m = try mid.pixel(x: 1, y: 1)
+        #expect(abs(m.r - 0.5) <= Self.tolerance, "midtone r \(m.r)")
+        #expect(m.a == 0.5)
+        var high = try PixelBuffer(width: 4, height: 4, fill: RGBA(r: 0.45, g: 0.45, b: 0.45, a: 0.5))
+        try high.dodge(dab, x: 0, y: 0, range: .highlights, exposure: 1)
+        let h = try high.pixel(x: 1, y: 1)
+        #expect(h.r <= h.a && h.g <= h.a && h.b <= h.a, "highlight \(h)")
+        #expect(abs(h.r - 0.5) <= Self.tolerance)
+    }
+
     @Test func spongeRaisesAndGreys() throws {
         let richer = try Self.patchesAfter { try $0.sponge($1, x: $2, y: $3, amount: 1) }
         #expect(try chroma(Self.centre(richer, patch: 3)) > chroma(RetouchFixtures.tint) + Self.tolerance)
