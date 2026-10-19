@@ -68,11 +68,14 @@ private func lumaStats(_ buffer: PixelBuffer, under mask: Mask) throws -> (mean:
                 try checkered.setPixel(x: x, y: y, RGBA(r: v, g: v, b: v, a: 1))
             }
         }
-        let filled = try checkered.filledFromSurroundings(spot.hole, seed: 9)
-        for y in 0..<96 {
-            for x in 1..<160 where try spot.hole.coverage(x: x, y: y) == 1 && spot.hole.coverage(x: x - 1, y: y) == 1 {
-                let d = try filled.pixel(x: x, y: y).g - filled.pixel(x: x - 1, y: y).g
-                #expect(abs(d) <= 0.45, "(\(x), \(y)) step \(d) is the hole's checkerboard")
+        // Many seeds, so a search that let a patch overlap the hole would pick one.
+        for seed: UInt64 in 9..<41 {
+            let filled = try checkered.filledFromSurroundings(spot.hole, seed: seed)
+            for y in 0..<96 {
+                for x in 1..<160 where try spot.hole.coverage(x: x, y: y) == 1 && spot.hole.coverage(x: x - 1, y: y) == 1 {
+                    let d = try filled.pixel(x: x, y: y).g - filled.pixel(x: x - 1, y: y).g
+                    #expect(abs(d) <= 0.45, "seed \(seed) (\(x), \(y)) step \(d) is the hole's checkerboard")
+                }
             }
         }
     }
