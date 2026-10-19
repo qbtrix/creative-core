@@ -89,8 +89,7 @@ import Testing
         #expect(Self.registrySamples().map { type(of: $0).id } == Self.expectedIDs)
     }
 
-    // MARK: - MM-6 acceptance on the masks fixture
-
+    /// MM-6 acceptance: the masks fixture, decoded.
     static func fixture() throws -> Document {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent("Fixtures/masks.flare")
         return try FlareFormat.decode(Data(contentsOf: url))
@@ -167,11 +166,10 @@ import Testing
         #expect(engine.document == start)
     }
 
-    /// A matte whose source reaches the layer through two mattes is refused, as are one-deep and self mattes.
+    /// Card matted by photo (photo to lumen to card) closes a cycle of three and is refused, as are one-deep and self mattes.
     @Test func refusesCycleTwoDeep() throws {
         var engine = CommandEngine(document: try Self.fixture())
         try engine.perform(SetTrackMatte(owner: Self.m, layerID: "lumen", matte: TrackMatte(sourceLayerID: "card")))
-        // photo -> lumen -> card: card matted by photo would close a cycle of three.
         Self.expectRefused(SetTrackMatte(owner: Self.m, layerID: "card", matte: TrackMatte(sourceLayerID: "photo")), on: engine.document)
         let start = try Self.fixture()
         Self.expectRefused(SetTrackMatte(owner: Self.m, layerID: "lumen", matte: TrackMatte(sourceLayerID: "photo")), on: start)
