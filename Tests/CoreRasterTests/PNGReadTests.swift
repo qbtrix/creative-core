@@ -135,6 +135,9 @@ import Foundation
             ("grey tRNS of 1 byte", [UInt8](file([[[7]]], 0, 8, extra: [F.chunk("tRNS", [7])]))),
             // A 2-bit palette image may name index 3, but this PLTE holds only entries 0 and 1.
             ("palette index past PLTE", [UInt8](F.png([[[3]]], depth: 2, colorType: 3, extra: [F.chunk("PLTE", [1, 2, 3, 4, 5, 6])]))),
+            // PLTE holds 1 to 256 three-byte entries (11.2.3): 4 bytes is not whole entries, 771 bytes is 257 entries.
+            ("PLTE of 4 bytes", [UInt8](F.png([[[0]]], depth: 8, colorType: 3, extra: [F.chunk("PLTE", [1, 2, 3, 4])]))),
+            ("PLTE of 257 entries", [UInt8](F.png([[[0]]], depth: 8, colorType: 3, extra: [F.chunk("PLTE", [UInt8](repeating: 9, count: 771))]))),
         ]
         for (name, bytes) in cases { #expect(F.thrown { try PNG.read(Data(bytes)) } == "damaged", "\(name)") }
         let zzzz = F.png([[[1]]], depth: 8, colorType: 0, extra: [F.chunk("ZZZZ", [])])
@@ -167,6 +170,11 @@ import Foundation
         methods[11] = 1  // the filter method, with the chunk CRC computed over it
         let filterMethod = F.signature + F.chunk("IHDR", methods) + F.chunk("IEND", [])
         #expect(message { try PNG.info(Data(filterMethod)) }.contains("filter method 1,"))
+        // A zero side and an over-limit chunk length say what is wrong, not only the numbers.
+        let zeroWidth = F.signature + F.chunk("IHDR", F.ihdr(0, 3, depth: 8, colorType: 0)) + F.chunk("IEND", [])
+        #expect(message { try PNG.info(Data(zeroWidth)) } == "PNG: zero width or height (0x3)")
+        let longChunk = F.signature + F.be32(0x8000_0000) + Array("IHDR".utf8) + [UInt8](repeating: 0, count: 17)
+        #expect(message { try PNG.info(Data(longChunk)) } == "PNG: chunk length 2147483648 over 2^31-1")
         let zzzz = F.png([[[1]]], depth: 8, colorType: 0, extra: [F.chunk("ZZZZ", [])])
         #expect(message { try PNG.read(zzzz) } == "PNG: unknown critical chunk ZZZZ")
         // A type that is not four ASCII letters is shown as hex, not as raw bytes.

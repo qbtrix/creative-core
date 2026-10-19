@@ -36,7 +36,7 @@ extension PNG {
         let width = try r.length32(), height = try r.length32()
         let depth = Int(try r.u8()), colorType = Int(try r.u8())
         let compression = try r.u8(), filter = try r.u8(), interlace = try r.u8()
-        guard width > 0, height > 0 else { throw damaged("size \(width)x\(height)") }
+        guard width > 0, height > 0 else { throw damaged("zero width or height (\(width)x\(height))") }
         guard width <= maxSide, height <= maxSide else { throw CodecError.tooLarge("PNG: \(width)x\(height) pixels: sides are at most \(maxSide)") }
         guard (try? PixelBuffer.validatedSize(width: width, height: height)) != nil else {
             throw CodecError.tooLarge("PNG: \(width)x\(height) pixels: over PixelBuffer.maxPixels (\(PixelBuffer.maxPixels))")
@@ -52,7 +52,7 @@ extension PNG {
     /// byte clear), and its body, its CRC checked.
     static func chunk(_ reader: inout ByteReader) throws -> (String, Bool, [UInt8]) {
         let length = try reader.length32()
-        guard length <= 0x7FFF_FFFF else { throw damaged("chunk length \(length)") }
+        guard length <= 0x7FFF_FFFF else { throw damaged("chunk length \(length) over 2^31-1") }
         let typed = try reader.bytes(try ByteReader.adding(length, 4))
         let type = typeName(typed.prefix(4))
         guard try reader.u32() == ByteReader.crc32(typed) else { throw damaged("\(type) chunk CRC mismatch") }

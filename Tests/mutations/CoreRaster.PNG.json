@@ -54,5 +54,26 @@
     "anchor": "guard (try? PixelBuffer.validatedSize(width: width, height: height)) != nil else {",
     "replacement": "guard true else {",
     "filter": "PNGReadTests"
+  },
+  {
+    "note": "inflated image data shorter than IHDR implies is no longer refused, so rows index past the inflated bytes, caught by PNGReadTests.damagedFilesThrow",
+    "file": "Sources/CoreRaster/Codecs/PNGRead.swift",
+    "anchor": "guard raw.count == total else",
+    "replacement": "guard raw.count == total || true else",
+    "filter": "PNGReadTests"
+  },
+  {
+    "note": "a PLTE of more than 256 entries is accepted, caught by PNGReadTests.damagedFilesThrow PLTE of 257 entries",
+    "file": "Sources/CoreRaster/Codecs/PNGRead.swift",
+    "anchor": "(1...256).contains(entries)",
+    "replacement": "(1...).contains(entries)",
+    "filter": "PNGReadTests"
+  },
+  {
+    "note": "a PLTE whose length is not a multiple of 3 is accepted, caught by PNGReadTests.damagedFilesThrow PLTE of 4 bytes",
+    "file": "Sources/CoreRaster/Codecs/PNGRead.swift",
+    "anchor": "bytes.count % 3 == 0, ",
+    "replacement": "",
+    "filter": "PNGReadTests"
   }
 ]

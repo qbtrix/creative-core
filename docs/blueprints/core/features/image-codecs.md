@@ -80,7 +80,7 @@ public enum Deflate {
     public static func zlib(_ data: Data, level: Int = 6) -> Data }
 
 // Sources/CoreRaster/Codecs/PNG.swift (IC-1 stub; IC-4 read, IC-5 write)
-public struct PNGInfo: Hashable, Sendable { public var width, height, bitDepth: Int; public var colorType: Int; public var interlaced: Bool }
+public struct PNGInfo: Hashable, Sendable { public var width, height, bitDepth: Int; public var colorType: Int; public var interlaced: Bool; public init(width: Int, height: Int, bitDepth: Int, colorType: Int, interlaced: Bool) }
 public enum PNG {
     public static let maxSide = 30_000                       // like PSD; and PixelBuffer.maxPixels
     public static func info(_ data: Data) throws -> PNGInfo  // IHDR only, no decode
