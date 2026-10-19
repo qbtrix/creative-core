@@ -50,13 +50,13 @@ import Testing
         #expect(svg.contains("x=\"25.5\" y=\"25.5\" width=\"49\" height=\"49\""))
     }
 
-    /// A first mask that is not a hard add paints everything into one mask, starting full or empty.
+    /// Masks that are not a hard add run followed by removals all paint one mask, starting full or empty.
     @Test func paintedMasksStartByFirstMode() throws {
         var scene = try Self.scene()
-        scene.layers[0].masks[0].opacity = 0.5
+        scene.layers[0].masks[1].mode = .add
         var svg = try SVGExporter.export(scene: scene, frame: 0)
         #expect(!svg.contains("<clipPath") && !svg.contains("<rect\(Self.region) fill=\"#fff\"/>"))
-        #expect(svg.contains("<path d=\"M10 10 L90 10 L90 90 L10 90 Z\" fill=\"#fff\" fill-opacity=\"0.5\"/>"))
+        #expect(svg.contains("<path d=\"M10 10 L90 10 L90 90 L10 90 Z\" fill=\"#fff\"/>"))
         scene.layers[0].masks = [LayerMask(path: MatteRenderListTests.square(10, 90), mode: .intersect, inverted: true)]
         svg = try SVGExporter.export(scene: scene, frame: 0)
         #expect(svg.contains("<rect\(Self.region) fill=\"#fff\"/>\n<path d=\"M10 10 L90 10 L90 90 L10 90 Z\" fill=\"#000\"/>"))

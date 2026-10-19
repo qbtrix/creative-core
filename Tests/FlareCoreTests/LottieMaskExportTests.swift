@@ -5,7 +5,6 @@ import Foundation
 import Testing
 
 @Suite struct LottieMaskExportTests {
-    /// The fixture with its feather cleared: Lottie masks have no feather.
     static func scene() throws -> Scene {
         var scene = try #require(MatteRenderListTests.fixture().scenes.first)
         scene.layers[0].masks[1].feather = 0
