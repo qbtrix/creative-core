@@ -5,7 +5,10 @@
 // - the result's filled area is the set operation on the inputs' filled areas
 //   under `rule`
 // - more than `maxBooleanVertices` flattened vertices throws
-//   GeometryError.tooComplex(count) instead of running unbounded
+//   GeometryError.tooComplex(count), and more than `maxBooleanWork` pair
+//   tests, cuts and ray-cast steps throws tooComplex(maxBooleanWork), so a
+//   comb pair or a many-spiked star refuses instead of running quadratic
+// - a coordinate whose edge lengths square past Double's range throws nonFinite
 // - output contours are closed, outer counter-clockwise, holes clockwise
 //
 // Closed subpaths flatten; edges split at crossings and collinear overlaps
@@ -13,21 +16,30 @@
 // band entries per segment) gives each segment's two sides each input's
 // winding; segments where the op changes are kept, directed and chained.
 // ponytail: band-indexed splitting, not the full Martinez–Rueda–Feito sweep,
-// and no curve re-fit. Ceiling: a sweep-line event queue if the 2 × 5,000-vertex
-// budget fails.
+// and no curve re-fit. The vertex cap only bounds input size; the work cap is
+// what bounds time (the 2 × 5,000-vertex logo budget needs well under it).
+// Ceiling: a sweep-line event queue if real inputs hit the work cap.
 
 extension Path {
     /// Most flattened vertices, both inputs together, `combine` accepts.
     public static let maxBooleanVertices = 200_000
+    /// Most edge pair tests, crossing cuts and ray-cast steps one `combine` takes.
+    public static let maxBooleanWork = 50_000_000
 
     /// `a op b` as one path, each input filled under `rule` and flattened to
-    /// `tolerance`.
+    /// `tolerance`. Only closed subpaths fill, as in HitTest: a subpath with
+    /// no `close` adds nothing and is dropped.
     ///
-    /// Throws `GeometryError.tooComplex` past `maxBooleanVertices` and
+    /// Throws `GeometryError.tooComplex` past `maxBooleanVertices` or `maxBooleanWork` and
     /// `GeometryError.invalidTolerance` for a bad tolerance; NaN or infinity
     /// throws `GeometryError.nonFinite`.
     public static func combine(_ op: BooleanOp, _ a: Path, _ b: Path, rule: FillRule,
                                tolerance: Double) throws -> Path {
+        try combine(op, a, b, rule: rule, tolerance: tolerance, workLimit: maxBooleanWork)
+    }
+
+    static func combine(_ op: BooleanOp, _ a: Path, _ b: Path, rule: FillRule,
+                        tolerance: Double, workLimit: Int) throws -> Path {
         var count = 0
         for path in [a, b] { try path.forEachFlattenedPoint(tolerance: tolerance) { _, _ in count += 1; return false } }
         guard count <= maxBooleanVertices else { throw GeometryError.tooComplex(count) }
@@ -41,7 +53,8 @@ extension Path {
                 }
             }
         }
-        return chain(kept(op, rule, segments(edges)))
+        var work = BooleanWork(limit: workLimit)
+        return chain(try kept(op, rule, segments(edges, &work), &work))
     }
 
     /// The closed subpaths, flattened: the polygons HitTest fills.
@@ -64,6 +77,16 @@ extension Path {
 
 /// One flattened input edge; `owner` is 0 for the first input, 1 for the second.
 private struct BooleanEdge { var p: Point, q: Point, owner: Int }
+
+/// Steps taken so far; past `limit` it throws tooComplex(limit).
+private struct BooleanWork {
+    let limit: Int
+    var steps = 0
+    mutating func add(_ n: Int) throws {
+        steps += n
+        guard steps <= limit else { throw GeometryError.tooComplex(limit) }
+    }
+}
 
 /// A split segment with ends ordered by (y, x), and per input how many of
 /// its edges run lo to hi minus hi to lo.
@@ -102,7 +125,7 @@ private struct Bands {
 
 /// Every edge split at its crossings and overlaps, deduplicated, with the
 /// net count of each input's edges along it.
-private func segments(_ edges: [BooleanEdge]) -> [(BooleanSegment, SIMD2<Int>)] {
+private func segments(_ edges: [BooleanEdge], _ work: inout BooleanWork) throws -> [(BooleanSegment, SIMD2<Int>)] {
     var cuts = Array(repeating: [(t: Double, point: Point)](), count: edges.count)
     let bands = Bands(edges.map { ($0.p, $0.q) })
     for (index, bucket) in bands.buckets.enumerated() {
@@ -112,9 +135,10 @@ private func segments(_ edges: [BooleanEdge]) -> [(BooleanSegment, SIMD2<Int>)] 
             for j in sorted[(k + 1)...] {
                 let (q, q2) = (edges[j].p, edges[j].q)
                 guard min(q.x, q2.x) <= max(p.x, p2.x) else { break }
+                try work.add(1)
                 // Each pair once: in the first band both edges reach.
                 guard bands.band(max(min(p.y, p2.y), min(q.y, q2.y))) == index else { continue }
-                addCuts(i, j, edges, &cuts)
+                try addCuts(i, j, edges, &cuts, &work)
             }
         }
     }
@@ -135,16 +159,18 @@ private func segments(_ edges: [BooleanEdge]) -> [(BooleanSegment, SIMD2<Int>)] 
 
 /// Records where edges `i` and `j` cross, or where each has the other's ends
 /// inside it when they overlap on one line.
-private func addCuts(_ i: Int, _ j: Int, _ edges: [BooleanEdge], _ cuts: inout [[(t: Double, point: Point)]]) {
+private func addCuts(_ i: Int, _ j: Int, _ edges: [BooleanEdge], _ cuts: inout [[(t: Double, point: Point)]],
+                     _ work: inout BooleanWork) throws {
     let (p, p2, q, q2) = (edges[i].p, edges[i].q, edges[j].p, edges[j].q)
     let (rx, ry, sx, sy, wx, wy) = (p2.x - p.x, p2.y - p.y, q2.x - q.x, q2.y - q.y, q.x - p.x, q.y - p.y)
-    let d = cross(rx, ry, sx, sy)
-    if abs(d) <= 1e-12 * norm(rx, ry) * norm(sx, sy) {
+    let d = cross(rx, ry, sx, sy), scale = norm(rx, ry) * norm(sx, sy)
+    guard scale.isFinite, d.isFinite else { throw GeometryError.nonFinite }
+    if abs(d) <= 1e-12 * scale {
         guard abs(cross(wx, wy, rx, ry)) <= 1e-9 * norm(rx, ry) else { return }
         for (end, k) in [(q, i), (q2, i), (p, j), (p2, j)] {
             let (a, b) = (edges[k].p, edges[k].q)
             let t = ((end.x - a.x) * (b.x - a.x) + (end.y - a.y) * (b.y - a.y)) / ((b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y))
-            if t > 0, t < 1 { cuts[k].append((t, end)) }
+            if t > 0, t < 1 { cuts[k].append((t, end)); try work.add(1) }
         }
         return
     }
@@ -154,11 +180,13 @@ private func addCuts(_ i: Int, _ j: Int, _ edges: [BooleanEdge], _ cuts: inout [
     let point = [p, p2, q, q2].first { norm($0.x - raw.x, $0.y - raw.y) <= 1e-9 } ?? snapped(raw)
     cuts[i].append((t, point))
     cuts[j].append((u, point))
+    try work.add(2)
 }
 
 /// The segments on the boundary of `op`, each directed with the result's
 /// inside on its left as drawn (y down), so outers run counter-clockwise.
-private func kept(_ op: BooleanOp, _ rule: FillRule, _ segments: [(BooleanSegment, SIMD2<Int>)]) -> [(Point, Point)] {
+private func kept(_ op: BooleanOp, _ rule: FillRule, _ segments: [(BooleanSegment, SIMD2<Int>)],
+                  _ work: inout BooleanWork) throws -> [(Point, Point)] {
     // Frame 1 swaps x and y, so a horizontal segment gets a vertical ray.
     let frames = [segments.map { ($0.0.lo, $0.0.hi) },
                   segments.map { (Point(x: $0.0.lo.y, y: $0.0.lo.x), Point(x: $0.0.hi.y, y: $0.0.hi.x)) }]
@@ -169,7 +197,9 @@ private func kept(_ op: BooleanOp, _ rule: FillRule, _ segments: [(BooleanSegmen
         let (a, b) = frames[f][i]
         let m = Point(x: (a.x + b.x) / 2, y: (a.y + b.y) / 2)
         var right = SIMD2<Int>.zero
-        for j in bands[f].buckets[bands[f].band(m.y)] where j != i {
+        let bucket = bands[f].buckets[bands[f].band(m.y)]
+        try work.add(bucket.count)
+        for j in bucket where j != i {
             let (c, d) = frames[f][j]
             guard (c.y <= m.y) != (d.y <= m.y), c.x + (m.y - c.y) * (d.x - c.x) / (d.y - c.y) > m.x else { continue }
             right = d.y > c.y ? right &+ segments[j].1 : right &- segments[j].1

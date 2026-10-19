@@ -88,6 +88,23 @@ private func close(_ a: [Double], _ b: [Double], _ eps: Double = 1e-9) -> Bool {
         #expect(try long.dashed([0, 0.004], phase: 0, tolerance: tol).elements.isEmpty)
     }
 
+    @Test func cutsTakeOnlyTheirOwnSpan() throws {
+        let zig = Path(polyline: [pt(0, 0), pt(10, 0), pt(10, 10), pt(20, 10)], closed: false)
+        #expect(try zig.dashed([10, 5], phase: 0, tolerance: tol).elements == [
+            .move(to: pt(0, 0)), .line(to: pt(10, 0)), .move(to: pt(10, 5)), .line(to: pt(10, 10)), .line(to: pt(15, 10)),
+        ])
+        // 20,000 points and ~28,000 dashes: a cut that scans every point would take minutes.
+        var rng = SplitMix64(seed: 432), x = 0.0
+        let points = (0..<20_000).map { i -> Point in
+            x += Double.random(in: 0.5...1.5, using: &rng)
+            return pt(x, Double(i % 2))
+        }
+        let clock = ContinuousClock(), start = clock.now
+        let dashes = try Path(polyline: points, closed: false).dashed([0.5, 0.5], phase: 0, tolerance: tol)
+        #expect(clock.now - start < .seconds(3))
+        #expect(dashes.elements.count > 40_000)
+    }
+
     @Test func seededTrimKeepsLengthAndDashesStayOnTheRuler() throws {
         var rng = SplitMix64(seed: 430)
         for _ in 0..<300 {

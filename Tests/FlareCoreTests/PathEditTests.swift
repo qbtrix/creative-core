@@ -128,4 +128,31 @@ private func anchorCount(_ path: Path) -> Int { path.contours.reduce(0) { $0 + $
             #expect(throws: GeometryError.invalidLocation) { try path.inserting(at: PathLocation(element: e, t: t, point: pt(0, 0), distance: 0)) }
         }
     }
+
+    @Test func cuspSmoothsAlongTheOutArm() throws {
+        // Both handles point +x, so the bisector vanishes: smooth falls back to the out-arm.
+        let path = Path(elements: [.move(to: pt(-10, 0)), .cubic(control1: pt(-5, 0), control2: pt(2, 0), to: pt(0, 0)),
+                                   .cubic(control1: pt(1, 0), control2: pt(5, 5), to: pt(10, 0))])
+        let a = try path.converting(contour: 0, index: 1, to: .smooth).contours[0].anchors[1]
+        let hin = try #require(a.handleIn), hout = try #require(a.handleOut)
+        #expect(abs(hout.x - 1) < 1e-12 && hout.y == 0 && abs(hin.x + 2) < 1e-12 && hin.y == 0)
+    }
+
+    @Test func defaultHandlesAreAThirdAlongTheNeighbourChord() throws {
+        // Anchor 0 of a closed square: its neighbours are anchors 1 and 3 (the wrap).
+        let a = try square.converting(contour: 0, index: 0, to: .smooth).contours[0].anchors[0]
+        let hin = try #require(a.handleIn), hout = try #require(a.handleOut), r = 10.0 / 3 / 2.0.squareRoot()
+        #expect(abs(hout.x - r) < 1e-12 && abs(hout.y + r) < 1e-12 && abs(hin.x + r) < 1e-12 && abs(hin.y - r) < 1e-12)
+    }
+
+    @Test func tinyAndHugeArmsStayFinite() throws {
+        for scale in [1e-200, 1e200] {
+            let path = Path(elements: [.move(to: pt(-10, 0)), .cubic(control1: pt(-5, 0), control2: pt(-scale, 0), to: pt(0, 0)),
+                                       .cubic(control1: pt(scale, scale), control2: pt(5, 5), to: pt(10, 0))])
+            for kind in [AnchorKind.smooth, .symmetric] {
+                let a = try path.converting(contour: 0, index: 1, to: kind).contours[0].anchors[1]
+                #expect([a.handleIn, a.handleOut].allSatisfy { $0?.isFinite == true }, "\(scale) \(kind)")
+            }
+        }
+    }
 }

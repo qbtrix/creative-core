@@ -114,7 +114,9 @@ extension Path {
     /// Smooth turns both onto their bisector, keeping lengths and sides; a
     /// missing handle starts a third of the way to its neighbour. With no usable
     /// arm (no handle and no distinct neighbour, as for a lone anchor) smooth
-    /// and symmetric leave the anchor as it is, so the path draws unchanged.
+    /// and symmetric leave the anchor as it is, so the path draws unchanged; so
+    /// does an arm whose length under- or overflows a Double. Handles that
+    /// point the same way (a cusp) line up along the old out-arm.
     ///
     /// Throws `GeometryError.invalidLocation` for an index out of range.
     public func converting(contour: Int, index: Int, to kind: AnchorKind) throws -> Path {
@@ -138,6 +140,8 @@ extension Path {
             var ux = rawOut.0 / lengthOut - rawIn.0 / lengthIn, uy = rawOut.1 / lengthOut - rawIn.1 / lengthIn
             if norm(ux, uy) < 1e-12 { (ux, uy) = (rawOut.0 / lengthOut, rawOut.1 / lengthOut) }
             let u = norm(ux, uy)
+            // An arm whose length under- or overflows leaves the anchor as it is.
+            guard [lengthIn, lengthOut, u].allSatisfy({ $0.isFinite && $0 > 0 }) else { return Path(contours: cs) }
             a.handleOut = Point(x: p.x + ux / u * lo, y: p.y + uy / u * lo)
             a.handleIn = Point(x: p.x - ux / u * li, y: p.y - uy / u * li)
         }

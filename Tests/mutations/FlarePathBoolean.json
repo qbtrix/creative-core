@@ -37,8 +37,10 @@
   {
     "note": "path boolean collinear overlap not split at the other edge ends",
     "file": "Sources/FlareCore/PathOps/PathBoolean.swift",
-    "anchor": "if t > 0, t < 1 { cuts[k].append((t, end)) }",
-    "replacement": "if t > 1, t < 1 { cuts[k].append((t, end)) }",
+    "anchor": "if t > 0, t < 1 { cuts[k].append((t, end)); try work.add(1) }",
+    "replacement": "if t > 1, t < 1 { cuts[k].append((t, end)); try work.add(1) }",
     "filter": "PathBooleanTests.partlySharedEdgeSplitsAtTheOtherEnds|PathBooleanFuzzTests"
-  }
+  },
+  {"note": "boolean work cap a thousand times too high, so crossing combs cut on past the cap instead of throwing tooComplex, caught by crossingWorkIsCapped", "file": "Sources/FlareCore/PathOps/PathBoolean.swift", "anchor": "guard steps <= limit else", "replacement": "guard steps <= limit * 1000 else", "filter": "PathBooleanTests.crossingWorkIsCapped"},
+  {"note": "boolean huge-coordinate guard dropped, so edge norms overflow to infinity and crossings are lost without a throw, caught by hugeCoordinatesThrowNotLoseCrossings", "file": "Sources/FlareCore/PathOps/PathBoolean.swift", "anchor": "guard scale.isFinite, d.isFinite else { throw GeometryError.nonFinite }", "replacement": "", "filter": "PathBooleanTests.hugeCoordinatesThrowNotLoseCrossings"}
 ]
