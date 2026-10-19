@@ -106,10 +106,12 @@ extension PixelBuffer {
         }
     }
 
-    /// Each linear colour channel inverted against its own alpha (a − c on
-    /// premultiplied components), so inverting twice gives the input back. An
-    /// alpha-0 pixel passes through untouched, whatever colour it stores. An a − c that overflows a finite input
-    /// is clamped to the largest finite Float, so the result stays finite.
+    /// Inverts in linear premultiplied space (not sRGB-encoded): each colour
+    /// component c becomes a − c against its own alpha a, which is 1 minus the
+    /// straight linear colour, so inverting twice gives the input back. Alpha is
+    /// kept, and an alpha-0 pixel passes through untouched, whatever colour it
+    /// stores. An a − c that overflows a finite input is clamped to the largest
+    /// finite Float, so the result stays finite.
     public func inverted() -> PixelBuffer {
         var out = components
         let big = Float.greatestFiniteMagnitude

@@ -11,8 +11,9 @@ import CoreRaster
 /// doc names, with that method's parameters, units and working space. The
 /// `.adjust` cases run on linear values (`levels` and `curves` on sRGB-encoded
 /// ones with `.sRGB`) and live in CoreRaster's `Adjustments.swift`; the
-/// `.color` cases live under its `Tone/`, and the comment above `vibrance`
-/// names each one's space.
+/// `.color` cases live in `Sources/CoreRaster/Tone/` (`ColorAdjust.swift`,
+/// `ColorMix.swift`, `ColorMap.swift`, `CubeLUT.swift`), and the comment above
+/// `vibrance` names each one's space.
 public enum ToneAdjustment: Equatable, Sendable {
     /// `PixelBuffer.exposure(stops:)`: multiplies every linear color value by
     /// 2^`stops`.
