@@ -7,9 +7,8 @@
 // against its budget, a miss recorded as a known issue so the number reaches
 // the finisher; a debug build (what `scripts/ci` runs) times a quarter of
 // each side and only reports, so no wall-clock check can flake the gate. The
-// size ratio is a count, checked in both builds; it misses today (Deflate's
-// single fixed-Huffman block, about 1.41x at 12 MP), so the miss is a known issue that
-// prints, and the plain check takes over once it holds. Times are wall-clock medians
+// size ratio is a count, checked in both builds (about 1.04x at 12 MP with Deflate's
+// dynamic blocks). Times are wall-clock medians
 // of `runs`, each run's earlier result freed first, printed as
 // `budget <row>: <ms> ms (...)`.
 // The PNG fixture is built here, from RFC 1951 3.2.7 only: Sub-filtered rows
@@ -169,14 +168,7 @@ enum DynamicDeflate {
         reported("PNG encode \(w)x\(h) level 6", time, budget: .milliseconds(2500))
         let ratio = Double(written.count) / Double(fixture.png.count)
         print("budget PNG encode \(w)x\(h) size: \(written.count) bytes, \(ratio)x the fixture's \(fixture.png.count) (budget 1.3x)")
-        // Deflate writes one fixed-Huffman block, which a dynamic fixture's per-block codes beat: about 1.41x at 12 MP
-        // here. A miss is a known issue (reported) until Deflate meets the budget, then the plain check holds.
-        if ratio > 1.3 {
-            print("budget PNG encode size: OVER budget, not verified")
-            withKnownIssue("PNG level 6 output over 1.3x the dynamic-block fixture (fixed-Huffman Deflate)") {
-                Issue.record("PNG level 6 output \(ratio)x the fixture's size")
-            }
-        }
+        #expect(ratio <= 1.3, "PNG level 6 output \(ratio)x the fixture's size")
         #expect(try PNG.read(written) == source)
     }
 
