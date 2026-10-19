@@ -26,7 +26,7 @@ extension PixelBuffer {
     /// Width 0 returns the buffer unchanged. Throws `RasterError.invalid` for
     /// a width that is not finite or not in 0...1,000, a colour that is not
     /// finite, a buffer too large to pad for the effect (its one-pixel
-    /// padded copy passes `maxWorkPixels`; the error names only the buffer,
+    /// padded copy passes `PixelBuffer.maxPixels`; the error names only the buffer,
     /// since the width does not set the padding), or a result that overflows.
     public func stroked(color: RGBA, width strokeWidth: Double, position: StrokePosition) throws -> PixelBuffer {
         guard strokeWidth.isFinite, strokeWidth >= 0, strokeWidth <= Self.maxStrokeWidth else {

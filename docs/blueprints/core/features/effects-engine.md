@@ -9,7 +9,7 @@ inner shadow, and an alpha stroke (outside, inside, centre). Each effect
 keeps the buffer's size; a caller that needs room for a shadow or glow pads
 first (`affine-composite`'s `padded`). Linux-safe.
 **Line:** `line:core` · **Wave:** 6 (`waves.md`) · **Lead branch:** `lead/effects-engine`
-**Status:** planned
+**Status:** built
 
 **Covers:** beta-80 plan row E4 (re-cut: Halo #39, the effects stack, whose
 pixel half is built here once instead of inside Halo); Photo's layer styles
