@@ -20,6 +20,15 @@ public struct PNGInfo: Hashable, Sendable {
     public var colorType: Int
     /// True for Adam7 interlacing (IHDR interlace method 1).
     public var interlaced: Bool
+
+    /// The fields as given, unchecked (only `PNG.info` checks them against a file), for expected values and fixtures.
+    public init(width: Int, height: Int, bitDepth: Int, colorType: Int, interlaced: Bool) {
+        self.width = width
+        self.height = height
+        self.bitDepth = bitDepth
+        self.colorType = colorType
+        self.interlaced = interlaced
+    }
 }
 
 /// PNG files to and from `PixelBuffer`. Throws `CodecError`: `notThisFormat`
