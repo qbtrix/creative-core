@@ -2,7 +2,7 @@
 
 Issue: #432 · Packet: docs/blueprints/core/features/tone-pack.md
 Run: act-1a150bfbcf7-sfwy · Session: cse_01NZM1f4cdnQ6PPn761pxTEp · Started: 2026-10-18T20:45Z
-Stage: 4 round 5 gate + mutation running on 7f81db8 (all r4 fixes merged)
+Stage: 4 round 5 panel running (wf_40faad79-81e) on 7f81db8: gate PASS, mutants 40/40
 Base: 4feaaf9fac3cc050901f8b459a0908515a927f54
 Next: round 5 panel; then TP-10 (feature-done), Belt-Slice-Done TP-z, Mac-Finish-Wanted TP-z (release budgets miss 4-60x on Linux; disabled there, verify on Mac)
 
