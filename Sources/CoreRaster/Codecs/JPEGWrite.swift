@@ -14,8 +14,8 @@ extension JPEG {
     /// `buffer` as a baseline JFIF: un-premultiplied, then alpha dropped (a
     /// fully transparent pixel writes black), sRGB encoded, 4:2:0 chroma, one
     /// scan, the Annex K tables scaled by `quality` (1...100, higher keeps more
-    /// detail). Throws `unsupported` for a quality outside 1...100, `tooLarge`
-    /// for a side over `maxSide`.
+    /// detail). Throws `unsupported` for a quality outside 1...100 (a caller
+    /// argument, not the buffer), `tooLarge` for a side over `maxSide`.
     public static func write(_ buffer: PixelBuffer, quality: Int = 90) throws -> Data {
         guard (1...100).contains(quality) else { throw CodecError.unsupported("JPEG quality \(quality) is not in 1...100") }
         let width = buffer.width, height = buffer.height

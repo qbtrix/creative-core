@@ -167,7 +167,8 @@ public enum CodecError: Error, Equatable, Sendable {
     case notThisFormat
     /// The file is this format but broken; the text says where.
     case damaged(String)
-    /// The file uses a feature this codec does not read or write.
+    /// The file uses a feature, or the caller asked for an encoder option,
+    /// that this codec does not read or write.
     case unsupported(String)
     /// A size or count is over the codec's limits.
     case tooLarge(String)

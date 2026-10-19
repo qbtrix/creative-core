@@ -155,7 +155,7 @@ extension JPEGDecoder {
 
     /// Component `index`'s samples over its padded grid: each block dequantized, inverse transformed, shifted by 128.
     func plane(_ index: Int, _ c: JPEGComponent) throws -> [UInt8] {
-        guard let q = quant[c.tq], index < coefficients.count else { throw CodecError.damaged("no DQT \(c.tq)") }
+        guard let q = quant[c.tq], index < coefficients.count else { throw CodecError.damaged("component \(c.id) uses DQT \(c.tq), not defined") }
         let width = c.stride * 8, store = coefficients[index], t = Self.cosines
         var out = [UInt8](repeating: 0, count: width * c.rows * 8)
         var s = [Float](repeating: 0, count: 64), row = [Float](repeating: 0, count: 64)
@@ -182,7 +182,8 @@ extension JPEGDecoder {
 
     /// Linear premultiplied pixels, alpha 1: box upsampling (x * H / Hmax), JFIF YCbCr to RGB, DisplayTransfer's sRGB.
     func pixels() throws -> PixelBuffer {
-        guard let f = frame, let transfer = try? DisplayTransfer(.sRGB) else { throw CodecError.damaged("no SOF") }
+        guard let f = frame else { throw CodecError.damaged("no SOF") }
+        guard let transfer = try? DisplayTransfer(.sRGB) else { throw CodecError.damaged("the sRGB display transfer could not be built") }
         let linear: [Float] = (0...255).map { Float(transfer.decode(UInt8($0), 0, 0).c0) }
         let planes = try f.components.enumerated().map { try plane($0.offset, $0.element) }
         let columns = f.components.map { c in (0..<f.width).map { $0 * c.h / f.hmax } }

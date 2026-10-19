@@ -2,7 +2,8 @@
 // ITU-T T.81, JFIF 1.02 and EXIF 2.3 (JPEGFixtures), each within a mean of
 // 1/255 and a maximum of 4/255 of its A.3.3 reference: grey and YCbCr at
 // 4:4:4, 4:2:2 and 4:2:0, the zigzag order, restart intervals, the EXIF
-// orientation reported but not applied, and unsupported, oversized or
+// orientation reported but not applied (and its documented PixelBuffer calls
+// turning each of 1...8 upright), and unsupported, oversized or
 // damaged files refused; progressive codings (Annex G, with EOB runs and
 // restart intervals) read as their baseline ones do, and progressive scans out
 // of Annex G's order or limits, or past the scan work budget, refused.
@@ -92,6 +93,42 @@ import Foundation
         }
     }
 
+    /// Each EXIF orientation's documented `JPEGInfo.orientation` calls turn a 2 x 3 frame upright: the result matches
+    /// the EXIF 2.3 definition (where the stored 0th row and 0th column are shown) applied to the stored pixels.
+    @Test func orientationCallsTurnUpright() throws {
+        let f = F.Frame(width: 2, height: 3, sampling: Self.samplings[0], block: F.seeded(0x0D))
+        let stored = try JPEG.read(F.baseline(f)), w = stored.width, h = stored.height
+        func upright(_ b: PixelBuffer, _ o: Int) -> PixelBuffer {
+            switch o {
+            case 2: b.flipped(.horizontal)
+            case 3: b.rotated(.degrees180)
+            case 4: b.flipped(.vertical)
+            case 5: b.rotated(.degrees90).flipped(.horizontal)
+            case 6: b.rotated(.degrees90)
+            case 7: b.rotated(.degrees270).flipped(.horizontal)
+            case 8: b.rotated(.degrees270)
+            default: b
+            }
+        }
+        // EXIF 2.3 Orientation: the stored pixel shown at display (x, y).
+        let source: [Int: (Int, Int) -> (Int, Int)] = [
+            1: { ($0, $1) }, 2: { (w - 1 - $0, $1) }, 3: { (w - 1 - $0, h - 1 - $1) }, 4: { ($0, h - 1 - $1) },
+            5: { ($1, $0) }, 6: { ($1, h - 1 - $0) }, 7: { (w - 1 - $1, h - 1 - $0) }, 8: { (w - 1 - $1, $0) },
+        ]
+        for o in 1...8 {
+            let data = F.baseline(f, orientation: o, littleEndian: o % 2 == 0)
+            #expect(try JPEG.info(data).orientation == o)
+            let shown = upright(try JPEG.read(data), o)
+            #expect(shown.width == (o >= 5 ? h : w) && shown.height == (o >= 5 ? w : h), "\(o)")
+            for y in 0..<shown.height {
+                for x in 0..<shown.width {
+                    let (sx, sy) = source[o].map { $0(x, y) } ?? (x, y)
+                    #expect(try shown.pixel(x: x, y: y) == stored.pixel(x: sx, y: sy), "orientation \(o) at (\(x), \(y))")
+                }
+            }
+        }
+    }
+
     /// Arithmetic coding (SOF9, SOF10), lossless (SOF3) and hierarchical (SOF5) frames, 12-bit samples and four components.
     @Test func unsupportedThrows() throws {
         let grey = F.Frame(width: 8, height: 8, block: F.seeded(0x05))
@@ -136,6 +173,10 @@ import Foundation
             ("sampling 0", F.join(badSampling, parts.scan)), ("unknown component", F.join(parts.segments, badSelector)),
         ]
         for (name, data) in cases { #expect(PNGFixtures.thrown { try JPEG.read(data) } == "damaged", "\(name)") }
+        // The SOS refuses a component whose DQT is missing before the scan is decoded, naming the component.
+        do { _ = try JPEG.read(without { m, b in m == 0xDB && b.first == 1 }) } catch CodecError.damaged(let text) {
+            #expect(text == "scan component 2 uses DQT 1, not defined before its scan", "\(text)")
+        } catch { Issue.record("no DQT 1: \(error)") }
         for data in [without { m, _ in m == 0xC0 }, Data([0xFF, 0xD8, 0xFF, 0xE0, 0xFF, 0xF0, 0x4A, 0x46])] {
             #expect(PNGFixtures.thrown { try JPEG.info(data) } == "damaged", "no SOF, or a segment past the end")
             #expect(PNGFixtures.thrown { try JPEG.read(data) } == "damaged")
@@ -243,6 +284,10 @@ import Foundation
             ("refinement of an uncoded band", F.sos([0], 1, 63, 1, 0)),
         ]
         for (name, scan) in bad { #expect(read(dc, scan + zeros) == "damaged", "\(name)") }
+        let pastBand: [[UInt8]] = [head, dc, F.sos([0], 1, 64, 0, 0), zeros, [0xFF, 0xD9]]
+        do { _ = try JPEG.read(Data(Array(pastBand.joined()))) } catch CodecError.damaged(let text) {
+            #expect(text.contains("scan band 1...64: a band must run up within 0...63"), "\(text)")
+        } catch { Issue.record("band past 63: \(error)") }
         // Each a first scan with nothing coded before it, or a refinement whose Ah matches what was coded, so only
         // its own G.1.1.1 clause refuses it: Al over 13, a DC band past 0, and Ah 2 with Al 0 (not Ah - 1).
         #expect(read(F.sos([0], 0, 0, 0, 14) + zeros) == "damaged", "Al 14 first")
