@@ -4,7 +4,8 @@
 // approximation refinement, into the coefficient store `pixels()` shares
 // with the sequential scan. Invariants: each scan's band and approximation
 // are checked (B.2.3, G.1.1.1) against what earlier scans coded before any
-// bit is read; EOBRUN and the DC predictions reset at each restart interval.
+// bit is read; EOBRUN and the DC predictions reset at each restart interval;
+// the scans together walk at most `passes` times the frame's blocks.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -12,7 +13,13 @@ import Foundation
 #endif
 
 extension JPEGDecoder {
-    /// One progressive scan; `coded` holds per component and zigzag index the Al that last coded it, or -1.
+    /// The most block visits all progressive scans may make, in passes over every block of the frame. A scan header is
+    /// a few bytes and an EOB run skips 32767 blocks in two more, so bytes do not bound the work; real encoders send
+    /// under 20 scans, Annex G's limits allow 896 per component.
+    static let passes = 64
+
+    /// One progressive scan; `coded` holds per component and zigzag index the Al that last coded it, or -1, then
+    /// one row of the blocks walked so far.
     mutating func progressiveScan(_ scan: JPEGScan, _ intervals: [[UInt8]], _ coded: inout [[Int]]) throws {
         try check(scan, &coded)
         var pred = [Int32](repeating: 0, count: scan.parts.count), eobrun = 0
@@ -28,22 +35,31 @@ extension JPEGDecoder {
     }
 
     /// B.2.3 and G.1.1.1: ss <= se <= 63, a DC scan codes only coefficient 0, an AC scan one component whose DC is
-    /// coded, Al <= 13, a first scan codes coefficients not yet coded and a refinement those last coded at Al = Ah - 1.
+    /// coded, Al <= 13, a first scan codes coefficients not yet coded and a refinement those last coded at Al = Ah - 1;
+    /// `tooLarge` once the scans would walk over `passes` times the frame's blocks.
     func check(_ scan: JPEGScan, _ coded: inout [[Int]]) throws {
         guard let f = frame else { throw CodecError.damaged("SOS before SOF") }
-        if coded.isEmpty { coded = f.components.map { _ in [Int](repeating: -1, count: 64) } }
+        let n = f.components.count
+        if coded.count != n + 1 { coded = f.components.map { _ in [Int](repeating: -1, count: 64) } + [[0]] }
         let (ss, se, ah, al) = (scan.ss, scan.se, scan.ah, scan.al)
         guard ss <= se, se <= 63, al <= 13, ss == 0 ? se == 0 : scan.parts.count == 1, ah == 0 || ah == al + 1 else {
             throw CodecError.damaged("scan of \(ss)...\(se) at Ah \(ah), Al \(al)")
         }
         for part in scan.parts {
-            guard part.index < coded.count else { throw CodecError.damaged("scan component \(part.index)") }
+            guard part.index < n else { throw CodecError.damaged("scan component \(part.index)") }
             let want = ah == 0 ? -1 : ah
             guard ss == 0 || coded[part.index][0] >= 0, coded[part.index][ss...se].allSatisfy({ $0 == want }) else {
                 throw CodecError.damaged("component \(part.index) coefficients \(ss)...\(se) out of order")
             }
             for k in ss...se { coded[part.index][k] = al }
         }
+        // Sides are at most maxSide and factors 4, so neither sum can overflow.
+        let blocks = f.components.reduce(0) { $0 + $1.stride * $1.rows }, walked = scan.parts.reduce(coded[n].first ?? 0) {
+            let c = f.components[$1.index]
+            return $0 + (scan.parts.count == 1 ? c.blocksX * c.blocksY : c.stride * c.rows)
+        }
+        guard walked <= Self.passes * blocks else { throw CodecError.tooLarge("scans walk over \(Self.passes) passes of \(blocks) blocks") }
+        coded[n] = [walked]
     }
 }
 

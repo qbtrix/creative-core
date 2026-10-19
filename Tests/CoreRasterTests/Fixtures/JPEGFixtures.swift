@@ -75,8 +75,7 @@ enum JPEGFixtures {
         let size = Int.bitWidth - abs(v).leadingZeroBitCount
         return (size, v < 0 ? v + (1 << size) - 1 : v)
     }
-    /// F.1.2.2 (and G.1.2.2 with end-of-band runs of one): `band`, zigzag order, as run/size symbols, ZRL per
-    /// 16 zeros, EOB after the last non-zero.
+    /// F.1.2.2: `band`, zigzag order, as run/size symbols, ZRL per 16 zeros, EOB after the last non-zero.
     static func encodeAC(_ band: [Int], _ codes: Codes, _ w: inout Bits) {
         var run = 0
         for v in band {
@@ -148,13 +147,15 @@ enum JPEGFixtures {
         }
     }
 
-    /// SOI, JFIF, EXIF when `orientation` is set, DQT, SOF (`sof`, `precision`), DHT K.3 to K.6, DRI when `restart` > 0.
-    static func header(_ f: Frame, sof: UInt8, precision: Int, restart: Int, orientation: Int?, littleEndian: Bool) -> [UInt8] {
+    /// SOI, JFIF, EXIF when `orientation` is set, DQT, SOF (`sof`, `precision`), DHT K.3 and K.4 with the AC tables
+    /// `ac` (K.5 and K.6 by default), DRI when `restart` > 0.
+    static func header(_ f: Frame, sof: UInt8, precision: Int, restart: Int, orientation: Int?, littleEndian: Bool,
+                       ac: (Huffman, Huffman) = (acLuma, acChroma)) -> [UInt8] {
         var bytes: [UInt8] = [0xFF, 0xD8] + jfif + (orientation.map { exif($0, littleEndian: littleEndian) } ?? [])
         bytes += f.tables.enumerated().flatMap { dqt($0.offset, $0.element) }
         let components = f.sampling.enumerated().flatMap { [UInt8($0.offset + 1), UInt8($0.element.h << 4 | $0.element.v), UInt8(min($0.offset, 1))] }
         bytes += segment(sof, [UInt8(precision)] + be16(f.height) + be16(f.width) + [UInt8(f.sampling.count)] + components)
-        bytes += dht(0, 0, dcLuma) + dht(1, 0, acLuma) + dht(0, 1, dcChroma) + dht(1, 1, acChroma)
+        bytes += dht(0, 0, dcLuma) + dht(1, 0, ac.0) + dht(0, 1, dcChroma) + dht(1, 1, ac.1)
         return bytes + (restart > 0 ? segment(0xDD, be16(restart)) : [])
     }
 
@@ -179,44 +180,83 @@ enum JPEGFixtures {
         let head = header(f, sof: sof, precision: precision, restart: restart, orientation: orientation, littleEndian: littleEndian)
         return Data(head + sos(Array(f.sampling.indices), 0, 63, 0, 0) + w.bytes + [0xFF, 0xD9])
     }
-    /// G.1.2.3, refining |coefficients| one bit (Al = 0 after Al = 1): a coefficient going 0 to 1 is (R, 1) and its
-    /// sign (1 positive), R counting only zero-history zeros; one with history gives its correction bit, held until
-    /// the next symbol. A ZRL is sent at the next non-zero once 16 zeros have passed, never after the last new
-    /// coefficient (EOB carries the rest).
-    static func refineAC(_ band: [Int], _ codes: Codes, _ w: inout Bits) {
-        let t = band.map(abs), last = t.lastIndex(of: 1) ?? -1
-        var run = 0, held: [Int] = []
-        func flush(_ w: inout Bits) { held.forEach { w.put($0, 1) }; held = [] }
-        for (k, v) in t.enumerated() {
-            if v == 0 { run += 1; continue }
-            while run > 15, k <= last { w.put(codes, 0xF0); flush(&w); run -= 16 }
-            if v > 1 { held.append(v & 1); continue }
-            w.put(codes, run << 4 | 1); w.put(band[k] > 0 ? 1 : 0, 1); flush(&w); run = 0
+    /// An AC table of 8-bit codes for every symbol a progressive scan uses: EOB0...EOB14 (r << 4, G.1.2.2), ZRL and
+    /// run/size for sizes 1...10. K.5 and K.6 hold no EOBn for n >= 1.
+    static let acAll = Huffman(bits: [0, 0, 0, 0, 0, 0, 0, 176] + [Int](repeating: 0, count: 8),
+                               values: (0...14).map { $0 << 4 } + [0xF0] + (0..<16).flatMap { r in (1...10).map { r << 4 | $0 } })
+    /// One progressive scan's bits, the DC predictions, and G.1.2.2's end-of-band run: EOBRUN bands still to send and,
+    /// for a refinement, the correction bits of the blocks it covers, which follow its EOBn symbol and bits.
+    struct Scan {
+        var w = Bits(), eobrun = 0, held: [Int] = [], prediction = [Int](repeating: 0, count: 4)
+        let codes = JPEGFixtures.codes(acAll)
+        /// EOBn: symbol n << 4 and n bits of EOBRUN - 2^n, n = floor(log2 EOBRUN), then the held correction bits.
+        mutating func flush() {
+            guard eobrun > 0 else { return }
+            let n = Int.bitWidth - 1 - eobrun.leadingZeroBitCount
+            w.put(codes, n << 4); w.put(eobrun - (1 << n), n); held.forEach { w.put($0, 1) }
+            (eobrun, held) = (0, [])
         }
-        if run > 0 || !held.isEmpty { w.put(codes, 0x00); flush(&w) }
+        /// A band ending in zeros joins the run with its trailing correction bits; 0x7FFF is the most EOB14 codes.
+        mutating func endBand(_ bits: [Int]) { eobrun += 1; held += bits; if eobrun == 0x7FFF { flush() } }
+        /// B.2.4.4 and G.1.2.2: RSTm ends the run and the byte, and resets the DC predictions.
+        mutating func restart(_ m: Int) {
+            flush(); w.align(); w.bytes += [0xFF, UInt8(0xD0 + m % 8)]
+            prediction = prediction.map { _ in 0 }
+        }
+        /// G.1.2.2: a first scan's band as run/size symbols, ZRL per 16 zeros before a non-zero, the zero tail an EOB run.
+        mutating func first(_ band: [Int]) {
+            var run = 0
+            for v in band {
+                if v == 0 { run += 1; continue }
+                flush()
+                while run > 15 { w.put(codes, 0xF0); run -= 16 }
+                let m = magnitude(v)
+                w.put(codes, run << 4 | m.size); w.put(m.bits, m.size); run = 0
+            }
+            if run > 0 { endBand([]) }
+        }
+        /// G.1.2.3, refining |coefficients| one bit (Al = 0 after Al = 1): a coefficient going 0 to 1 is (R, 1) and its
+        /// sign (1 positive), R counting only zero-history zeros; one with history gives its correction bit, held until
+        /// the next symbol. A ZRL is sent at the next non-zero once 16 zeros have passed, never after the last new
+        /// coefficient (the EOB run carries the rest).
+        mutating func refine(_ band: [Int]) {
+            let t = band.map(abs), last = t.lastIndex(of: 1) ?? -1
+            var run = 0, mine: [Int] = []
+            for (k, v) in t.enumerated() {
+                if v == 0 { run += 1; continue }
+                while run > 15, k <= last { flush(); w.put(codes, 0xF0); mine.forEach { w.put($0, 1) }; mine = []; run -= 16 }
+                if v > 1 { mine.append(v & 1); continue }
+                flush(); w.put(codes, run << 4 | 1); w.put(band[k] > 0 ? 1 : 0, 1); mine.forEach { w.put($0, 1) }
+                (mine, run) = ([], 0)
+            }
+            if run > 0 || !mine.isEmpty { endBand(mine) }
+        }
     }
     /// A progressive JPEG of `f` (SOF2, Annex G) coding the same coefficients as `baseline`: DC first at Al 1 and its
     /// refinement (all components interleaved), chroma AC by spectral selection (1...5, 6...63), luma AC 1...63 at
-    /// Al 1 (divided toward zero) then refined. Every AC scan holds one component over its own block grid (A.2.2).
-    static func progressive(_ f: Frame) -> Data {
+    /// Al 1 (divided toward zero) then refined. Every AC scan holds one component over its own block grid (A.2.2);
+    /// zero tails of consecutive blocks merge into EOBn runs. With `restart` n, RSTm follows every n units of a scan.
+    static func progressive(_ f: Frame, restart: Int = 0) -> Data {
         let all = Array(f.sampling.indices)
-        var out = header(f, sof: 0xC2, precision: 8, restart: 0, orientation: nil, littleEndian: false)
-        var prediction = all.map { _ in 0 }
-        func scan(_ cs: [Int], _ ss: Int, _ se: Int, _ ah: Int, _ al: Int, _ code: (Int, [Int], inout Bits) -> Void) {
-            var w = Bits()
-            for b in f.units(cs).joined() { let q = f.block(b.c, b.x, b.y); code(b.c, zigzag.map { q[$0] }, &w) }
-            w.align(); out += sos(cs, ss, se, ah, al) + w.bytes
+        var out = header(f, sof: 0xC2, precision: 8, restart: restart, orientation: nil, littleEndian: false, ac: (acAll, acAll))
+        func scan(_ cs: [Int], _ ss: Int, _ se: Int, _ ah: Int, _ al: Int, _ code: (Int, [Int], inout Scan) -> Void) {
+            var s = Scan()
+            for (i, unit) in f.units(cs).enumerated() {
+                if restart > 0, i > 0, i % restart == 0 { s.restart(i / restart - 1) }
+                for b in unit { let q = f.block(b.c, b.x, b.y); code(b.c, zigzag.map { q[$0] }, &s) }
+            }
+            s.flush(); s.w.align(); out += sos(cs, ss, se, ah, al) + s.w.bytes
         }
-        scan(all, 0, 0, 0, 1) { c, z, w in
-            let d = magnitude((z[0] >> 1) - prediction[c]); prediction[c] = z[0] >> 1
-            w.put(huffman[min(c, 1)].dc, d.size); w.put(d.bits, d.size)
+        scan(all, 0, 0, 0, 1) { c, z, s in
+            let d = magnitude((z[0] >> 1) - s.prediction[c]); s.prediction[c] = z[0] >> 1
+            s.w.put(huffman[min(c, 1)].dc, d.size); s.w.put(d.bits, d.size)
         }
-        scan(all, 0, 0, 1, 0) { _, z, w in w.put(z[0] & 1, 1) }
+        scan(all, 0, 0, 1, 0) { _, z, s in s.w.put(z[0] & 1, 1) }
         for c in all.dropFirst() {
-            for (ss, se) in [(1, 5), (6, 63)] { scan([c], ss, se, 0, 0) { _, z, w in encodeAC(Array(z[ss...se]), huffman[1].ac, &w) } }
+            for (ss, se) in [(1, 5), (6, 63)] { scan([c], ss, se, 0, 0) { _, z, s in s.first(Array(z[ss...se])) } }
         }
-        scan([0], 1, 63, 0, 1) { _, z, w in encodeAC(z.dropFirst().map { $0 < 0 ? -(-$0 >> 1) : $0 >> 1 }, huffman[0].ac, &w) }
-        scan([0], 1, 63, 1, 0) { _, z, w in refineAC(Array(z.dropFirst()), huffman[0].ac, &w) }
+        scan([0], 1, 63, 0, 1) { _, z, s in s.first(z.dropFirst().map { $0 < 0 ? -(-$0 >> 1) : $0 >> 1 }) }
+        scan([0], 1, 63, 1, 0) { _, z, s in s.refine(Array(z.dropFirst())) }
         return Data(out + [0xFF, 0xD9])
     }
     /// The header and a scan header (DC-only for SOF2) with two entropy bytes: enough for `info`, too short to decode.
