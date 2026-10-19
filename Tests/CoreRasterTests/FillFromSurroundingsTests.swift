@@ -27,6 +27,19 @@ private func lumaStats(_ buffer: PixelBuffer, under mask: Mask) throws -> (mean:
         let filled = try photo.spotted.filledFromSurroundings(spot.hole, seed: 1)
         let hole = try lumaStats(filled, under: spot.hole), ring = try lumaStats(filled, under: spot.ring)
         #expect(abs(hole.mean - ring.mean) <= 3.0 / 255, "hole mean \(hole.mean), ring mean \(ring.mean)")
+
+        // On a smooth field every patch has the wrong tone; the heal still
+        // lands each hole pixel on the field.
+        let field = try RetouchFixtures.gradientField(width: 64, height: 48)
+        let disc = try RetouchFixtures.disc(width: 64, height: 48, centerX: 32, centerY: 24, radius: 6)
+        let smooth = try field.filledFromSurroundings(disc, seed: 1)
+        for y in 0..<48 {
+            for x in 0..<64 where try disc.coverage(x: x, y: y) > 0 {
+                let p = try smooth.pixel(x: x, y: y), f = RetouchFixtures.fieldValue(x: x, y: y)
+                let gap = max(abs(p.r - f.r), abs(p.g - f.g), abs(p.b - f.b))
+                #expect(gap <= 1.0 / 255, "(\(x), \(y)) off the field by \(gap)")
+            }
+        }
     }
 
     @Test func textureMatchesRing() throws {

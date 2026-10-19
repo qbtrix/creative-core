@@ -91,21 +91,25 @@ extension PixelBuffer {
     }
 
     /// The mean squared colour difference between the band and the band
-    /// shifted by the offset; a shifted pixel off the buffer or under the
-    /// mask counts as the worst difference.
+    /// shifted by the offset. A shifted pixel off the buffer counts as the
+    /// worst difference; one under the mask is skipped (its value is the
+    /// damage being removed, and the clearance check keeps it out of the fill).
     func fillScore(_ band: [(Int, Int)], mask: Mask, dx: Int, dy: Int) throws -> Double {
-        var total = 0.0
+        var total = 0.0, counted = 0
         for (x, y) in band {
             let sx = x + dx, sy = y + dy
-            guard (0..<width).contains(sx), (0..<height).contains(sy), try mask.coverage(x: sx, y: sy) == 0 else {
+            guard (0..<width).contains(sx), (0..<height).contains(sy) else {
                 total += 3
+                counted += 1
                 continue
             }
+            guard try mask.coverage(x: sx, y: sy) == 0 else { continue }
+            counted += 1
             let a = try pixel(x: x, y: y), b = try pixel(x: sx, y: sy)
             let dr = Double(a.r - b.r), dg = Double(a.g - b.g), db = Double(a.b - b.b)
             total += dr * dr + dg * dg + db * db
         }
-        return total / Double(max(band.count, 1))
+        return total / Double(max(counted, 1))
     }
 }
 
