@@ -2,7 +2,7 @@
 // W3C PNG specification: rereads equal at 8 bits and within one step at 16,
 // IHDR depth, big-endian samples, chunk order and CRCs, IDATs of at most
 // 64 KiB, the least-sum filter choice (12.8), and an ORA round trip through
-// PNGCodec. Written files are parsed with PNGFixtures. Disabled until IC-5.
+// PNGCodec. Written files are parsed with PNGFixtures. Rereads wait on IC-4.
 @testable import CoreRaster
 import CoreColor
 import Testing
@@ -31,13 +31,13 @@ import Foundation
         return [UInt8](try Inflate.zlib(Data(idat), limit: 1 << 24))
     }
 
-    @Test(.disabled("waits on IC-5")) func eightBitRoundTrip() throws {
+    @Test func eightBitRoundTrip() throws {
         let source = try Self.bytePixels(0x5E1, 13, 7)
         for level in [0, 6, 9] { #expect(try PNG.read(PNG.write(source, level: level)) == source, "level \(level)") }
         #expect(try PNGCodec().decodePNG(PNGCodec().encodePNG(source, bitsPerChannel: 8)) == source)
     }
 
-    @Test(.disabled("waits on IC-5")) func sixteenBitWithinOneStep() throws {
+    @Test func sixteenBitWithinOneStep() throws {
         var rng = SplitMix64(seed: 0x5E2), source = try PixelBuffer(width: 11, height: 6)
         for y in 0..<6 {
             for x in 0..<11 {
@@ -57,14 +57,14 @@ import Foundation
     }
 
     /// 7.1: 16-bit samples are written high byte first; encoded 0x1234 is the bytes 0x12 0x34.
-    @Test(.disabled("waits on IC-5")) func bigEndian16() throws {
+    @Test func bigEndian16() throws {
         let v = Float(TransferCurve.decode(Double(0x1234) / 65_535))
         let lines = try Self.scanlines(PNG.write(PixelBuffer(width: 1, height: 1, fill: RGBA(r: v, g: v, b: v, a: 1)), bitsPerChannel: 16))
         #expect(lines.count == 9 && lines[0] <= 4)
         #expect(Array(lines.dropFirst()) == [0x12, 0x34, 0x12, 0x34, 0x12, 0x34, 0xFF, 0xFF])
     }
 
-    @Test(.disabled("waits on IC-5")) func ihdrDepthRecorded() throws {
+    @Test func ihdrDepthRecorded() throws {
         let source = try Self.bytePixels(0x5E3, 3, 2)
         for depth in [8, 16] {
             let data = try PNG.write(source, bitsPerChannel: depth), bytes = [UInt8](data)
@@ -73,7 +73,7 @@ import Foundation
         }
     }
 
-    @Test(.disabled("waits on IC-5")) func chunkCRCsValid() throws {
+    @Test func chunkCRCsValid() throws {
         let data = try PNG.write(Self.bytePixels(0x5E4, 200, 200), level: 0)
         let chunks = F.chunks(data)
         #expect(Array(data.prefix(8)) == F.signature && chunks.first?.type == "IHDR")
@@ -85,7 +85,7 @@ import Foundation
 
     /// 12.8: each row takes the filter with the least sum of its bytes read as signed. A 16-pixel horizontal
     /// ramp (sRGB 4x + 4, opaque) with equal rows makes None the worst choice on every row.
-    @Test(.disabled("waits on IC-5")) func adaptiveFilterSmaller() throws {
+    @Test func adaptiveFilterSmaller() throws {
         let row: [UInt8] = (0..<16).flatMap { (x: Int) -> [UInt8] in let v = UInt8(4 * x + 4); return [v, v, v, 255] }
         let image = try PixelBuffer(rgba8: row + row + row + row, width: 16, height: 4)
         let lines = try Self.scanlines(PNG.write(image))
@@ -99,13 +99,13 @@ import Foundation
         }
     }
 
-    @Test(.disabled("waits on IC-5")) func oraRoundTripThroughPNGCodec() throws {
+    @Test func oraRoundTripThroughPNGCodec() throws {
         let layers = try (0..<3).map { PixelLayer(name: "layer \($0)", pixels: try Self.bytePixels(0x5E5 + UInt64($0), 5 + $0, 4), x: $0, y: -$0) }
         let image = LayeredImage(width: 9, height: 6, nodes: layers.map { .pixels($0) }, composite: try Self.bytePixels(0x5E9, 9, 6))
         #expect(try OpenRaster.read(OpenRaster.write(image, pixels: PNGCodec()), pixels: PNGCodec()) == image)
     }
 
-    @Test(.disabled("waits on IC-5")) func otherDepthsRefused() throws {
+    @Test func otherDepthsRefused() throws {
         let source = try Self.bytePixels(0x5EA, 2, 2)
         #expect(F.thrown { try PNG.write(source, bitsPerChannel: 12) } == "unsupported")
         #expect(F.thrown { try PNGCodec().encodePNG(source, bitsPerChannel: 12) } == "pixelCodec")

@@ -1,6 +1,6 @@
 // PNG.swift: the Foundation-only PNG codec (W3C PNG specification, third
 // edition) and `PNGCodec`, the `PixelCodec` over it; the reader is in
-// PNGRead.swift, write a stub until IC-5. Invariants: sizes come from
+// PNGRead.swift, the writer in PNGWrite.swift. Invariants: sizes come from
 // IHDR and are checked against `maxSide` and `PixelBuffer.maxPixels` before
 // any pixel buffer is made, and inflate is capped at the bytes IHDR implies;
 // pixels are premultiplied linear Float32 both ways, files are sRGB.
@@ -47,16 +47,6 @@ public enum PNG {
     public static func read(_ data: Data) throws -> PixelBuffer {
         try decode(data)
     }
-
-    /// `buffer` as an sRGB RGBA PNG with `bitsPerChannel` (8 or 16) bits per
-    /// sample, one IDAT per 64 KiB, each row given the filter with the least
-    /// sum of absolute signed bytes (the spec's 12.8), compressed by
-    /// `Deflate.zlib` at `level` (0...9). Throws `unsupported` for another
-    /// depth, `tooLarge` for a side over `maxSide`. Until IC-5 it throws
-    /// `unsupported`.
-    public static func write(_ buffer: PixelBuffer, bitsPerChannel: Int = 8, level: Int = 6) throws -> Data {
-        throw CodecError.unsupported("PNG.write waits on IC-5")
-    }
 }
 
 /// The `PixelCodec` over `PNG`, so layered formats (ORA layers) read and
@@ -72,13 +62,5 @@ public struct PNGCodec: PixelCodec {
     /// `PNG.read` refused, as `PixelCodec` asks.
     public func decodePNG(_ data: Data) throws -> PixelBuffer {
         do { return try PNG.read(data) } catch { throw CodecError.pixelCodec("PNG: \(error)") }
-    }
-
-    /// `buffer` through `PNG.write` at `bitsPerChannel` (8 or 16) and this
-    /// codec's level. Throws `CodecError.pixelCodec` for another depth or
-    /// anything `PNG.write` refuses, as `PixelCodec` asks. Until IC-5 it
-    /// throws `unsupported`.
-    public func encodePNG(_ buffer: PixelBuffer, bitsPerChannel: Int) throws -> Data {
-        throw CodecError.unsupported("PNGCodec.encodePNG waits on IC-5")
     }
 }

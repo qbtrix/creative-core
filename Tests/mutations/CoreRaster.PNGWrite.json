@@ -1,0 +1,16 @@
+[
+  {
+    "note": "a 16-bit sample is written high byte last, caught by PNGWriteTests.bigEndian16",
+    "file": "Sources/CoreRaster/Codecs/PNGWrite.swift",
+    "anchor": "out[j] = UInt8(truncatingIfNeeded: v >> 8); out[j + 1] = UInt8(truncatingIfNeeded: v)",
+    "replacement": "out[j + 1] = UInt8(truncatingIfNeeded: v >> 8); out[j] = UInt8(truncatingIfNeeded: v)",
+    "filter": "PNGWriteTests"
+  },
+  {
+    "note": "the filter choice is always None, caught by PNGWriteTests.adaptiveFilterSmaller",
+    "file": "Sources/CoreRaster/Codecs/PNGWrite.swift",
+    "anchor": "for filter in 1..<5 where costs[filter] < costs[best] { best = filter }",
+    "replacement": "for filter in 1..<5 where costs[filter] < costs[best] && filter < 0 { best = filter }",
+    "filter": "PNGWriteTests"
+  }
+]
