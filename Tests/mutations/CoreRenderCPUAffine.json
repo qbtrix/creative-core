@@ -7,5 +7,8 @@
    "replacement": "{ $0.flipped(axis == .horizontal ? .vertical : .horizontal) }"},
   {"note": "cpu backend affine composite lets a bare raster error escape", "filter": "CPUAffineTests", "file": "Sources/CoreRender/CPU/CPUBackend+Affine.swift",
    "anchor": "try RenderError.mapping {\n                try backdrop.composite(source, through: m, mode: mode, opacity: opacity, filter: filter)\n            }",
-   "replacement": "try backdrop.composite(source, through: m, mode: mode, opacity: opacity, filter: filter)"}
+   "replacement": "try backdrop.composite(source, through: m, mode: mode, opacity: opacity, filter: filter)"},
+  {"note": "cpu backend affine composite drops the caller's filter for bilinear, caught by the opaque lanczos3 golden", "filter": "CPUGoldenTests", "file": "Sources/CoreRender/CPU/CPUBackend+Affine.swift",
+   "anchor": "try backdrop.composite(source, through: m, mode: mode, opacity: opacity, filter: filter)",
+   "replacement": "try backdrop.composite(source, through: m, mode: mode, opacity: opacity, filter: .bilinear)"}
 ]

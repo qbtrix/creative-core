@@ -94,7 +94,13 @@ public protocol RenderBackend: Sendable {
     /// sampled with `filter`, with `mode` at `opacity`; `b` keeps its id and
     /// size. Coordinates are continuous pixel units with (0, 0) at the
     /// top-left corner of the top-left pixel; pixel (x, y) is sampled at its
-    /// centre (x + 0.5, y + 0.5). Gated by `.affine`.
+    /// centre (x + 0.5, y + 0.5). Gated by `.affine`. Only `b`'s pixels
+    /// inside `m.writeBounds(of: s.width, s.height, filter: filter)` can
+    /// change. A bad opacity or matrix throws with `b` unchanged; a
+    /// non-finite lanczos3 overshoot or blend result throws after the
+    /// composite began, so `b` may hold it in some rows of that box and not
+    /// in others (never outside it): redo the composite on a copy kept
+    /// before the call to recover.
     func composite(_ s: RenderSurface, onto b: inout RenderSurface, through m: AffineMatrix, mode: BlendMode,
                    opacity: Float, filter: ResampleFilter) throws
     /// `s` with `effect` applied, as a new surface of the same size. Gated
