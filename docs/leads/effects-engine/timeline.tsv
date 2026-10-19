@@ -57,3 +57,4 @@ utc	stage	event	ref	note
 2026-10-19T06:42Z	4	merged	#652	r3-b3 packet docs a672a6b
 2026-10-19T06:50:56Z	4	fixes merged	#652 #653 #655 #658	round 3 fixes all merged; dev e9fa096
 2026-10-19T06:50:56Z	4	round 4 start	e9fa096	gate and mutation
+2026-10-19T07:05:34Z	4	heartbeat	-	round 4 gate and mutation on e9fa096
