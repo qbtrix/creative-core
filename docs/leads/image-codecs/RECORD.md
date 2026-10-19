@@ -3,9 +3,9 @@
 Issue: #562 · Packet: docs/blueprints/core/features/image-codecs.md
 Run: act-1a1511a1174-tlch · Started: 2026-10-18T22:40Z
 Line lead for: image-codecs (#562), preview-cache (#440, already done), vector-import (#439, VI-z left)
-Stage: 4 — IC-png r1 fix batch wf_9d39d94a-8d4; IC-jpeg r2 fix batch wf_a005f679-d21
+Stage: 3 — IC-png round 2 and IC-jpeg round 3 gate on 891372e
 Base: 9385de9 (wave 4)
-Next: IC-png r1 fix PRs #664 (b3, 209431b), #666 (b1, f51bf9f), #667 (b2, b72e958) merge, then IC-png round 2; r2-jpeg-b2 (wf_a005f679-d21) PR, then IC-jpeg round 3
+Next: gate passes, then IC-png r2 and IC-jpeg r3 critic panels; r1 PNG fixes #664 #666 #667 and r2 JPEG fixes #663 #668 all merged (dev 891372e)
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
