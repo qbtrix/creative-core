@@ -46,6 +46,17 @@ private func close(_ a: [Double], _ b: [Double], _ eps: Double = 1e-9) -> Bool {
         #expect(close(try pieces(Self.rect().trimmed(start: 0.75, end: 0.25, offset: 0, mode: .together, tolerance: tol)), [75, 75]))
     }
 
+    @Test func offsetIsAFractionAndEndsClamp() throws {
+        // offset is a fraction of the length, not a distance: 1.25 is 0.25, and 25 is a whole number of turns.
+        let quarter = try pieces(Self.line120.trimmed(start: 0, end: 0.5, offset: 0.25, mode: .together, tolerance: tol))
+        #expect(close(quarter, [60]))
+        #expect(close(try pieces(Self.line120.trimmed(start: 0, end: 0.5, offset: 1.25, mode: .together, tolerance: tol)), quarter))
+        let turns = try Self.line120.trimmed(start: 0, end: 0.5, offset: 25, mode: .together, tolerance: tol)
+        #expect(try turns.sample(atLength: 0, tolerance: tol)?.point == pt(0, 0) && close(try pieces(turns), [60]))
+        // start and end outside 0...1 clamp to it.
+        #expect(close(try pieces(Self.line120.trimmed(start: -0.5, end: 1.5, offset: 0, mode: .together, tolerance: tol)), [120]))
+    }
+
     @Test func eachContourRestarts() throws {
         #expect(close(try pieces(Self.twoSquares.trimmed(start: 0, end: 0.5, offset: 0, mode: .eachContour, tolerance: tol)), [20, 40]))
         #expect(close(try pieces(Self.twoSquares.trimmed(start: 0, end: 0.5, offset: 0, mode: .together, tolerance: tol)), [40, 20]))
@@ -69,7 +80,8 @@ private func close(_ a: [Double], _ b: [Double], _ eps: Double = 1e-9) -> Bool {
 
     @Test func refusals() throws {
         let path = try Self.rect()
-        for pattern: [Double] in [[], [0, 0], [-1, 5], [.nan, 5], [.infinity, 1], Array(repeating: 1, count: 65)] {
+        for pattern: [Double] in [[], [0, 0], [-1, 5], [.nan, 5], [.infinity, 1], Array(repeating: 1, count: 65),
+                                 [1e308, 1e308]] {
             #expect(throws: GeometryError.invalidPattern) { try path.dashed(pattern, phase: 0, tolerance: tol) }
         }
         #expect(try !path.dashed(Array(repeating: 1, count: 64), phase: 0, tolerance: tol).elements.isEmpty)

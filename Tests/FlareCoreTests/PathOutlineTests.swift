@@ -64,6 +64,39 @@ import Testing
         #expect(Self.near(try Self.area(zig, join: .miter, miterLimit: 40) - bevel, tip, 1e-6))
     }
 
+    @Test func shortLegInnerJoinPivots() throws {
+        // A 150° turn onto a 4-long leg: the inner offsets cross ≈ 18.7 past the
+        // vertex, beyond half the short leg, so the inner side pivots through it.
+        let (c, s) = (cos(Double.pi / 6), sin(Double.pi / 6))
+        let end = Point(x: 100 - 4 * c, y: 4 * s)
+        let path = Path(polyline: [Point(x: 0, y: 0), Point(x: 100, y: 0), end], closed: false)
+        // Oracle: the two butt bands and the bevel triangle on the outer side, unioned.
+        let first = Path(polyline: [Point(x: 0, y: -5), Point(x: 100, y: -5), Point(x: 100, y: 5), Point(x: 0, y: 5)],
+                         closed: true)
+        let n = Point(x: 5 * s, y: 5 * c)
+        let second = Path(polyline: [Point(x: 100 + n.x, y: n.y), Point(x: end.x + n.x, y: end.y + n.y),
+                                     Point(x: end.x - n.x, y: end.y - n.y), Point(x: 100 - n.x, y: -n.y)], closed: true)
+        let bevel = Path(polyline: [Point(x: 100, y: 0), Point(x: 100, y: -5), Point(x: 100 + n.x, y: n.y)], closed: true)
+        let bands = try Path.combine(.union, first, second, rule: .nonZero, tolerance: 0.01)
+        let expected = abs(try PathArea.signedArea(Path.combine(.union, bands, bevel, rule: .nonZero, tolerance: 0.01)))
+        #expect(Self.near(try Self.area(path, join: .bevel), expected, 1e-6))
+    }
+
+    @Test func roundJoinsPastTheVertexCapThrowEarly() throws {
+        // Round joins at a huge width and a fine tolerance take the most arc
+        // points per corner (4096); 100 right-angle corners pass
+        // maxBooleanVertices on the way, so the stroker stops there instead of
+        // building every loop and leaving the count to combine.
+        let points = (0..<101).map { (k: Int) -> Point in
+            let (x, y): (Int, Int) = ((k + 1) / 2 * 10, k / 2 * 10)
+            return Point(x: Double(x), y: Double(y))
+        }
+        #expect(throws: GeometryError.tooComplex(Path.maxBooleanVertices)) {
+            try Path(polyline: points, closed: false).outlined(width: 1e7, join: .round, cap: .round, miterLimit: 4,
+                                                               tolerance: 0.01)
+        }
+    }
+
     @Test func closedSquareIsARing() throws {
         let ring = try Self.square.outlined(width: 10, join: .miter, cap: .round, miterLimit: 4, tolerance: 0.01)
         let contours = try ring.flattened(tolerance: 0.01)
@@ -94,8 +127,10 @@ import Testing
     }
 
     @Test func badMiterLimitAndToleranceThrow() {
-        #expect(throws: GeometryError.nonFinite) {
-            try Self.line.outlined(width: 4, join: .miter, cap: .butt, miterLimit: .nan, tolerance: 0.1)
+        for limit in [Double.nan, 0, -1] {
+            #expect(throws: GeometryError.nonFinite) {
+                try Self.line.outlined(width: 4, join: .miter, cap: .butt, miterLimit: limit, tolerance: 0.1)
+            }
         }
         #expect(throws: GeometryError.invalidTolerance) {
             try Self.line.outlined(width: 4, join: .miter, cap: .butt, miterLimit: 4, tolerance: 0)

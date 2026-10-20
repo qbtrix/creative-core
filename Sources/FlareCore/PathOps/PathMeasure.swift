@@ -4,16 +4,18 @@
 // Invariants:
 // - every measure flattens the path once at `tolerance` and walks the polyline
 // - trimmed and dashed output is polyline pieces of the flattened path
-// - a dash pattern with a negative, non-finite or zero-sum entry list, or
-//   more than 64 entries, throws GeometryError.invalidPattern
+// - a dash pattern with a negative or non-finite entry, a sum of zero or
+//   past Double's range, or more than 64 entries, throws
+//   GeometryError.invalidPattern
 // - a non-finite point or length throws nonFinite; a dash walk past `maxDashSteps` throws tooComplex
 //
 // ponytail: trim and dash cut the flattened polyline, so curves come back as
 // lines; ceiling: exact cubic trim if a caller needs editable curves.
 
 extension Path {
-    /// Most dash and gap entries one `dashed` call walks.
-    static let maxDashSteps = 1_000_000
+    /// Most dash and gap entries one `dashed` call walks; past it, `dashed`
+    /// throws `GeometryError.tooComplex(maxDashSteps)`.
+    public static let maxDashSteps = 1_000_000
 
     /// The length of the path flattened to `tolerance`.
     ///
@@ -38,9 +40,11 @@ extension Path {
         return (line.at(at), Point(x: (b.x - a.x) / d, y: (b.y - a.y) / d))
     }
 
-    /// The part of the path from `start` to `end` (fractions 0...1 of the
-    /// length) shifted by `offset` (wraps), over the whole path or each contour
-    /// as `mode` says. A start past the end after wrapping gives two pieces.
+    /// The part of the path from `start` to `end` shifted by `offset`, over
+    /// the whole path or each contour as `mode` says. All three are fractions
+    /// of the length, not distances: `start` and `end` are clamped to 0...1,
+    /// and `offset` wraps (1 is one full turn, so 1.25 is 0.25). A start past
+    /// the end after wrapping gives two pieces.
     ///
     /// Throws `GeometryError.invalidTolerance` for a bad tolerance and
     /// `GeometryError.nonFinite` for a non-finite start, end or offset.

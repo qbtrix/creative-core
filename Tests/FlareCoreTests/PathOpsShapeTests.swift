@@ -16,6 +16,7 @@ import Testing
         #expect(PathContour(anchors: [anchor], closed: true).anchors == [anchor])
         #expect(TrimMode(rawValue: "eachContour") == .eachContour && BooleanOp(rawValue: "exclude") == .exclude)
         #expect(Path.maxBooleanVertices == 200_000)
+        #expect(Path.maxDashSteps == 1_000_000)
     }
 
     @Test func newGeometryErrorsAreEquatable() {

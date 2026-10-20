@@ -30,7 +30,9 @@ public enum GeometryError: Error, Equatable, Sendable {
     case singularMatrix
     /// A flattening tolerance that is zero, negative or not finite.
     case invalidTolerance
-    /// A coordinate, size or ratio that is NaN or infinite.
+    /// A coordinate, size or ratio that is NaN or infinite (or a stroke
+    /// width or miter limit of 0 or less, from `Path.outlined`). Fix it by
+    /// passing finite values, and a positive stroke width and miter limit.
     case nonFinite
     /// A polygon side count or star point count below 3 or above
     /// `PathBuilders.maxSides`. Fix it by passing a count in 3...maxSides.
@@ -38,22 +40,24 @@ public enum GeometryError: Error, Equatable, Sendable {
     /// A finite star inner ratio outside (0, 1]. Fix it by passing a ratio
     /// greater than 0 and at most 1.
     case invalidRatio
-    /// A path operation whose body has not landed yet; the payload names it,
-    /// e.g. "length(tolerance:)".
+    /// Not thrown: every path operation is built. Kept for source
+    /// compatibility with the path-geometry stubs (PG-a), which threw it with
+    /// the operation's name as the payload.
     case notBuilt(String)
     /// A contour, anchor or element index that is out of range, or a curve
     /// parameter outside 0...1. Fix it by passing a location on the path.
     case invalidLocation
-    /// A dash pattern that is empty, sums to zero, has a negative or
-    /// non-finite entry, or has more than 64 entries.
+    /// A dash pattern that is empty, sums to zero or past Double's range, has
+    /// a negative or non-finite entry, or has more than 64 entries.
     case invalidPattern
     /// A path operation past one of its work limits. From `Path.combine` the
     /// payload is either the flattened vertex count, when it passes
     /// `Path.maxBooleanVertices`, or `Path.maxBooleanWork`, when edge pair
     /// tests, crossing cuts and ray-cast steps together pass that cap. From
-    /// `Path.dashed` it is `Path.maxDashSteps` (1,000,000), the most dash and
-    /// gap entries one call walks. Fix it by simplifying or splitting the input,
-    /// or with a longer dash pattern.
+    /// `Path.outlined` it is `Path.maxBooleanVertices`, when the outline's
+    /// points pass it. From `Path.dashed` it is `Path.maxDashSteps`
+    /// (1,000,000), the most dash and gap entries one call walks. Fix it by
+    /// simplifying or splitting the input, or with a longer dash pattern.
     case tooComplex(Int)
 }
 

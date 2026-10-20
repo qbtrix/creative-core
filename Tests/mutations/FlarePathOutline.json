@@ -26,5 +26,19 @@
     "anchor": "guard width.isFinite, width > 0,",
     "replacement": "guard width.isFinite, width >= 0,",
     "filter": "PathOutlineTests.badWidthThrows"
+  },
+  {
+    "note": "inner join always cuts at the offsets' crossing, so a sharp turn onto a short leg folds past the leg and the stroked area changes",
+    "file": "Sources/FlareCore/PathOps/PathOutline.swift",
+    "anchor": "h * abs(turn) / (1 + dot) <= shorter / 2",
+    "replacement": "h * abs(turn) / (1 + dot) <= .infinity",
+    "filter": "PathOutlineTests.shortLegInnerJoinPivots"
+  },
+  {
+    "note": "outline point budget never checked, so round joins build every loop before combine refuses the count",
+    "file": "Sources/FlareCore/PathOps/PathOutline.swift",
+    "anchor": "guard budget >= 0 else",
+    "replacement": "guard budget >= Int.min else",
+    "filter": "PathOutlineTests.roundJoinsPastTheVertexCapThrowEarly"
   }
 ]
