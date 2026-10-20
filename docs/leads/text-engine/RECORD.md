@@ -25,9 +25,9 @@ Next: read dev CI run holding fa40b34; Slice-Done TE-lay, TE-svg, TE-z
 |---|---|---|---|---|---|
 | TE-a | TE-1, TE-2 | engine-contracts:EC-f | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39190181936 | – |
 | TE-cmd | TE-3, TE-4 | TE-a | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39196728473 | – |
-| TE-lay | TE-5, TE-6 | TE-a; path-geometry:PG-measure (TE-6) | open |  | – |
-| TE-svg | TE-7, TE-8 | TE-cmd, TE-lay | open |  | – |
-| TE-z | TE-9, TE-10 | TE-svg | open |  | – |
+| TE-lay | TE-5, TE-6 | TE-a; path-geometry:PG-measure (TE-6) | merged (#761) |  | – |
+| TE-svg | TE-7, TE-8 | TE-cmd, TE-lay | merged (#763) |  | – |
+| TE-z | TE-9, TE-10 | TE-svg | merged (#764 feature-done) |  | wanted (release time budgets) |
 
 ## Rounds
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
@@ -56,4 +56,4 @@ Next: read dev CI run holding fa40b34; Slice-Done TE-lay, TE-svg, TE-z
 - Round 4 was the last Anatomy round (lead.md round budget). The 10 open findings went to 3 gap issues grouped by area rather than 10 single issues, matching how other leads filed theirs (#703-#705).
 
 ## Open
-- #706 SVG text whitespace and justified multi-scalar x lists (major), to fix with TE-8 or before TE-svg Slice-Done
+- #706 fixed by #763 (TE-8); closes with it. #707 #708 stay open as gap issues.
