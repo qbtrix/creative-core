@@ -14,8 +14,8 @@
 // Each layer's <g> carries its id and name, XML-escaped. Numbers are rounded
 // to 4 decimals and never use exponent notation; a non-finite value throws.
 // Each text shape is one <text> element (SVGExporter+Text), laid out over the
-// metrics `export`'s `measure` gives (0.5 em per grapheme by default). Type on a path is
-// not written yet: a visible layer with one throws `unsupported("textPath")`.
+// metrics `export`'s `measure` gives (0.5 em per grapheme by default); type on
+// a path is a <textPath> naming its path in <defs> (SVGExporter+TextPath).
 // A render list that stopped expanding instances at its budget throws
 // `sceneTooLarge` before anything is written. Masks: SVGExporter+Masks.
 #if canImport(FoundationEssentials)
@@ -34,7 +34,7 @@ public enum SVGExportError: Error, Equatable, Sendable {
     /// instances of each other many levels deep. Every symbol exists; place
     /// fewer instances or flatten the nesting.
     case sceneTooLarge
-    /// The scene draws something this exporter cannot write yet, e.g. "textPath".
+    /// The scene draws something this exporter cannot write yet, e.g. "matte source".
     case unsupported(String)
 }
 
@@ -51,7 +51,7 @@ public enum SVGExporter {
     ///
     /// Throws `SVGExportError` (`nonFiniteValue`, `unresolvedSymbol`,
     /// `sceneTooLarge`, or `unsupported` with one of these reasons:
-    /// "textPath" for a visible layer with type on a path, "matte source"
+    /// "matte source"
     /// for a track matte whose source is not in the same layer list, "nested matte" for a matte source that has
     /// a matte of its own), or `ModelError.invalidText` when the layout refuses a
     /// text shape: a paragraph value out of range, metrics that do not match
@@ -82,10 +82,6 @@ public enum SVGExporter {
                      measure: (TextShape) -> [GlyphRunMetrics]) throws {
         switch node {
         case .layer(let layer):
-            // Type on a path throws before anything in its layer is written or checked.
-            for child in layer.children {
-                if case .text(_, let text) = child, text.onPath != nil { throw SVGExportError.unsupported("textPath") }
-            }
             let opacityAttr = layer.opacity == 1 ? "" : " opacity=\"\(try number(layer.opacity))\""
             let idName = scope.writesIDs ? "id" : "data-id"
             let ids = " \(idName)=\"\(escape(layer.id))\" data-name=\"\(escape(layer.name))\""
@@ -109,6 +105,8 @@ public enum SVGExporter {
                 attr = " fill=\"url(#\(id))\""
             }
             lines.append("<path d=\"\(d)\"\(attr)\(try stroke(shape.stroke))/>")
+        case .text(_, let text) where text.onPath != nil:
+            lines.append(contentsOf: try textPathElement(text, ids: &gradients, measure: measure))
         case .text(_, let text):
             lines.append(contentsOf: try textElement(text, gradients: &gradients, measure: measure))
         case .instance(_, let instance, let symbolID, let local, let children):
