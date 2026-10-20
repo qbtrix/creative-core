@@ -10,7 +10,20 @@ outputs are a `Mask` and a `PixelBuffer`: the bucket fills by compositing a
 solid colour through the mask with `masks-mattes`' masked composite, so no
 second compositing path exists.
 **Line:** `line:core` · **Wave:** 6 (`waves.md`) · **Lead branch:** `lead/fill-tools`
-**Status:** planned
+**Status:** built. Merged PRs: #568 (FT-2), #589 (FT-0), #595 (FT-1),
+#608 (FT-3), #623 (FT-4), #612 (FT-5), #622 (FT-6), #654 (FT-7), the
+review fixes #649, #650, #683, #688, #689, #765, #766, and this packet's
+closing `feature-done` PR (FT-8). Deviations from the text below: the
+KJ-FT walk checks the gradient buffer alone, since `masks-mattes` is not
+on dev yet, and the masked-composite step is #767; the release budgets
+run and report, and a miss is a known issue (flood fill 531 ms, colour
+range 153 ms, gradient 1.9 s on 4-core Linux; #767); the 2 bytes per
+pixel memory bound is checked as the flood fill's counted scratch on
+every platform, and the resident peak is only printed; `GradientSpace.linear`
+keeps its name and means linear-light sRGB mixing, not the linear shape;
+`gradient` and `gradientMap` share one public `PixelBuffer.maxGradientStops`
+(64) and one hard-edge rule (when two stops share an offset, the later one wins); dither
+applies to the straight colour before premultiplying.
 
 **Covers:** beta-80 plan row E6 ("flood fill, raster gradient, colour
 range"); Photo map rows 8 and 9 (paint bucket and gradient; magic wand and
