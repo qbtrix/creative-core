@@ -5,7 +5,7 @@
 // - the result's filled area is the set operation on the inputs' filled areas
 //   under `rule`
 // - more than `maxBooleanVertices` flattened vertices throws
-//   GeometryError.tooComplex(count), and more than `maxBooleanWork` pair
+//   GeometryError.tooComplex(maxBooleanVertices), and more than `maxBooleanWork` pair
 //   tests, cuts and ray-cast steps throws tooComplex(maxBooleanWork), so a
 //   comb pair or a many-spiked star refuses instead of running quadratic
 // - a coordinate whose edge lengths square past Double's range throws nonFinite
@@ -30,7 +30,7 @@ extension Path {
     /// `tolerance`. Only closed subpaths fill, as in HitTest: a subpath with
     /// no `close` adds nothing and is dropped.
     ///
-    /// Throws `GeometryError.tooComplex` past `maxBooleanVertices` or `maxBooleanWork` and
+    /// Throws `GeometryError.tooComplex` with the cap passed, `maxBooleanVertices` or `maxBooleanWork`, and
     /// `GeometryError.invalidTolerance` for a bad tolerance; NaN or infinity
     /// throws `GeometryError.nonFinite`.
     public static func combine(_ op: BooleanOp, _ a: Path, _ b: Path, rule: FillRule,
@@ -42,7 +42,7 @@ extension Path {
                         tolerance: Double, workLimit: Int) throws -> Path {
         var count = 0
         for path in [a, b] { try path.forEachFlattenedPoint(tolerance: tolerance) { _, _ in count += 1; return false } }
-        guard count <= maxBooleanVertices else { throw GeometryError.tooComplex(count) }
+        guard count <= maxBooleanVertices else { throw GeometryError.tooComplex(maxBooleanVertices) }
         var edges: [BooleanEdge] = []
         for (owner, path) in [a, b].enumerated() {
             for polygon in try path.filledPolygons(tolerance: tolerance) {

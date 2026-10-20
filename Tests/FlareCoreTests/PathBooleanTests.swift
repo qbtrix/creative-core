@@ -84,7 +84,7 @@ import Testing
         let spiky = { (count: Int) in Path(polyline: Array(repeating: Point(x: 0, y: 0), count: count - 4)
             + [Point(x: 10, y: 0), Point(x: 10, y: 10), Point(x: 0, y: 10)], closed: true) }
         #expect(abs(try Self.area(.union, spiky(max), Path()) - 100) < 1e-9)
-        #expect(throws: GeometryError.tooComplex(max + 1)) { try Path.combine(.union, spiky(max - 4), Self.a, rule: .nonZero, tolerance: 0.01) }
+        #expect(throws: GeometryError.tooComplex(max)) { try Path.combine(.union, spiky(max - 4), Self.a, rule: .nonZero, tolerance: 0.01) }
         let bad = Path(polyline: [Point(x: 0, y: 0), Point(x: .nan, y: 1), Point(x: 1, y: 1)], closed: true)
         #expect(throws: GeometryError.nonFinite) { try Path.combine(.union, bad, Self.a, rule: .nonZero, tolerance: 0.01) }
         #expect(throws: GeometryError.invalidTolerance) { try Path.combine(.union, Self.a, Self.b, rule: .nonZero, tolerance: 0) }

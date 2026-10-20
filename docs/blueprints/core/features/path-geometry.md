@@ -11,6 +11,7 @@ intersect, exclude) under either fill rule. Linux-safe, value types only.
 **Line:** `line:core` · **Wave:** 5 (`waves.md`) · **Lead branch:** `lead/path-geometry`
 **Status:** built (PG-1 to PG-12). Merged PRs: #713, #723, #731, #733, #735,
 #739, #741, and PG-z (walk, budgets, this status line).
+Status: done; Anatomy rounds 1-4 run.
 
 **Covers:** beta-80 plan row E1 ("path geometry: edit math, booleans, dash
 and trim outlines", the unfiled core issue); captain's answer to Q5 and kernel
@@ -35,7 +36,7 @@ and this repo's `Path`; no task reads another product's code.
 
 | slice | behavior (one sentence) | tasks | checks | waits on |
 |---|---|---|---|---|
-| PG-a | `Path` declares every edit, measure, trim, dash, outline and boolean entry point and the anchors view as documented stubs that throw `GeometryError.notBuilt`, with the checks for every later slice and the area oracle written, the checks disabled. | PG-1, PG-2, PG-7 | `PathOpsShapeTests` | nothing |
+| PG-a | `Path` declares every edit, measure, trim, dash, outline and boolean entry point and the anchors view as documented stubs that throw `GeometryError.notBuilt` (no longer thrown now every slice is built), with the checks for every later slice and the area oracle written, the checks disabled. | PG-1, PG-2, PG-7 | `PathOpsShapeTests` | nothing |
 | PG-edit | The anchors view round-trips any path, `nearest` finds the closest point on a curve, inserting a point keeps the drawn shape, removing one joins its neighbours, and converting a point mirrors or frees its handles. | PG-3, PG-4 | `PathEditTests` | PG-a |
 | PG-measure | Length, point and tangent at a length, trim in both modes and dash with a phase cut the path where a ruler along it says, open or closed. | PG-5, PG-6 | `PathMeasureTests`, `PathTrimDashTests` | PG-a |
 | PG-shape | Union, subtract, intersect and exclude of two paths give the filled area set algebra says, under even-odd and nonzero, for touching, nested and self-crossing input, refusing input past the size cap instead of hanging; and a stroke outlines (through `combine`) into a closed path whose area matches the stroked area for every join and cap, the miter limit falling back to a bevel. | PG-9, PG-10, PG-8 | `PathBooleanTests`, `PathBooleanFuzzTests`, `PathOutlineTests` | PG-a |
@@ -67,7 +68,8 @@ public struct PathContour: Codable, Sendable, Hashable { public var anchors: [Pa
 public struct PathLocation: Sendable, Hashable { public var element: Int; public var t: Double; public var point: Point; public var distance: Double }
 public enum TrimMode: String, Codable, Sendable, Hashable { case together, eachContour }
 public enum BooleanOp: String, Codable, Sendable, Hashable { case union, subtract, intersect, exclude }
-// GeometryError gains (Geometry.swift): notBuilt(String), invalidLocation, invalidPattern, tooComplex(Int)
+// GeometryError gains (Geometry.swift): invalidLocation, invalidPattern, tooComplex(Int) (payload: always the cap passed),
+// invalidStroke (a finite stroke width or miter limit ≤ 0); notBuilt(String) is never thrown, kept for source compatibility
 
 // Sources/FlareCore/PathOps/PathEdit.swift (PG-1 stubs, PG-4 bodies)
 extension Path {
@@ -124,9 +126,13 @@ extension Path {
   the miter length passes `miterLimit × w/2`, then bevel; round adds an arc
   flattened at `tolerance`; caps on open contours: butt, square (w/2 out),
   round. The union of the pieces under nonzero is the result (it reuses
-  `combine`).
+  `combine`). A non-finite width or miter limit throws `nonFinite`; a finite
+  one ≤ 0 throws `invalidStroke`.
+- **measure.** `length`, `sample`, `trimmed` and `dashed` refuse a path that
+  flattens past `maxMeasurePoints` (1,000,000) with
+  `tooComplex(maxMeasurePoints)` before storing more.
 - **combine.** Flatten both; refuse more than `maxBooleanVertices` with
-  `tooComplex(count)`; a sweep-line polygon clipper (the published
+  `tooComplex(maxBooleanVertices)`; a sweep-line polygon clipper (the published
   Martinez–Rueda–Feito method) that splits edges at crossings, labels each
   edge's in/out by the fill rule, and keeps edges per op; collinear overlaps
   and touching vertices are merged with a 1e-9 snap. Output contours are

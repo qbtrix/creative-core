@@ -30,9 +30,8 @@ public enum GeometryError: Error, Equatable, Sendable {
     case singularMatrix
     /// A flattening tolerance that is zero, negative or not finite.
     case invalidTolerance
-    /// A coordinate, size or ratio that is NaN or infinite (or a stroke
-    /// width or miter limit of 0 or less, from `Path.outlined`). Fix it by
-    /// passing finite values, and a positive stroke width and miter limit.
+    /// A coordinate, size or ratio that is NaN or infinite. Fix it by
+    /// passing finite values.
     case nonFinite
     /// A polygon side count or star point count below 3 or above
     /// `PathBuilders.maxSides`. Fix it by passing a count in 3...maxSides.
@@ -50,15 +49,18 @@ public enum GeometryError: Error, Equatable, Sendable {
     /// A dash pattern that is empty, sums to zero or past Double's range, has
     /// a negative or non-finite entry, or has more than 64 entries.
     case invalidPattern
-    /// A path operation past one of its work limits. From `Path.combine` the
-    /// payload is either the flattened vertex count, when it passes
-    /// `Path.maxBooleanVertices`, or `Path.maxBooleanWork`, when edge pair
-    /// tests, crossing cuts and ray-cast steps together pass that cap. From
-    /// `Path.outlined` it is `Path.maxBooleanVertices`, when the outline's
-    /// points pass it. From `Path.dashed` it is `Path.maxDashSteps`
-    /// (1,000,000), the most dash and gap entries one call walks. Fix it by
-    /// simplifying or splitting the input, or with a longer dash pattern.
+    /// A path operation past one of its work limits. The payload is always
+    /// the limit that was passed, never a count: `Path.maxBooleanVertices`
+    /// (flattened vertices, from `combine` and `outlined`),
+    /// `Path.maxBooleanWork` (edge pair tests, crossing cuts and ray-cast
+    /// steps, from `combine`), `Path.maxMeasurePoints` (flattened points, from
+    /// `length`, `sample`, `trimmed` and `dashed`) or `Path.maxDashSteps`
+    /// (dash and gap entries, from `dashed`). Fix it by simplifying or
+    /// splitting the input, a coarser tolerance, or a longer dash pattern.
     case tooComplex(Int)
+    /// A finite stroke width or miter limit that is zero or negative, from
+    /// `Path.outlined`. Fix it by passing values greater than 0.
+    case invalidStroke
 }
 
 public struct Matrix: Codable, Sendable, Hashable {

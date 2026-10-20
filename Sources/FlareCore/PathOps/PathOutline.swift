@@ -4,10 +4,11 @@
 // Invariants:
 // - the result is closed and its filled area is the stroked area
 // - a miter longer than `miterLimit` times half the width falls back to a bevel
-// - a width or miter limit that is zero, negative or not finite throws
-//   GeometryError.nonFinite
-// - the loops never hold more than `Path.maxBooleanVertices` points: the
-//   stroker throws tooComplex(maxBooleanVertices) as it passes the cap, before
+// - a width or miter limit that is not finite throws GeometryError.nonFinite;
+//   a finite one that is zero or negative throws GeometryError.invalidStroke
+// - the loops never hold more than `Path.maxBooleanVertices` points, counted
+//   as combine counts them (each loop's repeated start included): the stroker
+//   throws tooComplex(maxBooleanVertices) as it passes the cap, before
 //   building the rest (a round join can add 4096 points per vertex)
 //
 // Each subpath flattens and is offset by w/2 to both sides: an open one
@@ -41,14 +42,25 @@ extension Path {
     /// `tolerance`, as one fillable path (nonzero).
     ///
     /// Throws `GeometryError.nonFinite` when `width` or `miterLimit` is not
-    /// finite or not greater than 0 (pass a positive width and miter limit),
-    /// or for a non-finite point; `GeometryError.invalidTolerance` for a bad
+    /// finite, or for a non-finite point; `GeometryError.invalidStroke` when a
+    /// finite `width` or `miterLimit` is not greater than 0 (pass a positive
+    /// width and miter limit); `GeometryError.invalidTolerance` for a bad
     /// tolerance; and `GeometryError.tooComplex(Path.maxBooleanVertices)` as
     /// soon as the outline's points pass `Path.maxBooleanVertices`, the most
     /// `combine` accepts (round joins and caps at a fine tolerance add many).
     public func outlined(width: Double, join: Stroke.Join, cap: Stroke.Cap, miterLimit: Double,
                          tolerance: Double) throws -> Path {
-        guard width.isFinite, width > 0, miterLimit.isFinite, miterLimit > 0 else { throw GeometryError.nonFinite }
+        let loops = try strokeLoops(width: width, join: join, cap: cap, miterLimit: miterLimit, tolerance: tolerance)
+        return try Path.combine(.union, loops, Path(), rule: .nonZero, tolerance: tolerance)
+    }
+
+    /// The closed loops whose nonzero fill is the stroke, before `combine`
+    /// merges them; they flatten to at most `Path.maxBooleanVertices` points.
+    /// Throws as `outlined` does.
+    func strokeLoops(width: Double, join: Stroke.Join, cap: Stroke.Cap, miterLimit: Double,
+                     tolerance: Double) throws -> Path {
+        guard width.isFinite, miterLimit.isFinite else { throw GeometryError.nonFinite }
+        guard width > 0, miterLimit > 0 else { throw GeometryError.invalidStroke }
         guard tolerance.isFinite, tolerance > 0 else { throw GeometryError.invalidTolerance }
         let stroker = Stroker(h: width / 2, join: join, cap: cap, miterLimit: miterLimit, tolerance: tolerance)
         var loops: [PathElement] = [], budget = Path.maxBooleanVertices
@@ -59,7 +71,7 @@ extension Path {
                 }
             }
         }
-        return try Path.combine(.union, Path(elements: loops), Path(), rule: .nonZero, tolerance: tolerance)
+        return Path(elements: loops)
     }
 
     /// Each subpath as its own path, with whether it ends in `close`. A
@@ -89,8 +101,9 @@ extension Path {
 private struct Stroker {
     let h: Double, join: Stroke.Join, cap: Stroke.Cap, miterLimit: Double, tolerance: Double
 
-    /// Each loop's points count against `budget`, the points the outline may
-    /// still add; passing it throws tooComplex(maxBooleanVertices) at once.
+    /// Each loop's points, and the repeated start it flattens with in
+    /// `combine`, count against `budget`, the points the outline may still
+    /// add; passing it throws tooComplex(maxBooleanVertices) at once.
     func loops(_ polyline: [Point], closed: Bool, budget: inout Int) throws -> [[Point]] {
         var points: [Point] = []
         for p in polyline where points.last != p {
@@ -121,12 +134,17 @@ private struct Stroker {
             if !closed, let last = normals.last, let end = ends.last { chain += try spend([offset(end, last, s)]) }
             return chain
         }
+        /// The loops, once each one's repeated start is spent.
+        func closing(_ loops: [[Point]]) throws -> [[Point]] {
+            _ = try spend(loops.compactMap(\.first))
+            return loops
+        }
         let (left, right) = (try side(1), Array(try side(-1).reversed()))
         guard !closed, let d0 = dirs.first, let d1 = dirs.last, let n0 = normals.first, let n1 = normals.last,
-              let end = ends.last else { return [left, right] }
+              let end = ends.last else { return try closing([left, right]) }
         let endCap = try spend(capPoints(end, outward: d1, from: n1))
         let startCap = try spend(capPoints(ends[0], outward: Point(x: -d0.x, y: -d0.y), from: Point(x: -n0.x, y: -n0.y)))
-        return [left + endCap + right + startCap]
+        return try closing([left + endCap + right + startCap])
     }
 
     /// The side `s` (1 left, -1 right) offset points at vertex `v` between a

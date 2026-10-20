@@ -23,8 +23,8 @@
   {
     "note": "outline width guard lets a zero width through",
     "file": "Sources/FlareCore/PathOps/PathOutline.swift",
-    "anchor": "guard width.isFinite, width > 0,",
-    "replacement": "guard width.isFinite, width >= 0,",
+    "anchor": "guard width > 0, miterLimit > 0 else",
+    "replacement": "guard width >= 0, miterLimit > 0 else",
     "filter": "PathOutlineTests.badWidthThrows"
   },
   {
@@ -40,5 +40,26 @@
     "anchor": "guard budget >= 0 else",
     "replacement": "guard budget >= Int.min else",
     "filter": "PathOutlineTests.roundJoinsPastTheVertexCapThrowEarly"
+  },
+  {
+    "note": "outline miter limit guard lets a zero miter limit through",
+    "file": "Sources/FlareCore/PathOps/PathOutline.swift",
+    "anchor": "miterLimit > 0 else { throw GeometryError.invalidStroke }",
+    "replacement": "miterLimit >= 0 else { throw GeometryError.invalidStroke }",
+    "filter": "PathOutlineTests.badMiterLimitAndToleranceThrow"
+  },
+  {
+    "note": "outline point budget off by one, so an outline of exactly maxBooleanVertices points that combine accepts is refused",
+    "file": "Sources/FlareCore/PathOps/PathOutline.swift",
+    "anchor": "guard budget >= 0 else",
+    "replacement": "guard budget > 0 else",
+    "filter": "PathOutlineTests.outlineAtTheVertexCapIsAccepted"
+  },
+  {
+    "note": "outline budget skips each loop's repeated start, so an outline one point past the cap reaches combine instead of the stroker refusing it",
+    "file": "Sources/FlareCore/PathOps/PathOutline.swift",
+    "anchor": "_ = try spend(loops.compactMap(\\.first))",
+    "replacement": "",
+    "filter": "PathOutlineTests.outlineAtTheVertexCapIsAccepted"
   }
 ]

@@ -61,6 +61,30 @@ private func near(_ a: Point, _ b: Point, _ eps: Double = 1e-9) -> Bool { abs(a.
         let huge = Path(polyline: [pt(-1e308, 0), pt(1e308, 0)], closed: false)
         #expect(throws: GeometryError.nonFinite) { try huge.sample(atLength: 0, tolerance: 0.1) }
     }
+
+    @Test func manyLargeCurvesAtAFineToleranceThrowTooComplex() throws {
+        // 1,000 cubics over a 1e6 span each flatten to 4,096 points at 1e-9:
+        // 4 million, so the ruler stops at maxMeasurePoints instead of storing them.
+        var rng = SplitMix64(seed: 0x9E3779B97F4A7C15)
+        let r = { (rng: inout SplitMix64) in Double(rng.next() % 1_000_000) }
+        let curves = (0..<1_000).map { _ in
+            PathElement.cubic(control1: pt(r(&rng), r(&rng)), control2: pt(r(&rng), r(&rng)), to: pt(r(&rng), r(&rng)))
+        }
+        let path = Path(elements: [.move(to: pt(0, 0))] + curves)
+        let cap = GeometryError.tooComplex(Path.maxMeasurePoints)
+        #expect(throws: cap) { try path.length(tolerance: 1e-9) }
+        #expect(throws: cap) { try path.sample(atLength: 1, tolerance: 1e-9) }
+        #expect(throws: cap) { try path.trimmed(start: 0, end: 0.5, offset: 0, mode: .together, tolerance: 1e-9) }
+        #expect(throws: cap) { try path.dashed([1], phase: 0, tolerance: 1e-9) }
+    }
+
+    @Test func measurePointCapIsInclusive() throws {
+        // A polyline flattens to its points: exactly the cap measures, one more throws.
+        let n = Path.maxMeasurePoints
+        let line = { (count: Int) in Path(polyline: (0..<count).map { pt(Double($0), 0) }, closed: false) }
+        #expect(try line(n).length(tolerance: 0.1) == Double(n - 1))
+        #expect(throws: GeometryError.tooComplex(n)) { try line(n + 1).length(tolerance: 0.1) }
+    }
 }
 
 private func norm(_ p: Point) -> Double { (p.x * p.x + p.y * p.y).squareRoot() }

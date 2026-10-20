@@ -1,7 +1,7 @@
 // PathOutlineTests.swift: Path.outlined turns a stroke into a fillable path
 // whose area is the stroked area, for every join and cap (PathArea shoelace
 // oracle; combine's outers run counter-clockwise, so area is minus signed area).
-import FlareCore
+@testable import FlareCore
 import Foundation
 import Testing
 
@@ -86,15 +86,42 @@ import Testing
         // Round joins at a huge width and a fine tolerance take the most arc
         // points per corner (4096); 100 right-angle corners pass
         // maxBooleanVertices on the way, so the stroker stops there instead of
-        // building every loop and leaving the count to combine.
+        // building every loop and leaving the count to combine (which throws
+        // the same error, so the loops are checked before combine runs).
         let points = (0..<101).map { (k: Int) -> Point in
             let (x, y): (Int, Int) = ((k + 1) / 2 * 10, k / 2 * 10)
             return Point(x: Double(x), y: Double(y))
         }
+        let path = Path(polyline: points, closed: false)
         #expect(throws: GeometryError.tooComplex(Path.maxBooleanVertices)) {
-            try Path(polyline: points, closed: false).outlined(width: 1e7, join: .round, cap: .round, miterLimit: 4,
-                                                               tolerance: 0.01)
+            try path.strokeLoops(width: 1e7, join: .round, cap: .round, miterLimit: 4, tolerance: 0.01)
         }
+        #expect(throws: GeometryError.tooComplex(Path.maxBooleanVertices)) {
+            try path.outlined(width: 1e7, join: .round, cap: .round, miterLimit: 4, tolerance: 0.01)
+        }
+    }
+
+    @Test func outlineAtTheVertexCapIsAccepted() throws {
+        // A closed convex n-gon with bevel joins strokes to two rings: 2 points
+        // per vertex on the outer side, 1 on the inner, plus each ring's repeated
+        // start, 3n + 2 as combine counts them. n = 66,666 lands exactly on
+        // maxBooleanVertices; one more vertex is past it. (combine itself would
+        // stop such a ring pair at maxBooleanWork, so the loops are checked.)
+        let gon = { (n: Int) in Path(polyline: (0..<n).map { k in
+            let a = 2 * Double.pi * Double(k) / Double(n)
+            return Point(x: 10_000 * cos(a), y: 10_000 * sin(a))
+        }, closed: true) }
+        let stroke = { (path: Path) in
+            try path.strokeLoops(width: 10, join: .bevel, cap: .butt, miterLimit: 4, tolerance: 0.1)
+        }
+        var count = 0
+        _ = try stroke(gon(66_666)).forEachFlattenedPoint(tolerance: 0.1) { _, _ in count += 1; return false }
+        #expect(count == Path.maxBooleanVertices)
+        #expect(throws: GeometryError.tooComplex(Path.maxBooleanVertices)) { try stroke(gon(66_667)) }
+        // A straight open line of n points with butt caps is one loop of 2n:
+        // n = 100,000 fills the cap only before its repeated start is counted.
+        let line = Path(polyline: (0..<100_000).map { Point(x: Double($0), y: 0) }, closed: false)
+        #expect(throws: GeometryError.tooComplex(Path.maxBooleanVertices)) { try stroke(line) }
     }
 
     @Test func closedSquareIsARing() throws {
@@ -119,16 +146,17 @@ import Testing
         #expect(try dot.outlined(width: 4, join: .round, cap: .square, miterLimit: 4, tolerance: 0.1).elements.isEmpty)
     }
 
-    @Test(arguments: [0, -1, Double.nan, Double.infinity])
-    func badWidthThrows(_ width: Double) {
-        #expect(throws: GeometryError.nonFinite) {
+    @Test(arguments: [(0, GeometryError.invalidStroke), (-1, .invalidStroke), (.nan, .nonFinite),
+                      (.infinity, .nonFinite)])
+    func badWidthThrows(_ width: Double, _ error: GeometryError) {
+        #expect(throws: error) {
             try Self.line.outlined(width: width, join: .miter, cap: .butt, miterLimit: 4, tolerance: 0.1)
         }
     }
 
     @Test func badMiterLimitAndToleranceThrow() {
-        for limit in [Double.nan, 0, -1] {
-            #expect(throws: GeometryError.nonFinite) {
+        for (limit, error) in [(Double.nan, GeometryError.nonFinite), (0, .invalidStroke), (-1, .invalidStroke)] {
+            #expect(throws: error) {
                 try Self.line.outlined(width: 4, join: .miter, cap: .butt, miterLimit: limit, tolerance: 0.1)
             }
         }
