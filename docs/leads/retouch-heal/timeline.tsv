@@ -1,0 +1,145 @@
+utc	stage	event	ref	note
+2026-10-18T20:39Z	0	stage-end	-	setup, base d715348
+2026-10-18T20:39Z	1	stage-end	-	packet read
+2026-10-18T20:39Z	2	stage-end	-	waves planned
+2026-10-18T20:39Z	3	stage-start	-	wave 1
+2026-10-18T20:41Z	2	stage-end	-	waves revised: FT-0, RH-0 stubs added (rule 18)
+2026-10-18T20:41Z	3	stage-start	wf_e617d983-30e	wave 1 launched
+2026-10-18T20:59Z	3	heartbeat	-	waiting on builders or the lane
+2026-10-18T21:17Z	3	heartbeat	-	waiting on builders or the lane
+2026-10-18T21:35Z	3	heartbeat	-	waiting on builders or the lane
+2026-10-18T21:53Z	3	heartbeat	-	waiting on builders or the lane
+2026-10-18T22:11Z	3	heartbeat	-	waiting on builders or the lane
+2026-10-18T22:29Z	3	heartbeat	-	waiting on builders or the lane
+2026-10-19T00:09Z	3 wave 2	pr-merged	#560	RH-0 stubs
+2026-10-19T00:09Z	3 wave 2	pr-merged	#566	RH-2 fixtures
+2026-10-19T00:09Z	3 wave 2	wave-start	wf_2689b5a9-999	wave 2: RH-1 on 62a84e9
+2026-10-19T00:27Z	3	heartbeat	-	waiting on builders or the lane
+2026-10-19T00:35Z	4 wave 3	merged	#591	RH-1
+2026-10-19T00:35Z	4 wave 3	launch	wd209uya1	wave 3 RH-3 RH-5 RH-6
+2026-10-19T00:45Z	4	heartbeat	-	waiting on builders or the lane
+2026-10-19T01:03Z	4	heartbeat	-	waiting on builders or the lane
+2026-10-19T01:21Z	4	heartbeat	-	waiting on builders or the lane
+2026-10-19T01:23Z	5 wave 4	merged	#601	RH-3
+2026-10-19T01:23Z	5 wave 4	merged	#602	RH-6
+2026-10-19T01:23Z	5 wave 4	merged	#606	RH-5
+2026-10-19T01:23Z	5 wave 4	launch	RH-4	wave 4
+2026-10-19T01:39Z	5	heartbeat	-	waiting on builders or the lane
+2026-10-19T01:46Z	5 wave 4	restart	-	RH-4 resumed from e470fc6
+2026-10-19T02:02Z	5	heartbeat	-	waiting on builders or the lane
+2026-10-19T02:16Z	6 wave 5	merged	#613	RH-4
+2026-10-19T02:16Z	6 wave 5	launch	wave 5	RH-7
+2026-10-19T02:18Z	6 wave 5	slice-done	RH-a	https://github.com/qbtrix/creative-core/actions/runs/39183955889
+2026-10-19T02:20Z	6	heartbeat	-	waiting on builders or the lane
+2026-10-19T02:38Z	6	heartbeat	-	waiting on builders or the lane
+2026-10-19T02:56Z	6	heartbeat	-	waiting on builders or the lane
+2026-10-19T03:14Z	6	heartbeat	-	waiting on builders or the lane
+2026-10-19T03:22Z	Build wave 2 merged (RH-3..RH-7); Anatomy round 1 gate running on 27f5e36	merged	#616	RH-7
+2026-10-19T03:23Z	Build wave 2 merged (RH-3..RH-7); Anatomy round 1 gate running on 27f5e36	slice-done	RH-dab	run 39188534008 Linux green
+2026-10-19T03:31Z	Anatomy round 1: gate CI: PASS on 27f5e36, mutate --validate OK, mutants 10/10 caught; critic panel running	round-1-gate	27f5e36	CI: PASS, mutants 10/10 caught
+2026-10-19T03:31Z	Anatomy round 1: gate CI: PASS on 27f5e36, mutate --validate OK, mutants 10/10 caught; critic panel running	round-1-panel	27f5e36	critic panel launched
+2026-10-19T03:32Z	Anatomy	heartbeat	-	waiting on builders or the lane
+2026-10-19T03:51Z	Anatomy	heartbeat	-	waiting on builders or the lane
+2026-10-19T04:02Z	Anatomy round 1: fix batches building (wf_c74f1a33-f4c)	round-1-panel	wf_52be3b2f-289	26 confirmed, 0 refuted
+2026-10-19T04:02Z	Anatomy round 1: fix batches building (wf_c74f1a33-f4c)	round-1-fix	wf_c74f1a33-f4c	5 batches on 22a5fdd
+2026-10-19T04:02Z	Anatomy round 1: fix batches building (wf_c74f1a33-f4c)	slice-done	RH-heal	https://github.com/qbtrix/creative-core/actions/runs/39190181936
+2026-10-19T04:09Z	Anatomy	heartbeat	-	waiting on builders or the lane
+2026-10-19T04:27Z	Anatomy	heartbeat	-	waiting on builders or the lane
+2026-10-19T04:45Z	Anatomy	heartbeat	-	waiting on builders or the lane
+2026-10-19T05:03Z	Anatomy	heartbeat	-	waiting on builders or the lane
+2026-10-19T05:21Z	Anatomy	heartbeat	-	waiting on builders or the lane
+2026-10-19T05:39Z	Anatomy	heartbeat	-	waiting on builders or the lane
+2026-10-19T05:58Z	Anatomy	heartbeat	-	waiting on builders or the lane
+2026-10-19T06:16Z	Anatomy	heartbeat	-	waiting on builders or the lane
+2026-10-19T06:19Z	Anatomy round 1: r1-walk #641 and r1-smudge #647 merged; r1-fill #644 open; r1-heal, r1-fill, r1-tone gating	round-1-fix	#641	r1-walk merged
+2026-10-19T06:19Z	Anatomy round 1: r1-walk #641 and r1-smudge #647 merged; r1-fill #644 open; r1-heal, r1-fill, r1-tone gating	round-1-fix	#647	r1-smudge merged
+2026-10-19T06:34Z	Anatomy	heartbeat	-	waiting on builders or the lane
+2026-10-19T06:51Z	Anatomy round 1: r1-fill #644, r1-heal #657, r1-tone #659 open with markers	pr	#657	r1-heal
+2026-10-19T06:51Z	Anatomy round 1: r1-fill #644, r1-heal #657, r1-tone #659 open with markers	pr	#659	r1-tone
+2026-10-19T06:51Z	Anatomy round 1: r1-fill #644, r1-heal #657, r1-tone #659 open with markers	marker	#644	Fast-Check added after gate
+2026-10-19T06:52Z	Anatomy	heartbeat	-	waiting on builders or the lane
+2026-10-19T07:03Z	Anatomy round 1 merged: #641, #647, #657, #659, #644	merged	#657	r1-heal
+2026-10-19T07:03Z	Anatomy round 1 merged: #641, #647, #657, #659, #644	merged	#659	r1-tone
+2026-10-19T07:03Z	Anatomy round 1 merged: #641, #647, #657, #659, #644	merged	#644	r1-fill
+2026-10-19T07:10Z	Anatomy round 2 blocked: dev b83a0bd does not build (#644 calls relaxHeal/channelsOf that #657 removed)	dev-break	b83a0bd	FillFromSurroundings uses removed relaxHeal/channelsOf
+2026-10-19T07:10Z	Anatomy	heartbeat	-	waiting on builders or the lane
+2026-10-19T07:24Z	Dev build fix #661 open (fill on multigrid HealSolver; CI PASS, FFS 5/5, Heal 6/6)	pr	#661	dev build fix
+2026-10-19T07:25Z	Dev builds again: #661 merged (dev 5142795); round 2 gate and mutate running	merged	#661	dev build restored
+2026-10-19T07:28Z	Dev	heartbeat	-	waiting on builders or the lane
+2026-10-19T07:44Z	Anatomy round 2: gate PASS on dev 5142795, mutations FFS 5/5, Heal 6/6, Smudge 4/4, ToneDabs 5/5; critic panel running (wf_0feaecad-917)	round-2	5142795	gate PASS, 20/20 caught, panel launched
+2026-10-19T07:46Z	Anatomy	heartbeat	-	waiting on builders or the lane
+2026-10-19T07:52Z	Anatomy round 2 panel: not clean, 18 confirmed (3 major: fill loses structure across the hole, feathered fill blend untested, sponge coverage untested), 0 refuted. Fix batches r2-fill, r2-tone, r2-docs running (wf_65c7e9f9-fe6) on dev affd140	panel	round-2	18 confirmed, not clean
+2026-10-19T07:52Z	Anatomy round 2 panel: not clean, 18 confirmed (3 major: fill loses structure across the hole, feathered fill blend untested, sponge coverage untested), 0 refuted. Fix batches r2-fill, r2-tone, r2-docs running (wf_65c7e9f9-fe6) on dev affd140	fix-batch	wf_65c7e9f9-fe6	3 batches on affd140
+2026-10-19T08:04Z	Anatomy	heartbeat	-	waiting on builders or the lane
+2026-10-19T08:23Z	Anatomy	heartbeat	-	waiting on builders or the lane
+2026-10-19T08:41Z	Anatomy	heartbeat	-	waiting on builders or the lane
+2026-10-19T08:59Z	Anatomy	heartbeat	-	waiting on builders or the lane
+2026-10-19T09:17Z	Anatomy	heartbeat	-	waiting on builders or the lane
+2026-10-19T09:35Z	Anatomy	heartbeat	-	waiting on builders or the lane
+2026-10-19T09:43Z	Anatomy round 3: round-2 wave merged (#687 r2-fill, #684 r2-tone, #677 r2-docs); gate + mutations running on dev 1940443	merged	#687	r2-fill: fill heals matched source in a search window
+2026-10-19T09:43Z	Anatomy round 3: round-2 wave merged (#687 r2-fill, #684 r2-tone, #677 r2-docs); gate + mutations running on dev 1940443	gate	1940443	round 3 gate started
+2026-10-19T09:53Z	Anatomy	heartbeat	-	waiting on builders or the lane
+2026-10-19T10:11Z	Anatomy	heartbeat	-	waiting on builders or the lane
+2026-10-19T10:13Z	Anatomy round 3: gate on dev 1940443 CI: PASS (3rd attempt; first two failed only on fill-tools FloodFillTests.worstCaseMemory under load); mutations rerunning	gate	1940443	CI: PASS; validate 900 anchors OK; mutations rerunning after time limit
+2026-10-19T10:19Z	Anatomy round 3: gate on 1940443 CI: PASS, mutations 28/28 caught (FillFromSurroundings 9, Heal 8, Smudge 4, ToneDabs 7); critic panel running	mutate	1940443	28/28 caught
+2026-10-19T10:19Z	Anatomy round 3: gate on 1940443 CI: PASS, mutations 28/28 caught (FillFromSurroundings 9, Heal 8, Smudge 4, ToneDabs 7); critic panel running	panel	1940443	round 3 critic panel started
+2026-10-19T10:30Z	Anatomy	heartbeat	-	waiting on builders or the lane
+2026-10-19T10:48Z	Anatomy	heartbeat	-	waiting on builders or the lane
+2026-10-19T11:00Z	Anatomy round 3 not clean: 13 confirmed (3 major), 1 refuted; fix wave r3-fill, r3-heal, r3-smudge running (wf_83a4482b-ac4)	fix-wave	wf_83a4482b-ac4	round 3, 3 batches, base 2436c3a
+2026-10-19T11:06Z	Anatomy	heartbeat	-	waiting on builders or the lane
+2026-10-19T11:24Z	Anatomy	heartbeat	-	waiting on builders or the lane
+2026-10-19T11:42Z	Anatomy	heartbeat	-	waiting on builders or the lane
+2026-10-19T11:48Z	Round-3 fixes merged (#710, #711, #712); round 4 (last) gate running on 0b5a641	merged	#710	r3-fill
+2026-10-19T11:48Z	Round-3 fixes merged (#710, #711, #712); round 4 (last) gate running on 0b5a641	merged	#711	r3-heal
+2026-10-19T11:48Z	Round-3 fixes merged (#710, #711, #712); round 4 (last) gate running on 0b5a641	merged	#712	r3-smudge
+2026-10-19T11:48Z	Round-3 fixes merged (#710, #711, #712); round 4 (last) gate running on 0b5a641	round4-gate	0b5a641	started
+2026-10-19T12:00Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T12:18Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T12:36Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T12:55Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T13:13Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T13:31Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T13:49Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T14:07Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T14:25Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T14:43Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T15:02Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T15:20Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T15:38Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T15:56Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T16:14Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T16:32Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T16:50Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T17:08Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T17:26Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T17:45Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T18:03Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T18:21Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T18:39Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T18:57Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T19:15Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T19:33Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T19:52Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T20:10Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T20:28Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T20:46Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T21:04Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T21:22Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T21:40Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T21:58Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T22:17Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T22:35Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T22:53Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T23:11Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T23:29Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-19T23:47Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-20T00:05Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-20T00:23Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-20T00:41Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-20T01:00Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-20T01:18Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-20T01:36Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-20T01:54Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-20T02:12Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-20T02:30Z	Round-3	heartbeat	-	waiting on builders or the lane
+2026-10-20T02:48Z	Round-3	heartbeat	-	waiting on builders or the lane
