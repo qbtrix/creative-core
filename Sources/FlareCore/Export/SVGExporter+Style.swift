@@ -1,56 +1,8 @@
-// SVGExporter+Style.swift: the fill, stroke and gradient attributes SVGExporter writes on a path,
-// and each shape as it draws at the exported frame: its layer's fill and stroke colour tracks,
-// `Layer.trackKey(strokeWidthOf:)` track, trim tracks and shape track sampled there (an instance's symbol
-// layers at the symbol frame). A value with no track stays static, so an unkeyed scene exports as before.
-// A keyed fill track paints the shape a solid of its sampled colour, replacing a gradient as the
-// Lottie export does; stroke tracks colour, widen and trim an existing stroke only (a trim track on a
-// stroke without a trim starts from the whole outline). A dash writes stroke-dasharray and stroke-dashoffset.
+// SVGExporter+Style.swift: the fill, stroke and gradient attributes SVGExporter writes on a path. The shapes
+// arrive already sampled at the exported frame by the render list (`Layer.sampledShape`), so the SVG draws
+// what the stage draws. A dash writes stroke-dasharray and stroke-dashoffset.
 
 extension SVGExporter {
-    /// `nodes` with each shape replaced by `styled(_:index:of:at:)`: shapes of
-    /// `layers` (matched by layer id) sample at `frame`, and an instance's
-    /// children sample its symbol's layers at the instance's symbol frame.
-    static func sampled(_ nodes: [RenderNode], layers: [Layer], frame: Double, symbols: [Symbol]) -> [RenderNode] {
-        var byID: [String: Layer] = [:]
-        for layer in layers where byID[layer.id] == nil { byID[layer.id] = layer }
-        return nodes.map { node in
-            guard case .layer(var layer) = node else { return node }
-            let model = byID[layer.id]
-            layer.children = layer.children.map { child in
-                switch child {
-                case .shape(let index, let shape):
-                    return .shape(index: index, model.map { styled(shape, index: index, of: $0, at: frame) } ?? shape)
-                case .instance(let index, let instance, let symbolID, let local, let children):
-                    let inner = symbols.first(where: { $0.id == symbolID })?.layers ?? []
-                    return .instance(index: index, instance, symbolID: symbolID, frame: local,
-                                     children: sampled(children, layers: inner, frame: local, symbols: symbols))
-                case .text, .unresolved, .layer:
-                    return child
-                }
-            }
-            return .layer(layer)
-        }
-    }
-
-    /// `shape`, which is `layer.shapes[index]`, with its fill colour, stroke
-    /// colour, stroke width, stroke trim and path sampled from `layer`'s tracks at `frame`.
-    /// A keyed fill colour replaces any fill, gradients included, with that solid.
-    /// A sampled width below 0 draws as 0, the least a stroke may have.
-    static func styled(_ shape: Shape, index: Int, of layer: Layer, at frame: Double) -> Shape {
-        var out = shape
-        if let color = layer.sampledColor(.fill(shape: index), at: frame) { out.fill = .solid(color) }
-        if var stroke = shape.stroke {
-            if let color = layer.sampledColor(.stroke(shape: index), at: frame) { stroke.color = color }
-            if let keys = layer.tracks[Layer.trackKey(strokeWidthOf: index)], let width = Timeline.value(of: keys, at: frame) {
-                stroke.width = max(width, 0)
-            }
-            stroke.trim = layer.sampledTrim(of: index, base: stroke.trim, at: frame)
-            out.stroke = stroke
-        }
-        if let path = layer.sampledPath(shape: index, at: frame) { out.path = path }
-        return out
-    }
-
     /// ` stroke`, ` stroke-opacity` (when translucent), width, join and cap,
     /// then ` stroke-dasharray` and ` stroke-dashoffset` when dashed; empty
     /// when there is no stroke.

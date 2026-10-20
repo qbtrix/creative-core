@@ -1,6 +1,7 @@
-// Sampling+Tracks.swift: a layer's colour tracks and stroke trim tracks at a frame, for
-// rendering and export (shape tracks morph in Sampling+TracksMorph.swift). nil means the
-// track is empty, so the caller uses the shape's or text's static colour.
+// Sampling+Tracks.swift: a layer's colour, stroke width, trim and shape tracks at a frame. `sampledShape` is the
+// one place a shape's animated values resolve: the render list calls it for every shape it walks, so the stage, hit
+// testing, PNG frames and the SVG export all draw the same values (shape tracks morph in Sampling+TracksMorph.swift).
+// nil from a single-track sampler means the track is empty, so the caller uses the static value.
 // Colour blends each encoded sRGB component (not linear light, as Lottie
 // players do, so stage and export agree) through `Timeline.value`: the same
 // key lookup, left-key easing, hold and held ends as every Double track.
@@ -37,5 +38,26 @@ extension Layer {
         if let end { trim.end = min(max(end, 0), 1) }
         if let offset { trim.offset = offset }
         return trim
+    }
+
+    /// Shape `index` of `shapes` as it draws at `frame`: its fill colour, stroke colour, stroke width, stroke trim
+    /// and path sampled from this layer's tracks. A keyed fill colour replaces any fill, gradients included, with
+    /// that solid. A sampled width below 0 draws as 0, the least a stroke may have. Stroke tracks change an existing
+    /// stroke only. An empty shape for an index past `shapes`.
+    public func sampledShape(_ index: Int, at frame: Double) -> Shape {
+        guard shapes.indices.contains(index) else { return Shape(points: []) }
+        let shape = shapes[index]
+        var out = shape
+        if let color = sampledColor(.fill(shape: index), at: frame) { out.fill = .solid(color) }
+        if var stroke = shape.stroke {
+            if let color = sampledColor(.stroke(shape: index), at: frame) { stroke.color = color }
+            if let keys = tracks[Layer.trackKey(strokeWidthOf: index)], let width = Timeline.value(of: keys, at: frame) {
+                stroke.width = max(width, 0)
+            }
+            stroke.trim = sampledTrim(of: index, base: stroke.trim, at: frame)
+            out.stroke = stroke
+        }
+        if let path = sampledPath(shape: index, at: frame) { out.path = path }
+        return out
     }
 }

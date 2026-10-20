@@ -1,42 +1,42 @@
 [
   {
     "note": "SVG export writes the static fill colour instead of the sampled one",
-    "file": "Sources/FlareCore/Export/SVGExporter+Style.swift",
+    "file": "Sources/FlareCore/Sampling+Tracks.swift",
     "anchor": "out.fill = .solid(color)",
     "replacement": "out.fill = shape.fill",
     "filter": "SVGStyleAtFrameTests.usesSampledColour"
   },
   {
     "note": "SVG export writes the static path instead of the sampled shape track",
-    "file": "Sources/FlareCore/Export/SVGExporter+Style.swift",
-    "anchor": "if let path = layer.sampledPath(shape: index, at: frame) { out.path = path }",
-    "replacement": "if let path = layer.sampledPath(shape: index, at: frame) { out.path = path.elements.isEmpty ? path : shape.outline }",
+    "file": "Sources/FlareCore/Sampling+Tracks.swift",
+    "anchor": "if let path = sampledPath(shape: index, at: frame) { out.path = path }",
+    "replacement": "if let path = sampledPath(shape: index, at: frame) { out.path = path.elements.isEmpty ? path : shape.outline }",
     "filter": "SVGStyleAtFrameTests.usesSampledPath"
   },
   {
     "note": "SVG export writes a negative sampled stroke width unclamped",
-    "file": "Sources/FlareCore/Export/SVGExporter+Style.swift",
+    "file": "Sources/FlareCore/Sampling+Tracks.swift",
     "anchor": "stroke.width = max(width, 0)",
     "replacement": "stroke.width = width",
     "filter": "SVGStyleAtFrameTests.keyedFillReplacesAGradientAndStrokeTracksNeedAStroke"
   },
   {
     "note": "SVG export writes the static stroke width instead of the sampled one",
-    "file": "Sources/FlareCore/Export/SVGExporter+Style.swift",
+    "file": "Sources/FlareCore/Sampling+Tracks.swift",
     "anchor": "stroke.width = max(width, 0)",
     "replacement": "stroke.width = max(shape.stroke?.width ?? width, 0)",
     "filter": "SVGStyleAtFrameTests.usesSampledWidth"
   },
   {
     "note": "SVG export keeps a gradient under a keyed fill track",
-    "file": "Sources/FlareCore/Export/SVGExporter+Style.swift",
-    "anchor": "if let color = layer.sampledColor(.fill(shape: index), at: frame) { out.fill = .solid(color) }",
-    "replacement": "if case .solid = shape.fill, let color = layer.sampledColor(.fill(shape: index), at: frame) { out.fill = .solid(color) }",
+    "file": "Sources/FlareCore/Sampling+Tracks.swift",
+    "anchor": "if let color = sampledColor(.fill(shape: index), at: frame) { out.fill = .solid(color) }",
+    "replacement": "if case .solid = shape.fill, let color = sampledColor(.fill(shape: index), at: frame) { out.fill = .solid(color) }",
     "filter": "SVGStyleAtFrameTests.keyedFillReplacesAGradientAndStrokeTracksNeedAStroke"
   },
   {
     "note": "SVG stroke ignores its sampled colour",
-    "file": "Sources/FlareCore/Export/SVGExporter+Style.swift",
+    "file": "Sources/FlareCore/Sampling+Tracks.swift",
     "anchor": "stroke.color = color",
     "replacement": "_ = color",
     "filter": "SVGStyleAtFrameTests.usesSampledColour"

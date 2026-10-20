@@ -73,7 +73,7 @@ public enum SVGExporter {
         let list = scene.renderList(at: frame, symbols: symbols)
         if list.isTruncated { throw SVGExportError.sceneTooLarge }
         let scope = Scope(layers: scene.layers, frame: frame, symbols: symbols)
-        for node in sampled(list.nodes, layers: scene.layers, frame: frame, symbols: symbols) {
+        for node in list.nodes {
             try emit(node, in: scope, into: &lines, gradients: &gradients, measure: measure)
         }
         lines.append("</svg>")
