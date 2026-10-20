@@ -4,7 +4,7 @@
 // of one mask (SetLayerMask under one coalesce key) merges into one step.
 // SetTrackMatte refuses, before changing anything, a source missing from the
 // owner's list (`layerNotFound`) and one whose chain of mattes leads back to
-// the layer at any depth (`invalidDocument`). Bad mask values (non-finite
+// the layer at any depth (`matteCycle`). Bad mask values (non-finite
 // numbers, opacity outside 0...1, too many masks) are refused by the format
 // check on `CommandEngine.perform`; `execute` alone checks none.
 #if canImport(FoundationEssentials)
@@ -144,10 +144,8 @@ public struct MoveLayerMask: LayerParamsCommand {
 /// layer of the same list whose own chain of mattes never reaches this layer.
 ///
 /// Throws `layerNotFound(source)` when the source is not in this layer's list.
-/// A cycle, a layer matting itself included, is a routine refusal, not a
-/// corrupt document, but it throws `invalidDocument("matte source <source>
-/// leads back to <layer>")`, since `CommandError` has no matte-cycle case: a
-/// UI tells it apart by that message prefix and should offer a source whose
+/// A cycle, a layer matting itself included, throws `matteCycle(source:layer:)`:
+/// a routine refusal on a valid document, so a UI should offer a source whose
 /// own matte chain does not reach this layer.
 public struct SetTrackMatte: LayerParamsCommand {
     public static let id = "mask.setMatte"
@@ -173,14 +171,14 @@ public struct SetTrackMatte: LayerParamsCommand {
         let oldMatte = oldMatte
         try document.withLayer(owner, layer: layerID) { $0.matte = oldMatte }
     }
-    /// Throws `layerNotFound(source)` unless `source` is in `layers`, and `invalidDocument`
+    /// Throws `layerNotFound(source)` unless `source` is in `layers`, and `matteCycle`
     /// when the chain of mattes from `source` reaches `layerID` (a self matte is length 0).
     static func checkSource(_ source: String, of layerID: String, in layers: [Layer]) throws {
         guard layers.contains(where: { $0.id == source }) else { throw CommandError.layerNotFound(source) }
         var next: String? = source, hops = 0
         // Bounded: a chain longer than the list repeats a layer, so it never reaches `layerID` after that.
         while let id = next, hops <= layers.count {
-            guard id != layerID else { throw CommandError.invalidDocument("matte source \(source) leads back to \(layerID)") }
+            guard id != layerID else { throw CommandError.matteCycle(source: source, layer: layerID) }
             next = layers.first { $0.id == id }?.matte?.sourceLayerID
             hops += 1
         }

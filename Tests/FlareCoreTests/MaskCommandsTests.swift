@@ -173,12 +173,12 @@ import Testing
         var engine = CommandEngine(document: try Self.fixture())
         try engine.perform(SetTrackMatte(owner: Self.m, layerID: "lumen", matte: TrackMatte(sourceLayerID: "card")))
         Self.expectRefused(SetTrackMatte(owner: Self.m, layerID: "card", matte: TrackMatte(sourceLayerID: "photo")),
-                            .invalidDocument("matte source photo leads back to card"), on: engine.document)
+                            .matteCycle(source: "photo", layer: "card"), on: engine.document)
         let start = try Self.fixture()
         Self.expectRefused(SetTrackMatte(owner: Self.m, layerID: "lumen", matte: TrackMatte(sourceLayerID: "photo")),
-                            .invalidDocument("matte source photo leads back to lumen"), on: start)
+                            .matteCycle(source: "photo", layer: "lumen"), on: start)
         Self.expectRefused(SetTrackMatte(owner: Self.m, layerID: "card", matte: TrackMatte(sourceLayerID: "card")),
-                            .invalidDocument("matte source card leads back to card"), on: start)
+                            .matteCycle(source: "card", layer: "card"), on: start)
     }
 
     /// A source in another owner's list or nowhere is refused.

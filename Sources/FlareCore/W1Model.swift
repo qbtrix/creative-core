@@ -33,13 +33,23 @@ public struct LayerMask: Codable, Sendable, Hashable {
     public var opacity: Double
     /// When true the mask keeps what lies outside `path` instead of inside it.
     public var inverted: Bool
+    /// A mask over `path`; the defaults add a hard, fully opaque, upright mask.
     public init(path: Path, mode: MaskMode = .add, feather: Double = 0, opacity: Double = 1, inverted: Bool = false) {
         (self.path, self.mode, self.feather, self.opacity, self.inverted) = (path, mode, feather, opacity, inverted)
     }
 }
 
 /// How a mask combines with the masks before it.
-public enum MaskMode: String, Codable, Sendable, Hashable { case add, subtract, intersect, difference }
+public enum MaskMode: String, Codable, Sendable, Hashable {
+    /// Union: covered where this mask or the ones before it cover.
+    case add
+    /// Removes this mask's coverage from the ones before it.
+    case subtract
+    /// Keeps only the overlap of this mask and the ones before it.
+    case intersect
+    /// Toggles: covered where exactly one of this mask and the ones before it cover.
+    case difference
+}
 
 /// The layer draws only where `sourceLayerID`, in the same layer list, covers it.
 public struct TrackMatte: Codable, Sendable, Hashable {
@@ -47,12 +57,22 @@ public struct TrackMatte: Codable, Sendable, Hashable {
     public var sourceLayerID: String
     /// Which of the source's values limits this layer.
     public var kind: MatteKind
+    /// A matte read from layer `sourceLayerID`; alpha unless `kind` says otherwise.
     public init(sourceLayerID: String, kind: MatteKind = .alpha) { (self.sourceLayerID, self.kind) = (sourceLayerID, kind) }
 }
 
 /// What a track matte reads from its source layer: its alpha or its luminance
 /// (each 0...1), or one minus that value for the inverted kinds.
-public enum MatteKind: String, Codable, Sendable, Hashable { case alpha, alphaInverted, luma, lumaInverted }
+public enum MatteKind: String, Codable, Sendable, Hashable {
+    /// The source's alpha.
+    case alpha
+    /// One minus the source's alpha.
+    case alphaInverted
+    /// The source's luminance.
+    case luma
+    /// One minus the source's luminance.
+    case lumaInverted
+}
 
 /// A style over graphemes `start ..< start + length` of a text shape's string.
 /// Nil fields inherit the text shape's own style.

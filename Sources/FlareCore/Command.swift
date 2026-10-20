@@ -148,6 +148,11 @@ public enum CommandError: Error, Equatable, Sendable {
     /// or a text edit is refused because its inserted text would join a
     /// neighbouring grapheme (EditTextString); the message says which.
     case invalidDocument(String)
+    /// SetTrackMatte refused `source` as the matte of `layer` because the
+    /// chain of mattes from `source` leads back to `layer` (a layer matting
+    /// itself included). The document is valid and unchanged; offer a source
+    /// whose own matte chain does not reach this layer.
+    case matteCycle(source: String, layer: String)
     /// The command is registered but has no body yet; the message names the
     /// command id and the feature that will build it. The document is untouched.
     case notBuilt(String)
