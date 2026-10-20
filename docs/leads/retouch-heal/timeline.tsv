@@ -144,3 +144,4 @@ utc	stage	event	ref	note
 2026-10-20T02:30Z	Round-3	heartbeat	-	waiting on builders or the lane
 2026-10-20T02:48Z	Round-3	heartbeat	-	waiting on builders or the lane
 2026-10-20T06:29Z	Round-4	resumed	-	relaunched as act-1a157fd0281-warg on dev e09c6c3 (CI 415 green)
+2026-10-20T08:29Z	4	gate-run	e09c6c3	round 4 gate CI: PASS on e09c6c3; mutation next
