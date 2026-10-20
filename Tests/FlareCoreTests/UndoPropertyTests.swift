@@ -28,6 +28,7 @@ import Testing
         + TransitionCommandTests.undoSteps
         + MachineInputCommandTests.undoSteps
         + MaskCommandsTests.undoSteps
+        + ParentTests.undoSteps
         + TextStyleCommandsTests.undoSteps
         + TrackCommandsTests.undoSteps
         + RemoveShapeTrackTests.undoSteps

@@ -271,6 +271,12 @@ public struct Layer: Codable, Sendable, Hashable {
         get { w1Fields.shapeTracks }
         set { w1Fields.shapeTracks = newValue }
     }
+    /// Another layer of the same list this one follows: its matrix is the parent's world matrix times its own.
+    /// Opacity and visibility are not inherited. Nil (and missing in older files) means none.
+    public var parentID: String? {
+        get { w1Fields.parentID }
+        set { w1Fields.parentID = newValue }
+    }
 
     /// Every field but `id`, behind one copy-on-write reference, so copying a
     /// layer (and so a big scene's layer array, which every command and undo
@@ -300,7 +306,7 @@ public struct Layer: Codable, Sendable, Hashable {
         id: String, name: String, shapes: [Shape] = [], tracks: [String: [Keyframe]] = [:],
         isVisible: Bool = true, isLocked: Bool = false, instances: [Instance] = [], texts: [TextShape] = [],
         masks: [LayerMask] = [], matte: TrackMatte? = nil, colorTracks: [String: [ColorKeyframe]] = [:],
-        shapeTracks: [ShapeTrack] = []
+        shapeTracks: [ShapeTrack] = [], parentID: String? = nil
     ) {
         self.id = id
         storage = LayerStorage(LayerFields(name: name, shapes: shapes, tracks: tracks, isVisible: isVisible,
@@ -309,6 +315,7 @@ public struct Layer: Codable, Sendable, Hashable {
         self.matte = matte
         self.colorTracks = colorTracks
         self.shapeTracks = shapeTracks
+        self.parentID = parentID
     }
 
     public static func == (a: Layer, b: Layer) -> Bool {
@@ -337,6 +344,7 @@ public struct Layer: Codable, Sendable, Hashable {
 
     private enum CodingKeys: String, CodingKey {
         case id, name, shapes, tracks, isVisible, isLocked, instances, texts, masks, matte, colorTracks, shapeTracks
+        case parentID = "parent"
     }
 
     /// Files written before the flags existed decode as visible and unlocked,
@@ -355,11 +363,12 @@ public struct Layer: Codable, Sendable, Hashable {
             masks: c.decodeIfPresent([LayerMask].self, forKey: .masks) ?? [],
             matte: c.decodeIfPresent(TrackMatte.self, forKey: .matte),
             colorTracks: c.decodeIfPresent([String: [ColorKeyframe]].self, forKey: .colorTracks) ?? [:],
-            shapeTracks: c.decodeIfPresent([ShapeTrack].self, forKey: .shapeTracks) ?? []
+            shapeTracks: c.decodeIfPresent([ShapeTrack].self, forKey: .shapeTracks) ?? [],
+            parentID: c.decodeIfPresent(String.self, forKey: .parentID)
         )
     }
 
-    /// Empty texts, masks and tracks and a nil matte are left out, so older layers encode as before.
+    /// Empty texts, masks and tracks and a nil matte or parent are left out, so older layers encode as before.
     public func encode(to encoder: any Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(id, forKey: .id)
@@ -374,6 +383,7 @@ public struct Layer: Codable, Sendable, Hashable {
         try c.encodeIfPresent(matte, forKey: .matte)
         if !colorTracks.isEmpty { try c.encode(colorTracks, forKey: .colorTracks) }
         if !shapeTracks.isEmpty { try c.encode(shapeTracks, forKey: .shapeTracks) }
+        try c.encodeIfPresent(parentID, forKey: .parentID)
     }
 
     /// Inserts or replaces the keyframe at `keyframe.frame`, keeping the track

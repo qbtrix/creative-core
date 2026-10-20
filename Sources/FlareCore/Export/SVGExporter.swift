@@ -92,7 +92,7 @@ public enum SVGExporter {
             let ids = " \(idName)=\"\(escape(layer.id))\" data-name=\"\(escape(layer.name))\""
             let (masks, matte) = try maskDefs(for: layer.id, in: scope, into: &lines, ids: &gradients, measure: measure)
             if let matte { lines.append("<g mask=\"url(#\(matte))\">") }
-            lines.append("<g\(ids)\(try matrix(layer.transform))\(opacityAttr)\(masks)>")
+            lines.append("<g\(ids)\(try matrix(layer.parentMatrix * layer.transform.matrix))\(opacityAttr)\(masks)>")
             for child in layer.children {
                 try emit(child, in: scope, into: &lines, gradients: &gradients, measure: measure)
             }
@@ -136,9 +136,11 @@ public enum SVGExporter {
     }
 
     /// ` transform="matrix(a b c d tx ty)"`.
-    static func matrix(_ transform: Transform) throws -> String {
-        let m = transform.matrix
-        return " transform=\"matrix(\(try [m.a, m.b, m.c, m.d, m.tx, m.ty].map(number).joined(separator: " ")))\""
+    static func matrix(_ transform: Transform) throws -> String { try matrix(transform.matrix) }
+
+    /// ` transform="matrix(a b c d tx ty)"` for `m`.
+    static func matrix(_ m: Matrix) throws -> String {
+         " transform=\"matrix(\(try [m.a, m.b, m.c, m.d, m.tx, m.ty].map(number).joined(separator: " ")))\""
     }
 
     /// SVG path data (the `d` attribute) for `path`: M, L, Q, C and Z commands

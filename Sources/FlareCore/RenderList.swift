@@ -17,6 +17,9 @@
 //   are flagged `isMatteSource`
 // - an item's opacity is the product of every layer opacity on its way down;
 //   instances have no opacity of their own
+// - a layer with a parent (`Layer.parentID`, same list) is placed by its
+//   parent chain's matrices, hidden parents included, before its own; its
+//   opacity, lock and visibility are its own
 // - an item is locked when its layer or any host layer above it is locked
 // - an instance whose symbol is missing, cyclic or nested too deep is an
 //   `.unresolved` node and adds no items; building never throws or traps
@@ -101,6 +104,9 @@ public struct RenderLayer: Sendable, Hashable {
     public var name: String
     /// The layer's transform sampled at the frame, relative to its parent.
     public var transform: Transform
+    /// Its parent layers' matrices multiplied down to it (`Layer.parentID`); identity without a parent. The
+    /// layer's matrix in its list is `parentMatrix * transform.matrix`.
+    public var parentMatrix: Matrix = .identity
     /// The layer's own opacity sampled at the frame, not multiplied down.
     public var opacity: Double
     /// The layer's own lock flag, not inherited from host layers.
@@ -310,13 +316,25 @@ extension RenderList {
             // Hidden layers a visible one uses as a matte are walked into `matteItems` only.
             let wanted = Set(layers.filter(\.isVisible).compactMap { $0.matte?.sourceLayerID })
             var spans: [String: (items: Range<Int>, inMatteItems: Bool)] = [:]
+            // Parents name layers of this list; validation keeps the chains acyclic, and the hop bound holds anyway.
+            let byID = layers.contains { $0.parentID != nil }
+                ? Dictionary(layers.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a }) : [:]
+            func parentMatrix(of layer: Layer) -> Matrix {
+                var m = Matrix.identity, next = layer.parentID, hops = 0
+                while let id = next, let p = byID[id], hops < layers.count {
+                    m = p.placement(at: frame).transform.matrix * m
+                    (next, hops) = (p.parentID, hops + 1)
+                }
+                return m
+            }
             for (li, layer) in layers.enumerated() where layer.isVisible || wanted.contains(layer.id) {
                 let outer = matteOnly
                 matteOnly = outer || !layer.isVisible
                 defer { matteOnly = outer }
                 let start = matteOnly ? matteItems.count : items.count
                 let (t, o) = layer.placement(at: frame)
-                let m = parent * t.matrix
+                let up = byID.isEmpty ? Matrix.identity : parentMatrix(of: layer)
+                let m = byID.isEmpty ? parent * t.matrix : parent * up * t.matrix
                 let op = opacity * o
                 let lk = locked || layer.isLocked
                 let scale = m.uniformScale
@@ -371,8 +389,10 @@ extension RenderList {
                 }
                 spans[layer.id] = (start..<(matteOnly ? matteItems.count : items.count), matteOnly)
                 guard layer.isVisible else { continue }
-                nodes.append(.layer(RenderLayer(id: layer.id, name: layer.name, transform: t, opacity: o,
-                                                isLocked: layer.isLocked, children: children)))
+                var node = RenderLayer(id: layer.id, name: layer.name, transform: t, opacity: o,
+                                       isLocked: layer.isLocked, children: children)
+                node.parentMatrix = up
+                nodes.append(.layer(node))
             }
             // Inner walks linked their own mattes first, so a matte nearer the item wins.
             for layer in layers where layer.isVisible {

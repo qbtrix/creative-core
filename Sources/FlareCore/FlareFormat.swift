@@ -137,7 +137,7 @@ public enum FlareFormat {
             points = try validateCountingPoints(document)
             return
         }
-        // Mattes name layers by id: only a removal or a change to this layer's matte can break one.
+        // Mattes and parents name layers by id: only a removal or a change to this layer's link can break one.
         var mattesChanged = new.count < old.count
         // Points the change added (negative when it removed some).
         var delta = 0
@@ -155,7 +155,7 @@ public enum FlareFormat {
                 : old.indices.contains(i) && old[i].id == layerID ? old[i] : old.first { $0.id == layerID }
             delta = pointCount(layer) - (before.map(pointCount) ?? 0)
             counted = inserted ? new.count == old.count + 1 : new.count == old.count && before != nil
-            mattesChanged = mattesChanged || layer.matte != before?.matte
+            mattesChanged = mattesChanged || layer.matte != before?.matte || layer.parentID != before?.parentID
         } else if new.count == old.count - 1, let removed = old.first(where: { $0.id == layerID }) {
             delta = -pointCount(removed)
             counted = true
@@ -362,19 +362,27 @@ public enum FlareFormat {
         }
     }
 
-    /// Each matte names another layer of `layers`, and no chain of mattes
-    /// returns to a layer it passed. Linear: a layer proven acyclic is not walked again.
+    /// Each matte and each parent names another layer of `layers`, and no chain of mattes, or of parents,
+    /// returns to a layer it passed.
     static func checkMattes(_ layers: [Layer], owner: String) throws {
+        try checkLinks(layers, owner: owner, noun: "matte source", plural: "mattes") { $0.matte?.sourceLayerID }
+        try checkLinks(layers, owner: owner, noun: "parent", plural: "parents") { $0.parentID }
+    }
+
+    /// Each `link` names another layer of `layers`, and no chain of links returns to a layer it passed.
+    /// Linear: a layer proven acyclic is not walked again.
+    static func checkLinks(_ layers: [Layer], owner: String, noun: String, plural: String,
+                           _ link: (Layer) -> String?) throws {
         var source: [String: String] = [:]
-        for layer in layers where layer.hasW1Fields { // no box, no matte
-            if let matte = layer.matte { source[layer.id] = matte.sourceLayerID }
+        for layer in layers where layer.hasW1Fields { // no box, no matte or parent
+            if let id = link(layer) { source[layer.id] = id }
         }
         guard !source.isEmpty else { return }
         let ids = Set(layers.map(\.id))
         var acyclic = Set<String>()
         for (start, first) in source {
             guard first != start, ids.contains(first) else {
-                throw FormatError.invalid("\(owner): layer \(start) matte source \(first) is not another layer here")
+                throw FormatError.invalid("\(owner): layer \(start) \(noun) \(first) is not another layer here")
             }
             var seen: Set<String> = [start]
             var path = [start] // walk order, built beside `seen` for the error
@@ -383,7 +391,7 @@ public enum FlareFormat {
                 path.append(id)
                 guard seen.insert(id).inserted else {
                     let chain = path.joined(separator: " -> ")
-                    throw FormatError.invalid("\(owner): mattes form a cycle \(chain); remove one layer's matte")
+                    throw FormatError.invalid("\(owner): \(plural) form a cycle \(chain); remove one layer's \(plural.dropLast())")
                 }
                 next = source[id]
             }

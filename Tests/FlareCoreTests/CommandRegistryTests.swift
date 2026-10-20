@@ -20,7 +20,7 @@ import Testing
     static let familyIDs: [[String]] = [
         ["layer.add", "layer.remove", "layer.rename",
          "keyframe.set", "keyframe.move", "keyframe.remove", "shape.add"],
-        ["layer.setFlags", "layer.reorder", "layer.duplicate"],
+        ["layer.setFlags", "layer.reorder", "layer.duplicate", "layer.setParent"],
         ["shape.remove", "shape.setFill", "shape.setStroke", "shape.setPath", "shape.translate"],
         ["scene.add", "scene.remove", "scene.timing", "scene.setCanvas", "scene.rename", "scene.reorder"],
         ["keyframe.setEasing", "keyframe.shift"],
@@ -109,6 +109,7 @@ import Testing
             ReorderLayer(owner: .scene(s), layerID: "bg", toIndex: 1),
             SetLayerFlags(owner: .scene(s), layerID: "ball", isVisible: false, isLocked: true),
             DuplicateLayer(owner: .scene(s), layerID: "ball"),
+            SetLayerParent(owner: .scene(s), layerID: "bg", parentID: "ball"),
             RemoveShape(owner: .scene(s), layerID: "ball", index: 0),
             SetShapeFill(owner: .scene(s), layerID: "ball", index: 0, fill: .solid(Color(r: 0, g: 0, b: 1))),
             SetShapeStroke(owner: .scene(s), layerID: "ball", index: 0, stroke: Stroke(width: 2, cap: .round)),
@@ -133,7 +134,7 @@ import Testing
     }
 
     @Test func everyBuiltInCommandIsRegistered() {
-        #expect(Self.expectedIDs.count == 73)
+        #expect(Self.expectedIDs.count == 74)
         #expect(Set(Self.registry.ids) == Self.expectedIDs)
     }
 
