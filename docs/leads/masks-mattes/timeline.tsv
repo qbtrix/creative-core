@@ -82,3 +82,4 @@ utc	stage	event	ref	note
 2026-10-20T03:54:00Z	round-4	mutate 154/230 caught, 0 escaped so far; panel after
 2026-10-20T04:11:29Z	round-4	mutate 230/230 caught (54 min); critic panel wf_d9fad7c0-bd3 running on 672d6b8c
 2026-10-20T04:13:28Z	round-4	critic panel wf_d9fad7c0-bd3 still running on 672d6b8c
+2026-10-20T04:14:41Z	round-4	panel: 10 confirmed (3 major); final feature-done fix batch wf_efd98b53-ebf launched
