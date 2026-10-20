@@ -125,6 +125,26 @@ private func lumaStats(_ buffer: PixelBuffer, under mask: Mask) throws -> (mean:
         }
     }
 
+    /// A dab-sized mask is the likely first mistake; the throw says how to fix it.
+    @Test func dabSizedMaskThrowsAskingForBufferSized() throws {
+        let buffer = try PixelBuffer(width: 64, height: 64, fill: RGBA(r: 0.5, g: 0.5, b: 0.5, a: 1))
+        #expect { try buffer.filledFromSurroundings(Mask(width: 16, height: 16, fill: 1), seed: 1) } throws: { error in
+            "\(error)".contains("buffer-sized")
+        }
+    }
+
+    /// Stripes near Float's limit overflow the heal; the throw names the input as the cause.
+    @Test func overflowingValuesThrowNamingTheInput() throws {
+        var buffer = try PixelBuffer(width: 32, height: 32)
+        for y in 0..<32 {
+            for x in 0..<32 { try buffer.setPixel(x: x, y: y, RGBA(r: x % 2 == 0 ? 3e38 : -3e38, g: 0, b: 0, a: 1)) }
+        }
+        let mask = try Mask.rectangle(width: 32, height: 32, x: 14, y: 14, w: 4, h: 4)
+        #expect { try buffer.filledFromSurroundings(mask, seed: 1) } throws: { error in
+            "\(error)".contains("non-finite") && "\(error)".contains("too large")
+        }
+    }
+
     @Test func sparseMaskOverCapThrowsEarly() throws {
         // Two dots in opposite corners: their bounds hold 2100 x 2100 pixels,
         // over maxHealPixels, so the fill throws before any search.

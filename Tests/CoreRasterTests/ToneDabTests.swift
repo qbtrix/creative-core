@@ -96,6 +96,35 @@ private func chroma(_ p: RGBA) -> Float { max(p.r, p.g, p.b) - min(p.r, p.g, p.b
         #expect(try chroma(Self.centre(grey, patch: 3)) <= Self.tolerance)
     }
 
+    /// Sponge +1 on a pixel whose weak channels sit far below its luma drives
+    /// them negative before the clamp: colour stays in 0...alpha, the low
+    /// channels land on 0 exactly and red on alpha.
+    @Test func spongeClampsChannelsAtZero() throws {
+        var buffer = try PixelBuffer(width: 4, height: 4, fill: RGBA(r: 0.9, g: 0.1, b: 0.02, a: 1))
+        try buffer.sponge(try Mask(width: 4, height: 4, fill: 1), x: 0, y: 0, amount: 1)
+        let p = try buffer.pixel(x: 1, y: 1)
+        #expect(p.g == 0 && p.b == 0, "low channels \(p)")
+        #expect(p.r == 1 && p.a == 1, "\(p)")
+    }
+
+    /// Each op's range error names the op, so a log line from a shared brush
+    /// pipeline says which tool got the bad value.
+    @Test func strengthErrorsNameTheOp() throws {
+        let dab = try Mask(width: 2, height: 2, fill: 1)
+        var buffer = try PixelBuffer(width: 2, height: 2, fill: RGBA(r: 0.5, g: 0.5, b: 0.5, a: 1))
+        let cases: [(String, DabOp)] = [
+            ("dodge exposure", { try $0.dodge($1, x: $2, y: $3, range: .midtones, exposure: 2) }),
+            ("burn exposure", { try $0.burn($1, x: $2, y: $3, range: .midtones, exposure: 2) }),
+            ("sponge amount", { try $0.sponge($1, x: $2, y: $3, amount: 2) }),
+        ]
+        for (name, op) in cases {
+            #expect { try op(&buffer, dab, 0, 0) } throws: { error in
+                guard case let RasterError.invalid(message) = error else { return false }
+                return message.hasPrefix(name)
+            }
+        }
+    }
+
     @Test func dabCoverageWeights() throws {
         let grey = RGBA(r: 0.5, g: 0.5, b: 0.5, a: 1)
         var buffer = try PixelBuffer(width: 20, height: 20, fill: grey)

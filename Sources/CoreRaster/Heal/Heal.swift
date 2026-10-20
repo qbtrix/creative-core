@@ -38,8 +38,9 @@ extension PixelBuffer {
     ///
     /// Throws `RasterError.invalid` when the mask's size differs from the
     /// buffer's, when its covered bounds hold more than `maxHealPixels`, or
-    /// when the source of any pixel in those bounds lies off the buffer.
-    /// Unlike `cloned(offset:through:)`, which leaves such pixels as they
+    /// when the source of any pixel in those bounds lies off the buffer, or
+    /// when the buffer holds values so large near the mask that the solve
+    /// overflows and the result would not be finite. Unlike `cloned(offset:through:)`, which leaves such pixels as they
     /// are, heal throws for an off-buffer source. An empty mask returns the
     /// buffer unchanged, whatever the offset: there is no source to check.
     public func healed(offset: (dx: Int, dy: Int), through mask: Mask) throws -> PixelBuffer {
@@ -63,11 +64,7 @@ extension PixelBuffer {
         try checkHealSource(box, offset: offset)
         let (dx, dy) = offset
 
-        // The grid: the mask's bounds plus the one-pixel ring that holds the
-        // boundary values, clipped to the buffer.
-        let gx0 = max(box.x - 1, 0), gx1 = min(box.x + box.width, width - 1)
-        let gy0 = max(box.y - 1, 0), gy1 = min(box.y + box.height, height - 1)
-        let gw = gx1 - gx0 + 1, gh = gy1 - gy0 + 1
+        let (gx0, gy0, gw, gh) = healGrid(box)
         var cover = [Float](repeating: 0, count: gw * gh)
         var solver = HealSolver(width: gw, height: gh)
         var pixels = [SIMD4<Float>](repeating: .zero, count: gw * gh)
@@ -98,11 +95,7 @@ extension PixelBuffer {
                 let c = cover[i]
                 let x = gx0 + gx, y = gy0 + gy, dest = vector(x, y)
                 let f = c > 0 ? vector(x + dx, y + dy) + solver.value(gx, gy) : dest
-                let out = c >= 1 ? f : dest + (f - dest) * c
-                guard out.x.isFinite, out.y.isFinite, out.z.isFinite, out.w.isFinite else {
-                    throw RasterError.invalid("heal produced a non-finite pixel at (\(x), \(y))")
-                }
-                pixels[i] = out
+                pixels[i] = try Self.healBlend(dest, toward: f, by: c, op: "heal", x: x, y: y)
             }
         }
         all = [] // Released before the writes, so they copy nothing.
@@ -113,6 +106,30 @@ extension PixelBuffer {
                 }
             }
         }
+    }
+
+    /// The heal's grid around covered bounds `box`, in buffer coordinates:
+    /// the bounds plus the one-pixel ring that holds the boundary values,
+    /// clipped to the buffer. Heal and fill from surroundings share it, so
+    /// both read the same ring.
+    func healGrid(_ box: TileRect) -> (x0: Int, y0: Int, w: Int, h: Int) {
+        let x0 = max(box.x - 1, 0), x1 = min(box.x + box.width, width - 1)
+        let y0 = max(box.y - 1, 0), y1 = min(box.y + box.height, height - 1)
+        return (x0, y0, x1 - x0 + 1, y1 - y0 + 1)
+    }
+
+    /// `dest` blended toward the solved `f` by coverage `c` (`f` itself at
+    /// 1 or more), as heal and fill write each grid pixel. Throws when the
+    /// result is not finite, which only values large enough to overflow the
+    /// solve can cause: a buffer holds no NaN or infinity.
+    static func healBlend(_ dest: SIMD4<Float>, toward f: SIMD4<Float>, by c: Float,
+                          op: String, x: Int, y: Int) throws -> SIMD4<Float> {
+        let out = c >= 1 ? f : dest + (f - dest) * c
+        guard out.x.isFinite, out.y.isFinite, out.z.isFinite, out.w.isFinite else {
+            throw RasterError.invalid("\(op) produced a non-finite pixel at (\(x), \(y)): the buffer holds values "
+                + "too large to solve, which overflow, near the mask; keep components in a normal range such as 0...1")
+        }
+        return out
     }
 
     /// Throws unless the source of every pixel in `box`, shifted by

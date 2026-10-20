@@ -1,6 +1,6 @@
 // HealTests.swift: retouch-heal RH-3's acceptance, written first by RH-1
 // (docs/blueprints/core/features/retouch-heal.md); RH-3 turned it on.
-import CoreRaster
+@testable import CoreRaster
 import Testing
 
 /// Every pixel outside the square of half-side `r` around (`cx`, `cy`) is the same in both.
@@ -229,6 +229,49 @@ func expectSameOutside(_ a: PixelBuffer, _ b: PixelBuffer, cx: Int, cy: Int, r: 
         #expect(throws: RasterError.self) { try field.healed(offset: (dx: 15, dy: 0), through: box) }
         let small = try Mask(width: 10, height: 10, fill: 1)
         #expect(throws: RasterError.self) { try field.healed(offset: (dx: 0, dy: 0), through: small) }
+    }
+
+    /// Values near Float's limit overflow the solve; the throw names the
+    /// input as the cause, not the engine.
+    @Test func overflowingValuesThrowNamingTheInput() throws {
+        var buffer = try PixelBuffer(width: 32, height: 24, fill: RGBA(r: 3e38, g: 0.5, b: 0.5, a: 1))
+        for y in 0..<24 {
+            for x in 16..<32 { try buffer.setPixel(x: x, y: y, RGBA(r: -3e38, g: 0.5, b: 0.5, a: 1)) }
+        }
+        let mask = try RetouchFixtures.disc(width: 32, height: 24, centerX: 24, centerY: 12, radius: 4)
+        #expect { try buffer.healed(offset: (dx: -16, dy: 0), through: mask) } throws: { error in
+            "\(error)".contains("non-finite") && "\(error)".contains("too large")
+        }
+    }
+
+    /// The solve stops on the whole V-cycle's change, so a heal at
+    /// healTolerance lands within 1e-4 of a reference run far past it, and a
+    /// further cycle then moves no cell by the tolerance.
+    @Test func solveStopsOnCycleChange() throws {
+        func solver() -> HealSolver {
+            var s = HealSolver(width: 160, height: 120)
+            for y in 0..<120 {
+                for x in 0..<160 {
+                    if x == 0 || y == 0 || x == 159 || y == 119 {
+                        s.fix(x, y, SIMD4(repeating: Float(x * x + 3 * y) / 30_000))
+                    } else {
+                        s.free(x, y)
+                    }
+                }
+            }
+            return s
+        }
+        var stopped = solver(), reference = solver()
+        stopped.solve(tolerance: PixelBuffer.healTolerance, maxCycles: PixelBuffer.healMaxCycles)
+        reference.solve(tolerance: 0, maxCycles: 200)
+        var worst: Float = 0
+        for y in 0..<120 {
+            for x in 0..<160 { worst = max(worst, abs(stopped.value(x, y).x - reference.value(x, y).x)) }
+        }
+        // At 1e-5 the stopped solve sits about 2e-5 from the reference; a
+        // tolerance loosened to 1e-3 lands about 7e-4 away.
+        #expect(worst <= 1e-4, "stopped \(worst) from the reference")
+        #expect(stopped.cycleChange() < PixelBuffer.healTolerance)
     }
 
     @Test func fuzzedInputsThrowOrHeal() throws {

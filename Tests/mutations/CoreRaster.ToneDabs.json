@@ -47,5 +47,12 @@
     "anchor": "guard p.a > 0 else { continue }",
     "replacement": "",
     "filter": "ToneDabTests.transparentPixelsUntouched"
+  },
+  {
+    "note": "tone dab green channel loses its floor at 0, so a strong sponge on a saturated pixel stores negative colour, caught by ToneDabTests.spongeClampsChannelsAtZero",
+    "file": "Sources/CoreRaster/Heal/ToneDabs.swift",
+    "anchor": "p.g = min(max(p.g, 0), alpha)",
+    "replacement": "p.g = min(p.g, alpha)",
+    "filter": "ToneDabTests.spongeClampsChannelsAtZero"
   }
 ]

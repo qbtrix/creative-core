@@ -37,8 +37,8 @@
   {
     "note": "the fill ignores a feathered mask's coverage and writes the full fill on partly covered pixels, caught by FillFromSurroundingsTests.featherBlendsByCoverage",
     "file": "Sources/CoreRaster/Heal/FillFromSurroundings.swift",
-    "anchor": "c = min(cover[i], 1)",
-    "replacement": "c = Float(1)",
+    "anchor": "by: cover[i], op: \"fill\"",
+    "replacement": "by: 1, op: \"fill\"",
     "filter": "FillFromSurroundingsTests.featherBlendsByCoverage"
   },
   {
@@ -75,5 +75,33 @@
     "anchor": "let margin = r + max(Self.fillContext, max(box.width, box.height) / 2)",
     "replacement": "let margin = r + Self.fillContext",
     "filter": "FillFromSurroundingsTests.searchWindowGrowsWithHole"
+  },
+  {
+    "note": "the fill pyramid drops from three levels to one, so the search finds no long structure to carry across the hole, caught by FillFromSurroundingsTests.keepsStructureAcrossHole",
+    "file": "Sources/CoreRaster/Heal/FillFromSurroundings.swift",
+    "anchor": "static let fillLevels = 3",
+    "replacement": "static let fillLevels = 1",
+    "filter": "FillFromSurroundingsTests.keepsStructureAcrossHole"
+  },
+  {
+    "note": "the patch search runs one iteration per level instead of five, so matches stay near their random start, caught by FillFromSurroundingsTests.keepsStructureAcrossHole",
+    "file": "Sources/CoreRaster/Heal/PatchSearch.swift",
+    "anchor": "static let iterations = 5",
+    "replacement": "static let iterations = 1",
+    "filter": "FillFromSurroundingsTests.keepsStructureAcrossHole"
+  },
+  {
+    "note": "mapUp drops the coarse level's guess, so each finer level restarts its search from random, caught by FillFromSurroundingsTests.toneMeetsRing",
+    "file": "Sources/CoreRaster/Heal/PatchSearch.swift",
+    "anchor": "if sx < finer.width, sy < finer.height { up[p] = sy * finer.width + sx }",
+    "replacement": "_ = (sx, sy)",
+    "filter": "FillFromSurroundingsTests.toneMeetsRing"
+  },
+  {
+    "note": "the fill's guidance between two hole pixels no longer takes the smaller of the two sources' steps, so seams between sources of different tone stay, caught by FillFromSurroundingsTests.fillsWhereNoTranslationFits",
+    "file": "Sources/CoreRaster/Heal/FillFromSurroundings.swift",
+    "anchor": "step.replace(with: other, where: other * other .< step * step)",
+    "replacement": "_ = other",
+    "filter": "FillFromSurroundingsTests.fillsWhereNoTranslationFits"
   }
 ]

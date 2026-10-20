@@ -47,7 +47,7 @@ extension PixelBuffer {
     /// the buffer.
     /// Throws `RasterError.invalid` for an exposure outside 0...1 or NaN.
     public mutating func dodge(_ dab: Mask, x: Int, y: Int, range: TonalRange, exposure: Float) throws {
-        try ColorMath.check("exposure", exposure, in: 0...1)
+        try ColorMath.check("dodge exposure", exposure, in: 0...1)
         try toneDab(dab, x: x, y: y, range: range, gain: exposure)
     }
 
@@ -61,17 +61,20 @@ extension PixelBuffer {
     /// changes nothing, and so does a dab placed wholly off the buffer.
     /// Throws `RasterError.invalid` for an exposure outside 0...1 or NaN.
     public mutating func burn(_ dab: Mask, x: Int, y: Int, range: TonalRange, exposure: Float) throws {
-        try ColorMath.check("exposure", exposure, in: 0...1)
+        try ColorMath.check("burn exposure", exposure, in: 0...1)
         try toneDab(dab, x: x, y: y, range: range, gain: -0.5 * exposure)
     }
 
     /// Raises (`amount` above 0) or lowers (`amount` below 0) the saturation
     /// of the pixels under `dab` (its top-left at `x`, `y`), weighted by the
     /// dab's coverage. `amount` is in -1...1; 0 changes nothing, and so does
-    /// a dab placed wholly off the buffer. Throws `RasterError.invalid` for an
+    /// a dab placed wholly off the buffer. Chroma about the pixel's luma is
+    /// scaled by `1 + amount × coverage`: -1 at full coverage is grey, +1
+    /// doubles chroma. Colour clamps to 0...alpha, alpha is unchanged and
+    /// transparent pixels are skipped. Throws `RasterError.invalid` for an
     /// amount outside -1...1 or NaN.
     public mutating func sponge(_ dab: Mask, x: Int, y: Int, amount: Float) throws {
-        try ColorMath.check("amount", amount, in: -1...1)
+        try ColorMath.check("sponge amount", amount, in: -1...1)
         guard amount != 0 else { return }
         try eachDabPixel(dab, x: x, y: y) { p, coverage in
             let luma = Self.luma(p)
