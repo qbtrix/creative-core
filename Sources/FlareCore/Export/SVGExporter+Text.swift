@@ -9,14 +9,16 @@
 // font-weight, font-style, letter-spacing (the run's tracking plus the
 // paragraph's) and baseline-shift. Centre and trailing alignment write
 // `text-anchor` middle and end, with x at the line's centre or end; a
-// justified shape writes every line's per-grapheme x list. A line's trailing
-// whitespace is not written, and the <text> keeps spaces with
-// `xml:space="preserve"`. A gradient run fill is a gradient element before the
+// justified shape writes every line's x list, one value per Unicode scalar
+// (SVG counts characters, not graphemes): each grapheme's x, repeated for its
+// further scalars. A line's trailing whitespace is not written, and the
+// <text> keeps spaces with `xml:space="preserve"`, so the whole element is
+// one output line: a newline between line spans would draw as a space. A gradient run fill is a gradient element before the
 // <text>, like a path's. Numbers use `SVGExporter.number`, so a non-finite
 // value throws `nonFiniteValue`; a text the layout refuses throws its
 // `ModelError.invalidText`. Lines and runs both tile the string in order, so
 // one run cursor walks them together and the work is linear in lines plus
-// runs. Type on a path is not written here yet.
+// runs. Type on a path is SVGExporter+TextPath.
 
 extension SVGExporter {
     /// The lines of one `<text>` element for `text`, laid out over
@@ -25,32 +27,32 @@ extension SVGExporter {
                             measure: (TextShape) -> [GlyphRunMetrics]) throws -> [String] {
         let style = text.paragraph ?? ParagraphStyle()
         let runs = text.resolvedRuns
-        var out: [String] = [], attributes: [String] = []
-        // Every run's attributes are formatted before layout, so a non-finite
-        // run value throws `nonFiniteValue` rather than the layout's error.
-        for run in runs {
-            let (paint, element) = try runFill(run.fill, gradients: &gradients)
-            if let element { out.append(element) }
-            attributes.append(try runAttributes(run, paint: paint, paragraphTracking: style.tracking))
-        }
+        let (elements, attributes) = try runAttributeList(runs, style: style, gradients: &gradients)
+        var out = elements
         let origin = text.position
         let layout = try TextLayout.lay(text, measured: measure(text))
         let anchor = style.alignment == .center ? " text-anchor=\"middle\""
             : style.alignment == .trailing ? " text-anchor=\"end\"" : ""
-        out.append("<text xml:space=\"preserve\"\(anchor)>")
+        var element = "<text xml:space=\"preserve\"\(anchor)>"
         let chars = Array(text.string)
         var first = 0
         for line in layout.lines {
+            var end = line.graphemes.upperBound
+            while end > line.graphemes.lowerBound, chars[end - 1].isWhitespace { end -= 1 }
             let lead = line.x.first ?? 0
             let x: String
             switch style.alignment {
-            case .justified: x = try line.x.map { try number(origin.x + $0) }.joined(separator: " ")
+            case .justified:
+                // One x per scalar: a grapheme's x, then again for each further scalar in it.
+                var xs: [String] = []
+                for (i, px) in zip(line.graphemes.lowerBound..<end, line.x) {
+                    xs += Array(repeating: try number(origin.x + px), count: chars[i].unicodeScalars.count)
+                }
+                x = xs.joined(separator: " ")
             case .center: x = try number(origin.x + lead + line.width / 2)
             case .trailing: x = try number(origin.x + lead + line.width)
             case .leading: x = try number(origin.x + lead)
             }
-            var end = line.graphemes.upperBound
-            while end > line.graphemes.lowerBound, chars[end - 1].isWhitespace { end -= 1 }
             var spans = ""
             // Skip the runs that end before this line, so no line restarts from run 0.
             while first < runs.count, runs[first].start + runs[first].length <= line.graphemes.lowerBound { first += 1 }
@@ -60,10 +62,24 @@ extension SVGExporter {
                 guard lower < upper else { continue }
                 spans += "<tspan\(attrs)>\(escape(String(chars[lower..<upper])))</tspan>"
             }
-            out.append("<tspan x=\"\(x)\" y=\"\(try number(origin.y + line.baseline))\">\(spans)</tspan>")
+            element += "<tspan x=\"\(x)\" y=\"\(try number(origin.y + line.baseline))\">\(spans)</tspan>"
         }
-        out.append("</text>")
+        out.append(element + "</text>")
         return out
+    }
+
+    /// The gradient elements and the attributes of each of `runs`. Every
+    /// run's attributes are formatted before layout, so a non-finite run
+    /// value throws `nonFiniteValue` rather than the layout's error.
+    static func runAttributeList(_ runs: [ResolvedRun], style: ParagraphStyle,
+                                 gradients: inout Int) throws -> (elements: [String], attributes: [String]) {
+        var out: [String] = [], attributes: [String] = []
+        for run in runs {
+            let (paint, element) = try runFill(run.fill, gradients: &gradients)
+            if let element { out.append(element) }
+            attributes.append(try runAttributes(run, paint: paint, paragraphTracking: style.tracking))
+        }
+        return (out, attributes)
     }
 
     /// One run's attributes, each with a leading space: family, size and
