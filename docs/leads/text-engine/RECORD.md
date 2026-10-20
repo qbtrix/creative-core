@@ -3,7 +3,7 @@
 Issue: #437 · Packet: docs/blueprints/core/features/text-engine.md
 Run: act-1a157fd0281-warg · Session: 2df03724-340d-5741-940b-d32d0ef62e2a · Resumed: 2026-10-20T06:25Z
 Stage: done (merged-done; contact sheet posted)
-Base: e41c2c9cf828f16e7200b38625166b8f10ee002e
+Base: cc27761484b9ed106af343ec3b813bbf86b3b797
 Next: Mac finisher verifies TE-z release budgets
 
 ## Tasks
