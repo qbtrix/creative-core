@@ -86,14 +86,18 @@ import Testing
         // Round joins at a huge width and a fine tolerance take the most arc
         // points per corner (4096); 100 right-angle corners pass
         // maxBooleanVertices on the way, so the stroker stops there instead of
-        // building every loop and leaving the count to combine.
+        // building every loop and leaving the count to combine (which throws
+        // the same error, so the loops are checked before combine runs).
         let points = (0..<101).map { (k: Int) -> Point in
             let (x, y): (Int, Int) = ((k + 1) / 2 * 10, k / 2 * 10)
             return Point(x: Double(x), y: Double(y))
         }
+        let path = Path(polyline: points, closed: false)
         #expect(throws: GeometryError.tooComplex(Path.maxBooleanVertices)) {
-            try Path(polyline: points, closed: false).outlined(width: 1e7, join: .round, cap: .round, miterLimit: 4,
-                                                               tolerance: 0.01)
+            try path.strokeLoops(width: 1e7, join: .round, cap: .round, miterLimit: 4, tolerance: 0.01)
+        }
+        #expect(throws: GeometryError.tooComplex(Path.maxBooleanVertices)) {
+            try path.outlined(width: 1e7, join: .round, cap: .round, miterLimit: 4, tolerance: 0.01)
         }
     }
 
