@@ -3,7 +3,7 @@
 Issue: #435 · Packet: docs/blueprints/core/features/fill-tools.md
 Run: act-1a157fd0281-warg · Session: 2df03724-340d-5741-940b-d32d0ef62e2a · Resumed: 2026-10-20T06:25Z
 Stage: Anatomy round 4 fixes in flight (r4-flood, r4-grad)
-Base: fa40b3427c6950e982d58c55d769f2dc5f7f1923
+Base: e41c2c9cf828f16e7200b38625166b8f10ee002e
 Next: merge r4 fixes, then FT-8 feature-done; leftovers become gap issues
 
 ## Tasks
