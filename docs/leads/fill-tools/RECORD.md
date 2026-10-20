@@ -35,6 +35,7 @@ Next: run mutate FT plans, then critic panel round 4
 | 3 | 2436c3a | PASS | 21/21 | none yet (39238594196 on 8613770 queued) | clarity contract design robustness tests | 9 (4 major, 5 minor), 1 refuted | r3-mem r3-grad r3-range | no |
 
 ## Decisions
+- Round-3 fix batches (r3-mem, r3-grad, r3-range) and their finding details were lost in a container restart before they pushed; they fold into round 4 (the last): scratch-memory bound with resident peak, and one perf fix each for flood, colour range and gradient.
 - Line lead over text-engine #437, retouch-heal #436, fill-tools #435: one wave plan; tasks share a wave only with disjoint files.
 - Cross-feature waves (revised): W1 TE-1 FT-0 FT-2 RH-0 RH-2; W2 TE-2 FT-1 RH-1; W3 TE-3 TE-4 TE-5 FT-3 FT-4 FT-5 RH-3 RH-5 RH-6; W4 TE-7 FT-6 RH-4; W5 FT-7 RH-7; W6 FT-8 RH-8.
 - Rule 18: fill-tools and retouch-heal have no stubs on dev, so their disabled checks (FT-1, RH-1) could not compile. Added FT-0 and RH-0 "declare the stubs" (signatures verbatim from the Contract slice, bodies throw RasterError.invalid) to wave 1; checks move to wave 2.
