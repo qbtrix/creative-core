@@ -56,3 +56,4 @@ Next: #745 merges and dispatches dev CI; Slice-Done PG-shape and PG-z on that ru
 - P6 on handScribble (128,064 long, 51,159 points), release x3: nearest 0.51-0.61 ms (2), trim 1.70-2.26 ms (5), dash 4.32-5.07 ms (5, thin: one run 0.07 over under load), union 20.6-23.4 ms (50). Dash at ~2.5x trim is a round-3 look; Mac finish confirms the margin.
 - P6b #745 merged 23:47 as 47c283f (feature-done). dev CI run 39343832741 on 47c283f: Linux, Mutation, Mutation anchors, Fast lane tests green; macOS queued. PG-shape and PG-z Slice-Done wait on it.
 - dev CI https://github.com/qbtrix/creative-core/actions/runs/39343832741 green on 47c283f (macOS too): Belt-Slice-Done PG-shape and PG-z posted on #430. Every path-geometry slice is merged-done. Contact sheet follows Anatomy round 3 on dev after masks-mattes' M7b.
+- Anatomy round 3 started on dev 9714ff33 (masks-mattes' last PR merged), covering both features.
