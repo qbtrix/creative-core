@@ -2,9 +2,9 @@
 
 Issue: #436 · Packet: docs/blueprints/core/features/retouch-heal.md
 Run: act-1a157fd0281-warg · Session: 2df03724-340d-5741-940b-d32d0ef62e2a · Resumed: 2026-10-20T06:25Z
-Stage: RH-8 merged; dev CI 39406154571 running
+Stage: done: all slices merged-done, contact sheet posted (Mac finisher wanted for RH-z budget)
 Base: 0b2cb33e9e6482a20c981aaa74e89fd7004c78a2
-Next: Linux green on 39406154571, then Belt-Slice-Done RH-z, Mac-Finish-Wanted RH-z, contact sheet
+Next: Mac finisher verifies RH-z heal dab budget (#770)
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -25,7 +25,7 @@ Next: Linux green on 39406154571, then Belt-Slice-Done RH-z, Mac-Finish-Wanted R
 | RH-a | RH-0, RH-1, RH-2 | engine-contracts:EC-a | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39183955889 | – |
 | RH-heal | RH-3, RH-4 | RH-a | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39190181936 | – |
 | RH-dab | RH-5, RH-6 | RH-a | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39188534008 | – |
-| RH-z | RH-7, RH-8 | RH-heal, RH-dab | open |  | wanted |
+| RH-z | RH-7, RH-8 | RH-heal, RH-dab | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39406154571 | wanted (heal dab budget, #770) |
 
 ## Rounds
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
