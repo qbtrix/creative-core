@@ -70,3 +70,4 @@ utc	stage	event	ref	note
 2026-10-20T02:36:19Z	round-3	fix batch r3: 3 fixers gating (scripts/ci, mutate); no PR yet
 2026-10-20T02:56:43Z	round-3	fix batch r3: r3-pg in mutate; r3-mm-model and r3-mm-export in scripts/ci; no PR yet
 2026-10-20T03:12:40Z	round-4	r3 fixes merged (#749 #750 #751); round 4 gate + mutate on 672d6b8c
+2026-10-20T03:15:54Z	round-4	gate (scripts/ci) running on 672d6b8c; mutate and panel next
