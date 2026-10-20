@@ -51,8 +51,9 @@ struct LottieImportTests {
 
     func file(_ top: String = "\"fr\":30,\"ip\":0,\"op\":10", layers: String = "") -> Data { Data("{\(top),\"w\":100,\"h\":100,\"layers\":[\(layers)]}".utf8) }
 
-    /// Each vertex is stored as v - a, so the layer places it at R·S·(v - a) + p; keyframed anchors are counted.
-    @Test func anchorFolded() throws {
+    /// Each vertex is stored as written and the anchor becomes the layer's, so the layer places it at
+    /// R·S·(v - a) + p; keyframed anchors are counted.
+    @Test func anchorKept() throws {
         let line = "{\"ty\":\"gr\",\"it\":[{\"ty\":\"sh\",\"ks\":{\"a\":0,\"k\":{\"v\":[[30,40],[50,40]],\"i\":[[0,0],[0,0]],\"o\":[[0,0],[0,0]]}}},"
             + "{\"ty\":\"fl\",\"c\":{\"a\":0,\"k\":[1,0,0,1]}}]}"
         let ks = "{\"a\":{\"a\":1,\"k\":[{\"t\":0,\"s\":[10,20]}]},\"p\":{\"a\":0,\"k\":[100,50]},\"s\":{\"a\":0,\"k\":[200,50]},\"r\":{\"a\":0,\"k\":90}}"
@@ -60,7 +61,8 @@ struct LottieImportTests {
         let layer = try #require(document.scenes.first?.layers.first)
         guard case .move(let v)? = layer.shapes.first?.path?.elements.first else { Issue.record("no move"); return }
         let placed = try layer.placement(at: 0).0.matrix.apply(v)
-        #expect(v == Point(x: 20, y: 20) && abs(placed.x - 90) < 1e-9 && abs(placed.y - 90) < 1e-9, "\(v) \(placed)")
+        #expect(v == Point(x: 30, y: 40) && abs(placed.x - 90) < 1e-9 && abs(placed.y - 90) < 1e-9, "\(v) \(placed)")
+        #expect(layer.placement(at: 0).transform.anchorX == 10 && layer.placement(at: 0).transform.anchorY == 20)
         #expect(report.skipped == ["anchor animation (1)"])
     }
 

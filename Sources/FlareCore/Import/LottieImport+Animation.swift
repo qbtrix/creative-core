@@ -153,6 +153,25 @@ extension LottieReader {
     }
     /// Sets each `tt` layer's matte from the `tp` layer by `ind`, else the one above;
     /// `built` maps a file index to its index in `out`.
+    /// Sets each layer's parent from its `parent` (another layer's `ind`). A parent that wasn't brought in, or a
+    /// link that would close a cycle, is skipped and counted as "parent".
+    mutating func linkParents(_ out: inout [Layer], _ layers: [LottieJSON], built: [Int: Int]) {
+        for (index, json) in layers.enumerated() {
+            guard let p = json["parent"], let child = built[index], out.indices.contains(child) else { continue }
+            guard let from = layers.firstIndex(where: { $0["ind"] == p }), from != index, let parent = built[from],
+                  out.indices.contains(parent) else { skip("parent"); continue }
+            // Walk up from the would-be parent; reaching the child means a cycle. Bounded by the list's length.
+            var next: String? = out[parent].id, hops = 0, cycle = false
+            while let id = next, hops <= out.count {
+                if id == out[child].id { cycle = true; break }
+                next = out.first { $0.id == id }?.parentID
+                hops += 1
+            }
+            if cycle { skip("parent"); continue }
+            out[child].parentID = out[parent].id
+        }
+    }
+
     mutating func linkMattes(_ out: inout [Layer], _ layers: [LottieJSON], built: [Int: Int]) {
         let kinds: [Double: MatteKind] = [1: .alpha, 2: .alphaInverted, 3: .luma, 4: .lumaInverted]
         for (index, json) in layers.enumerated() {

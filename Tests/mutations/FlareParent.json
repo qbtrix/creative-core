@@ -26,12 +26,5 @@
     "anchor": "try matrix(layer.parentMatrix * layer.transform.matrix)",
     "replacement": "try matrix(layer.transform.matrix)",
     "filter": "ParentTests"
-  },
-  {
-    "note": "Lottie writes a parented layer as if it had no parent",
-    "file": "Sources/FlareCore/Export/LottieExporter.swift",
-    "anchor": "guard layer.parentID == nil else { throw LottieExportError.unsupported(\"parented layer\") }",
-    "replacement": "",
-    "filter": "ParentTests"
   }
 ]
