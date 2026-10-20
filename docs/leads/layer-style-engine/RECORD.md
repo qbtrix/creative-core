@@ -38,7 +38,8 @@ Next: LE-a builder (branch les/le-a) opens its PR; then LE-cpu builder stacks on
 - Rule 20: one PR per slice. LE-a = LE-1 + LE-2 in one PR (tests-first commit, then seam).
 - Slice PRs stack: the next slice starts on a branch stacked on the open one; never wait on CI.
 - Builders are worktree subagents, one per slice (lead.md stage 3 fallback), so a builder can be messaged back on a lane ejection. Branches `les/<slice>`: `lead/layer-style-engine/<task>` collides with the lead ref.
-- Waves follow slices: wave 1 LE-a; 2 LE-cpu (LE-3..5); 3 LE-psd and LE-metal in parallel (both wait on LE-cpu, disjoint files except none); 4 LE-z.
+- Size cap beats rule 20's one-PR-per-slice: a slice over 400 lines ships as stacked PRs with the same `Slice:` line. LE-a: 1 PR. LE-cpu: LE-3, LE-4, LE-5 (3 PRs). LE-psd: LE-6, LE-7. LE-metal: LE-8, LE-9. LE-z: LE-10 + LE-11 folded (LE-11 < 50 lines), labelled feature-done.
+- Rule 18 parallelism: once LE-a's PR is open, two chains stack on it: CPU (LE-3 -> LE-4 -> LE-5 -> LE-8 -> LE-9) and PSD (LE-6 -> LE-7). LE-6 maps lfx2 onto the contract's types only, so it doesn't need LE-4's bodies (packet lists LE-4 as a dependency for the op shapes, which LE-a fixes). LE-6 and LE-7 both own PSDRead.swift, so they're stacked, not parallel.
 
 ## Open
 - Container had no Swift toolchain; ran scripts/cloud-setup.sh at start.
