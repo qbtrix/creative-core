@@ -35,21 +35,27 @@ extension PSD {
         let header = try PSDHeader(&reader)
         try reader.skip(try reader.length32()) // colour mode data
         var resources = try reader.reader(try reader.length32())
+        let light = (try? PSDGlobalLight(resources: resources)) ?? PSDGlobalLight()
         let profile = try profile(in: &resources)
         var section = try reader.reader(try reader.length32())
-        let (nodes, mergedAlpha) = try readLayers(&section, header)
+        var notes: [String] = []
+        let (nodes, mergedAlpha) = try readLayers(&section, header, light: light, notes: &notes)
         let keep = min(header.channels, header.colorChannels + (mergedAlpha ? 1 : 0))
         let planes = try readPlanes(&reader, count: header.channels, keep: keep,
                                     width: header.width * header.depth.bytes, height: header.height)
         let alpha = planes.count > header.colorChannels ? planes[header.colorChannels] : nil
         let composite = try buffer(width: header.width, height: header.height,
                                    color: Array(planes.prefix(header.colorChannels)), alpha: alpha, depth: header.depth)
-        return LayeredImage(width: header.width, height: header.height, nodes: nodes, composite: composite,
-                            bitsPerChannel: header.depth.rawValue, profile: profile)
+        var image = LayeredImage(width: header.width, height: header.height, nodes: nodes, composite: composite,
+                                 bitsPerChannel: header.depth.rawValue, profile: profile)
+        image.notes = notes
+        return image
     }
 
     /// The layer tree, and whether the merged image's first alpha channel is its transparency.
-    private static func readLayers(_ section: inout ByteReader, _ header: PSDHeader) throws -> ([LayerNode], Bool) {
+    /// Effects the layers' styles cannot hold add to `notes`.
+    private static func readLayers(_ section: inout ByteReader, _ header: PSDHeader, light: PSDGlobalLight,
+                                   notes: inout [String]) throws -> ([LayerNode], Bool) {
         guard !section.isAtEnd else { return ([], false) }
         var info = try section.reader(try section.length32())
         guard !info.isAtEnd else { return ([], false) }
@@ -90,9 +96,16 @@ extension PSD {
                 node = .group(LayerGroup(name: record.name, children: current, opacity: record.opacityFraction,
                                          blendMode: key == "pass" ? nil : blendMode(key),
                                          isHidden: record.isHidden, isOpen: type == 1))
+                if record.effects != nil || record.oldEffects { notes.append("\(record.name): layer effects (not kept)") }
                 current = parent
             } else {
-                node = .pixels(try pixelLayer(record, planes, colorChannels: header.colorChannels, depth: header.depth))
+                var layer = try pixelLayer(record, planes, colorChannels: header.colorChannels, depth: header.depth)
+                let (style, styleNotes) = PSDEffects.style(record.effects, fill: record.fill, oldBlock: record.oldEffects,
+                                                           layer: record.name, width: record.rect.width,
+                                                           height: record.rect.height, light: light)
+                layer.style = style
+                notes += styleNotes
+                node = .pixels(layer)
             }
             current.append(node)
         }
@@ -276,6 +289,8 @@ private struct PSDLayerRecord {
     var name: String
     /// The `lsct` section type (1 open folder, 2 closed folder, 3 bounding divider) and its blend key.
     var section: UInt32?, sectionKey: String?
+    /// The `lfx2` effects block, the `iOpa` fill opacity byte, and whether an older `lrFX` block is present.
+    var effects: ByteReader?, fill: UInt8 = 255, oldEffects = false
 
     var opacityFraction: Float { Float(opacity) / 255 }
     var isHidden: Bool { flags & 0x02 != 0 }
@@ -306,6 +321,12 @@ private struct PSDLayerRecord {
             } else if key == "lsct" {
                 section = try block.u32()
                 if block.remaining >= 8 { sectionKey = try Self.key(&block) }
+            } else if key == "lfx2" {
+                effects = block
+            } else if key == "iOpa" {
+                fill = try block.u8()
+            } else if key == "lrFX" {
+                oldEffects = true
             }
         }
     }
