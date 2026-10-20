@@ -21,7 +21,8 @@
 // Every W1 method routes by its own family, never an old one: the masked
 // composite by `.maskedComposite` (not by its blend mode), `transformed`,
 // `flipped` and the composite through a matrix by `.affine`, `applying` by
-// `.effect`, and `adjusted` by `adjustment.family` (`.adjust` or `.color`).
+// `.effect`, `styled` by `.style`, and `adjusted` by `adjustment.family`
+// (`.adjust` or `.color`).
 // The two W1 composites share `composite`'s backdrop path. The batched
 // composite runs on one backend: the CPU when any step's family falls back.
 import CoreColor
@@ -203,6 +204,10 @@ public struct RenderDispatcher: Sendable {
     /// A layer effect on the backend routed for `.effect`.
     public func applying(_ s: RenderSurface, _ effect: LayerEffect) throws -> RenderSurface {
         try run(.effect, s) { try $0.applying($1, effect) }
+    }
+    /// A layer style on the backend routed for `.style`.
+    public func styled(_ s: RenderSurface, _ stack: LayerStyleStack) throws -> RenderSurface {
+        try run(.style, s) { try $0.styled($1, stack) }
     }
 
     /// Routes `op`, then runs `body` on `s` and `b` there, each uploaded if

@@ -34,4 +34,9 @@ extension RenderBackend {
     public func applying(_ s: RenderSurface, _ effect: LayerEffect) throws -> RenderSurface {
         throw RenderError.unsupported(.effect)
     }
+
+    /// Not on this backend: throws `unsupported(.style)`.
+    public func styled(_ s: RenderSurface, _ stack: LayerStyleStack) throws -> RenderSurface {
+        throw RenderError.unsupported(.style)
+    }
 }

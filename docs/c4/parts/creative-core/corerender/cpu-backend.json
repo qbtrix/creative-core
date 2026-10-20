@@ -1,7 +1,7 @@
 {
   "id": "cpu-backend",
   "name": "CPU Backend",
-  "description": "CPUBackend, the CPU RenderBackend and pixel reference (Sources/CoreRender/CPU), supporting every op family: its surfaces are PixelBuffers held in the shared SurfaceStore; surface, read and release go through the SurfaceStore; display and composite (every blend mode, gated by its family) are the CoreRaster calls themselves, composite blending the stored backdrop in place under the store's lock so composites onto one surface apply one at a time, and crop, rotate, resample, blur, unsharp, each tone adjustment and masked clone (CPUBackend+Ops) each call the CoreRaster method they name and return a new surface. CoreRaster errors map to RenderError.raster with the same message. Each W1 family answers from its own file, CPUBackend+MaskedComposite, +Affine, +Effect and +Color (the color tone cases, reached from adjusted's switch). +Color is built: each color case calls the CoreRaster op it names (vibrance to invert, the LUT applied once) with no color math of its own. +Affine is filled: transformed and flipped call the CoreRaster ops into a new surface, and composite through a matrix runs CoreRaster's through-composite on the stored backdrop in place under the store's lock, as composite does. +Effect is filled: every LayerEffect is CoreRaster's applying(_:) on the surface's pixels, returned as a new surface. +MaskedComposite is filled: the masked composite runs CoreRaster's masked composite on the stored backdrop in place under the store's lock, as composite does. Every W1 family is now built.",
+  "description": "CPUBackend, the CPU RenderBackend and pixel reference (Sources/CoreRender/CPU), supporting every op family: its surfaces are PixelBuffers held in the shared SurfaceStore; surface, read and release go through the SurfaceStore; display and composite (every blend mode, gated by its family) are the CoreRaster calls themselves, composite blending the stored backdrop in place under the store's lock so composites onto one surface apply one at a time, and crop, rotate, resample, blur, unsharp, each tone adjustment and masked clone (CPUBackend+Ops) each call the CoreRaster method they name and return a new surface. CoreRaster errors map to RenderError.raster with the same message. Each W1 family answers from its own file, CPUBackend+MaskedComposite, +Affine, +Effect and +Color (the color tone cases, reached from adjusted's switch). +Color is built: each color case calls the CoreRaster op it names (vibrance to invert, the LUT applied once) with no color math of its own. +Affine is filled: transformed and flipped call the CoreRaster ops into a new surface, and composite through a matrix runs CoreRaster's through-composite on the stored backdrop in place under the store's lock, as composite does. +Effect is filled: every LayerEffect is CoreRaster's applying(_:) on the surface's pixels, returned as a new surface. +MaskedComposite is filled: the masked composite runs CoreRaster's masked composite on the stored backdrop in place under the store's lock, as composite does. +Style (layer styles, the .style family) is a stub until layer-style-engine LE-5: it checks the surface, then throws unsupported(.style).",
   "technology": "Swift 6, Foundation",
   "paths": [
     "Sources/CoreRender/CPU/CPUBackend.swift",
@@ -9,7 +9,8 @@
     "Sources/CoreRender/CPU/CPUBackend+MaskedComposite.swift",
     "Sources/CoreRender/CPU/CPUBackend+Affine.swift",
     "Sources/CoreRender/CPU/CPUBackend+Effect.swift",
-    "Sources/CoreRender/CPU/CPUBackend+Color.swift"
+    "Sources/CoreRender/CPU/CPUBackend+Color.swift",
+    "Sources/CoreRender/CPU/CPUBackend+Style.swift"
   ],
   "order": 15
 }

@@ -106,4 +106,7 @@ public protocol RenderBackend: Sendable {
     /// `s` with `effect` applied, as a new surface of the same size. Gated
     /// by `.effect`.
     func applying(_ s: RenderSurface, _ effect: LayerEffect) throws -> RenderSurface
+    /// `s` drawn with the layer style `stack`, as a new surface of the same
+    /// size. Gated by `.style`.
+    func styled(_ s: RenderSurface, _ stack: LayerStyleStack) throws -> RenderSurface
 }
