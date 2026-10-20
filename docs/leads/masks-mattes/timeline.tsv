@@ -84,3 +84,4 @@ utc	stage	event	ref	note
 2026-10-20T04:13:28Z	round-4	critic panel wf_d9fad7c0-bd3 still running on 672d6b8c
 2026-10-20T04:14:41Z	round-4	panel: 10 confirmed (3 major); final feature-done fix batch wf_efd98b53-ebf launched
 2026-10-20T04:32:59Z	round-4	final fixers (wf_efd98b53-ebf) running the harness
+2026-10-20T04:35:54Z	round-4	#754 merged (mm feature-done); #755 open clean (pg feature-done); all findings fixed
