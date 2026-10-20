@@ -1,0 +1,4 @@
+[
+  {"note": "descriptor nesting is not limited by maxDepth, caught by PSDDescriptorTests.nestingAndCountsStopAtTheirLimits", "file": "Sources/CoreRaster/Codecs/PSDDescriptor.swift", "anchor": "guard depth < Self.maxDepth else", "replacement": "guard depth < Self.maxDepth * 4 else", "filter": "PSDDescriptorTests"},
+  {"note": "a descriptor item count is not checked against maxItems, caught by PSDDescriptorTests.nestingAndCountsStopAtTheirLimits", "file": "Sources/CoreRaster/Codecs/PSDDescriptor.swift", "anchor": "guard count <= maxItems else", "replacement": "guard count <= maxItems * 4 else", "filter": "PSDDescriptorTests"}
+]
