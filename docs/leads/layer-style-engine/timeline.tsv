@@ -5,3 +5,4 @@ utc	stage	event	ref	note
 2026-10-20T22:15Z	2	stage-end	-	waves = slices
 2026-10-20T22:15Z	3	stage-start	les/le-a	LE-a builder started
 2026-10-20T22:20Z	3	decision	LE-a	split into LE-a1 (raster) + LE-a2 (render seam), size cap
+2026-10-20T22:25Z	3	gate-base	3ded188	FAIL: ThumbnailStoreRecovery 1s wall-clock under load; gates serialized by flock

@@ -46,3 +46,4 @@ Next: LE-a1 builder (les/le-a1) opens its PR; then LE-a2, LE-3 and LE-6 stack on
 
 ## Open
 - Container had no Swift toolchain; ran scripts/cloud-setup.sh at start.
+- Base gate on 3ded188 (2026-10-20T22:25Z): CI: FAIL only on wall-clock `ThumbnailStoreRecoveryTests.fuzzedIndexThrowsOrRecovers` (1.5-2.0 s vs 1 s) while a builder compiled (load 10.8 on 4 cores). No open dev-red. Treated as contention: builders gate under `flock /tmp/les-gate.lock scripts/ci`; recheck on a quiet machine before calling dev red.
