@@ -4,7 +4,8 @@
 // straight color as `CPUBackend.adjusted` applies them one after another. Exposure, levels, curves, white
 // balance, contrast and highlights/shadows are their `AdjustTable` (gains, or a table and its two octave
 // tables, concatenated into `tables` at the step's `offset`); hue/saturation is math, standard HSL on the
-// clamped sRGB-encoded values as CoreRaster's `hueSaturation` does it, in Float. A `matrix` operation is a
+// clamped sRGB-encoded values as CoreRaster's `hueSaturation` does it, in Float, and so is vibrance (CoreRaster's
+// `vibrance`: chroma scaled about Rec. 709 luma on the linear values, halved for skin hues, capped). A `matrix` operation is a
 // 3x3 matrix on the straight linear color, negatives clamped to 0, then a lightness mix toward white (positive)
 // or black (negative): an app's own colour matrix (Photo's Hue/Saturation), its nine entries and lightness in
 // `tables` at the step's offset. Any other adjustment throws `RenderError.unsupported(.color)`. Parameters are
@@ -29,11 +30,12 @@ public struct ToneProgram: Equatable, Sendable {
         case matrix(rows: [Float], lightness: Float)
     }
 
-    /// One step. `kind` 0 to 2 are `AdjustTable.Kind`; 3 is hue/saturation, 4 a matrix.
+    /// One step. `kind` 0 to 2 are `AdjustTable.Kind`; 3 is hue/saturation, 4 a matrix, 5 vibrance.
     public struct Step: Equatable, Sendable {
         /// `AdjustTable.Kind.rawValue`, or `hueSaturation`.
         public let kind: UInt32
-        /// The gains (kind 0), or hue in degrees, saturation and lightness in -100...100 (kind 3).
+        /// The gains (kind 0), hue in degrees, saturation and lightness in -100...100 (kind 3), or the
+        /// vibrance amount in -100...100 then two zeros (kind 5).
         public let values: SIMD3<Float>
         /// The table's intervals over 0...1 (0 without a table).
         public let n: UInt32
@@ -47,11 +49,13 @@ public struct ToneProgram: Equatable, Sendable {
     public static let hueSaturation: UInt32 = 3
     /// `Step.kind` of a matrix operation.
     public static let matrix: UInt32 = 4
+    /// `Step.kind` of vibrance.
+    public static let vibrance: UInt32 = 5
 
     public let steps: [Step]
     /// Every step's table, then its octave tables below and above, back to back.
     public let tables: [Float]
-    /// Each step's AdjustTable (nil for hue/saturation and a matrix), for `map`.
+    /// Each step's AdjustTable (nil for hue/saturation, vibrance and a matrix), for `map`.
     private let adjustTables: [AdjustTable?]
 
     /// The program for `adjustments`, in order. Throws as `init(operations:)` does.
@@ -77,11 +81,16 @@ public struct ToneProgram: Equatable, Sendable {
                 adjustTables.append(nil)
                 continue
             }
-            if case .hueSaturation(let hue, let saturation, let lightness) = adjustment {
+            let math: (kind: UInt32, values: SIMD3<Float>)? = switch adjustment {
+            case .hueSaturation(let hue, let saturation, let lightness): (Self.hueSaturation, SIMD3(hue, saturation, lightness))
+            case .vibrance(let amount): (Self.vibrance, SIMD3(amount, 0, 0))
+            default: nil
+            }
+            if let math {
                 // The CPU checks the ranges and throws its own error.
                 let cpu = CPUBackend()
                 _ = try cpu.adjusted(cpu.surface(RenderError.mapping { try PixelBuffer(width: 1, height: 1) }), adjustment)
-                steps.append(Step(kind: Self.hueSaturation, values: SIMD3(hue, saturation, lightness), n: 0, outer: 0, offset: 0))
+                steps.append(Step(kind: math.kind, values: math.values, n: 0, outer: 0, offset: 0))
                 adjustTables.append(nil)
                 continue
             }
@@ -109,7 +118,7 @@ public struct ToneProgram: Equatable, Sendable {
                 continue
             }
             guard let table else {
-                c = Self.shifted(c, by: step.values)
+                c = step.kind == Self.vibrance ? Self.vibrant(c, amount: step.values.x) : Self.shifted(c, by: step.values)
                 continue
             }
             switch table.kind {
@@ -137,24 +146,15 @@ public struct ToneProgram: Equatable, Sendable {
     /// The straight color `c` shifted by hue (degrees), saturation and lightness (percent) as standard HSL on
     /// its sRGB-encoded values clamped to 0...1, then decoded: CoreRaster's `hueSaturation`, in Float.
     static func shifted(_ c: SIMD3<Float>, by shift: SIMD3<Float>) -> SIMD3<Float> {
-        func encode(_ v: Float) -> Float {
-            let a = abs(v)
-            let e = a <= 0.0031308 ? a * 12.92 : 1.055 * powf(a, 1 / 2.4) - 0.055
-            return min(max(v < 0 ? -e : e, 0), 1)
-        }
         func decode(_ v: Float) -> Float {
             let a = abs(v)
             let l = a <= 0.04045 ? a / 12.92 : powf((a + 0.055) / 1.055, 2.4)
             return v < 0 ? -l : l
         }
-        let e = SIMD3(encode(c.x), encode(c.y), encode(c.z))
+        let e = encoded(c)
         let hi = e.max(), lo = e.min(), d = hi - lo
-        var l = (hi + lo) / 2, h: Float = 0, s: Float = 0
-        if d > 0 {
-            let sector = hi == e.x ? (e.y - e.z) / d : hi == e.y ? (e.z - e.x) / d + 2 : (e.x - e.y) / d + 4
-            h = fmodf(sector * 60 + 360, 360)
-            s = d / (1 - abs(2 * l - 1))
-        }
+        var l = (hi + lo) / 2, h = hue(e), s: Float = 0
+        if d > 0 { s = d / (1 - abs(2 * l - 1)) }
         h = fmodf(h + shift.x + 360, 360)
         s = min(1, max(0, s * (1 + shift.y / 100)))
         l = shift.z >= 0 ? l + (1 - l) * shift.z / 100 : l * (1 + shift.z / 100)
@@ -170,5 +170,44 @@ public struct ToneProgram: Equatable, Sendable {
         }
         let v = rgb + SIMD3(repeating: l - chroma / 2)
         return SIMD3(decode(v.x), decode(v.y), decode(v.z))
+    }
+
+    /// The straight linear color `c` through vibrance `amount` (-100...100): CoreRaster's `vibrance`, in Float.
+    /// A positive amount scales chroma about luma by 1 + amount/100 x (1 - s), s the HSL saturation of the linear
+    /// values, halved for an encoded hue in 15...50 degrees (skin), and capped so no channel leaves 0...1 (or its
+    /// own range when already outside); a negative amount scales every chroma by 1 + amount/100.
+    static func vibrant(_ c: SIMD3<Float>, amount: Float) -> SIMD3<Float> {
+        let w = AdjustTable.lumaWeights, a = amount / 100
+        let y = w.x * c.x + w.y * c.y + w.z * c.z
+        let lo = c.min(), hi = c.max()
+        var scale = 1 + a
+        if a > 0 {
+            let skin: Float = (15...50).contains(hue(encoded(c))) ? 0.5 : 1
+            let s = hi > lo ? min(1, (hi - lo) / max(1 - abs(hi + lo - 1), .ulpOfOne)) : 0
+            scale = 1 + a * (1 - s) * skin
+            var cap = scale
+            if lo < y { cap = min(cap, y / (y - lo)) }
+            if hi > y { cap = min(cap, (max(1, hi) - y) / (hi - y)) }
+            scale = max(1, cap)
+        }
+        return SIMD3(repeating: y) + (c - SIMD3(repeating: y)) * scale
+    }
+
+    /// The straight linear color's sRGB-encoded values, each clamped to 0...1.
+    static func encoded(_ c: SIMD3<Float>) -> SIMD3<Float> {
+        func encode(_ v: Float) -> Float {
+            let a = abs(v)
+            let e = a <= 0.0031308 ? a * 12.92 : 1.055 * powf(a, 1 / 2.4) - 0.055
+            return min(max(v < 0 ? -e : e, 0), 1)
+        }
+        return SIMD3(encode(c.x), encode(c.y), encode(c.z))
+    }
+
+    /// The standard HSL hue in degrees 0..<360 of encoded values `e` (0 for a grey).
+    static func hue(_ e: SIMD3<Float>) -> Float {
+        let hi = e.max(), lo = e.min(), d = hi - lo
+        guard d > 0 else { return 0 }
+        let sector = hi == e.x ? (e.y - e.z) / d : hi == e.y ? (e.z - e.x) / d + 2 : (e.x - e.y) / d + 4
+        return fmodf(sector * 60 + 360, 360)
     }
 }
