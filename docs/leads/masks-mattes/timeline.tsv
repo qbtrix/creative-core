@@ -64,3 +64,5 @@ utc	stage	event	ref	note
 2026-10-20T00:02:08Z	M7a2	rebased on b9f53dc as 3306eb6; gating
 2026-10-20T01:03:23Z	M7a2	opened #747 (3306eb6), fast-lane
 2026-10-20T01:03:23Z	MM-raster	Slice-Done + Mac-Finish-Wanted on run 39343832741
+2026-10-20T01:11:53Z	M7a2	#747 merged as 96e6718
+2026-10-20T01:11:53Z	M7b	opened #748, feature-done
