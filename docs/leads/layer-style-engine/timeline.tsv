@@ -1,0 +1,4 @@
+utc	stage	event	ref	note
+2026-10-20T22:30Z	0	stage-start	3ded188	setup, base verified
+2026-10-20T22:35Z	1	stage-end	#779	packet read
+2026-10-20T22:36Z	2	stage-start	-	plan slices
