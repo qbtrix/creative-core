@@ -251,8 +251,8 @@ public enum LayerEffect: Hashable, Sendable {
 }
 
 /// Where a stroke effect sits relative to the layer's edge, the boundary of
-/// its alpha >= 0.5 set.
-public enum StrokePosition: Hashable, Sendable {
+/// its alpha >= 0.5 set. Coded as its case name (`"outside"`, `"inside"`, `"center"`).
+public enum StrokePosition: String, CaseIterable, Codable, Hashable, Sendable {
     /// Entirely off the shape (alpha < 0.5), `width` wide, painted under the layer.
     case outside
     /// Entirely on the shape, `width` wide, painted over the layer and clipped to its alpha.

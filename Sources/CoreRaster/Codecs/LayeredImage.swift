@@ -36,6 +36,9 @@ public struct LayeredImage: Equatable, Sendable {
     /// `PixelBuffer.converted(from: profile, to:)`, which undoes that decode,
     /// not with `ProfileTransform.applyLinear` directly.
     public var profile: ColorProfile?
+    /// What a reader read but could not keep, in layer order, one line each as
+    /// "<layer>: <what> (not kept)"; empty when nothing was dropped.
+    public var notes: [String] = []
 
     public init(width: Int, height: Int, nodes: [LayerNode] = [],
                 composite: PixelBuffer? = nil, bitsPerChannel: Int = 8, profile: ColorProfile? = nil) {
@@ -95,6 +98,8 @@ public struct PixelLayer: Equatable, Sendable {
     public var clipsToBelow: Bool
     /// The layer's mask, nil when it has none.
     public var mask: PlacedMask?
+    /// The layer's style (shadows, glows, strokes, overlays, bevel), nil when the file has none.
+    public var style: LayerStyleStack? = nil
 
     public init(name: String, pixels: PixelBuffer, x: Int = 0, y: Int = 0,
                 opacity: Float = 1, blendMode: BlendMode = .normal, isHidden: Bool = false,
