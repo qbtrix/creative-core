@@ -77,7 +77,7 @@ import Foundation
             let (back, _) = try SVGImport.scene(from: Data(svg.utf8), name: name)
             let list = scene.renderList(at: svgFrame, symbols: document.symbols)
             var expected: [(id: String, shapes: [Shape])] = []
-            for case .layer(let layer) in SVGExporter.sampled(list.nodes, layers: scene.layers, frame: svgFrame, symbols: document.symbols) {
+            for case .layer(let layer) in list.nodes {
                 let shapes = try drawn(layer.children, ctm: try rounded(layer.transform.matrix), opacity: 1 * (try rounded(layer.opacity)))
                 if !shapes.isEmpty { expected.append((layer.id, shapes)) }
             }
@@ -207,7 +207,7 @@ import Foundation
     /// Shape `i` of `layer` as it draws at `frame`, its path raised to cubics as
     /// Lottie stores it (the exporter's own two-thirds rule).
     static func styled(_ shape: Shape, _ i: Int, _ layer: Layer, _ frame: Double) -> Shape {
-        var out = SVGExporter.styled(shape, index: i, of: layer, at: frame)
+        var out = layer.sampledShape(i, at: frame)
         var last = Point(x: 0, y: 0), start = last
         out.path = Path(elements: out.outline.elements.map { element in
             defer {

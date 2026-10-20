@@ -1,6 +1,9 @@
 // RenderList.swift: what one frame of a scene or symbol draws, built from one
-// walk of its layers, so the stage, hit testing, bounds and the SVG exporter
-// agree. `nodes` keeps the layer and instance tree (one node per visible
+// walk of its layers, so the stage, hit testing, bounds, PNG frames and the SVG
+// exporter agree. Every shape is drawn as `Layer.sampledShape` gives it at the
+// frame (an instance's at its symbol frame): fill and stroke colour, stroke
+// width, trim and path keys included, in both `nodes` and `items`. `nodes`
+// keeps the layer and instance tree (one node per visible
 // layer, empty ones included); `items` are its leaves in paint order. Paint
 // order is the SVG exporter's: layers in order; in a layer its shapes, then
 // texts, then instances, each instance's symbol layers recursively.
@@ -27,7 +30,8 @@
 //   2^40 items or billions of points; a symbol already being walked still
 //   lists its own leaves
 // - each symbol shape's outline is built once per walk and shared by every
-//   item that expands it
+//   item that expands it, except a shape with a shape track, whose outline
+//   depends on the frame
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -333,9 +337,12 @@ extension RenderList {
                 var children: [RenderNode] = []
                 let shared = cached?[li]
                 expanded += weight * (1 + 2 * (layer.shapes.count + layer.texts.count))
-                for (i, s) in layer.shapes.enumerated() {
+                for i in layer.shapes.indices {
+                    let s = layer.sampledShape(i, at: frame)
                     children.append(.shape(index: i, s))
-                    if let outline = shared?[i] {
+                    if let cachedOutline = shared?[i] {
+                        // A shape track changes the path with the frame, so its outline is never the shared one.
+                        let outline = layer.shapeTracks.contains { $0.shapeIndex == i } ? Outline(s) : cachedOutline
                         expanded += outline.points
                         add(item(outline.path, s.fill, s.stroke, shape: i, text: nil))
                     } else {

@@ -64,7 +64,7 @@ extension SVGExporter {
         if list.isTruncated { throw SVGExportError.sceneTooLarge }
         let inner = Scope(layers: [source], frame: scope.frame, symbols: scope.symbols, path: scope.path, writesIDs: false)
         var body: [String] = []
-        for node in sampled(list.nodes, layers: [source], frame: scope.frame, symbols: scope.symbols) {
+        for node in list.nodes {
             try emit(node, in: inner, into: &body, gradients: &ids, measure: measure)
         }
         var wrapper: String?
