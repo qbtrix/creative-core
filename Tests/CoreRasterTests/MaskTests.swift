@@ -72,6 +72,18 @@ private func within1Percent(_ area: Double, _ expected: Double) -> Bool {
     #expect(throws: RasterError.self) { try Mask.rectangle(width: 0, height: 8, x: 0, y: 0, w: 1, h: 1) }
 }
 
+/// A feather radius over twice the mask's larger side is refused in feather terms, not as a blur sigma.
+@Test func featherOverLimitNamesTheRadius() throws {
+    let mask = try Mask(width: 8, height: 8)
+    #expect(try mask.feathered(radius: 16).width == 8)
+    do {
+        _ = try mask.feathered(radius: 100)
+        Issue.record("radius 100 on an 8 x 8 mask did not throw")
+    } catch RasterError.invalid(let message) {
+        #expect(message == "feather radius 100.0: over 16, twice the mask's larger side")
+    }
+}
+
 @Test func combiningMasks() throws {
     let empty = try Mask(width: 200, height: 200)
     let circle = try Mask.ellipse(width: 200, height: 200, centerX: 90, centerY: 110, radiusX: 40, radiusY: 30)
