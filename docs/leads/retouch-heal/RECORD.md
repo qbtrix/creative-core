@@ -2,9 +2,9 @@
 
 Issue: #436 · Packet: docs/blueprints/core/features/retouch-heal.md
 Run: act-1a157fd0281-warg · Session: 2df03724-340d-5741-940b-d32d0ef62e2a · Resumed: 2026-10-20T06:25Z
-Stage: Stage: 4 round 4 (last): fixes in flight (r4-rh, wf_88c6af29-b3d)
-Base: cc27761484b9ed106af343ec3b813bbf86b3b797
-Next: Next: merge r4-rh, then RH-8 feature-done; leftovers become gap issues
+Stage: Stage: RH-8 feature-done PR #771 in the lane
+Base: 33664403f74e8c3d07ac3ec6c1f6c9d90453ffa4
+Next: Next: dev CI with #771 green Linux, then Belt-Slice-Done RH-z, Mac-Finish-Wanted RH-z, contact sheet
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -17,7 +17,7 @@ Next: Next: merge r4-rh, then RH-8 feature-done; leftovers become gap issues
 | RH-5 | W3 | `dodge`, `burn`, `sponge`; turns on `ToneDabTests` | `Sources/CoreRaster/Heal/ToneDabs.swift`, `Tests/CoreRasterTests/ToneDabTests.swift`, `Tests/mutations/CoreRaster.ToneDabs.json` | `ToneDabTests`: a midtone dodge lifts luma 0.5 and leaves luma 0.1 and 0.95 within 1/255; burn mirrors; sponge +1 raises chroma, −1 greys; alpha never changes; exposure 0 is identity | `CoreRaster.ToneDabs`: midtone weight `\ | #606 | merged (Mutate 2/2) |  | building |
 | RH-6 | W3 | `SmudgeState`; turns on `SmudgeTests` | `Sources/CoreRaster/Heal/Smudge.swift`, `Tests/CoreRasterTests/SmudgeTests.swift`, `Tests/mutations/CoreRaster.Smudge.json` | `SmudgeTests`: the first dab changes nothing; ten dabs along a line move a red edge's colour forward and its strength fades monotonically; strength 0 is identity | `CoreRaster.Smudge`: carried patch not replaced after a dab → `SmudgeTests.colourFades`; first dab paints → `.firstDabPicksUp` | #602 | merged (Mutate 2/2) |
 | RH-7 | W5 | KJ-RH walk; `RetouchBudgetTests` (release, `.serialized`) | `Tests/CoreRasterTests/RetouchWalkTests.swift`, `Tests/CoreRasterTests/RetouchBudgetTests.swift` | `RetouchWalkTests.walk`; `RetouchBudgetTests`: heal of a 200 px dab ≤ 12 ms; fill from surroundings of a 300 × 300 spot ≤ 400 ms; a tone dab of 200 px ≤ 1 ms (release, reported) | none | #616 | merged |
-| RH-8 | W6 | The packet's status line; `feature-done` | `docs/blueprints/core/features/retouch-heal.md` | status line says built | – |  | open |
+| RH-8 | W6 | The packet's status line; `feature-done` | `docs/blueprints/core/features/retouch-heal.md` | status line says built | – | #771 | open (feature-done) |
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -33,7 +33,7 @@ Next: Next: merge r4-rh, then RH-8 feature-done; leftovers become gap issues
 | 1 | 27f5e36 | PASS | see confirmed | | | gate CI: PASS, mutants 10/10 caught; panel wf_52be3b2f-289: 26 confirmed (1 blocker: heal 200 px dab budget ~390 ms vs 12 ms; 8 major), 0 refuted. Batches on 22a5fdd: r1-heal (6,23,16,0,5,10,11,15,18,24,25), r1-fill (7,1,2,17,19), r1-tone (4,9,12,20,21; owns the packet), r1-smudge (3,14,22), r1-walk (8,13; owns image-ops C4 part). | | no |
 | 2 | 5142795 | PASS | see confirmed | | | 18 confirmed (3 major, 15 minor), 0 refuted; not clean. Batches r2-fill (findings 4,11,12,16,1,9,0-code), r2-tone (2,3,10,13,14,17), r2-docs (5,15,6,7,0-packet). Deferred: FillRandom/ParityRandom SplitMix dedup (minor, design), as a packet follow-up | #687, #684, #677 | no |
 | 3 | 1940443 | PASS | 28/28 | 39230628738 (8cd57c6) | clarity contract design robustness tests | 13 (3 major, 10 minor), 1 refuted | r3-fill r3-heal r3-smudge | no |
-| 4 | e09c6c3 | PASS | 34/34 | 39370425442 | clarity contract design robustness tests | 10 (2 major, 8 minor), 0 refuted; FillRandom/ParityRandom dedup refuted by lead (CoreRaster cannot depend on CoreRender; packet follow-up) | r4-rh | no |
+| 4 | e09c6c3 | PASS | 34/34 | 39370425442 | clarity contract design robustness tests | 10 (2 major, 8 minor), 0 refuted; FillRandom/ParityRandom dedup refuted by lead (CoreRaster cannot depend on CoreRender; packet follow-up) | r4-rh (#769, 36/36) | no (round cap) |
 
 ## Decisions
 - Line lead over text-engine #437, retouch-heal #436, fill-tools #435: one wave plan; tasks share a wave only with disjoint files.
@@ -58,5 +58,6 @@ Next: Next: merge r4-rh, then RH-8 feature-done; leftovers become gap issues
 - Round 3: finding 7 (shared heal/fill grid helper) deferred to round 4 because it spans Heal.swift and FillFromSurroundings.swift, owned by different batches; finding 8 stays a packet follow-up.
 
 ## Open
+- #770 (gap p3): heal dab release budget (16.7-19.3 ms vs 12 ms on Linux) and the FillRandom/ParityRandom dedupe.
 - healDab measured 16.7 to 19.3 ms on the loaded Linux host vs 12 ms: release budget for the Mac finisher (rule 15).
 - Mask.coveredRect still scans the whole mask (about 4 ms at 2400x1600).
