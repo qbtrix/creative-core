@@ -2,9 +2,9 @@
 
 Issue: #779 · Packet: docs/blueprints/core/features/layer-style-engine.md
 Run: act-1a15b62a149-srko · Session: see Belt · Started: 2026-10-20T22:05Z
-Stage: 3 wave 1 (LE-a)
+Stage: 3 wave 2 (LE-a2, LE-3, LE-6 in parallel)
 Base: 3ded188e8702de287fcc38dee63e1889220788b3
-Next: LE-a1 builder (les/le-a1) opens its PR; then LE-a2, LE-3 and LE-6 stack on les/le-a1
+Next: builders on LE-a2 (les/le-a2), LE-3 (les/le-3) and LE-6 (les/le-6) from dev 6e8f82c report PRs; then LE-4 on LE-3, LE-7 on LE-6
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -47,3 +47,5 @@ Next: LE-a1 builder (les/le-a1) opens its PR; then LE-a2, LE-3 and LE-6 stack on
 ## Open
 - Container had no Swift toolchain; ran scripts/cloud-setup.sh at start.
 - Base gate on 3ded188 (2026-10-20T22:25Z): CI: FAIL only on wall-clock `ThumbnailStoreRecoveryTests.fuzzedIndexThrowsOrRecovers` (1.5-2.0 s vs 1 s) while a builder compiled (load 10.8 on 4 cores). No open dev-red. Treated as contention: builders gate under `flock /tmp/les-gate.lock scripts/ci`; recheck on a quiet machine before calling dev red.
+- PR #780 (LE-a1) opened 22:32Z, lane-merged 22:33Z as 6e8f82c. Lane merges within a minute, so slices branch from fresh dev rather than stacking whenever the lower PR is already in.
+- LE-a1 builder ran `pkill -f scripts/ci` once (could hit other gates); builders told never to pkill -f.
