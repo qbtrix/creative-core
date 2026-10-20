@@ -69,9 +69,9 @@ import Testing
         #expect(try GlyphRunMetrics(advances: [0, 3], ascent: 0, descent: 0).advances == [0, 3])
     }
 
-    @Test func layoutStubsThrowNotBuilt() {
+    @Test func onPathWithoutAPathThrows() {
         let text = Self.text(), measured = FixedAdvances.measure(text)
-        #expect(throws: CommandError.notBuilt("TextLayout.onPath is not built yet (text-engine)")) {
+        #expect(throws: ModelError.invalidText("text has no onPath to place along")) {
             try TextLayout.onPath(text, measured: measured, tolerance: 0.1)
         }
         #expect(TextLayout.maxGraphemes == 100_000)

@@ -284,9 +284,6 @@ public struct TextLayout: Sendable, Hashable {
         guard !lines.isEmpty else { return TextLayout(lines: [], bounds: Rect(minX: 0, minY: 0, maxX: 0, maxY: 0)) }
         return TextLayout(lines: lines, bounds: Rect(minX: minX, minY: 0, maxX: maxX, maxY: bottom))
     }
-
-    /// What a text-engine stub named `name` throws until its task builds it.
-    static func notBuilt(_ name: String) -> CommandError { .notBuilt("\(name) is not built yet (text-engine)") }
 }
 
 /// The platform-free measurer: every grapheme advances 0.5 em, and each run's
