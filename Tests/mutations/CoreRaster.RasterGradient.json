@@ -15,17 +15,38 @@
   },
   {
     "note": "the ramp's t is not clamped to the last stop, so past b the colour extrapolates beyond its last stop, caught by RasterGradientTests.clampsPastEnd",
-    "file": "Sources/CoreRaster/Fill/RasterGradient.swift",
-    "anchor": "let t = min(max(t, offsets[0]), offsets[last])",
-    "replacement": "let t = max(t, offsets[0])",
+    "file": "Sources/CoreRaster/Fill/StopRamp.swift",
+    "anchor": "guard t < offsets[last] else { return (last - 1, 1) }",
+    "replacement": "guard t < offsets[last] else { return (last - 1, t) }",
     "filter": "RasterGradientTests.clampsPastEnd"
   },
   {
     "note": "the gradient stop limit is half-open, so a valid 64-stop gradient throws, caught by RasterGradientTests.sixtyFourStopsAccepted",
-    "file": "Sources/CoreRaster/Fill/RasterGradient.swift",
-    "anchor": "guard (2...PixelBuffer.maxGradientStops).contains(stops.count) else {",
-    "replacement": "guard (2..<PixelBuffer.maxGradientStops).contains(stops.count) else {",
+    "file": "Sources/CoreRaster/Fill/StopRamp.swift",
+    "anchor": "let counts = 2...PixelBuffer.maxGradientStops",
+    "replacement": "let counts = 2..<PixelBuffer.maxGradientStops",
     "filter": "RasterGradientTests.sixtyFourStopsAccepted"
+  },
+  {
+    "note": "the stop ramp's hard edge takes the earlier stop, so a t exactly on two equal offsets gets the first colour, caught by RasterGradientTests.hardEdgeTakesLaterStopInGradientAndMap",
+    "file": "Sources/CoreRaster/Fill/StopRamp.swift",
+    "anchor": "while offsets[hi] <= t { hi += 1 }",
+    "replacement": "while offsets[hi] < t { hi += 1 }",
+    "filter": "RasterGradientTests.hardEdgeTakesLaterStopInGradientAndMap"
+  },
+  {
+    "note": "the gradient's tabulated ramp drops its lerp between samples, so t is quantised to 1/256 steps, caught by RasterGradientTests.shapesMatchAnalyticT",
+    "file": "Sources/CoreRaster/Fill/RasterGradient.swift",
+    "anchor": "let u = f * Double(Self.samples), i = min(Int(u), Self.samples - 1), w = u - Double(i)",
+    "replacement": "let u = f * Double(Self.samples), i = min(Int(u), Self.samples - 1), w = 0.0",
+    "filter": "RasterGradientTests.shapesMatchAnalyticT"
+  },
+  {
+    "note": "the gradient dithers its premultiplied colour, not the straight one, so a semi-transparent dithered pixel comes out as RGB times alpha squared, caught by GradientDitherTests.semiTransparentKeepsStraightColour",
+    "file": "Sources/CoreRaster/Fill/RasterGradient.swift",
+    "anchor": "let shown = dither ? GradientDither.dithered(straight, x: x, y: y) : straight",
+    "replacement": "let shown = dither ? GradientDither.dithered(straight.premultiplied(), x: x, y: y) : straight",
+    "filter": "GradientDitherTests.semiTransparentKeepsStraightColour"
   },
   {
     "note": "the linear projection drops the y term, so a vertical or diagonal drag ramps along x only, caught by RasterGradientTests.shapesFollowDiagonalDirection",

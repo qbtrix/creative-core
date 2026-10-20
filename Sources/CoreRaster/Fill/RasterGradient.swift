@@ -1,9 +1,10 @@
 // RasterGradient.swift: the raster gradient behind the gradient tool
 // (fill-tools). Each pixel centre maps to a parameter `t` by the shape (FT-5),
 // clamped to the stops (so to 0...1), and `t` picks a colour from the stops,
-// interpolated in linear light or in OKLab through CoreColor. Alpha
-// interpolates linearly and the result is premultiplied. With `dither`, each
-// pixel then takes `GradientDither`'s ordered offset (FT-6).
+// interpolated in linear light or in OKLab through CoreColor, tabulated once
+// per call. Alpha interpolates linearly. With `dither`, each pixel's straight
+// colour then takes `GradientDither`'s ordered offset (FT-6), and the result
+// is premultiplied.
 #if canImport(Glibc)
 import Glibc
 #elseif canImport(Musl)
@@ -16,7 +17,8 @@ import CoreColor
 /// The space a gradient interpolates its stops in: linear light, or OKLab
 /// (perceptual). Not the ramp's shape: that is `RasterGradientShape`.
 public enum GradientSpace: Hashable, Sendable {
-    /// Mix the stops' linear-light sRGB components.
+    /// Mix the stops' linear-light sRGB components. Linear light, not the
+    /// shape `RasterGradientShape.linear`.
     case linear
     /// Mix the stops in OKLab (perceptually even).
     case perceptual
@@ -41,9 +43,6 @@ public struct RasterGradientStop: Hashable, Sendable {
 }
 
 extension PixelBuffer {
-    /// The most stops a gradient takes.
-    static let maxGradientStops = 64
-
     /// A `width` x `height` buffer filled with a gradient from `a` to `b`.
     ///
     /// - Parameters:
@@ -53,10 +52,15 @@ extension PixelBuffer {
     ///     0...1 (see each `RasterGradientShape` case).
     ///   - a: the start point, in pixel space; finite.
     ///   - b: the end point; finite and not equal to `a`.
-    ///   - stops: 2...64 stops, sorted by offset, offsets in 0...1, colours
-    ///     finite. Two stops at one offset make a hard edge. Stop colours are
-    ///     straight alpha in linear light (see `RasterGradientStop.color`).
-    ///   - space: the space the stops interpolate in.
+    ///   - stops: 2...`maxGradientStops` stops, sorted by offset, offsets in
+    ///     0...1, colours finite. Two stops at one offset make a hard edge: a
+    ///     `t` exactly on it takes the later stop, as `gradientMap(_:)` does
+    ///     (both read stops through `StopRamp`). Stop colours are straight
+    ///     alpha in linear light (see `RasterGradientStop.color`).
+    ///   - space: the space the stops interpolate in, not the shape. In
+    ///     `gradient(..., shape: .linear, ..., space: .linear)` the first
+    ///     `.linear` is the projection ramp and the second means linear-light
+    ///     sRGB mixing; `.perceptual` mixes in OKLab.
     ///   - dither: `true` adds a deterministic ordered dither of +-0.5/255 so
     ///     an 8-bit encode does not band (`GradientDither`).
     /// - Returns: the gradient, premultiplied like any buffer.
@@ -79,7 +83,10 @@ extension PixelBuffer {
             for x in 0..<width {
                 let (dx, dy) = (Double(x) + 0.5 - a.x, Double(y) + 0.5 - a.y)
                 let t = gradientT(shape, dx: dx, dy: dy, vx: vx, vy: vy, length2: length2)
-                let c = dither ? GradientDither.dithered(try ramp.color(at: t), x: x, y: y) : try ramp.color(at: t)
+                let straight = ramp.straight(at: t)
+                let shown = dither ? GradientDither.dithered(straight, x: x, y: y) : straight
+                let c = shown.premultiplied()
+                guard c.isFinite else { throw RasterError.invalid("gradient colour \(shown): not finite in Float") }
                 let i = (y * width + x) * channels
                 storage[i] = c.r
                 storage[i + 1] = c.g
@@ -92,7 +99,7 @@ extension PixelBuffer {
 
     /// The shape's `t` for a pixel centre at (`dx`, `dy`) from `a`, with
     /// `a→b` = (`vx`, `vy`) and `length2` its squared length. Not clamped
-    /// here: `GradientRamp.color(at:)` clamps it to the stops, which lie in 0...1.
+    /// here: `StopRamp.segment(at:)` clamps it to the stops, which lie in 0...1.
     static func gradientT(_ shape: RasterGradientShape, dx: Double, dy: Double,
                           vx: Double, vy: Double, length2: Double) -> Double {
         let along = (dx * vx + dy * vy) / length2
@@ -108,58 +115,48 @@ extension PixelBuffer {
     }
 }
 
-/// Checked stops, with their colours already in the interpolation space.
+/// Checked stops, with each segment's straight linear-light colour
+/// tabulated once per call, so a pixel only finds its segment and lerps two
+/// table entries. In linear light the mix is linear in `t`, so the lerp is
+/// exact; in OKLab it is within 1e-5 of the exact mix.
 private struct GradientRamp {
-    let offsets: [Double]
-    /// Each stop's colour in `space` (linear sRGB or OKLab) and its alpha.
-    let colors: [(Color3, Double)]
-    let space: GradientSpace
+    let stops: StopRamp
+    /// `samples + 1` straight (r, g, b, a) entries per segment, f = 0...1.
+    let table: [Double]
+    static let samples = 256
 
     init(stops: [RasterGradientStop], space: GradientSpace) throws {
-        guard (2...PixelBuffer.maxGradientStops).contains(stops.count) else {
-            throw RasterError.invalid("gradient has \(stops.count) stops: needs 2...\(PixelBuffer.maxGradientStops)")
+        self.stops = try StopRamp(stops.map(\.offset), what: "gradient")
+        for (k, stop) in stops.enumerated() where !stop.color.isFinite {
+            throw RasterError.invalid("gradient stop \(k) colour \(stop.color): must be finite")
         }
-        var previous: Float = 0
-        for (k, stop) in stops.enumerated() {
-            guard (0...1).contains(stop.offset), stop.offset >= previous else {
-                throw RasterError.invalid("gradient stop \(k) offset \(stop.offset): must be in 0...1 and sorted")
-            }
-            guard stop.color.isFinite else {
-                throw RasterError.invalid("gradient stop \(k) colour \(stop.color): must be finite")
-            }
-            previous = stop.offset
-        }
-        self.space = space
-        offsets = stops.map { Double($0.offset) }
-        colors = try stops.map { stop in
+        let colors = try stops.map { stop in
             let c = Color3(Double(stop.color.r), Double(stop.color.g), Double(stop.color.b))
             let inSpace = space == .perceptual
                 ? try FillColor.converted(c, from: .linearSRGB, to: .oklab, what: "gradient stop colour \(c)") : c
             return (inSpace, Double(stop.color.a))
         }
+        var table: [Double] = []
+        table.reserveCapacity((colors.count - 1) * (Self.samples + 1) * 4)
+        for ((c0, a0), (c1, a1)) in zip(colors, colors.dropFirst()) {
+            for k in 0...Self.samples {
+                let f = Double(k) / Double(Self.samples)
+                let mixed = Color3(c0.c0 + (c1.c0 - c0.c0) * f, c0.c1 + (c1.c1 - c0.c1) * f, c0.c2 + (c1.c2 - c0.c2) * f)
+                let linear = space == .perceptual
+                    ? try FillColor.converted(mixed, from: .oklab, to: .linearSRGB, what: "gradient colour \(mixed)") : mixed
+                table += [linear.c0, linear.c1, linear.c2, a0 + (a1 - a0) * f]
+            }
+        }
+        self.table = table
     }
 
-    /// The premultiplied colour at `t` in 0...1: the first stop's before it,
-    /// the last stop's after it, else the mix of the two stops around `t`.
-    func color(at t: Double) throws -> RGBA {
-        let last = offsets.count - 1
-        let t = min(max(t, offsets[0]), offsets[last])
-        guard t > offsets[0] else { return try finish(colors[0].0, colors[0].1) }
-        // The segment holding t; at a hard edge the later stop wins.
-        let lo = min(offsets.lastIndex { $0 <= t } ?? 0, last - 1), hi = lo + 1
-        let span = offsets[hi] - offsets[lo]
-        let f = span > 0 ? (t - offsets[lo]) / span : 1
-        let (c0, a0) = colors[lo], (c1, a1) = colors[hi]
-        let mixed = Color3(c0.c0 + (c1.c0 - c0.c0) * f, c0.c1 + (c1.c1 - c0.c1) * f, c0.c2 + (c1.c2 - c0.c2) * f)
-        return try finish(mixed, a0 + (a1 - a0) * f)
-    }
-
-    /// Back to linear light, premultiplied, as a finite `RGBA`.
-    private func finish(_ c: Color3, _ alpha: Double) throws -> RGBA {
-        let linear = space == .perceptual
-            ? try FillColor.converted(c, from: .oklab, to: .linearSRGB, what: "gradient colour \(c)") : c
-        let out = RGBA(r: Float(linear.c0), g: Float(linear.c1), b: Float(linear.c2), a: Float(alpha)).premultiplied()
-        guard out.isFinite else { throw RasterError.invalid("gradient colour \(out): not finite in Float") }
-        return out
+    /// The straight colour at `t`: the first stop's before it, the last
+    /// stop's after it, else the mix of the two stops around `t`.
+    func straight(at t: Double) -> RGBA {
+        let (lo, f) = stops.segment(at: t)
+        let u = f * Double(Self.samples), i = min(Int(u), Self.samples - 1), w = u - Double(i)
+        let base = (lo * (Self.samples + 1) + i) * 4
+        func at(_ c: Int) -> Float { Float(table[base + c] + (table[base + 4 + c] - table[base + c]) * w) }
+        return RGBA(r: at(0), g: at(1), b: at(2), a: at(3))
     }
 }

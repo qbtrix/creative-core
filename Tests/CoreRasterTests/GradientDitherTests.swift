@@ -73,6 +73,32 @@ import Testing
         #expect(Set(try reds(try flat(dither: false)).joined()).count == 1)
     }
 
+    /// The offset goes onto the straight colour: at alpha 0.5 the dithered
+    /// straight colour stays within half an 8-bit step (in sRGB) of the
+    /// undithered one, and alpha is exactly the undithered alpha.
+    @Test
+    func semiTransparentKeepsStraightColour() throws {
+        let c = RGBA(r: 0.2, g: 0.05, b: 0.6, a: 0.5)
+        func render(dither: Bool) throws -> PixelBuffer {
+            try PixelBuffer.gradient(width: 8, height: 8, shape: .linear, from: Mask.Point(x: 0, y: 0), to: Mask.Point(x: 8, y: 0),
+                                     stops: [RasterGradientStop(offset: 0, color: c), RasterGradientStop(offset: 1, color: c)],
+                                     space: .linear, dither: dither)
+        }
+        let off = try render(dither: false), on = try render(dither: true)
+        #expect(on != off)
+        for y in 0..<8 {
+            for x in 0..<8 {
+                let p = try on.pixel(x: x, y: y), q = try off.pixel(x: x, y: y)
+                #expect(p.a == q.a, "(\(x), \(y)) alpha \(p.a), want \(q.a)")
+                let s = p.unpremultiplied(), t = q.unpremultiplied()
+                for (got, want) in [(s.r, t.r), (s.g, t.g), (s.b, t.b)] {
+                    let gap = abs(TransferCurve.encode(Double(got)) - TransferCurve.encode(Double(want)))
+                    #expect(gap <= 0.5 / 255 + 1e-6, "(\(x), \(y)): \(s), want \(t)")
+                }
+            }
+        }
+    }
+
     @Test
     func transparentStaysTransparent() throws {
         let clear = RGBA(r: 0, g: 0, b: 0, a: 0)

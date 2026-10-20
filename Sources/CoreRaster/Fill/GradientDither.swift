@@ -32,15 +32,38 @@ enum GradientDither {
         return ((Double(index) + 0.5) / 64 - 0.5) * amplitude
     }
 
-    /// `color` (premultiplied, linear light) with the pixel's offset added to
-    /// each sRGB-encoded straight channel. A transparent pixel, or one the
-    /// dither would push out of Float's range, comes back unchanged.
-    static func dithered(_ color: RGBA, x: Int, y: Int) -> RGBA {
-        guard color.a > 0 else { return color }
+    /// `s` (straight alpha, linear light) with the pixel's offset added to
+    /// each sRGB-encoded channel; alpha is kept. A transparent pixel, or one
+    /// the dither would push out of Float's range, comes back unchanged.
+    static func dithered(_ s: RGBA, x: Int, y: Int) -> RGBA {
+        guard s.a > 0 else { return s }
         let d = offset(x: x, y: y)
-        let s = color.unpremultiplied()
-        func shift(_ v: Float) -> Float { Float(TransferCurve.decode(TransferCurve.encode(Double(v)) + d)) }
-        let out = RGBA(r: shift(s.r), g: shift(s.g), b: shift(s.b), a: s.a).premultiplied()
-        return out.isFinite ? out : color
+        func shift(_ v: Float) -> Float { Float(decode(encode(Double(v)) + d)) }
+        let out = RGBA(r: shift(s.r), g: shift(s.g), b: shift(s.b), a: s.a)
+        return out.isFinite ? out : s
+    }
+
+    /// Steps of the transfer tables over 0...1. The encode curve bends hard
+    /// just above its linear toe, so it gets the finer table: either table's
+    /// lerp error is under 1e-3 of an 8-bit step.
+    private static let encodeSteps = 16384, decodeSteps = 4096
+    private static let encodeTable = table(encodeSteps, TransferCurve.encode)
+    private static let decodeTable = table(decodeSteps, TransferCurve.decode)
+
+    private static func table(_ steps: Int, _ curve: (Double) -> Double) -> [Double] {
+        (0...steps).map { curve(Double($0) / Double(steps)) }
+    }
+
+    /// `TransferCurve.encode`, read from a table in 0...1 (exact outside it).
+    static func encode(_ v: Double) -> Double { lookup(encodeTable, encodeSteps, v) ?? TransferCurve.encode(v) }
+
+    /// `TransferCurve.decode`, read from a table in 0...1 (exact outside it).
+    static func decode(_ v: Double) -> Double { lookup(decodeTable, decodeSteps, v) ?? TransferCurve.decode(v) }
+
+    /// The table's lerp at `v`, or nil when `v` is outside 0...1 or NaN.
+    private static func lookup(_ table: [Double], _ steps: Int, _ v: Double) -> Double? {
+        guard v >= 0, v <= 1 else { return nil }
+        let u = v * Double(steps), i = min(Int(u), steps - 1), w = u - Double(i)
+        return table[i] + (table[i + 1] - table[i]) * w
     }
 }
