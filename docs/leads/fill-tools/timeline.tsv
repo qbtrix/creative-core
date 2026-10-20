@@ -142,3 +142,4 @@ utc	stage	event	ref	note
 2026-10-20T02:12Z	Anatomy	heartbeat	-	waiting on builders or the lane
 2026-10-20T02:30Z	Anatomy	heartbeat	-	waiting on builders or the lane
 2026-10-20T02:48Z	Anatomy	heartbeat	-	waiting on builders or the lane
+2026-10-20T06:29Z	Round-3	resumed	-	relaunched; round-3 fixes r3-mem r3-grad r3-range were lost, redoing

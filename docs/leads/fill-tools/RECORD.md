@@ -1,10 +1,10 @@
 # fill-tools lead record
 
 Issue: #435 · Packet: docs/blueprints/core/features/fill-tools.md
-Run: act-1a150b99ea1-n4z4 · Session: 0dcfe60a-687f-5c9a-97c2-9e4695e35cea · Started: 2026-10-18T20:39Z
-Stage: Anatomy round 3 not clean: 9 confirmed (4 major, 5 minor), 1 refuted; fix wave r3-mem, r3-grad, r3-range running (wf_a378424f-52c)
-Base: d715348712c75935b56b0864cd2f0a623c38454f
-Next: Merge round-3 fixes, then round 4 (last) gate and panel
+Run: act-1a157fd0281-warg · Session: 2df03724-340d-5741-940b-d32d0ef62e2a · Resumed: 2026-10-20T06:25Z
+Stage: Round 3 fixes (r3-mem, r3-grad, r3-range) being redone on e09c6c3
+Base: e09c6c30190b6eee1a8f4a646cd7485e19abc97d
+Next: Merge round-3 fixes, then round 4 (last) gate and panel, then FT-8
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
