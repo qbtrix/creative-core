@@ -58,3 +58,4 @@ Next: #745 merges and dispatches dev CI; Slice-Done PG-shape and PG-z on that ru
 - dev CI https://github.com/qbtrix/creative-core/actions/runs/39343832741 green on 47c283f (macOS too): Belt-Slice-Done PG-shape and PG-z posted on #430. Every path-geometry slice is merged-done. Contact sheet follows Anatomy round 3 on dev after masks-mattes' M7b.
 - Anatomy round 3 started on dev 9714ff33 (masks-mattes' last PR merged), covering both features.
 - Round 3 on 9714ff33: scripts/ci CI: PASS; mutate --changed-since base at 161/221 caught, 0 escaped so far. Next: critic panel.
+- Round 3 on 9714ff33: mutate --changed-since base 221/221 caught (53.7 min). Critic panel running (clarity, contract, undo, robustness, tests), run wf_89ce91c1-7f8.
