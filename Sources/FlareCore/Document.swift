@@ -6,7 +6,7 @@
 // - every public type here is a Codable, Sendable value type with no shared mutable
 //   state; Layer keeps its fields behind a private copy-on-write box (LayerStorage),
 //   so copying a big scene's layer array costs an id and a pointer per layer
-// - Scene.fps > 0, Scene.durationFrames >= 0
+// - Scene.rate has both parts > 0, Scene.durationFrames >= 0
 // - Scene.width and Scene.height are finite and > 0
 // - Scene label frames are in 0...durationFrames
 // - Scene guide positions are finite
@@ -121,7 +121,13 @@ public struct Symbol: Codable, Sendable, Hashable {
 public struct Scene: Codable, Sendable, Hashable {
     public var id: String
     public var name: String
-    public var fps: Int
+    /// The exact frame rate. Files store it as `fps` when whole and add `frameRate` when not.
+    public var rate: SceneRate
+    /// The whole rate nearest `rate` (30 for 29.97); setting it makes the rate that whole number.
+    public var fps: Int {
+        get { rate.nominal }
+        set { rate = SceneRate(whole: newValue) }
+    }
     public var durationFrames: Int
     /// Canvas size in points.
     public var width: Double
@@ -140,11 +146,11 @@ public struct Scene: Codable, Sendable, Hashable {
         id: String, name: String, fps: Int = 24, durationFrames: Int = 48,
         width: Double = Scene.defaultWidth, height: Double = Scene.defaultHeight,
         background: Color = .white, layers: [Layer] = [], labels: [String: Int] = [:],
-        guides: [Guide] = []
+        guides: [Guide] = [], rate: SceneRate? = nil
     ) {
         self.id = id
         self.name = name
-        self.fps = fps
+        self.rate = rate ?? SceneRate(whole: fps)
         self.durationFrames = durationFrames
         self.width = width
         self.height = height
@@ -155,15 +161,17 @@ public struct Scene: Codable, Sendable, Hashable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, name, fps, durationFrames, width, height, background, layers, labels, guides
+        case id, name, fps, frameRate, durationFrames, width, height, background, layers, labels, guides
     }
 
-    /// Files written before the canvas fields, labels or guides existed decode with the defaults.
+    /// Files written before the canvas fields, labels, guides or `frameRate` existed decode with the defaults; a
+    /// file without `frameRate` runs at its whole `fps`.
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(String.self, forKey: .id)
         name = try c.decode(String.self, forKey: .name)
-        fps = try c.decode(Int.self, forKey: .fps)
+        let whole = try c.decode(Int.self, forKey: .fps)
+        rate = try c.decodeIfPresent(SceneRate.self, forKey: .frameRate) ?? SceneRate(whole: whole)
         durationFrames = try c.decode(Int.self, forKey: .durationFrames)
         width = try c.decodeIfPresent(Double.self, forKey: .width) ?? Scene.defaultWidth
         height = try c.decodeIfPresent(Double.self, forKey: .height) ?? Scene.defaultHeight
@@ -171,6 +179,23 @@ public struct Scene: Codable, Sendable, Hashable {
         layers = try c.decode([Layer].self, forKey: .layers)
         labels = try c.decodeIfPresent([String: Int].self, forKey: .labels) ?? [:]
         guides = try c.decodeIfPresent([Guide].self, forKey: .guides) ?? []
+    }
+
+    /// `fps` always (the nominal rate, what older readers use) and `frameRate` only when the rate isn't whole, so
+    /// a whole-rate scene writes the same bytes as before rates were fractions.
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(name, forKey: .name)
+        try c.encode(rate.isWhole ? rate.numerator : rate.nominal, forKey: .fps)
+        if !rate.isWhole { try c.encode(rate, forKey: .frameRate) }
+        try c.encode(durationFrames, forKey: .durationFrames)
+        try c.encode(width, forKey: .width)
+        try c.encode(height, forKey: .height)
+        try c.encode(background, forKey: .background)
+        try c.encode(layers, forKey: .layers)
+        try c.encode(labels, forKey: .labels)
+        try c.encode(guides, forKey: .guides)
     }
 }
 

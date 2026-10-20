@@ -1,7 +1,7 @@
 // PNGExportPlan.swift: the plan for exporting a scene as numbered PNG frames.
 //
 // Pure planning, no rendering: one entry per exported frame with its frame
-// number, its time in seconds (`Timeline.time(ofFrame:fps:)`), its pixel size
+// number, its time in seconds (`Timeline.time(ofFrame:rate:)`, exact at 29.97), its pixel size
 // (scene size times scale, rounded to nearest) and its file name
 // ("frame_0000.png", zero-padded to at least 4 digits). A renderer consumes
 // the plan later. Every input is checked before the plan is built, so bad
@@ -42,7 +42,7 @@ public enum PNGExportPlan {
     public static let maxFrames = 1_000_000
 
     public static func plan(scene: Scene, frames: ClosedRange<Int>, scale: Double, step: Int = 1) throws -> [PNGFramePlan] {
-        guard scene.fps > 0 else { throw PNGExportError.invalidFPS(scene.fps) }
+        guard scene.rate.isValid else { throw PNGExportError.invalidFPS(scene.rate.numerator) }
         guard frames.lowerBound >= 0, frames.upperBound <= scene.durationFrames else {
             throw PNGExportError.frameOutOfRange(frames)
         }
@@ -60,7 +60,7 @@ public enum PNGExportPlan {
         return try (0..<count).map { i in
             let frame = frames.lowerBound + i * step
             return PNGFramePlan(
-                frame: frame, time: try Timeline.time(ofFrame: frame, fps: scene.fps),
+                frame: frame, time: try Timeline.time(ofFrame: frame, rate: scene.rate),
                 pixelWidth: Int(width), pixelHeight: Int(height), fileName: fileName(frame: frame)
             )
         }

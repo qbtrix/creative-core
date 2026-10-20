@@ -192,7 +192,7 @@ public enum FlareFormat {
         var sceneIDs = Set<String>()
         for scene in document.scenes {
             guard sceneIDs.insert(scene.id).inserted else { throw FormatError.invalid("duplicate scene id \(scene.id)") }
-            guard scene.fps > 0 else { throw FormatError.invalid("scene \(scene.id): fps must be > 0") }
+            guard scene.rate.isValid else { throw FormatError.invalid("scene \(scene.id): frame rate \(scene.rate) must be > 0") }
             guard scene.durationFrames >= 0 else { throw FormatError.invalid("scene \(scene.id): negative duration") }
             guard scene.width.isFinite, scene.width > 0, scene.height.isFinite, scene.height > 0 else {
                 throw FormatError.invalid("scene \(scene.id): canvas size must be finite and > 0")

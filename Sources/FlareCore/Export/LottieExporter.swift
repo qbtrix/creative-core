@@ -72,7 +72,7 @@ public enum LottieExporter {
     public static func export(scene: Scene, symbols: [Symbol] = []) throws -> Data {
         let layers = try layers(of: scene, symbols: symbols)
         let root = LottieRoot(
-            v: version, fr: scene.fps, ip: 0, op: scene.durationFrames,
+            v: version, fr: scene.rate.value, ip: 0, op: scene.durationFrames,
             w: try finite(scene.width), h: try finite(scene.height), nm: scene.name,
             ddd: 0, assets: [], layers: layers
         )
@@ -173,7 +173,7 @@ struct LottieStatic<Value: Encodable & Sendable>: Encodable, Sendable {
 
 struct LottieRoot: Encodable, Sendable {
     var v: String
-    var fr: Int
+    var fr: Double
     var ip: Int
     var op: Int
     var w: Double

@@ -286,6 +286,8 @@ struct LottieReader {
         guard let layers = json.array else { throw ImportError.damaged("layers is not an array") }
         guard layers.count <= LottieImport.maxLayers else { throw ImportError.tooLarge("\(layers.count) layers, limit \(LottieImport.maxLayers)") }
         let fps = try frame(root["fr"], "fr", 30, 1...240)
+        // An NTSC `fr` (29.97) reads as its exact fraction, any other as the whole rate.
+        let rate = SceneRate(decimal: try number(root["fr"], "fr", 30))
         let ip = try frame(root["ip"], "ip", 0, LottieImport.frames), op = try frame(root["op"], "op", 60, LottieImport.frames)
         let w = try number(root["w"], "w", 0), h = try number(root["h"], "h", 0)
         guard w > 0 else { throw ImportError.damaged("w \(w) is not positive") }
@@ -297,7 +299,8 @@ struct LottieReader {
             if let layer = try layer(json, id: "layer-\(out.count + 1)", range: Double(ip)...Double(op)) { built[index] = out.count; out.append(layer) }
         }
         linkMattes(&out, layers, built: built)
-        return Scene(id: "scene-1", name: root["nm"]?.string ?? "Scene 1", fps: fps, durationFrames: op - ip, width: w, height: h, layers: out)
+        return Scene(id: "scene-1", name: root["nm"]?.string ?? "Scene 1", fps: fps, durationFrames: op - ip, width: w, height: h, layers: out,
+                     rate: rate.nominal == fps ? rate : SceneRate(whole: fps))
     }
     mutating func layer(_ json: LottieJSON, id: String, range: ClosedRange<Double>) throws -> Layer? {
         let kinds: [Double: String] = [0: "precomp", 2: "image", 3: "null", 5: "text"]
