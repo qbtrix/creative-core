@@ -2,9 +2,9 @@
 
 Issue: #437 · Packet: docs/blueprints/core/features/text-engine.md
 Run: act-1a157fd0281-warg · Session: 2df03724-340d-5741-940b-d32d0ef62e2a · Resumed: 2026-10-20T06:25Z
-Stage: 4 waiting on dev CI holding #764
+Stage: done (merged-done; contact sheet posted)
 Base: fa40b3427c6950e982d58c55d769f2dc5f7f1923
-Next: read dev CI run holding fa40b34; Slice-Done TE-lay, TE-svg, TE-z
+Next: Mac finisher verifies TE-z release budgets
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -25,9 +25,9 @@ Next: read dev CI run holding fa40b34; Slice-Done TE-lay, TE-svg, TE-z
 |---|---|---|---|---|---|
 | TE-a | TE-1, TE-2 | engine-contracts:EC-f | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39190181936 | – |
 | TE-cmd | TE-3, TE-4 | TE-a | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39196728473 | – |
-| TE-lay | TE-5, TE-6 | TE-a; path-geometry:PG-measure (TE-6) | merged (#761) |  | – |
-| TE-svg | TE-7, TE-8 | TE-cmd, TE-lay | merged (#763) |  | – |
-| TE-z | TE-9, TE-10 | TE-svg | merged (#764 feature-done) |  | wanted (release time budgets) |
+| TE-lay | TE-5, TE-6 | TE-a; path-geometry:PG-measure (TE-6) | merged-done (#761) | https://github.com/qbtrix/creative-core/actions/runs/39389993450 | – |
+| TE-svg | TE-7, TE-8 | TE-cmd, TE-lay | merged-done (#763) | https://github.com/qbtrix/creative-core/actions/runs/39389993450 | – |
+| TE-z | TE-9, TE-10 | TE-svg | merged-done (#764 feature-done) | https://github.com/qbtrix/creative-core/actions/runs/39389993450 | wanted (release time budgets), Mac-Finish-Wanted posted |
 
 ## Rounds
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |

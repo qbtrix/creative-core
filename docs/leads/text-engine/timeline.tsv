@@ -139,3 +139,4 @@ utc	stage	event	ref	note
 2026-10-20T06:29Z	Build	resumed	-	relaunched; PG-measure built (#735 #745 #755), TE-6 unblocked
 2026-10-20T08:29Z	3	pr-merged	#761 #763 #764	TE-6 onPath, TE-8 textPath (+#706), TE-9/10 feature-done merged; dev fa40b34
 2026-10-20T08:46Z	4	heartbeat	-	lead alive; round 4 mutation/panel or dev CI running
+2026-10-20T08:57Z	5	slice-done-contact-sheet	764	Slice-Done TE-lay TE-svg TE-z on run 39389993450; Mac-Finish-Wanted TE-z; contact sheet posted
