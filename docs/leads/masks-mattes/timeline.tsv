@@ -66,3 +66,5 @@ utc	stage	event	ref	note
 2026-10-20T01:03:23Z	MM-raster	Slice-Done + Mac-Finish-Wanted on run 39343832741
 2026-10-20T01:11:53Z	M7a2	#747 merged as 96e6718
 2026-10-20T01:11:53Z	M7b	opened #748, feature-done
+2026-10-20T01:12:33Z	M7b	#748 merged as 9714ff3; CI 39352093719
+2026-10-20T01:12:33Z	round-3	gate and mutation on 9714ff33
