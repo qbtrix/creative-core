@@ -144,3 +144,4 @@ utc	stage	event	ref	note
 2026-10-20T02:48Z	Anatomy	heartbeat	-	waiting on builders or the lane
 2026-10-20T06:29Z	Round-3	resumed	-	relaunched; round-3 fixes r3-mem r3-grad r3-range were lost, redoing
 2026-10-20T08:29Z	4	gate-run	e09c6c3	round 4 gate CI: PASS on e09c6c3; round-3 fixes folded into round 4 (lost in restart)
+2026-10-20T08:40Z	4	gate-run	wf_ae330b4f-cbd	round 4 mutation 21/21 caught on e09c6c3; critic panel running
