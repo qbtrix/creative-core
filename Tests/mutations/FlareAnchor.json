@@ -37,8 +37,8 @@
   {
     "note": "Lottie writes a keyed anchor as its frame-0 value",
     "file": "Sources/FlareCore/Export/LottieExporter.swift",
-    "anchor": "            throw LottieExportError.unsupported(\"keyed anchor point\")\n",
-    "replacement": "",
+    "anchor": "guard (layer.tracks[\"anchorX\"]?.count ?? 0) < 2, (layer.tracks[\"anchorY\"]?.count ?? 0) < 2 else {",
+    "replacement": "guard true else {",
     "filter": "AnchorTests"
   }
 ]

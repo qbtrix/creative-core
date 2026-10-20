@@ -383,7 +383,7 @@ extension LottieItem {
                 [try channel(stop.offset), try channel(stop.color.r),
                  try channel(stop.color.g), try channel(stop.color.b)]
             }
-            if alphas.contains(where: { $0 < 0 }) {
+            if alphas.contains(where: { $0 < 1 }) {
                 for (stop, alpha) in zip(stops, alphas) {
                     flat += [try channel(stop.offset), alpha]
                 }
