@@ -210,6 +210,8 @@ struct LottieLayer: Encodable, Sendable {
     var shapes: [LottieItem]
 
     init(_ layer: Layer, index: Int, durationFrames: Int, symbols: [Symbol]) throws {
+        // Lottie's `parent` isn't written yet, so a parented layer is refused rather than drawn unparented.
+        guard layer.parentID == nil else { throw LottieExportError.unsupported("parented layer") }
         let s = layer.sample(at: 0)
         func value(_ key: String, _ fallback: Double) throws -> Double {
             try LottieExporter.finite(s[key] ?? fallback)

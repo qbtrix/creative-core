@@ -59,6 +59,8 @@ extension SVGExporter {
             throw SVGExportError.unsupported("matte source")
         }
         if source.matte != nil { throw SVGExportError.unsupported("nested matte") }
+        // The source is drawn on its own, away from its list, so a parent would be lost: refuse it.
+        if source.parentID != nil { throw SVGExportError.unsupported("parented matte source") }
         source.isVisible = true
         let list = RenderList(layers: [source], owner: .scene(""), frame: scope.frame, symbols: scope.symbols, path: scope.path)
         if list.isTruncated { throw SVGExportError.sceneTooLarge }

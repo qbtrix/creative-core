@@ -184,7 +184,8 @@ struct W1Fields: Sendable, Hashable {
     var matte: TrackMatte?
     var colorTracks: [String: [ColorKeyframe]] = [:]
     var shapeTracks: [ShapeTrack] = []
-    var isEmpty: Bool { masks.isEmpty && matte == nil && colorTracks.isEmpty && shapeTracks.isEmpty }
+    var parentID: String?
+    var isEmpty: Bool { masks.isEmpty && matte == nil && colorTracks.isEmpty && shapeTracks.isEmpty && parentID == nil }
 }
 
 /// A heap box for `W1Fields`, nil in `LayerFields` while they are empty, so a

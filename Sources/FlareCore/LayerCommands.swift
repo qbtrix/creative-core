@@ -1,4 +1,4 @@
-// LayerCommands.swift: layer state, order and duplication beyond add/remove/rename. Each
+// LayerCommands.swift: layer state, order, duplication and parenting beyond add/remove/rename. Each
 // command validates its params, throws a CommandError instead of crashing, and
 // records just enough in execute() for undo() to restore the document exactly.
 #if canImport(FoundationEssentials)
@@ -7,9 +7,53 @@ import FoundationEssentials
 import Foundation
 #endif
 
-/// The layer flag, order and duplicate commands.
+/// The layer flag, order, duplicate and parent commands.
 public enum LayerCommands {
-    public static let all: [any Command.Type] = [SetLayerFlags.self, ReorderLayer.self, DuplicateLayer.self]
+    public static let all: [any Command.Type] = [SetLayerFlags.self, ReorderLayer.self, DuplicateLayer.self,
+                                                 SetLayerParent.self]
+}
+
+/// Makes the layer follow `parentID`, another layer of the same list, or follow none when nil. Refuses, before
+/// changing anything, a parent missing from the list (`layerNotFound`) and one whose chain of parents leads back to
+/// the layer (`invalidDocument`). It sets the link only: keeping the layer where it is on screen is the caller's
+/// job (it re-keys the transform in the same undo group).
+public struct SetLayerParent: LayerParamsCommand {
+    public static let id = "layer.setParent"
+    public var label: String { "Set Parent" }
+    public var owner: LayerOwner, layerID: String, parentID: String?
+    var oldParent: String?
+    var executed = false
+    public init(owner: LayerOwner, layerID: String, parentID: String?) {
+        (self.owner, self.layerID, self.parentID) = (owner, layerID, parentID)
+    }
+    struct Params: Codable { var parentID: String? }
+    var params: Params { Params(parentID: parentID) }
+    init(owner: LayerOwner, layerID: String, params: Params) { self.init(owner: owner, layerID: layerID, parentID: params.parentID) }
+    public mutating func execute(_ document: inout Document) throws {
+        let (parentID, layerID) = (parentID, layerID)
+        if let parentID, let layers = document.layers(of: owner) {
+            guard layers.contains(where: { $0.id == parentID }) else { throw CommandError.layerNotFound(parentID) }
+            var next: String? = parentID, hops = 0
+            // Bounded: a chain longer than the list repeats a layer, so it never reaches `layerID` after that.
+            while let id = next, hops <= layers.count {
+                guard id != layerID else {
+                    throw CommandError.invalidDocument("\(parentID) already follows \(layerID), so \(layerID) can't follow it.")
+                }
+                next = layers.first { $0.id == id }?.parentID
+                hops += 1
+            }
+        }
+        oldParent = try document.withEditableLayer(owner, layer: layerID) { l in
+            defer { l.parentID = parentID }
+            return l.parentID
+        }
+        executed = true
+    }
+    public func undo(_ document: inout Document) throws {
+        guard executed else { throw CommandError.notExecuted }
+        let oldParent = oldParent
+        try document.withLayer(owner, layer: layerID) { $0.parentID = oldParent }
+    }
 }
 
 /// Sets a layer's visibility and lock flags. A nil flag is left unchanged.

@@ -44,8 +44,8 @@
   {
     "note": "render list layer matrix composed in the wrong order, layer transform before its parent",
     "file": "Sources/FlareCore/RenderList.swift",
-    "anchor": "let m = parent * t.matrix",
-    "replacement": "let m = t.matrix * parent",
+    "anchor": "let m = byID.isEmpty ? parent * t.matrix : parent * up * t.matrix",
+    "replacement": "let m = byID.isEmpty ? t.matrix * parent : t.matrix * up * parent",
     "filter": "RenderListTests"
   },
   {
@@ -124,5 +124,19 @@
     "anchor": "layer.shapeTracks.contains { $0.shapeIndex == i } ? Outline(s) : cachedOutline",
     "replacement": "cachedOutline",
     "filter": "RenderListSamplingTests.instancesAtDifferentFramesMorphApart"
+  },
+  {
+    "note": "render list ignores a layer's parent, so a child doesn't follow it",
+    "file": "Sources/FlareCore/RenderList.swift",
+    "anchor": "let up = byID.isEmpty ? Matrix.identity : parentMatrix(of: layer)",
+    "replacement": "let up = Matrix.identity",
+    "filter": "ParentTests"
+  },
+  {
+    "note": "render list composes a parent after the child, so the child turns about the wrong point",
+    "file": "Sources/FlareCore/RenderList.swift",
+    "anchor": "m = p.placement(at: frame).transform.matrix * m",
+    "replacement": "m = m * p.placement(at: frame).transform.matrix",
+    "filter": "ParentTests"
   }
 ]

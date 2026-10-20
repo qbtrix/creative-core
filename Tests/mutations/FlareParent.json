@@ -1,0 +1,37 @@
+[
+  {
+    "note": "parent validation accepts a missing parent",
+    "file": "Sources/FlareCore/FlareFormat.swift",
+    "anchor": "try checkLinks(layers, owner: owner, noun: \"parent\", plural: \"parents\") { $0.parentID }\n",
+    "replacement": "\n",
+    "filter": "ParentTests"
+  },
+  {
+    "note": "set parent skips the cycle check, so two layers can follow each other",
+    "file": "Sources/FlareCore/LayerCommands.swift",
+    "anchor": "                guard id != layerID else {\n",
+    "replacement": "                guard true else {\n",
+    "filter": "ParentTests"
+  },
+  {
+    "note": "set parent undo keeps the new parent",
+    "file": "Sources/FlareCore/LayerCommands.swift",
+    "anchor": "try document.withLayer(owner, layer: layerID) { $0.parentID = oldParent }",
+    "replacement": "try document.withLayer(owner, layer: layerID) { _ in }",
+    "filter": "ParentTests"
+  },
+  {
+    "note": "svg writes a parented layer's own matrix only",
+    "file": "Sources/FlareCore/Export/SVGExporter.swift",
+    "anchor": "try matrix(layer.parentMatrix * layer.transform.matrix)",
+    "replacement": "try matrix(layer.transform.matrix)",
+    "filter": "ParentTests"
+  },
+  {
+    "note": "Lottie writes a parented layer as if it had no parent",
+    "file": "Sources/FlareCore/Export/LottieExporter.swift",
+    "anchor": "guard layer.parentID == nil else { throw LottieExportError.unsupported(\"parented layer\") }",
+    "replacement": "",
+    "filter": "ParentTests"
+  }
+]
