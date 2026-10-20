@@ -18,13 +18,13 @@ struct SamplingTests {
             #expect(s["scaleY"] == 1)
             #expect(s["rotation"] == 0)
             #expect(s["opacity"] == 1)
-            #expect(s.count == 6)
+            #expect(s.count == 8)
         }
     }
 
     @Test func emptyLayerReturnsDefaults() {
         let s = Layer(id: "e", name: "Empty").sample(at: 5)
-        #expect(s == ["x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "opacity": 1])
+        #expect(s == ["x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "opacity": 1, "anchorX": 0, "anchorY": 0])
     }
 
     @Test func opacityIsClamped() {
