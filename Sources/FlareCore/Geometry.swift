@@ -138,20 +138,55 @@ public struct Transform: Codable, Sendable, Hashable {
     public var scaleY: Double
     /// Degrees, clockwise on screen: scene space is y down, as the exporters draw it.
     public var rotation: Double
+    /// The anchor point in the layer's own space: what rotation and scale turn about, and the point that lands
+    /// on (x, y). 0, 0 by default, so a transform without one is the plain translate, rotate, scale.
+    public var anchorX: Double
+    public var anchorY: Double
 
-    public init(x: Double = 0, y: Double = 0, scaleX: Double = 1, scaleY: Double = 1, rotation: Double = 0) {
+    public init(x: Double = 0, y: Double = 0, scaleX: Double = 1, scaleY: Double = 1, rotation: Double = 0,
+                anchorX: Double = 0, anchorY: Double = 0) {
         self.x = x
         self.y = y
         self.scaleX = scaleX
         self.scaleY = scaleY
         self.rotation = rotation
+        self.anchorX = anchorX
+        self.anchorY = anchorY
     }
 
     public static let identity = Transform()
 
-    /// translate * rotate * scale: scale first, then rotate, then move.
+    /// translate * rotate * scale * translate(-anchor): the anchor moves to the origin, then scale, rotate and
+    /// move. A 0, 0 anchor skips the last multiply, so unanchored matrices are bit for bit what they were.
     public var matrix: Matrix {
-        Matrix.translation(x: x, y: y) * Matrix.rotation(degrees: rotation) * Matrix.scale(x: scaleX, y: scaleY)
+        let placed = Matrix.translation(x: x, y: y) * Matrix.rotation(degrees: rotation) * Matrix.scale(x: scaleX, y: scaleY)
+        return anchorX == 0 && anchorY == 0 ? placed : placed * Matrix.translation(x: -anchorX, y: -anchorY)
+    }
+
+    private enum CodingKeys: String, CodingKey { case x, y, scaleX, scaleY, rotation, anchorX, anchorY }
+
+    /// Files written before anchors existed decode with a 0, 0 anchor.
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(x: try c.decode(Double.self, forKey: .x), y: try c.decode(Double.self, forKey: .y),
+                  scaleX: try c.decode(Double.self, forKey: .scaleX), scaleY: try c.decode(Double.self, forKey: .scaleY),
+                  rotation: try c.decode(Double.self, forKey: .rotation),
+                  anchorX: try c.decodeIfPresent(Double.self, forKey: .anchorX) ?? 0,
+                  anchorY: try c.decodeIfPresent(Double.self, forKey: .anchorY) ?? 0)
+    }
+
+    /// The anchor is written only when it isn't 0, 0, so an unanchored transform writes the bytes it always did.
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(x, forKey: .x)
+        try c.encode(y, forKey: .y)
+        try c.encode(scaleX, forKey: .scaleX)
+        try c.encode(scaleY, forKey: .scaleY)
+        try c.encode(rotation, forKey: .rotation)
+        if anchorX != 0 || anchorY != 0 {
+            try c.encode(anchorX, forKey: .anchorX)
+            try c.encode(anchorY, forKey: .anchorY)
+        }
     }
 }
 

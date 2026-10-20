@@ -30,8 +30,8 @@
   {
     "note": "transform finite check skips the y component so a NaN instance y lands",
     "file": "Sources/FlareCore/Instance.swift",
-    "anchor": "        [x, y, scaleX, scaleY, rotation].allSatisfy(\\.isFinite)",
-    "replacement": "        [x, scaleX, scaleY, rotation].allSatisfy(\\.isFinite)",
+    "anchor": "[x, y, scaleX, scaleY, rotation, anchorX, anchorY].allSatisfy(\\.isFinite)",
+    "replacement": "[x, scaleX, scaleY, rotation, anchorX, anchorY].allSatisfy(\\.isFinite)",
     "filter": "InstanceCommandsTests|InstanceTransformPlaybackTests"
   },
   {

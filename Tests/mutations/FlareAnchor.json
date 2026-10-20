@@ -1,0 +1,44 @@
+[
+  {
+    "note": "anchor ignored: the matrix turns about the layer origin",
+    "file": "Sources/FlareCore/Geometry.swift",
+    "anchor": "placed * Matrix.translation(x: -anchorX, y: -anchorY)",
+    "replacement": "placed",
+    "filter": "AnchorTests"
+  },
+  {
+    "note": "anchor sign flipped: the matrix moves the anchor away from the origin",
+    "file": "Sources/FlareCore/Geometry.swift",
+    "anchor": "placed * Matrix.translation(x: -anchorX, y: -anchorY)",
+    "replacement": "placed * Matrix.translation(x: anchorX, y: anchorY)",
+    "filter": "AnchorTests"
+  },
+  {
+    "note": "a zero anchor is written, so old files re-save with new bytes",
+    "file": "Sources/FlareCore/Geometry.swift",
+    "anchor": "        if anchorX != 0 || anchorY != 0 {\n",
+    "replacement": "        if true {\n",
+    "filter": "AnchorTests"
+  },
+  {
+    "note": "layers don't sample their anchor tracks",
+    "file": "Sources/FlareCore/Sampling.swift",
+    "anchor": "anchorX: s[\"anchorX\"] ?? 0, anchorY: s[\"anchorY\"] ?? 0",
+    "replacement": "anchorX: 0, anchorY: 0",
+    "filter": "AnchorTests"
+  },
+  {
+    "note": "a non-finite instance anchor passes validation",
+    "file": "Sources/FlareCore/Instance.swift",
+    "anchor": "rotation, anchorX, anchorY].allSatisfy",
+    "replacement": "rotation].allSatisfy",
+    "filter": "AnchorTests"
+  },
+  {
+    "note": "Lottie writes a keyed anchor as its frame-0 value",
+    "file": "Sources/FlareCore/Export/LottieExporter.swift",
+    "anchor": "guard (layer.tracks[\"anchorX\"]?.count ?? 0) < 2, (layer.tracks[\"anchorY\"]?.count ?? 0) < 2 else {",
+    "replacement": "guard true else {",
+    "filter": "AnchorTests"
+  }
+]
