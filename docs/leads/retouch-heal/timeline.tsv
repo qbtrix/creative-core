@@ -147,3 +147,4 @@ utc	stage	event	ref	note
 2026-10-20T08:29Z	4	gate-run	e09c6c3	round 4 gate CI: PASS on e09c6c3; mutation next
 2026-10-20T08:40Z	4	gate-run	wf_3b84ca09-91b	round 4 mutation 34/34 caught on e09c6c3; critic panel running
 2026-10-20T08:45Z	4	heartbeat	-	lead alive; round 4 mutation/panel or dev CI running
+2026-10-20T09:01Z	4	fix-launched	-	r4-rh fixer launched (wf_88c6af29-b3d)

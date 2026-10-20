@@ -2,9 +2,9 @@
 
 Issue: #436 · Packet: docs/blueprints/core/features/retouch-heal.md
 Run: act-1a157fd0281-warg · Session: 2df03724-340d-5741-940b-d32d0ef62e2a · Resumed: 2026-10-20T06:25Z
-Stage: 4 round 4 (last): critic panel wf_3b84ca09-91b on e09c6c3
+Stage: Stage: 4 round 4 (last): fixes in flight (r4-rh, wf_88c6af29-b3d)
 Base: fa40b3427c6950e982d58c55d769f2dc5f7f1923
-Next: read panel wf_3b84ca09-91b, then fix batch, then RH-8 feature-done
+Next: Next: merge r4-rh, then RH-8 feature-done; leftovers become gap issues
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -33,6 +33,7 @@ Next: read panel wf_3b84ca09-91b, then fix batch, then RH-8 feature-done
 | 1 | 27f5e36 | PASS | see confirmed | | | gate CI: PASS, mutants 10/10 caught; panel wf_52be3b2f-289: 26 confirmed (1 blocker: heal 200 px dab budget ~390 ms vs 12 ms; 8 major), 0 refuted. Batches on 22a5fdd: r1-heal (6,23,16,0,5,10,11,15,18,24,25), r1-fill (7,1,2,17,19), r1-tone (4,9,12,20,21; owns the packet), r1-smudge (3,14,22), r1-walk (8,13; owns image-ops C4 part). | | no |
 | 2 | 5142795 | PASS | see confirmed | | | 18 confirmed (3 major, 15 minor), 0 refuted; not clean. Batches r2-fill (findings 4,11,12,16,1,9,0-code), r2-tone (2,3,10,13,14,17), r2-docs (5,15,6,7,0-packet). Deferred: FillRandom/ParityRandom SplitMix dedup (minor, design), as a packet follow-up | #687, #684, #677 | no |
 | 3 | 1940443 | PASS | 28/28 | 39230628738 (8cd57c6) | clarity contract design robustness tests | 13 (3 major, 10 minor), 1 refuted | r3-fill r3-heal r3-smudge | no |
+| 4 | e09c6c3 | PASS | 34/34 | 39370425442 | clarity contract design robustness tests | 10 (2 major, 8 minor), 0 refuted; FillRandom/ParityRandom dedup refuted by lead (CoreRaster cannot depend on CoreRender; packet follow-up) | r4-rh | no |
 
 ## Decisions
 - Line lead over text-engine #437, retouch-heal #436, fill-tools #435: one wave plan; tasks share a wave only with disjoint files.
