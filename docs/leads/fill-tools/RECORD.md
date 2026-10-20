@@ -2,9 +2,9 @@
 
 Issue: #435 · Packet: docs/blueprints/core/features/fill-tools.md
 Run: act-1a157fd0281-warg · Session: 2df03724-340d-5741-940b-d32d0ef62e2a · Resumed: 2026-10-20T06:25Z
-Stage: Anatomy round 4 fixes in flight (r4-flood, r4-grad)
-Base: cc27761484b9ed106af343ec3b813bbf86b3b797
-Next: merge r4 fixes, then FT-8 feature-done; leftovers become gap issues
+Stage: done: all slices merged-done, contact sheet posted (Mac finisher wanted for FT-z budgets)
+Base: 0b2cb33e9e6482a20c981aaa74e89fd7004c78a2
+Next: Mac finisher verifies FT-z budgets (#767)
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -25,7 +25,7 @@ Next: merge r4 fixes, then FT-8 feature-done; leftovers become gap issues
 | FT-a | FT-0, FT-1, FT-2 | engine-contracts:EC-a | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39183955889 | – |
 | FT-mask | FT-3, FT-4 | FT-a | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39196728473 | – |
 | FT-grad | FT-5, FT-6 | FT-a | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39196728473 | – |
-| FT-z | FT-7, FT-8 | FT-mask, FT-grad | open |  | wanted |
+| FT-z | FT-7, FT-8 | FT-mask, FT-grad | merged-done | https://github.com/qbtrix/creative-core/actions/runs/39404984625 | wanted (budgets, #767) |
 
 ## Rounds
 | round | dev SHA | scripts/ci | mutants caught | CI run | lenses | confirmed | fixed by | clean |
@@ -58,6 +58,5 @@ Next: merge r4 fixes, then FT-8 feature-done; leftovers become gap issues
 - Round 3: the FT-7 release-budget misses (flood about 10x, colour range about 2x, gradient about 87x) get one performance fix per op in this wave; finding 4 (packet status built) waits for the FT-8 feature-done PR.
 
 ## Open
-- FT-mask Slice-Done waits on a dev CI run holding #623; FT-grad on one holding #622.
 - FT-7 release budgets missed on loaded Linux and disabled as bug: floodMask ~1250 ms (120), colorRangeMask ~195 ms (90), gradient ~5206 ms (60); the Mac finisher verifies them (rule 15).
 - Packet FT-3 half-covers wording now holds through #650 fixture change; FT-8 may correct the packet line.
