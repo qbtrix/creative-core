@@ -59,7 +59,8 @@ struct AnchorTests {
         let host = Layer(id: "h", name: "H", instances: [Instance(symbolID: "sym", transform: Transform(anchorX: .nan))])
         let document = Document(scenes: [Scene(id: "s", name: "S", layers: [host])],
                                 symbols: [Symbol(id: "sym", name: "Sym", durationFrames: 1, layers: [])])
-        #expect(throws: FormatError.self) { try FlareFormat.encode(document) }
+        // The check itself refuses it, not just JSON's refusal to write a NaN.
+        #expect(throws: FormatError.self) { try FlareFormat.validate(document) }
     }
 
     @Test func svgWritesTheAnchoredMatrix() throws {
