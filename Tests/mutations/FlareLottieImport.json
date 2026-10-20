@@ -1,205 +1,31 @@
 [
-  {
-    "note": "lottie import reads the in tangent as absolute, not relative to its vertex",
-    "file": "Sources/FlareCore/Import/LottieImport.swift",
-    "anchor": "let c2 = Point(x: b.vertex.x + b.tangentIn.x, y: b.vertex.y + b.tangentIn.y)",
-    "replacement": "let c2 = b.tangentIn",
-    "filter": "LottieImportTests"
-  },
-  {
-    "note": "lottie import keeps the file's top-first layer order",
-    "file": "Sources/FlareCore/Import/LottieImport.swift",
-    "anchor": "for (index, json) in layers.enumerated().reversed() {",
-    "replacement": "for (index, json) in layers.enumerated() {",
-    "filter": "LottieImportTests"
-  },
-  {
-    "note": "lottie import drops the layer anchor",
-    "file": "Sources/FlareCore/Import/LottieImport.swift",
-    "anchor": "\"anchorX\": anchor.x, \"anchorY\": anchor.y]",
-    "replacement": "\"anchorX\": 0, \"anchorY\": 0]",
-    "filter": "LottieImportTests"
-  },
-  {
-    "note": "lottie import negates the layer anchor",
-    "file": "Sources/FlareCore/Import/LottieImport.swift",
-    "anchor": "\"anchorX\": anchor.x, \"anchorY\": anchor.y]",
-    "replacement": "\"anchorX\": -anchor.x, \"anchorY\": -anchor.y]",
-    "filter": "LottieImportTests"
-  },
-  {
-    "note": "lottie import fps range widened to 0...240",
-    "file": "Sources/FlareCore/Import/LottieImport.swift",
-    "anchor": "let fps = try frame(root[\"fr\"], \"fr\", 30, 1...240)",
-    "replacement": "let fps = try frame(root[\"fr\"], \"fr\", 30, 0...240)",
-    "filter": "LottieImportTests"
-  },
-  {
-    "note": "lottie import frame range has no upper cap",
-    "file": "Sources/FlareCore/Import/LottieImport.swift",
-    "anchor": "static let frames = 0...1_000_000",
-    "replacement": "static let frames = 0...Int.max",
-    "filter": "LottieImportTests"
-  },
-  {
-    "note": "lottie import nesting check lets deep groups through",
-    "file": "Sources/FlareCore/Import/LottieImport.swift",
-    "anchor": "guard depth <= limit else {",
-    "replacement": "guard depth <= Int.max else {",
-    "filter": "LottieImportTests"
-  },
-  {
-    "note": "lottie import group depth guard off by one reads maxDepth + 1 groups (depthCapped)",
-    "file": "Sources/FlareCore/Import/LottieImport.swift",
-    "anchor": "guard depth <= LottieImport.maxDepth else {",
-    "replacement": "guard depth <= LottieImport.maxDepth + 1 else {",
-    "filter": "LottieImportTests"
-  },
-  {
-    "note": "lottie import drops the group tr anchor (groupTransformFull)",
-    "file": "Sources/FlareCore/Import/LottieImport.swift",
-    "anchor": "matrix = outer * t.matrix * Matrix.translation(x: -anchor.x, y: -anchor.y)",
-    "replacement": "matrix = outer * t.matrix",
-    "filter": "LottieImportTests"
-  },
-  {
-    "note": "lottie import group opacity replaces the outer one instead of multiplying (groupTransformFull)",
-    "file": "Sources/FlareCore/Import/LottieImport.swift",
-    "anchor": "(opacity, inherited) = (opacity * o, inherited.faded(o))",
-    "replacement": "(opacity, inherited) = (o, inherited.faded(o))",
-    "filter": "LottieImportTests"
-  },
-  {
-    "note": "lottie import scales stroke width by det, not sqrt det (groupTransformFull)",
-    "file": "Sources/FlareCore/Import/LottieImport.swift",
-    "anchor": "0) * abs(matrix.determinant).squareRoot()",
-    "replacement": "0) * abs(matrix.determinant)",
-    "filter": "LottieImportTests"
-  },
-  {
-    "note": "lottie import leaves tr opacity unclamped (groupOpacityClamped)",
-    "file": "Sources/FlareCore/Import/LottieImport.swift",
-    "anchor": "min(max(try scalar(json?[\"o\"], \"opacity\", 100) / 100, 0), 1)",
-    "replacement": "try scalar(json?[\"o\"], \"opacity\", 100) / 100",
-    "filter": "LottieImportTests"
-  },
-  {
-    "note": "lottie json keeps the last of a repeated key, not the first as Foundation does (LottieJSONTests)",
-    "file": "Sources/FlareCore/Import/LottieImport.swift",
-    "anchor": "for j in (0..<count).reversed() { members[keys[first + j]] = values[start + j] }",
-    "replacement": "for j in 0..<count { members[keys[first + j]] = values[start + j] }",
-    "filter": "LottieJSONTests"
-  },
-  {
-    "note": "lottie json takes a raw control character inside a string (LottieJSONTests)",
-    "file": "Sources/FlareCore/Import/LottieImport.swift",
-    "anchor": "guard i < b.count, b[i] >= 0x20 else { throw bad }",
-    "replacement": "guard i < b.count else { throw bad }",
-    "filter": "LottieJSONTests"
-  },
-  {
-    "note": "lottie group walk drops a nested group's shapes when it closes (ownShapeAtFirstPaint)",
-    "file": "Sources/FlareCore/Import/LottieImport.swift",
-    "anchor": "open[top - 1].shapes += done.shapes",
-    "replacement": "_ = done.shapes",
-    "filter": "LottieImportTests"
-  },
-  {
-    "note": "lottie group walk places a group's own shape at every paint and again at its end, not once (ownShapeAtFirstPaint)",
-    "file": "Sources/FlareCore/Import/LottieImport.swift",
-    "anchor": "open[top].placed = true",
-    "replacement": "open[top].placed = false",
-    "filter": "LottieImportTests"
-  },
-  {
-    "note": "lottie group walk keeps nested groups at the outer depth, so the depth cap never binds (depthCapped)",
-    "file": "Sources/FlareCore/Import/LottieImport.swift",
-    "anchor": "depth: f.depth + 1))",
-    "replacement": "depth: f.depth))",
-    "filter": "LottieImportTests"
-  },
-  {
-    "note": "lottie json accepts text after the value",
-    "file": "Sources/FlareCore/Import/LottieImport.swift",
-    "anchor": "guard i == b.count else { throw bad }",
-    "replacement": "guard i <= b.count else { throw bad }",
-    "filter": "LottieJSONTests"
-  },
-  {
-    "note": "lottie json lets a bracket close the other kind of container",
-    "file": "Sources/FlareCore/Import/LottieImport.swift",
-    "anchor": "try expect(close)",
-    "replacement": "space(); guard at(\"]\") || at(\"}\") else { throw bad }; i += 1",
-    "filter": "LottieJSONTests"
-  },
-  {
-    "note": "lottie json accepts leading zeros",
-    "file": "Sources/FlareCore/Import/LottieImport.swift",
-    "anchor": "if at(\"0\") { i += 1 } else { guard digits() > 0 else { throw bad } }",
-    "replacement": "guard digits() > 0 else { throw bad }",
-    "filter": "LottieJSONTests"
-  },
-  {
-    "note": "lottie json accepts numbers past Double's range",
-    "file": "Sources/FlareCore/Import/LottieImport.swift",
-    "anchor": "v.isFinite else { throw bad }",
-    "replacement": "v.isFinite || true else { throw bad }",
-    "filter": "LottieJSONTests"
-  },
-  {
-    "note": "lottie json repairs invalid UTF-8 instead of throwing",
-    "file": "Sources/FlareCore/Import/LottieImport.swift",
-    "anchor": "case .error: throw bad",
-    "replacement": "case .error: text.append(\"\\u{FFFD}\")",
-    "filter": "LottieJSONTests"
-  },
-  {
-    "note": "lottie json joins a surrogate pair without the 0x10000 offset",
-    "file": "Sources/FlareCore/Import/LottieImport.swift",
-    "anchor": "v = 0x10000 + (v - 0xD800) << 10 + (low - 0xDC00)",
-    "replacement": "v = (v - 0xD800) << 10 + (low - 0xDC00)",
-    "filter": "LottieJSONTests"
-  },
-  {
-    "note": "lottie json takes a high surrogate before a non-low one",
-    "file": "Sources/FlareCore/Import/LottieImport.swift",
-    "anchor": "guard (0xDC00..<0xE000).contains(low) else { throw bad }",
-    "replacement": "guard (0xDC00..<0xE000).contains(low) || low >= 0xDC00 else { throw bad }",
-    "filter": "LottieJSONTests"
-  },
-  {
-    "note": "lottie json reads a sign inside a unicode escape",
-    "file": "Sources/FlareCore/Import/LottieImport.swift",
-    "anchor": "b[i..<(i + 4)].allSatisfy({ $0 != UInt8(ascii: \"+\") && $0 != UInt8(ascii: \"-\") }) else { throw bad }",
-    "replacement": "b[i..<(i + 4)].count == 4 else { throw bad }",
-    "filter": "LottieJSONTests"
-  },
-  {
-    "note": "lottie json equality zips arrays of different lengths (equalityComparesEveryLevel)",
-    "file": "Sources/FlareCore/Import/LottieImport.swift",
-    "anchor": "case (.array(let a), .array(let b)) where a.count == b.count:",
-    "replacement": "case (.array(let a), .array(let b)):",
-    "filter": "LottieJSONTests"
-  },
-  {
-    "note": "lottie json equality skips a key the other object lacks (equalityComparesEveryLevel)",
-    "file": "Sources/FlareCore/Import/LottieImport.swift",
-    "anchor": "guard let other = b[key] else { return false }",
-    "replacement": "guard let other = b[key] else { continue }",
-    "filter": "LottieJSONTests"
-  },
-  {
-    "note": "lottie import keeps a layer's top-first shape order, so a round trip differs (walk)",
-    "file": "Sources/FlareCore/Import/LottieImport.swift",
-    "anchor": "place(shapes.reversed(), on: &layer)",
-    "replacement": "place(shapes, on: &layer)",
-    "filter": "ImportRoundTripTests"
-  },
-  {
-    "note": "lottie json memo keys a container by part of its text, so a near repeat reads as the earlier one (repeatedContainersReadAsWritten)",
-    "file": "Sources/FlareCore/Import/LottieImport.swift",
-    "anchor": "let text = Text(bytes: b[top.from..<i]), small = text.count <= builtText",
-    "replacement": "let text = Text(bytes: b[top.from..<(i - 2)]), small = text.count <= builtText",
-    "filter": "LottieJSONTests"
-  }
+  {"note": "lottie import reads the in tangent as absolute, not relative to its vertex", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "let c2 = Point(x: b.vertex.x + b.tangentIn.x, y: b.vertex.y + b.tangentIn.y)", "replacement": "let c2 = b.tangentIn", "filter": "LottieImportTests"},
+  {"note": "lottie import keeps the file's top-first layer order", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "for (index, json) in layers.enumerated().reversed() {", "replacement": "for (index, json) in layers.enumerated() {", "filter": "LottieImportTests"},
+  {"note": "lottie import drops the layer anchor", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "\"anchorX\": anchor.x, \"anchorY\": anchor.y]", "replacement": "\"anchorX\": 0, \"anchorY\": 0]", "filter": "LottieImportTests"},
+  {"note": "lottie import negates the layer anchor", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "\"anchorX\": anchor.x, \"anchorY\": anchor.y]", "replacement": "\"anchorX\": -anchor.x, \"anchorY\": -anchor.y]", "filter": "LottieImportTests"},
+  {"note": "lottie import fps range widened to 0...240", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "let fps = try frame(root[\"fr\"], \"fr\", 30, 1...240)", "replacement": "let fps = try frame(root[\"fr\"], \"fr\", 30, 0...240)", "filter": "LottieImportTests"},
+  {"note": "lottie import frame range has no upper cap", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "static let frames = 0...1_000_000", "replacement": "static let frames = 0...Int.max", "filter": "LottieImportTests"},
+  {"note": "lottie import nesting check lets deep groups through", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "guard depth <= limit else {", "replacement": "guard depth <= Int.max else {", "filter": "LottieImportTests"},
+  {"note": "lottie import group depth guard off by one reads maxDepth + 1 groups (depthCapped)", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "guard depth <= LottieImport.maxDepth else {", "replacement": "guard depth <= LottieImport.maxDepth + 1 else {", "filter": "LottieImportTests"},
+  {"note": "lottie import drops the group tr anchor (groupTransformFull)", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "matrix = outer * t.matrix * Matrix.translation(x: -anchor.x, y: -anchor.y)", "replacement": "matrix = outer * t.matrix", "filter": "LottieImportTests"},
+  {"note": "lottie import group opacity replaces the outer one instead of multiplying (groupTransformFull)", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "(opacity, inherited) = (opacity * o, inherited.faded(o))", "replacement": "(opacity, inherited) = (o, inherited.faded(o))", "filter": "LottieImportTests"},
+  {"note": "lottie import scales stroke width by det, not sqrt det (groupTransformFull)", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "0) * abs(matrix.determinant).squareRoot()", "replacement": "0) * abs(matrix.determinant)", "filter": "LottieImportTests"},
+  {"note": "lottie import leaves tr opacity unclamped (groupOpacityClamped)", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "min(max(try scalar(json?[\"o\"], \"opacity\", 100) / 100, 0), 1)", "replacement": "try scalar(json?[\"o\"], \"opacity\", 100) / 100", "filter": "LottieImportTests"},
+  {"note": "lottie json keeps the last of a repeated key, not the first as Foundation does (LottieJSONTests)", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "for j in (0..<count).reversed() { members[keys[first + j]] = values[start + j] }", "replacement": "for j in 0..<count { members[keys[first + j]] = values[start + j] }", "filter": "LottieJSONTests"},
+  {"note": "lottie json takes a raw control character inside a string (LottieJSONTests)", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "guard i < b.count, b[i] >= 0x20 else { throw bad }", "replacement": "guard i < b.count else { throw bad }", "filter": "LottieJSONTests"},
+  {"note": "lottie group walk drops a nested group's shapes when it closes (ownShapeAtFirstPaint)", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "open[top - 1].shapes += done.shapes", "replacement": "_ = done.shapes", "filter": "LottieImportTests"},
+  {"note": "lottie group walk places a group's own shape at every paint and again at its end, not once (ownShapeAtFirstPaint)", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "open[top].placed = true", "replacement": "open[top].placed = false", "filter": "LottieImportTests"},
+  {"note": "lottie group walk keeps nested groups at the outer depth, so the depth cap never binds (depthCapped)", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "depth: f.depth + 1))", "replacement": "depth: f.depth))", "filter": "LottieImportTests"},
+  {"note": "lottie json accepts text after the value", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "guard i == b.count else { throw bad }", "replacement": "guard i <= b.count else { throw bad }", "filter": "LottieJSONTests"},
+  {"note": "lottie json lets a bracket close the other kind of container", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "try expect(close)", "replacement": "space(); guard at(\"]\") || at(\"}\") else { throw bad }; i += 1", "filter": "LottieJSONTests"},
+  {"note": "lottie json accepts leading zeros", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "if at(\"0\") { i += 1 } else { guard digits() > 0 else { throw bad } }", "replacement": "guard digits() > 0 else { throw bad }", "filter": "LottieJSONTests"},
+  {"note": "lottie json accepts numbers past Double's range", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "v.isFinite else { throw bad }", "replacement": "v.isFinite || true else { throw bad }", "filter": "LottieJSONTests"},
+  {"note": "lottie json repairs invalid UTF-8 instead of throwing", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "case .error: throw bad", "replacement": "case .error: text.append(\"\\u{FFFD}\")", "filter": "LottieJSONTests"},
+  {"note": "lottie json joins a surrogate pair without the 0x10000 offset", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "v = 0x10000 + (v - 0xD800) << 10 + (low - 0xDC00)", "replacement": "v = (v - 0xD800) << 10 + (low - 0xDC00)", "filter": "LottieJSONTests"},
+  {"note": "lottie json takes a high surrogate before a non-low one", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "guard (0xDC00..<0xE000).contains(low) else { throw bad }", "replacement": "guard (0xDC00..<0xE000).contains(low) || low >= 0xDC00 else { throw bad }", "filter": "LottieJSONTests"},
+  {"note": "lottie json reads a sign inside a unicode escape", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "b[i..<(i + 4)].allSatisfy({ $0 != UInt8(ascii: \"+\") && $0 != UInt8(ascii: \"-\") }) else { throw bad }", "replacement": "b[i..<(i + 4)].count == 4 else { throw bad }", "filter": "LottieJSONTests"},
+  {"note": "lottie json equality zips arrays of different lengths (equalityComparesEveryLevel)", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "case (.array(let a), .array(let b)) where a.count == b.count:", "replacement": "case (.array(let a), .array(let b)):", "filter": "LottieJSONTests"},
+  {"note": "lottie json equality skips a key the other object lacks (equalityComparesEveryLevel)", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "guard let other = b[key] else { return false }", "replacement": "guard let other = b[key] else { continue }", "filter": "LottieJSONTests"},
+  {"note": "lottie import keeps a layer's top-first shape order, so a round trip differs (walk)", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "place(shapes.reversed(), on: &layer)", "replacement": "place(shapes, on: &layer)", "filter": "ImportRoundTripTests"},
+  {"note": "lottie json memo keys a container by part of its text, so a near repeat reads as the earlier one (repeatedContainersReadAsWritten)", "file": "Sources/FlareCore/Import/LottieImport.swift", "anchor": "let text = Text(bytes: b[top.from..<i]), small = text.count <= builtText", "replacement": "let text = Text(bytes: b[top.from..<(i - 2)]), small = text.count <= builtText", "filter": "LottieJSONTests"}
 ]
