@@ -62,3 +62,4 @@ Next: M7a #746 open; M7a2 gating (stacked); M7b after #745 (P6b) merges; then An
 - #748 (M7b, feature-done) merged as 9714ff3; dev CI run 39352093719 dispatched. Anatomy round 3 started on 9714ff33 (gate + mutate --changed-since base, then the panel with the round-2 lenses).
 - dev CI https://github.com/qbtrix/creative-core/actions/runs/39352093719 green on 9714ff3 (Linux, macOS, Mutation): Belt-Slice-Done MM-z and Mac-Finish-Wanted MM-z posted on #431. Every masks-mattes slice is merged-done.
 - Round 3 on 9714ff33: scripts/ci CI: PASS; mutate --changed-since base at 161/221 caught, 0 escaped so far. Next: the critic panel (clarity, contract, undo, robustness, tests) once mutation finishes.
+- Round 3 on 9714ff33: mutate --changed-since base 221/221 caught (53.7 min). Critic panel running (clarity, contract, undo, robustness, tests), run wf_89ce91c1-7f8.
