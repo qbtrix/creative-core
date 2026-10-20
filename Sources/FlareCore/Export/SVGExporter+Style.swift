@@ -1,9 +1,10 @@
 // SVGExporter+Style.swift: the fill, stroke and gradient attributes SVGExporter writes on a path,
 // and each shape as it draws at the exported frame: its layer's fill and stroke colour tracks,
-// `Layer.trackKey(strokeWidthOf:)` track and shape track sampled there (an instance's symbol layers at the
-// symbol frame). A value with no track stays static, so an unkeyed scene exports as before.
+// `Layer.trackKey(strokeWidthOf:)` track, trim tracks and shape track sampled there (an instance's symbol
+// layers at the symbol frame). A value with no track stays static, so an unkeyed scene exports as before.
 // A keyed fill track paints the shape a solid of its sampled colour, replacing a gradient as the
-// Lottie export does; stroke tracks colour and widen an existing stroke only.
+// Lottie export does; stroke tracks colour, widen and trim an existing stroke only (a trim track on a
+// stroke without a trim starts from the whole outline). A dash writes stroke-dasharray and stroke-dashoffset.
 
 extension SVGExporter {
     /// `nodes` with each shape replaced by `styled(_:index:of:at:)`: shapes of
@@ -32,7 +33,7 @@ extension SVGExporter {
     }
 
     /// `shape`, which is `layer.shapes[index]`, with its fill colour, stroke
-    /// colour, stroke width and path sampled from `layer`'s tracks at `frame`.
+    /// colour, stroke width, stroke trim and path sampled from `layer`'s tracks at `frame`.
     /// A keyed fill colour replaces any fill, gradients included, with that solid.
     /// A sampled width below 0 draws as 0, the least a stroke may have.
     static func styled(_ shape: Shape, index: Int, of layer: Layer, at frame: Double) -> Shape {
@@ -43,20 +44,24 @@ extension SVGExporter {
             if let keys = layer.tracks[Layer.trackKey(strokeWidthOf: index)], let width = Timeline.value(of: keys, at: frame) {
                 stroke.width = max(width, 0)
             }
+            stroke.trim = layer.sampledTrim(of: index, base: stroke.trim, at: frame)
             out.stroke = stroke
         }
         if let path = layer.sampledPath(shape: index, at: frame) { out.path = path }
         return out
     }
 
-    /// ` stroke`, ` stroke-opacity` (when translucent), width, join and cap;
-    /// empty when there is no stroke.
+    /// ` stroke`, ` stroke-opacity` (when translucent), width, join and cap,
+    /// then ` stroke-dasharray` and ` stroke-dashoffset` when dashed; empty
+    /// when there is no stroke.
     static func stroke(_ stroke: Stroke?) throws -> String {
         guard let stroke else { return "" }
         let (hex, alpha) = try paint(stroke.color)
         let opacity = alpha.map { " stroke-opacity=\"\($0)\"" } ?? ""
+        let dash = stroke.dash.isEmpty ? ""
+            : " stroke-dasharray=\"\(try stroke.dash.map(number).joined(separator: " "))\" stroke-dashoffset=\"\(try number(stroke.dashPhase))\""
         return " stroke=\"\(hex)\"\(opacity) stroke-width=\"\(try number(stroke.width))\""
-            + " stroke-linejoin=\"\(stroke.join.rawValue)\" stroke-linecap=\"\(stroke.cap.rawValue)\""
+            + " stroke-linejoin=\"\(stroke.join.rawValue)\" stroke-linecap=\"\(stroke.cap.rawValue)\"\(dash)"
     }
 
     /// ` fill="#rrggbb"`, plus ` fill-opacity` when the color is translucent.

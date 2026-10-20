@@ -20,8 +20,11 @@
 // with x clamped to 0...1 as `Easing` does).
 //
 // Each shape becomes a group (`gr`) of its subpaths (`sh`), its stroke (`st`)
-// if any, its fill (`fl` for a solid color, `gf` for a gradient) and an
-// identity group transform (`tr`). Each instance becomes a group, above the
+// if any, with its dash pattern as `st.d` (dashes and gaps, an odd pattern
+// repeated once, then the offset), its fill (`fl` for a solid color, `gf` for
+// a gradient) and an identity group transform (`tr`). A trimmed stroke
+// (LottieExporter+Tracks) splits the group in two so the trim cuts the stroke
+// and not the fill. Each instance becomes a group, above the
 // layer's shapes, holding one group per visible symbol layer sampled at the
 // symbol frame (`Instance.resolve`), each with its own `tr`. A radial
 // gradient's end point is its center moved right by the radius. A gradient's
@@ -286,10 +289,16 @@ struct LottieItem: Encodable, Sendable {
     var r: LottieR?
     var p: LottieStatic<[Double]>?
     var a: LottieStatic<[Double]>?
-    var s: LottieStatic<[Double]>?
+    /// A gradient's start point on `gf`, the scale on `tr`, the trim start on `tm`.
+    var s: LottieEnd?
     /// Gradient type on `gf`: 1 linear, 2 radial.
     var t: Int?
-    var e: LottieStatic<[Double]>?
+    /// A gradient's end point on `gf`, the trim end on `tm`.
+    var e: LottieEnd?
+    /// The dash pattern on `st`: dash and gap entries, then the offset.
+    var d: [LottieDash]?
+    /// How a `tm` trims several paths: 1 each on its own, 2 together.
+    var m: Int?
     var g: LottieGradientStops?
     /// Stroke width, line cap and line join on `st`.
     var w: LottieScalar?
@@ -306,11 +315,30 @@ struct LottieItem: Encodable, Sendable {
         var item = LottieItem(ty: "tr")
         item.p = LottieStatic([try f(t.x), try f(t.y)])
         item.a = LottieStatic([0, 0])
-        item.s = LottieStatic([try f(t.scaleX * 100), try f(t.scaleY * 100)])
+        item.s = .point(LottieStatic([try f(t.scaleX * 100), try f(t.scaleY * 100)]))
         item.r = .rotation(LottieStatic(try f(t.rotation)))
         item.o = .fixed(LottieStatic(min(max(try f(opacity), 0), 1) * 100))
         return item
     }
+}
+
+/// A `gf` gradient end or `tr` scale (a point), or a `tm` trim end (a percent).
+enum LottieEnd: Encodable, Sendable {
+    case point(LottieStatic<[Double]>)
+    case percent(LottieScalar)
+
+    func encode(to encoder: any Encoder) throws {
+        switch self {
+        case .point(let value): try value.encode(to: encoder)
+        case .percent(let value): try value.encode(to: encoder)
+        }
+    }
+}
+
+/// One entry of a stroke's dash pattern: `n` is "d" (dash), "g" (gap) or "o" (offset).
+struct LottieDash: Encodable, Sendable {
+    var n: String
+    var v: LottieScalar
 }
 
 /// Gradient stops: `p` stops, flattened as offset, r, g, b for each, then, only
@@ -366,13 +394,13 @@ extension LottieItem {
             fill.o = .fixed(LottieStatic(try channel(color.a) * 100))
         case .linear(let stops, let start, let end):
             fill.t = 1
-            fill.s = try point(start)
-            fill.e = try point(end)
+            fill.s = .point(try point(start))
+            fill.e = .point(try point(end))
             fill.g = try gradient(stops)
         case .radial(let stops, let center, let radius):
             fill.t = 2
-            fill.s = try point(center)
-            fill.e = try point(Point(x: center.x + radius, y: center.y))
+            fill.s = .point(try point(center))
+            fill.e = .point(try point(Point(x: center.x + radius, y: center.y)))
             fill.g = try gradient(stops)
         }
         if fill.ty == "gf" { fill.o = .fixed(LottieStatic(100)) }
@@ -385,6 +413,12 @@ extension LottieItem {
             item.w = .fixed(LottieStatic(try LottieExporter.finite(stroke.width)))
             item.lc = [.butt: 1, .round: 2, .square: 3][stroke.cap]
             item.lj = [.miter: 1, .round: 2, .bevel: 3][stroke.join]
+            if !stroke.dash.isEmpty {
+                let entries = stroke.dash.count % 2 == 1 ? stroke.dash + stroke.dash : stroke.dash
+                item.d = try entries.enumerated().map { k, length in
+                    LottieDash(n: k % 2 == 0 ? "d" : "g", v: .fixed(LottieStatic(try LottieExporter.finite(length))))
+                } + [LottieDash(n: "o", v: .fixed(LottieStatic(try LottieExporter.finite(stroke.dashPhase))))]
+            }
             items.append(item)
         }
         items += [fill, try LottieItem.transform(.identity, opacity: 1)]

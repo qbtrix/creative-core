@@ -11,7 +11,12 @@
 // keys with different subpath counts throw `unsupported("shape track")`. A
 // single key, or a layer inside a symbol (drawn at one local frame), writes
 // the sampled value statically. A keyed fill paints a gradient shape solid. A
-// shape with no keys writes exactly what `init(shape:)` writes.
+// stroke whose trim (`Stroke.trim` with its `trimStart/End/Offset.<i>` tracks
+// sampled in) cuts the outline, or whose trim tracks animate, splits the group:
+// first a group of the subpaths, a trim (`tm`: `s` and `e` in percent, `o` in
+// degrees, `m` 2 together or 1 each contour) and the stroke, then a group of the
+// subpaths and the fill, so the fill stays whole. A shape with no keys and no
+// trim writes exactly what `init(shape:)` writes.
 
 /// A scalar property, animated from one track.
 typealias LottieScalar = LottieProperty<Double>
@@ -163,16 +168,23 @@ extension LottieExporter {
 
 extension LottieItem {
     /// Shape `index` of `layer` as `init(shape:)` writes it, with the fill and
-    /// stroke colours, stroke width and path its tracks key: animated when
-    /// `animate` (a scene layer), else their values at `frame` (a symbol's layer).
+    /// stroke colours, stroke width, path and stroke trim its tracks key: animated
+    /// when `animate` (a scene layer), else their values at `frame` (a symbol's layer).
     init(shape: Shape, index: Int, of layer: Layer, frame: Double, animate: Bool) throws {
         try self.init(shape: shape)
+        if let items = it { it = try Self.keyed(items, shape: shape, index: index, of: layer, frame: frame, animate: animate) }
+        try trim(shape, index: index, of: layer, frame: frame, animate: animate)
+    }
+
+    /// `items`, the shape group `init(shape:)` wrote for `layer.shapes[index]`, with its fill, stroke and path tracks.
+    static func keyed(_ items: [LottieItem], shape: Shape, index: Int, of layer: Layer, frame: Double, animate: Bool) throws -> [LottieItem] {
+        var items = items
         let widthKey = Layer.trackKey(strokeWidthOf: index)
         let fills = layer.colorTracks[Layer.colorTrackKey(fillOf: index)] ?? []
         let strokes = layer.colorTracks[Layer.colorTrackKey(strokeOf: index)] ?? []
         let widths = layer.tracks[widthKey] ?? []
         let paths = layer.shapeTracks.first { $0.shapeIndex == index }?.keys ?? []
-        guard !(fills.isEmpty && strokes.isEmpty && widths.isEmpty && paths.isEmpty), var items = it else { return }
+        guard !(fills.isEmpty && strokes.isEmpty && widths.isEmpty && paths.isEmpty) else { return items }
         if let outline = try Self.outline(paths, of: layer, index, frame: frame, animate: animate) {
             items = outline + items.filter { $0.ty != "sh" }
         }
@@ -191,7 +203,30 @@ extension LottieItem {
             default: continue
             }
         }
-        it = items
+        return items
+    }
+
+    /// Splits this shape group in two when its stroke is trimmed: the subpaths,
+    /// a `tm` and the stroke, then the subpaths and the fill. Unchanged without
+    /// a stroke, or when the trim keeps the whole outline and no trim track animates.
+    mutating func trim(_ shape: Shape, index: Int, of layer: Layer, frame: Double, animate: Bool) throws {
+        let keys = [Layer.trackKey(trimStartOf: index), Layer.trackKey(trimEndOf: index), Layer.trackKey(trimOffsetOf: index)]
+        let tracks = keys.map { animate ? layer.tracks[$0] ?? [] : [] }
+        guard let stroke = shape.stroke, let now = layer.sampledTrim(of: index, base: stroke.trim, at: frame),
+              !now.isWhole || tracks.contains(where: { $0.count > 1 }), let items = it else { return }
+        // Checked here: map cannot throw, and a finite turn count can overflow in degrees.
+        for value in [now.offset] + tracks[2].map(\.value) { _ = try LottieExporter.finite(value * 360) }
+        func percent(_ v: Double) -> Double { min(max(v, 0), 1) * 100 }
+        var tm = LottieItem(ty: "tm")
+        tm.s = .percent(try LottieScalar(tracks[0], at0: now.start, map: percent))
+        tm.e = .percent(try LottieScalar(tracks[1], at0: now.end, map: percent))
+        tm.o = try LottieScalar(tracks[2], at0: now.offset) { $0 * 360 }
+        tm.m = now.mode == .together ? 2 : 1
+        let subpaths = items.filter { $0.ty == "sh" }
+        let identity = try LottieItem.transform(.identity, opacity: 1)
+        it = [LottieExporter.group(subpaths + [tm] + items.filter { $0.ty == "st" } + [identity]),
+              LottieExporter.group(subpaths + items.filter { $0.ty == "fl" || $0.ty == "gf" } + [identity])]
+            + items.filter { $0.ty == "tr" }
     }
 
     /// This item with `c` and `o` from colour track `keys` of `target`:

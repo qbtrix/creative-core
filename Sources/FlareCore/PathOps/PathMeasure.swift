@@ -1,5 +1,6 @@
 // PathMeasure.swift: a ruler along a `Path`: its length, the point and unit
-// tangent at a length, trim and dash.
+// tangent at a length, trim and dash, and the path a `Stroke` paints with them
+// (trimmed, then dashed).
 //
 // Invariants:
 // - every measure flattens the path once at `tolerance` and walks the polyline
@@ -111,6 +112,22 @@ extension Path {
             }
         }
         return Path(elements: elements)
+    }
+}
+
+extension Stroke {
+    /// The part of `path` this stroke paints: `path` trimmed by `trim` (unless
+    /// it keeps the whole path), then cut into `dash` starting `dashPhase` into
+    /// the pattern (unless the pattern is empty). `path` itself for a plain stroke.
+    ///
+    /// Throws as `Path.trimmed` and `Path.dashed` do.
+    public func paintedPath(_ path: Path, tolerance: Double) throws -> Path {
+        var out = path
+        if let trim, !trim.isWhole {
+            out = try out.trimmed(start: trim.start, end: trim.end, offset: trim.offset, mode: trim.mode, tolerance: tolerance)
+        }
+        if !dash.isEmpty { out = try out.dashed(dash, phase: dashPhase, tolerance: tolerance) }
+        return out
     }
 }
 

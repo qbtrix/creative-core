@@ -4,8 +4,10 @@
 // what the stage draws. Layers render bottom to top (the first layer is drawn
 // first). Each visible layer is a <g> carrying its sampled transform as a
 // matrix and its opacity; each shape is a <path> built from `Shape.outline`, so curves stay curves,
-// with its stroke as stroke attributes, its colour, width and shape tracks sampled
-// at the frame first (SVGExporter+Style). After its shapes, each instance on a
+// with its stroke as stroke attributes, its colour, width, trim and shape tracks sampled
+// at the frame first (SVGExporter+Style). A stroke whose trim cuts the outline is a second
+// <path> above it with fill="none" and the trimmed geometry (flattened at `strokeTolerance`),
+// the first <path> keeping the whole fill; a trim that keeps everything writes one <path>. After its shapes, each instance on a
 // layer is a nested <g> with the instance transform holding the symbol's
 // layers sampled at the symbol frame.
 // Coordinates are written as-is: scene space maps straight to SVG user space.
@@ -39,6 +41,9 @@ public enum SVGExportError: Error, Equatable, Sendable {
 }
 
 public enum SVGExporter {
+    /// How far, in the shape's own units, a trimmed stroke's flattened geometry may stray from its curve.
+    public static let strokeTolerance = 0.01
+
     /// The scene at `frame` as an SVG document. `symbols` are the document's
     /// symbols, which the scene's instances name.
     ///
@@ -104,7 +109,15 @@ public enum SVGExporter {
                 lines.append(try gradient(shape.fill, id: id))
                 attr = " fill=\"url(#\(id))\""
             }
-            lines.append("<path d=\"\(d)\"\(attr)\(try stroke(shape.stroke))/>")
+            guard let trim = shape.stroke?.trim, !trim.isWhole else {
+                lines.append("<path d=\"\(d)\"\(attr)\(try stroke(shape.stroke))/>")
+                return
+            }
+            lines.append("<path d=\"\(d)\"\(attr)/>")
+            let cut = try shape.outline.trimmed(start: trim.start, end: trim.end, offset: trim.offset, mode: trim.mode,
+                                                tolerance: strokeTolerance)
+            let t = try pathData(cut)
+            if !t.isEmpty { lines.append("<path d=\"\(t)\" fill=\"none\"\(try stroke(shape.stroke))/>") }
         case .text(_, let text) where text.onPath != nil:
             lines.append(contentsOf: try textPathElement(text, ids: &gradients, measure: measure))
         case .text(_, let text):

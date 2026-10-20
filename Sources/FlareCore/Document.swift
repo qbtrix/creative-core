@@ -221,8 +221,9 @@ public struct Layer: Codable, Sendable, Hashable {
         _modify { yield &fields.shapes }
     }
     /// Number keyframes keyed by property: "x", "y", "scaleX", "scaleY",
-    /// "rotation" and "opacity" for the layer, and "strokeWidth.<i>" for the
-    /// stroke width of `shapes[i]` (build it with `trackKey(strokeWidthOf:)`).
+    /// "rotation" and "opacity" for the layer, "strokeWidth.<i>" for the
+    /// stroke width of `shapes[i]` (build it with `trackKey(strokeWidthOf:)`),
+    /// and "trimStart.<i>", "trimEnd.<i>" and "trimOffset.<i>" for its stroke's trim.
     /// Any other key is stored, but no drawing or export reads it.
     public var tracks: [String: [Keyframe]] {
         get { storage.fields.tracks }
@@ -323,6 +324,12 @@ public struct Layer: Codable, Sendable, Hashable {
     public static func trackKey(strokeWidthOf index: Int) -> String { "strokeWidth.\(index)" }
     /// The `colorTracks` key for the fill of `shapes[index]`.
     public static func colorTrackKey(fillOf index: Int) -> String { "fill.\(index)" }
+    /// The `tracks` key for the trim start of `shapes[index]`'s stroke (a fraction, as `StrokeTrim.start`).
+    public static func trackKey(trimStartOf index: Int) -> String { "trimStart.\(index)" }
+    /// The `tracks` key for the trim end of `shapes[index]`'s stroke (a fraction, as `StrokeTrim.end`).
+    public static func trackKey(trimEndOf index: Int) -> String { "trimEnd.\(index)" }
+    /// The `tracks` key for the trim offset of `shapes[index]`'s stroke (in turns, as `StrokeTrim.offset`).
+    public static func trackKey(trimOffsetOf index: Int) -> String { "trimOffset.\(index)" }
     /// The `colorTracks` key for the stroke of `shapes[index]`.
     public static func colorTrackKey(strokeOf index: Int) -> String { "stroke.\(index)" }
     /// The `colorTracks` key for the fill of `texts[index]`.
@@ -542,8 +549,11 @@ public struct TextShape: Codable, Sendable, Hashable {
 }
 
 /// How a shape's outline is drawn. `width` is in points, finite and >= 0, and
-/// every color channel is finite (checked by `validate`, which the format layer
-/// runs on load).
+/// every color channel is finite. `dash` is empty (solid) or at most
+/// `maxDashEntries` finite lengths >= 0 with a positive finite sum, `dashPhase`
+/// is finite, and a `trim`'s start and end are in 0...1 with a finite offset
+/// (all checked by `validate`, which the format layer runs on load). The stroke
+/// paints `paintedPath`: the outline trimmed, then dashed.
 public struct Stroke: Codable, Sendable, Hashable {
     public enum Join: String, Codable, Sendable, Hashable, CaseIterable {
         case miter, round, bevel
@@ -553,23 +563,95 @@ public struct Stroke: Codable, Sendable, Hashable {
         case butt, round, square
     }
 
+    /// Most entries a dash pattern may hold (as `Path.dashed` allows).
+    public static let maxDashEntries = 64
+
     public var color: Color
     public var width: Double
     public var join: Join
     public var cap: Cap
+    /// Dash, gap, dash, ... lengths in points; an odd count repeats once (as
+    /// SVG reads it). Empty draws a solid stroke. Old files decode as empty.
+    public var dash: [Double]
+    /// How far into the dash pattern the stroke starts, in points.
+    public var dashPhase: Double
+    /// The part of the outline the stroke draws; nil draws all of it.
+    public var trim: StrokeTrim?
 
-    public init(color: Color = .black, width: Double = 1, join: Join = .miter, cap: Cap = .butt) {
+    public init(color: Color = .black, width: Double = 1, join: Join = .miter, cap: Cap = .butt,
+                dash: [Double] = [], dashPhase: Double = 0, trim: StrokeTrim? = nil) {
         self.color = color
         self.width = width
         self.join = join
         self.cap = cap
+        self.dash = dash
+        self.dashPhase = dashPhase
+        self.trim = trim
+    }
+
+    private enum CodingKeys: String, CodingKey { case color, width, join, cap, dash, dashPhase, trim }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        color = try c.decode(Color.self, forKey: .color)
+        width = try c.decode(Double.self, forKey: .width)
+        join = try c.decode(Join.self, forKey: .join)
+        cap = try c.decode(Cap.self, forKey: .cap)
+        dash = try c.decodeIfPresent([Double].self, forKey: .dash) ?? []
+        dashPhase = try c.decodeIfPresent(Double.self, forKey: .dashPhase) ?? 0
+        trim = try c.decodeIfPresent(StrokeTrim.self, forKey: .trim)
+    }
+
+    /// No dash, phase 0 and no trim are left out, so a plain stroke encodes as before.
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(color, forKey: .color)
+        try c.encode(width, forKey: .width)
+        try c.encode(join, forKey: .join)
+        try c.encode(cap, forKey: .cap)
+        if !dash.isEmpty { try c.encode(dash, forKey: .dash) }
+        if dashPhase != 0 { try c.encode(dashPhase, forKey: .dashPhase) }
+        try c.encodeIfPresent(trim, forKey: .trim)
     }
 
     /// Throws `ModelError.invalidStroke` if an invariant above breaks.
     func validate() throws {
         guard width.isFinite, width >= 0 else { throw ModelError.invalidStroke("stroke width must be finite and >= 0") }
         guard color.isFinite else { throw ModelError.invalidStroke("color channels must be finite") }
+        if !dash.isEmpty {
+            let sum = dash.reduce(0, +)
+            guard dash.count <= Self.maxDashEntries, dash.allSatisfy({ $0.isFinite && $0 >= 0 }), sum > 0, sum.isFinite else {
+                throw ModelError.invalidStroke("dash must be at most \(Self.maxDashEntries) finite lengths >= 0 with a positive sum")
+            }
+        }
+        guard dashPhase.isFinite else { throw ModelError.invalidStroke("dash phase must be finite") }
+        if let trim {
+            guard (0...1).contains(trim.start), (0...1).contains(trim.end), trim.offset.isFinite else {
+                throw ModelError.invalidStroke("trim start and end must be in 0...1 and its offset finite")
+            }
+        }
     }
+}
+
+/// The part of a shape's outline its stroke draws, as `Path.trimmed` cuts it:
+/// `start` and `end` are fractions of the length in 0...1, `offset` turns the
+/// span along the path (1 is one full turn), and `mode` says whether the
+/// fractions run over all contours together or each contour on its own.
+public struct StrokeTrim: Codable, Sendable, Hashable {
+    public var start: Double
+    public var end: Double
+    public var offset: Double
+    public var mode: TrimMode
+
+    public init(start: Double = 0, end: Double = 1, offset: Double = 0, mode: TrimMode = .together) {
+        self.start = start
+        self.end = end
+        self.offset = offset
+        self.mode = mode
+    }
+
+    /// Whether the trim keeps the whole outline (start 0, end 1, any offset).
+    public var isWhole: Bool { start <= 0 && end >= 1 }
 }
 
 extension Document {

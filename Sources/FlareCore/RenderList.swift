@@ -132,6 +132,13 @@ public struct RenderItem: Sendable, Hashable {
     public var matte: MatteLink?
     /// Whether some visible layer of its list uses its layer as a matte.
     public var isMatteSource = false
+
+    /// The path the stroke paints in the item's local space: the outline
+    /// trimmed, then dashed (`Stroke.paintedPath`); nil without a stroke.
+    /// Throws as `Path.trimmed` and `Path.dashed` do.
+    public func strokePath(tolerance: Double) throws -> Path? {
+        try stroke?.paintedPath(outline, tolerance: tolerance)
+    }
 }
 
 /// A layer mask carried into scene space that clips the item, one per mask
