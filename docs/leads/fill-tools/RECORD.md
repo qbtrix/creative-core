@@ -2,9 +2,9 @@
 
 Issue: #435 · Packet: docs/blueprints/core/features/fill-tools.md
 Run: act-1a157fd0281-warg · Session: 2df03724-340d-5741-940b-d32d0ef62e2a · Resumed: 2026-10-20T06:25Z
-Stage: 4 round 4 (last): critic panel wf_ae330b4f-cbd on e09c6c3
+Stage: Anatomy round 4 fixes in flight (r4-flood, r4-grad)
 Base: fa40b3427c6950e982d58c55d769f2dc5f7f1923
-Next: read panel wf_ae330b4f-cbd, then fix batch (with round-3 fold), then FT-8 feature-done
+Next: merge r4 fixes, then FT-8 feature-done; leftovers become gap issues
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -33,6 +33,7 @@ Next: read panel wf_ae330b4f-cbd, then fix batch (with round-3 fold), then FT-8 
 | 1 | 27f5e36 | PASS | see confirmed | | | gate CI: PASS, mutants 10/10 caught, 13 confirmed (majors: stop alpha convention undocumented, flood/range distance duplicated, soft-edge lower clamp untested, alpha axis untested), 1 refuted. Fix batches r1-grad (findings 0,1,12) and r1-flood (2,3,5-11). Finding 4 (FT-z missing) is FT-7, in build. | | no |
 | 2 | affd140 | PASS | see confirmed | | | gate PASS, mutants 15/15; panel 10 confirmed (3 major), 1 refuted. Not clean. | | no |
 | 3 | 2436c3a | PASS | 21/21 | none yet (39238594196 on 8613770 queued) | clarity contract design robustness tests | 9 (4 major, 5 minor), 1 refuted | r3-mem r3-grad r3-range | no |
+| 4 | e09c6c3 | PASS | 21/21 | 39370425442 | clarity contract design robustness tests | 14 (8 major, 6 minor), 0 refuted; budget-gating finding refuted by lead (rule 15: time budgets reported) | r4-flood r4-grad | no |
 
 ## Decisions
 - Round-3 fix batches (r3-mem, r3-grad, r3-range) and their finding details were lost in a container restart before they pushed; they fold into round 4 (the last): scratch-memory bound with resident peak, and one perf fix each for flood, colour range and gradient.
