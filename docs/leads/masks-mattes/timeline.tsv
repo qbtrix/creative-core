@@ -85,3 +85,4 @@ utc	stage	event	ref	note
 2026-10-20T04:14:41Z	round-4	panel: 10 confirmed (3 major); final feature-done fix batch wf_efd98b53-ebf launched
 2026-10-20T04:32:59Z	round-4	final fixers (wf_efd98b53-ebf) running the harness
 2026-10-20T04:35:54Z	round-4	#754 merged (mm feature-done); #755 open clean (pg feature-done); all findings fixed
+2026-10-20T04:53:23Z	finish	#755 merged (e09c6c30); both feature-done PRs in dev; ci.yml run 39370425442 pending on e09c6c30
