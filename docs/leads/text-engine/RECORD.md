@@ -2,9 +2,9 @@
 
 Issue: #437 · Packet: docs/blueprints/core/features/text-engine.md
 Run: act-1a157fd0281-warg · Session: 2df03724-340d-5741-940b-d32d0ef62e2a · Resumed: 2026-10-20T06:25Z
-Stage: TE-6 onPath building (TE-lay), TE-8 stacks on it
-Base: e09c6c30190b6eee1a8f4a646cd7485e19abc97d
-Next: TE-8 with #706, then TE-9/TE-10 feature-done
+Stage: 4 waiting on dev CI holding #764
+Base: fa40b3427c6950e982d58c55d769f2dc5f7f1923
+Next: read dev CI run holding fa40b34; Slice-Done TE-lay, TE-svg, TE-z
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
