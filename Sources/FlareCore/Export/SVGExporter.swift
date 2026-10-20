@@ -130,8 +130,10 @@ public enum SVGExporter {
         return " transform=\"matrix(\(try [m.a, m.b, m.c, m.d, m.tx, m.ty].map(number).joined(separator: " ")))\""
     }
 
-    /// SVG path data: M, L, Q, C and Z commands with absolute coordinates.
-    static func pathData(_ path: Path) throws -> String {
+    /// SVG path data (the `d` attribute) for `path`: M, L, Q, C and Z commands
+    /// with absolute coordinates, numbers written as `export` writes them.
+    /// Throws `SVGExportError.nonFiniteValue` for a NaN or infinite coordinate.
+    public static func pathData(_ path: Path) throws -> String {
         func pt(_ p: Point) throws -> String { "\(try number(p.x)) \(try number(p.y))" }
         var parts: [String] = []
         for element in path.elements {
