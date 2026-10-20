@@ -5,7 +5,7 @@
 // instance expansion stops at RenderList.maxExpandedPoints (fan-out and
 // heavy fan-out) while large valid scenes and reused symbols expand fully;
 // a layer paints shapes before texts; the budget is four format point caps,
-// charges a cubic its three points and no evaluation file names the format;
+// charges a cubic its three points and every mask point, and no evaluation file names the format;
 // an instance node carries the symbol frame; a caller outside the module
 // builds an address; 1,000 seeded broken scenes build a list,
 // hit, marquee and bound without trapping. The import is not @testable, so
@@ -285,6 +285,22 @@ enum NestedScene {
         let layer = Layer(id: "l", name: "L", instances: Array(repeating: Instance(symbolID: "c"), count: expected + 50))
         let list = Scene(id: "s", name: "S", layers: [layer]).renderList(at: 0, symbols: [symbol])
         #expect(list.isTruncated && list.items.count == expected)
+    }
+
+    /// Mask points are charged like outline points: 100 instances of a symbol
+    /// whose layer has one 100,000-point mask would copy 10 million mask
+    /// points into clips; the walk stops once the budget is spent.
+    @Test func maskPointsAreCharged() {
+        let path = Path(elements: [.move(to: Point(x: 0, y: 0))]
+            + (1..<100_000).map { .line(to: Point(x: Double($0 % 7), y: Double($0 % 5))) })
+        let symbol = Symbol(id: "m", name: "M", layers: [
+            Layer(id: "ml", name: "M", shapes: [NestedScene.square], masks: [LayerMask(path: path)]),
+        ])
+        let layer = Layer(id: "l", name: "L", instances: Array(repeating: Instance(symbolID: "m"), count: 100))
+        let list = Scene(id: "s", name: "S", layers: [layer]).renderList(at: 0, symbols: [symbol])
+        let clipPoints = list.items.reduce(0) { $0 + $1.clips.reduce(0) { $0 + $1.path.elements.count } }
+        #expect(list.isTruncated && list.items.count < 100)
+        #expect(clipPoints <= RenderList.maxExpandedPoints + 100_000)
     }
 
     /// A 300-shape symbol placed 100 times expands every instance.

@@ -93,8 +93,11 @@ public struct RemoveLayerMask: LayerCommand { owner, layerID, index }
 public struct MoveLayerMask: LayerCommand { owner, layerID, from, to }
 public struct SetTrackMatte: LayerCommand { owner, layerID, matte: TrackMatte? }   // refuses self, a cycle, another owner
 // Sources/FlareCore/RenderList.swift (MM-7): each paint item gains
-//   clips: [ClippedPath]   // the layer's masks in world space, in order, with mode, feather, opacity, inverted
-//   matte: MatteLink?      // the matte source's item index and kind; the source item is flagged isMatteSource
+//   clips: [ClippedPath]   // ClippedPath(path, mode, feather, opacity, inverted, depth): every mask on the
+//                          // way down in scene space, outermost host first; depth = instances above the mask's layer
+//   matte: MatteLink?      // MatteLink(sourceItems: Range<Int>, inMatteItems: Bool, kind): sourceItems index
+//                          // items, or matteItems when inMatteItems; the source items are flagged isMatteSource
+// and the list gains matteItems: [RenderItem], the items of hidden matte sources (never drawn or hit)
 ```
 
 ## Pseudocode
@@ -204,6 +207,19 @@ a W2 follow-up).
 
 ## Deviations (lead, 2026-10-19, slice MM-z)
 
+- **The render list's matte link is a range, one level deep.** `MatteLink`
+  names the source layer's items as `sourceItems: Range<Int>` plus
+  `inMatteItems`, not one item index: a source layer can hold many items. A
+  hidden source is listed only in the new `RenderList.matteItems`, so
+  `inMatteItems` says which list the range indexes. Mattes resolve one level
+  deep, as in the exporters: a matte on a hidden matte source gets no link,
+  so its items render unmatted (`MatteRenderListTests.matteNamesItsSourceItems`
+  and `.matteOnHiddenSourceIsNotResolved`). Mask paths copied under
+  instances are charged to `RenderList.maxExpandedPoints` like outlines
+  (`RenderListTests.maskPointsAreCharged`).
+- **Lottie refuses masks inside symbols.** A symbol layer with a mask or a
+  matte throws `unsupported("mask in symbol")` until precomp layers carry
+  `masksProperties` (`LottieMaskExportTests.refusals`); SVG writes them.
 - **Feather is one quantity everywhere: the blur radius.** A mask's
   `feather` is the radius of the Gaussian that softens its edge, with
   sigma = feather / 3 (the kernel reaches ceil(feather) pixels), in

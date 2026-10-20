@@ -103,5 +103,12 @@
     "anchor": "case .cubic: 3",
     "replacement": "case .cubic: 2",
     "filter": "RenderListTests"
+  },
+  {
+    "note": "render list expansion budget ignores mask path points, so masks copied under instances escape the budget",
+    "file": "Sources/FlareCore/RenderList.swift",
+    "anchor": "if symbol != nil { expanded += layer.masks.reduce(0)",
+    "replacement": "if symbol == nil { expanded += layer.masks.reduce(0)",
+    "filter": "RenderListTests"
   }
 ]
