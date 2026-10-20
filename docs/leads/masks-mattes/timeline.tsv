@@ -89,3 +89,4 @@ utc	stage	event	ref	note
 2026-10-20T05:13Z	heartbeat: ci.yml 39369827919 (492e84b0) in progress; 39370425442 (e09c6c30, both feature-done PRs) pending behind it; contact sheets drafted
 2026-10-20T05:32:44Z	heartbeat	ci.yml 39370425442 (e09c6c30): Linux, Mutation, Mutation anchors, Fast lane tests green; macOS queued. 39369827919 (492e84b0) green, Promote ran
 2026-10-20T05:51:58Z	heartbeat	ci.yml 39370425442 (e09c6c30): macOS in progress; Linux, Mutation, anchors, fast-lane tests green
+2026-10-20T06:12:01Z	finish	ci.yml 39370425442 green on e09c6c30, main promoted; Belt-Contact-Sheet posted on #431; lead stopped
