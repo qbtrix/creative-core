@@ -81,9 +81,9 @@ import Testing
         let hostM = Transform(x: 10).matrix, faceM = hostM * inst.matrix * Transform(y: 3).matrix
         #expect(list.items.count == 1 && list.items.first?.matrix == faceM)
         #expect(list.items.first?.clips == [
-            ClippedPath(path: Self.square(0, 50).transformed(by: hostM), mode: .intersect, feather: 0, opacity: 1,
+            ClipMask(path: Self.square(0, 50).transformed(by: hostM), mode: .intersect, feather: 0, opacity: 1,
                         inverted: false, depth: 0),
-            ClippedPath(path: Self.square(0, 4).transformed(by: faceM), mode: .add, feather: 0, opacity: 1,
+            ClipMask(path: Self.square(0, 4).transformed(by: faceM), mode: .add, feather: 0, opacity: 1,
                         inverted: true, depth: 1),
         ])
     }

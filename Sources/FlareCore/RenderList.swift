@@ -126,7 +126,7 @@ public struct RenderItem: Sendable, Hashable {
     public var isText: Bool
     /// The masks of its layer and every host layer above it, in scene
     /// space, outermost host first and each layer's masks in order.
-    public var clips: [ClippedPath] = []
+    public var clips: [ClipMask] = []
     /// The track matte of its nearest matted layer (its own or a host's);
     /// always nil on an item in `matteItems`: one matte level only.
     public var matte: MatteLink?
@@ -134,9 +134,9 @@ public struct RenderItem: Sendable, Hashable {
     public var isMatteSource = false
 }
 
-/// Not a path that was clipped: a layer mask carried into scene space that
-/// clips the item, one per mask on the way down to it.
-public struct ClippedPath: Sendable, Hashable {
+/// A layer mask carried into scene space that clips the item, one per mask
+/// on the way down to it.
+public struct ClipMask: Sendable, Hashable {
     /// The mask's path through its layer's scene matrix. An open subpath is
     /// implicitly closed.
     public var path: Path
@@ -285,7 +285,7 @@ extension RenderList {
         /// the owner's own layers, which are not charged to the budget.
         mutating func walk(
             _ layers: [Layer], symbol: String?, frame: Double, path: [String], hosts: [InstanceHost],
-            parent: Matrix, opacity: Double, locked: Bool, clips: [ClippedPath]
+            parent: Matrix, opacity: Double, locked: Bool, clips: [ClipMask]
         ) -> [RenderNode] {
             var nodes: [RenderNode] = []
             let owner = self.owner
@@ -312,7 +312,7 @@ extension RenderList {
                 // Each walk under an instance copies the layer's masks into scene space.
                 if symbol != nil { expanded += layer.masks.reduce(0) { $0 + $1.path.elements.reduce(0) { $0 + $1.pointCount } } }
                 let own = clips + layer.masks.map {
-                    ClippedPath(path: $0.path.transformed(by: m), mode: $0.mode, feather: $0.feather * scale,
+                    ClipMask(path: $0.path.transformed(by: m), mode: $0.mode, feather: $0.feather * scale,
                                 opacity: $0.opacity, inverted: $0.inverted, depth: hosts.count)
                 }
                 func item(_ outline: Path, _ fill: Fill?, _ stroke: Stroke?, shape: Int?, text: Int?) -> RenderItem {

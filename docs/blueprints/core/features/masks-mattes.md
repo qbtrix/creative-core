@@ -12,6 +12,7 @@ entries, and written by the SVG and Lottie exporters.
 **Line:** `line:core` · **Wave:** 6 (`waves.md`) · **Lead branch:** `lead/masks-mattes`
 **Status:** built (MM-1 to MM-10). Merged PRs: #718, #720, #724, #726, #729,
 #730, #737, #738, #740, #742, #746, #747, and MM-z (walk, budgets, this status line).
+Status: done; Anatomy rounds 1-4 run.
 
 **Covers:** beta-80 plan row E2; Photo blueprint 8.4 CR-3 (`Mask.feathered`),
 CR-4 (`Mask.contours`, `Mask.coveredBounds`), CR-6 (the masked composite);
@@ -93,7 +94,7 @@ public struct RemoveLayerMask: LayerCommand { owner, layerID, index }
 public struct MoveLayerMask: LayerCommand { owner, layerID, from, to }
 public struct SetTrackMatte: LayerCommand { owner, layerID, matte: TrackMatte? }   // refuses self, a cycle, another owner
 // Sources/FlareCore/RenderList.swift (MM-7): each paint item gains
-//   clips: [ClippedPath]   // ClippedPath(path, mode, feather, opacity, inverted, depth): every mask on the
+//   clips: [ClipMask]   // ClipMask(path, mode, feather, opacity, inverted, depth): every mask on the
 //                          // way down in scene space, outermost host first; depth = instances above the mask's layer
 //   matte: MatteLink?      // MatteLink(sourceItems: Range<Int>, inMatteItems: Bool, kind): sourceItems index
 //                          // items, or matteItems when inMatteItems; the source items are flagged isMatteSource

@@ -8,7 +8,8 @@
 extension PixelBuffer {
     /// Composites `src` over this buffer as `composite(_:x:y:mode:opacity:)`
     /// does, with each pixel's opacity scaled by `mask`, whose top-left pixel
-    /// sits on pixel (`maskX`, `maskY`); coverage outside the mask is 0, so
+    /// sits on this buffer's pixel (`maskX`, `maskY`), in the same coordinates
+    /// as `x` and `y` (not relative to `src`); coverage outside the mask is 0, so
     /// those pixels are unchanged. The mask may hang off any edge. Same throws
     /// as the unmasked composite.
     public mutating func composite(_ src: PixelBuffer, x: Int, y: Int, mode: BlendMode, opacity: Float,
