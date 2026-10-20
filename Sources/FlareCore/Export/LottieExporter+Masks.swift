@@ -5,7 +5,8 @@
 // feather, so a feathered mask throws. A matted layer gets `tt` 1...4 and its
 // source sits directly above with `td: 1`: a hidden source already there and
 // used once is marked in place (unhidden), else a copy numbered after the
-// scene's layers is written. Nested mattes and symbol layers with masks throw.
+// scene's layers is written. Nested mattes and symbol layers with masks throw. A layer that follows another
+// writes `parent` as that layer's `ind` (its place in the scene, from 1); a matte copy follows the same parent.
 
 extension LottieExporter {
     /// The scene's layers, top first, with their masks and mattes.
@@ -17,6 +18,7 @@ extension LottieExporter {
         var next = all.count + 1
         func written(_ layer: Layer, index: Int) throws -> LottieLayer {
             var item = try LottieLayer(layer, index: index, durationFrames: scene.durationFrames, symbols: symbols)
+            item.parent = layer.parentID.flatMap { id in all.firstIndex { $0.id == id } }.map { $0 + 1 }
             if !layer.masks.isEmpty { (item.hasMask, item.masksProperties) = (true, try layer.masks.map(LottieMask.init)) }
             return item
         }

@@ -1,0 +1,44 @@
+[
+  {
+    "note": "Lottie export drops the parent",
+    "file": "Sources/FlareCore/Export/LottieExporter+Masks.swift",
+    "anchor": "item.parent = layer.parentID.flatMap { id in all.firstIndex { $0.id == id } }.map { $0 + 1 }",
+    "replacement": "item.parent = nil",
+    "filter": "LottieAnchorParentTests"
+  },
+  {
+    "note": "Lottie export writes the parent's list index, not its ind",
+    "file": "Sources/FlareCore/Export/LottieExporter+Masks.swift",
+    "anchor": "all.firstIndex { $0.id == id } }.map { $0 + 1 }",
+    "replacement": "all.firstIndex { $0.id == id } }",
+    "filter": "LottieAnchorParentTests"
+  },
+  {
+    "note": "Lottie import bakes the anchor into the paths again",
+    "file": "Sources/FlareCore/Import/LottieImport.swift",
+    "anchor": "        let root = Matrix.identity\n",
+    "replacement": "        let root = Matrix.translation(x: -anchor.x, y: -anchor.y)\n",
+    "filter": "LottieAnchorParentTests"
+  },
+  {
+    "note": "Lottie import ignores parent",
+    "file": "Sources/FlareCore/Import/LottieImport+Animation.swift",
+    "anchor": "            out[child].parentID = out[parent].id\n",
+    "replacement": "",
+    "filter": "LottieAnchorParentTests"
+  },
+  {
+    "note": "Lottie import keeps a parent cycle",
+    "file": "Sources/FlareCore/Import/LottieImport+Animation.swift",
+    "anchor": "            if cycle { skip(\"parent\"); continue }\n",
+    "replacement": "",
+    "filter": "LottieAnchorParentTests"
+  },
+  {
+    "note": "Lottie import skips a null a child follows",
+    "file": "Sources/FlareCore/Import/LottieImport.swift",
+    "anchor": "guard ty == 1 || ty == 4 || null else",
+    "replacement": "guard ty == 1 || ty == 4 else",
+    "filter": "LottieAnchorParentTests"
+  }
+]

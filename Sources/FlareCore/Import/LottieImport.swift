@@ -295,34 +295,40 @@ struct LottieReader {
         guard op >= ip else { throw ImportError.damaged("ip/op \(ip)...\(op) out of order") }
         var out: [Layer] = [], built: [Int: Int] = [:]
         clock = LottieClock(ip: ip, duration: op - ip)
+        // A null layer comes in, as an empty layer, only when another layer follows it.
+        let followed = layers.compactMap { $0["parent"] }
         for (index, json) in layers.enumerated().reversed() {
-            if let layer = try layer(json, id: "layer-\(out.count + 1)", range: Double(ip)...Double(op)) { built[index] = out.count; out.append(layer) }
+            let null = (try? number(json["ty"], "layer ty", -1)) == 3 && json["ind"].map(followed.contains) == true
+            if let layer = try layer(json, id: "layer-\(out.count + 1)", range: Double(ip)...Double(op), null: null) {
+                built[index] = out.count; out.append(layer)
+            }
         }
         linkMattes(&out, layers, built: built)
+        linkParents(&out, layers, built: built)
         return Scene(id: "scene-1", name: root["nm"]?.string ?? "Scene 1", fps: fps, durationFrames: op - ip, width: w, height: h, layers: out,
                      rate: rate.nominal == fps ? rate : SceneRate(whole: fps))
     }
-    mutating func layer(_ json: LottieJSON, id: String, range: ClosedRange<Double>) throws -> Layer? {
+    mutating func layer(_ json: LottieJSON, id: String, range: ClosedRange<Double>, null: Bool = false) throws -> Layer? {
         let kinds: [Double: String] = [0: "precomp", 2: "image", 3: "null", 5: "text"]
         let ty = try number(json["ty"], "layer ty", -1)
-        guard ty == 1 || ty == 4 else { skip(kinds[ty] ?? "layer type"); return nil }
+        guard ty == 1 || ty == 4 || null else { skip(kinds[ty] ?? "layer type"); return nil }
         clock.start = try frame(json["st"], "st", 0, -LottieImport.frames.upperBound...LottieImport.frames.upperBound)
+        // The anchor stays the layer's (`anchorX`, `anchorY`), so paths keep the coordinates the file wrote.
         let (transform, anchor, opacity) = try placement(json["ks"])
-        let root = Matrix.translation(x: -anchor.x, y: -anchor.y)
+        let root = Matrix.identity
         var shapes = try group(json["shapes"]?.array ?? [], matrix: root, opacity: 1, inherited: LottieStyles(), depth: 0)
         if ty == 1 {
             let rect = Rect(minX: 0, minY: 0, maxX: try number(json["sw"], "solid width", 0), maxY: try number(json["sh"], "solid height", 0))
             shapes = [LottieShape(shape: Shape(points: [], fill: .solid(try hexColor(json["sc"])), path: try PathBuilders.rectangle(in: rect).transformed(by: root)))]
         }
         let values = ["x": transform.x, "y": transform.y, "scaleX": transform.scaleX, "scaleY": transform.scaleY,
-                      "rotation": transform.rotation, "opacity": opacity]
+                      "rotation": transform.rotation, "opacity": opacity, "anchorX": anchor.x, "anchorY": anchor.y]
         var layer = Layer(id: id, name: json["nm"]?.string ?? "Layer")
         layer.tracks = values.filter { Layer.standardDefaults[$0.key] != $0.value }.mapValues { [Keyframe(frame: 0, value: $0)] }
         layer.tracks.merge(try transformTracks(json["ks"])) { $1 }
         place(shapes.reversed(), on: &layer)
         layer.isVisible = !(json["hd"]?.isTrue ?? false) && !(json["td"]?.isTrue ?? false)
         layer.masks = try masks(json["masksProperties"]?.array ?? [], root: root)
-        if json["parent"] != nil { skip("parent") }
         let inPoint = try number(json["ip"], "layer ip", range.lowerBound), outPoint = try number(json["op"], "layer op", range.upperBound)
         if inPoint > range.lowerBound || outPoint < range.upperBound { skip("layer in/out") }
         return layer
