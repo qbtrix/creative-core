@@ -6,8 +6,8 @@
 // radius. Each line is padded with its end samples first, so the edges
 // repeat as `gaussianBlur`'s clamp-to-edge taps do. The boxes stay within
 // 0.025 of the exact Gaussian (cut at 3 sigma); MaskFeatherBoxTests bounds it.
-// Invariants: the radius is finite, at least 0 and within `gaussianBlur`'s
-// limit, checked by its kernel builder; each output is a mean of inputs, so
+// Invariants: the radius is finite, at least 0 and at most twice the mask's
+// larger side (`gaussianBlur`'s limit, in feather terms); each output is a mean of inputs, so
 // every value is a convex mix, kept in 0...1; a column filter runs along the
 // column's length. Lines run 64 at a time as interleaved lanes, so their
 // running sums are independent and a strip stays in cache through all passes.
@@ -22,6 +22,10 @@ extension Mask {
     public func feathered(radius: Double) throws -> Mask {
         guard radius.isFinite, radius >= 0 else {
             throw RasterError.invalid("feather radius \(radius): must be finite and at least 0")
+        }
+        let limit = 2 * max(width, height)
+        guard radius <= Double(limit) else {
+            throw RasterError.invalid("feather radius \(radius): over \(limit), twice the mask's larger side")
         }
         let sigma = radius / 3
         // The exact blur's checks and its identity: a sigma too small to spread returns this mask.

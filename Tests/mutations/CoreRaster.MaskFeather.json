@@ -33,5 +33,12 @@
     "anchor": "sigma <= Self.exactSigma ? kernel : []",
     "replacement": "sigma < 0 ? kernel : []",
     "filter": "MaskFeatherBoxTests"
+  },
+  {
+    "note": "the mask feather leaves its radius limit to the blur kernel, so an over-limit radius is refused as a blur sigma, caught by featherOverLimitNamesTheRadius",
+    "file": "Sources/CoreRaster/Masks/MaskFeather.swift",
+    "anchor": "guard radius <= Double(limit) else {",
+    "replacement": "guard radius.isFinite else {",
+    "filter": "featherOverLimitNamesTheRadius"
   }
 ]

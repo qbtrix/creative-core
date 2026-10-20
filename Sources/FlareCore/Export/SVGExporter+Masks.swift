@@ -1,15 +1,17 @@
 // SVGExporter+Masks.swift: layer masks and track mattes as W3C CSS Masking.
 //
 // Masks sit on the layer's <g>, in its space. A leading run of hard add masks
-// is one <clipPath> when every later mask only removes; the rest paint one
-// luminance <mask>, starting black when the first adds and white otherwise:
-// add paints white, subtract black, intersect black outside it, inverted swaps
-// the path and its outside (even-odd). Feather is the blur radius: a Gaussian
-// blur of sigma feather / 3, the radius `Mask.feathered(radius:)` takes, over
-// the path's box widened by three deviations. Difference throws. A track
-// matte wraps the <g> in a <g mask> holding the source (ids as data-id), alpha
-// or luminance; the inverted kinds paint white, then the source through its
-// alpha or by difference blend. Defs share the exporter's id counter.
+// is one <clipPath> when every later mask only removes (subtract or
+// intersect); the rest paint one luminance <mask>, starting black when the
+// first adds and white otherwise: add paints white, subtract black, intersect
+// black outside it, difference white by difference blend (it toggles),
+// inverted swaps the path and its outside (even-odd). Feather is the blur
+// radius: a Gaussian blur of sigma feather / 3, the radius
+// `Mask.feathered(radius:)` takes, over the path's box widened by three
+// deviations (an outside mask keeps the full region). A track matte wraps the
+// <g> in a <g mask> holding the source (ids as data-id), alpha or luminance;
+// the inverted kinds paint white, then the source through its alpha or by
+// difference blend. Defs share the exporter's id counter.
 
 extension SVGExporter {
     /// The layers, frame, symbols and symbol path a run of nodes came from.
@@ -29,9 +31,8 @@ extension SVGExporter {
         guard let layer = scope.layers.first(where: { $0.id == id }) else { return ("", nil) }
         var attributes = ""
         let masks = layer.masks
-        if masks.contains(where: { $0.mode == .difference }) { throw SVGExportError.unsupported("mask difference") }
         let hard = masks.prefix { $0.mode == .add && $0.feather == 0 && $0.opacity == 1 && !$0.inverted }
-        let clips = !hard.isEmpty && masks.dropFirst(hard.count).allSatisfy { $0.mode != .add }
+        let clips = !hard.isEmpty && masks.dropFirst(hard.count).allSatisfy { $0.mode == .subtract || $0.mode == .intersect }
         if clips {
             let clip = nextID("c", &ids)
             lines.append("<clipPath id=\"\(clip)\">")
@@ -87,9 +88,11 @@ extension SVGExporter {
         var d = try pathData(mask.path)
         let r = try number(maskReach)
         if outside { d = "M-\(r) -\(r) L\(r) -\(r) L\(r) \(r) L-\(r) \(r) Z " + d }
-        var out = "<path d=\"\(d)\" fill=\"\(mask.mode == .add ? "#fff" : "#000")\""
+        let adds = mask.mode == .add || mask.mode == .difference
+        var out = "<path d=\"\(d)\" fill=\"\(adds ? "#fff" : "#000")\""
         if mask.opacity != 1 { out += " fill-opacity=\"\(try number(mask.opacity))\"" }
         if outside { out += " fill-rule=\"evenodd\"" }
+        if mask.mode == .difference { out += " style=\"mix-blend-mode:difference\"" } // |coverage - paint|: toggles
         if mask.feather != 0 {
             let sigma = mask.feather / 3
             let filter = nextID("f", &ids)

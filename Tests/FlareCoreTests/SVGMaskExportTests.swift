@@ -1,5 +1,6 @@
 // SVGMaskExportTests.swift: MM-8 acceptance for SVG layer masks (clipPath, mask,
-// blur of feather / 3) and track mattes (mask holding the source), and refusals.
+// blur of feather / 3, difference by difference blend) and track mattes (mask
+// holding the source), and refusals.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -80,11 +81,49 @@ import Testing
         #expect(svg.contains("<mask id=\"m3\" mask-type=\"alpha\""))
     }
 
-    @Test func refusals() throws {
+    /// Difference toggles: a white path blended by difference inside the mask, and it keeps a hard add run from clipping.
+    @Test func differenceToggles() throws {
         var scene = try Self.scene()
         scene.layers[0].masks[1].mode = .difference
-        #expect(throws: SVGExportError.unsupported("mask difference")) { try SVGExporter.export(scene: scene, frame: 0) }
-        scene = try Self.scene()
+        let svg = try SVGExporter.export(scene: scene, frame: 0)
+        #expect(!svg.contains("<clipPath"))
+        #expect(svg.contains("""
+            <mask id="m1" maskUnits="userSpaceOnUse"\(Self.region)>
+            <path d="M10 10 L90 10 L90 90 L10 90 Z" fill="#fff"/>
+            <path d="M50 30 L70 50 L50 70 L30 50 Z" fill="#fff" fill-opacity="0.75" style="mix-blend-mode:difference" filter="url(#f0)"/>
+            </mask>
+            <g id="card" data-name="Card" transform="matrix(1 0 0 1 0 0)" mask="url(#m1)">
+            """))
+    }
+
+    /// A lone add mask that is inverted, translucent or feathered is painted in the <mask>, never a hard clip.
+    @Test(arguments: [LayerMask(path: MatteRenderListTests.square(10, 90), inverted: true),
+                      LayerMask(path: MatteRenderListTests.square(10, 90), opacity: 0.5),
+                      LayerMask(path: MatteRenderListTests.square(10, 90), feather: 3)])
+    func softLeadingAddMaskIsPaintedNotClipped(_ mask: LayerMask) throws {
+        var scene = try Self.scene()
+        scene.layers[0].masks = [mask]
+        let svg = try SVGExporter.export(scene: scene, frame: 0)
+        #expect(!svg.contains("<clipPath") && svg.contains("mask=\"url(#m"))
+        #expect(svg.contains("fill-rule=\"evenodd\"") == mask.inverted)
+        #expect(svg.contains("fill-opacity=\"0.5\"") == (mask.opacity == 0.5))
+        #expect(svg.contains("<feGaussianBlur stdDeviation=\"1\"/>") == (mask.feather == 3))
+    }
+
+    /// A feathered mask that paints outside its path (inverted, or intersect) blurs over the whole region, not the path's box.
+    @Test func featheredOutsideMaskKeepsFullFilterRegion() throws {
+        var scene = try Self.scene()
+        for mode in [MaskMode.add, .intersect] {
+            scene.layers[0].masks = [LayerMask(path: MatteRenderListTests.square(10, 90), mode: mode, feather: 6,
+                                               inverted: mode == .add)]
+            let svg = try SVGExporter.export(scene: scene, frame: 0)
+            #expect(svg.contains("<filter id=\"f0\" filterUnits=\"userSpaceOnUse\"\(Self.region)>"))
+            #expect(!svg.contains("x=\"4\" y=\"4\" width=\"92\" height=\"92\""))
+        }
+    }
+
+    @Test func refusals() throws {
+        var scene = try Self.scene()
         scene.layers[0].masks[1].feather = .infinity
         #expect(throws: SVGExportError.nonFiniteValue) { try SVGExporter.export(scene: scene, frame: 0) }
         scene = try Self.scene()
