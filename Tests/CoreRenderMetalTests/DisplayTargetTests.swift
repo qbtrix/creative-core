@@ -3,7 +3,7 @@
 // bgra8 textures at an offset, from resident or evicted tiles, and refuses a surface that would not fit.
 // With a ToneProgram it writes, within `ParityTolerance.standard`'s bytes, what the CPU displays after running
 // the program's adjustments one after another on the GPU's pixels: hue/saturation, sRGB levels and curves,
-// exposure and the chains a live Photo slider runs, on the parity samples and a tiled image, resident and
+// exposure, vibrance and the chains a live Photo slider runs, on the parity samples and a tiled image, resident and
 // evicted, colour matrices included; `adjusted(_:tone:)` (an adjustment layer under other layers) matches the
 // CPU backend's within `.standard` on the same images. Skipped without a device.
 #if canImport(Metal)
@@ -70,6 +70,7 @@ private func bytes(of texture: any MTLTexture, x: Int, y: Int, width: Int, heigh
             [levels], [curves], [.exposure(stops: 0.7)],
             [.exposure(stops: -0.5), levels, curves, .hueSaturation(hue: 20, saturation: 35, lightness: -10)],
             [levels, .hueSaturation(hue: 0, saturation: -100, lightness: 0), .exposure(stops: 1), curves],
+            [.vibrance(60)], [.vibrance(-40)], [.exposure(stops: 0.3), levels, .vibrance(100), curves],
         ]
         return adjustments.map { $0.map(ToneProgram.Operation.adjustment) }
             + [[matrix], [.adjustment(.exposure(stops: 0.4)), .adjustment(levels), matrix, .adjustment(curves)]]

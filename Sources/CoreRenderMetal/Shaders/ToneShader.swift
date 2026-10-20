@@ -5,7 +5,7 @@
 // range as `adjust_tone` writes. One thread per tile pixel mirrors `ToneProgram.map`: alpha 0 gives zeros,
 // else unpremultiply, each step on the straight color in order (gains; each channel through its table; the
 // table's gain at the Rec. 709 luminance; hue/saturation as standard HSL on the clamped sRGB-encoded values;
-// or a 3x3 matrix, clamp at 0 and lightness mix), premultiply. Textures: 0 the source tile, 1 the target (or
+// a 3x3 matrix, clamp at 0 and lightness mix; or vibrance, chroma scaled about that luminance), premultiply. Textures: 0 the source tile, 1 the target (or
 // output tile). Buffers: 1 display thresholds, 2 `DisplayParams`, 3 the display matrix (`display_tone` only,
 // as `display_target`), 4 the steps (`ToneStep`, seven 4-byte fields), 5 the tables (device memory: each thread
 // indexes them at its own value), 6 the step count.
@@ -47,16 +47,20 @@ enum ToneShader {
         return v < 0.0f ? -l : l;
     }
 
+    // `ToneProgram.hue`: the standard HSL hue in degrees of encoded values (0 for a grey).
+    static float tone_hue(float3 e) {
+        float hi = max(e.r, max(e.g, e.b)), lo = min(e.r, min(e.g, e.b)), d = hi - lo;
+        if (d <= 0.0f) { return 0.0f; }
+        float sector = hi == e.r ? (e.g - e.b) / d : hi == e.g ? (e.b - e.r) / d + 2.0f : (e.r - e.g) / d + 4.0f;
+        return fmod(sector * 60.0f + 360.0f, 360.0f);
+    }
+
     // `ToneProgram.shifted`: hue (degrees), saturation and lightness (percent) on standard HSL.
     static float3 tone_hue_saturation(float3 c, float hue, float saturation, float lightness) {
         float3 e = float3(tone_encode(c.r), tone_encode(c.g), tone_encode(c.b));
         float hi = max(e.r, max(e.g, e.b)), lo = min(e.r, min(e.g, e.b)), d = hi - lo;
-        float l = (hi + lo) / 2.0f, h = 0.0f, s = 0.0f;
-        if (d > 0.0f) {
-            float sector = hi == e.r ? (e.g - e.b) / d : hi == e.g ? (e.b - e.r) / d + 2.0f : (e.r - e.g) / d + 4.0f;
-            h = fmod(sector * 60.0f + 360.0f, 360.0f);
-            s = d / (1.0f - fabs(2.0f * l - 1.0f));
-        }
+        float l = (hi + lo) / 2.0f, h = tone_hue(e), s = 0.0f;
+        if (d > 0.0f) { s = d / (1.0f - fabs(2.0f * l - 1.0f)); }
         h = fmod(h + hue + 360.0f, 360.0f);
         s = min(1.0f, max(0.0f, s * (1.0f + saturation / 100.0f)));
         l = lightness >= 0.0f ? l + (1.0f - l) * lightness / 100.0f : l * (1.0f + lightness / 100.0f);
@@ -73,6 +77,25 @@ enum ToneShader {
         }
         float3 v = rgb + (l - chroma / 2.0f);
         return float3(tone_decode(v.r), tone_decode(v.g), tone_decode(v.b));
+    }
+
+    // `ToneProgram.vibrant`: chroma about luma, by 1 + a x (1 - s), halved for skin hues and capped, when a > 0.
+    static float3 tone_vibrance(float3 c, float amount) {
+        float a = amount / 100.0f;
+        float y = \(AdjustTable.lumaWeights.x)f * c.r + \(AdjustTable.lumaWeights.y)f * c.g + \(AdjustTable.lumaWeights.z)f * c.b;
+        float lo = min(c.r, min(c.g, c.b)), hi = max(c.r, max(c.g, c.b));
+        float scale = 1.0f + a;
+        if (a > 0.0f) {
+            float h = tone_hue(float3(tone_encode(c.r), tone_encode(c.g), tone_encode(c.b)));
+            float skin = h >= 15.0f && h <= 50.0f ? 0.5f : 1.0f;
+            float s = hi > lo ? min(1.0f, (hi - lo) / max(1.0f - fabs(hi + lo - 1.0f), FLT_EPSILON)) : 0.0f;
+            scale = 1.0f + a * (1.0f - s) * skin;
+            float cap = scale;
+            if (lo < y) { cap = min(cap, y / (y - lo)); }
+            if (hi > y) { cap = min(cap, (max(1.0f, hi) - y) / (hi - y)); }
+            scale = max(1.0f, cap);
+        }
+        return float3(y) + (c - float3(y)) * scale;
     }
 
     // `ToneProgram.mixed`: t[0...8] the rows, t[9] the lightness.
@@ -103,6 +126,8 @@ enum ToneShader {
                                      + \(AdjustTable.lumaWeights.z)f * c.b, t, s.n, s.outer);
             } else if (s.kind == 4) {
                 c = tone_matrix(c, t);
+            } else if (s.kind == 5) {
+                c = tone_vibrance(c, s.a);
             } else {
                 c = tone_hue_saturation(c, s.a, s.b, s.c);
             }

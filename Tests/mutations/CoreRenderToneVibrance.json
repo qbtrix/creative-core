@@ -1,0 +1,23 @@
+[
+  {
+    "note": "tone vibrance drops the skin-hue halving so muted skin tones get the full boost",
+    "file": "Sources/CoreRender/Metal/ToneProgram.swift",
+    "anchor": "let skin: Float = (15...50).contains(hue(encoded(c))) ? 0.5 : 1",
+    "replacement": "let skin: Float = 1",
+    "filter": "ToneProgramTests"
+  },
+  {
+    "note": "tone vibrance drops the gamut cap so a near-gamut channel is pushed past 1",
+    "file": "Sources/CoreRender/Metal/ToneProgram.swift",
+    "anchor": "scale = max(1, cap)",
+    "replacement": "scale = max(1, scale)",
+    "filter": "ToneProgramTests"
+  },
+  {
+    "note": "tone vibrance scales by the saturation instead of its complement so saturated colours get the most boost",
+    "file": "Sources/CoreRender/Metal/ToneProgram.swift",
+    "anchor": "scale = 1 + a * (1 - s) * skin",
+    "replacement": "scale = 1 + a * s * skin",
+    "filter": "ToneProgramTests"
+  }
+]
