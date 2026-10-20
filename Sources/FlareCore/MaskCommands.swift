@@ -142,6 +142,13 @@ public struct MoveLayerMask: LayerParamsCommand {
 
 /// Sets the layer's track matte; nil clears it. The source must be another
 /// layer of the same list whose own chain of mattes never reaches this layer.
+///
+/// Throws `layerNotFound(source)` when the source is not in this layer's list.
+/// A cycle, a layer matting itself included, is a routine refusal, not a
+/// corrupt document, but it throws `invalidDocument("matte source <source>
+/// leads back to <layer>")`, since `CommandError` has no matte-cycle case: a
+/// UI tells it apart by that message prefix and should offer a source whose
+/// own matte chain does not reach this layer.
 public struct SetTrackMatte: LayerParamsCommand {
     public static let id = "mask.setMatte"
     public var label: String { "Set Track Matte" }

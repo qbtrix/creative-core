@@ -19,7 +19,7 @@
 //   `.unresolved` node and adds no items; building never throws or traps
 // - the owner's own layers always list fully; only what instance expansion
 //   builds is charged to `RenderList.maxExpandedPoints`: the outline points of
-//   each expanded shape, plus one more than its nesting depth per expanded
+//   each expanded shape and the mask path points of each expanded layer, plus one more than its nesting depth per expanded
 //   node and item (each carries its chain of hosts). Once it is spent,
 //   every further instance is an `.unresolved` node, not expanded, and
 //   `isTruncated` is true, so a small file whose symbols fan out (two
@@ -40,8 +40,8 @@ import Foundation
 /// `isTruncated` is true, which the SVG exporter rejects with `sceneTooLarge`.
 public struct RenderList: Sendable, Hashable {
     /// The budget one walk spends on instance expansion before it stops
-    /// expanding: the outline points of every shape built under an instance,
-    /// plus, per node and item built there, one more than its nesting depth
+    /// expanding: the outline points of every shape and the mask path points
+    /// of every layer built under an instance, plus, per node and item built there, one more than its nesting depth
     /// (the hosts its address carries). The owner's own layers are not
     /// charged, so this does not cap `items.count`: a layer with more shapes
     /// than this lists them all. Four times the file format's point cap (a
@@ -134,7 +134,8 @@ public struct RenderItem: Sendable, Hashable {
     public var isMatteSource = false
 }
 
-/// One layer mask on the way down to an item, in scene space.
+/// Not a path that was clipped: a layer mask carried into scene space that
+/// clips the item, one per mask on the way down to it.
 public struct ClippedPath: Sendable, Hashable {
     /// The mask's path through its layer's scene matrix. An open subpath is
     /// implicitly closed.
@@ -267,7 +268,7 @@ extension RenderList {
     /// Collects `items` while it builds the tree, so both come from one walk.
     /// Depth is bounded by `Instance.resolve` (`Instance.maxNestingDepth`),
     /// total size by `maxExpandedPoints`: `expanded` charges what is built
-    /// under an instance (outline points, plus `1 + nesting depth` per node
+    /// under an instance (outline and mask points, plus `1 + nesting depth` per node
     /// and item).
     private struct Walker {
         let owner: LayerOwner
@@ -308,6 +309,8 @@ extension RenderList {
                 let op = opacity * o
                 let lk = locked || layer.isLocked
                 let scale = m.uniformScale
+                // Each walk under an instance copies the layer's masks into scene space.
+                if symbol != nil { expanded += layer.masks.reduce(0) { $0 + $1.path.elements.reduce(0) { $0 + $1.pointCount } } }
                 let own = clips + layer.masks.map {
                     ClippedPath(path: $0.path.transformed(by: m), mode: $0.mode, feather: $0.feather * scale,
                                 opacity: $0.opacity, inverted: $0.inverted, depth: hosts.count)
