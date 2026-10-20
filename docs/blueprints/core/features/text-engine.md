@@ -11,7 +11,22 @@ drawing are the platform's: the app measures through the suite's
 `TextMeasuring` (creative-apps `shell-text`, CoreText) and hands the
 advances in, so FlareCore stays Linux-safe and imports nothing.
 **Line:** `line:core` · **Wave:** 6 (`waves.md`) · **Lead branch:** `lead/text-engine`
-**Status:** planned
+**Status:** built. Merged PRs: #567 (TE-1), #614 (TE-2), #615 (TE-3),
+#619 (TE-4), #618 (TE-5), #761 (TE-6), #679 (TE-7), #763 (TE-8), the
+review fixes #646, #656, #682, #686, #694, #697, #701, and this packet's
+closing `feature-done` PR (TE-9, TE-10). Deviations from the text below:
+`SVGExporter.export` takes a `measure` closure (default
+`FixedAdvances.measure`), so exported lines follow the app's advances
+(#701); justified `x` lists hold one value per Unicode scalar, as SVG
+counts characters, and each `<text>` is one output line, since a newline
+between line spans draws as a space under `xml:space="preserve"` (#763);
+`onPath` ignores alignment and lines and measures a multi-contour path end
+to end; KJ-TE's "200-unit circle" is a circle of diameter 200 as 32 cubic
+arcs from its right point, clockwise (the four-arc ellipse's normals are off
+by 1.3e-3), and its first glyph's pen point, not its centre, is the bottom.
+`TextBudgetTests` records a release miss as a known issue instead of
+failing; on Linux release they ran at 2.0 ms and 0.06 ms. Where this
+packet and the code differ, the code and its doc comments win.
 
 **Covers:** beta-80 plan row E8, core half ("styles, line height, tracking,
 paragraphs, type on a path"; C4 home flarecore/document-commands
