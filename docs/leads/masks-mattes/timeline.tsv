@@ -60,3 +60,5 @@ utc	stage	event	ref	note
 2026-10-19T23:40:06Z	resume	run act-1a15685b8d2-jkm8 on dev fb09fdc2; toolchain reinstalled
 2026-10-19T23:40:06Z	M7	split into M7a, M7a2, M7b (268/240/204 lines)
 2026-10-19T23:55:25Z	M7a	opened #746 (5/5 caught)
+2026-10-20T00:02:08Z	M7a	#746 merged as b9f53dc
+2026-10-20T00:02:08Z	M7a2	rebased on b9f53dc as 3306eb6; gating
