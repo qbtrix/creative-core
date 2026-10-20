@@ -1,10 +1,10 @@
 # text-engine lead record
 
 Issue: #437 · Packet: docs/blueprints/core/features/text-engine.md
-Run: act-1a150b99ea1-n4z4 · Session: 0dcfe60a-687f-5c9a-97c2-9e4695e35cea · Started: 2026-10-18T20:39Z
-Stage: Anatomy round 4 (last) not clean: 10 confirmed (3 major, 7 minor), 1 refuted; round budget spent, open findings filed as gap #706 (p2, SVG text), #707 (p2, mutation entries), #708 (p3, docs)
-Base: d715348712c75935b56b0864cd2f0a623c38454f
-Next: Parked: TE-6 and TE-8 to TE-10 wait on path-geometry:PG-measure. When it merges, build TE-6/TE-8 (TE-svg builder also picks up #706), then TE-z, Slice-Done TE-lay/TE-svg/TE-z and feature-done
+Run: act-1a157fd0281-warg · Session: 2df03724-340d-5741-940b-d32d0ef62e2a · Resumed: 2026-10-20T06:25Z
+Stage: TE-6 onPath building (TE-lay), TE-8 stacks on it
+Base: e09c6c30190b6eee1a8f4a646cd7485e19abc97d
+Next: TE-8 with #706, then TE-9/TE-10 feature-done
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |

@@ -136,3 +136,4 @@ utc	stage	event	ref	note
 2026-10-20T02:12Z	Anatomy	heartbeat	-	waiting on builders or the lane
 2026-10-20T02:30Z	Anatomy	heartbeat	-	waiting on builders or the lane
 2026-10-20T02:48Z	Anatomy	heartbeat	-	waiting on builders or the lane
+2026-10-20T06:29Z	Build	resumed	-	relaunched; PG-measure built (#735 #745 #755), TE-6 unblocked
