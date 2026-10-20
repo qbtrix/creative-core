@@ -155,3 +155,4 @@ utc	stage	event	ref	note
 2026-10-20T10:01Z	4	heartbeat	-	lead alive; round 4 mutation/panel or dev CI running
 2026-10-20T10:11Z	5	feature-done	771	r4-rh #769 merged (36/36); leftovers #770; RH-8 feature-done #771 opened
 2026-10-20T10:13Z	z	merged	771	RH-8 #771 merged as 0b2cb33; dev CI 39406154571 dispatched
+2026-10-20T10:16Z	4	heartbeat	-	lead alive; round 4 mutation/panel or dev CI running
