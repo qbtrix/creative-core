@@ -27,12 +27,12 @@ extension Layer {
         set { (colorTracks, shapeTracks, tracks) = (newValue.colorTracks, newValue.shapeTracks, newValue.tracks) }
     }
 
-    /// Drops shape `index`'s `fill.i`, `stroke.i` and `strokeWidth.i` tracks
+    /// Drops shape `index`'s `fill.i`, `stroke.i`, `strokeWidth.i` and trim tracks
     /// and its shape track, and moves those of later shapes down one, so every
     /// track stays on its shape once `shapes[index]` is removed.
     mutating func removeShapeTracks(at index: Int) {
         colorTracks = Self.removingIndex(index, prefixes: ["fill", "stroke"], from: colorTracks)
-        tracks = Self.removingIndex(index, prefixes: ["strokeWidth"], from: tracks)
+        tracks = Self.removingIndex(index, prefixes: ["strokeWidth", "trimStart", "trimEnd", "trimOffset"], from: tracks)
         shapeTracks = shapeTracks.compactMap { track in
             guard track.shapeIndex != index else { return nil }
             return track.shapeIndex > index ? ShapeTrack(shapeIndex: track.shapeIndex - 1, keys: track.keys) : track

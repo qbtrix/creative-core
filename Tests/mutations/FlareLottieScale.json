@@ -44,8 +44,8 @@
   {
     "note": "lottie group transform checks scale finite before the times 100",
     "file": "Sources/FlareCore/Export/LottieExporter.swift",
-    "anchor": "item.s = LottieStatic([try f(t.scaleX * 100), try f(t.scaleY * 100)])",
-    "replacement": "item.s = LottieStatic([try f(t.scaleX) * 100, try f(t.scaleY) * 100])",
+    "anchor": "item.s = .point(LottieStatic([try f(t.scaleX * 100), try f(t.scaleY * 100)]))",
+    "replacement": "item.s = .point(LottieStatic([try f(t.scaleX) * 100, try f(t.scaleY) * 100]))",
     "filter": "LottieScaleTrackTests"
   },
   {

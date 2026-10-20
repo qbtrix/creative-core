@@ -1,0 +1,37 @@
+[
+  {
+    "note": "stroke dash validation drops the positive-sum guard so an all-zero pattern loads",
+    "file": "Sources/FlareCore/Document.swift",
+    "anchor": "sum > 0, sum.isFinite else {",
+    "replacement": "sum.isFinite else {",
+    "filter": "StrokeDashTrimTests"
+  },
+  {
+    "note": "stroke painted path skips the trim on a dashed stroke so dashes run the whole outline",
+    "file": "Sources/FlareCore/PathOps/PathMeasure.swift",
+    "anchor": "if let trim, !trim.isWhole {",
+    "replacement": "if let trim, !trim.isWhole, dash.isEmpty {",
+    "filter": "StrokeDashTrimTests"
+  },
+  {
+    "note": "stroke trim counts as whole when either end is open so an end-only trim draws everything",
+    "file": "Sources/FlareCore/Document.swift",
+    "anchor": "public var isWhole: Bool { start <= 0 && end >= 1 }",
+    "replacement": "public var isWhole: Bool { start <= 0 || end >= 1 }",
+    "filter": "StrokeDashTrimTests"
+  },
+  {
+    "note": "stroke trim Lottie mode swaps together and each contour",
+    "file": "Sources/FlareCore/Export/LottieExporter+Tracks.swift",
+    "anchor": "tm.m = now.mode == .together ? 2 : 1",
+    "replacement": "tm.m = now.mode == .together ? 1 : 2",
+    "filter": "StrokeDashTrimTests"
+  },
+  {
+    "note": "stroke trim end tracks stay put when an earlier shape is removed",
+    "file": "Sources/FlareCore/ShapeCommands.swift",
+    "anchor": "\"trimStart\", \"trimEnd\", \"trimOffset\"]",
+    "replacement": "\"trimStart\", \"trimOffset\"]",
+    "filter": "StrokeDashTrimTests"
+  }
+]
