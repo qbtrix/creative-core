@@ -11,8 +11,8 @@
 // right, not its speed. Times are wall-clock medians of `runs`, each run's
 // earlier result freed before the clock starts, printed as
 // `budget <row>: <ms> ms (budget <ms> ms)` or `(report only, debug)`.
-// All three missed in release on Linux (flood fill about 1250 ms, colour
-// range about 195 ms, gradient about 5200 ms). Each release run still times
+// All three missed in release on Linux (flood fill about 530 ms, colour
+// range about 155 ms, gradient about 5200 ms). Each release run still times
 // and prints its op; a miss is recorded as a known issue naming the op's
 // bug, so the number reaches the finisher and FT-z stays not verified until
 // the op meets its budget, then the plain check takes over.
@@ -72,7 +72,7 @@ private func report(_ row: String, _ time: Duration, budget: Duration, bug: Stri
             mask = try scene.buffer.floodMask(from: scene.seedA, tolerance: .within(0.1))
         }
         report("flood fill \(Self.width)x\(Self.height) background", time, budget: .milliseconds(120),
-               bug: "bug: floodMask measured 1250 ms for a 24 MP background fill in release (budget 120 ms)")
+               bug: "bug: floodMask measured 530 ms for a 24 MP background fill in release (budget 120 ms)")
         // The timed fill took the background and left B out.
         #expect(try mask.coverage(x: scene.seedA.x, y: scene.seedA.y) == 1)
         #expect(try mask.coverage(x: Self.width - 1, y: Self.height - 1) == 1)
@@ -87,7 +87,7 @@ private func report(_ row: String, _ time: Duration, budget: Duration, bug: Stri
             mask = try scene.buffer.colorRangeMask(around: FillScene.colorC, fuzziness: 0.2)
         }
         report("colour range \(Self.width)x\(Self.height)", time, budget: .milliseconds(90),
-               bug: "bug: colorRangeMask measured 195 ms on 24 MP in release (budget 90 ms)")
+               bug: "bug: colorRangeMask measured 155 ms on 24 MP in release (budget 90 ms)")
         // The timed range covered C and nothing of A or B.
         #expect(try mask.coverage(x: scene.seedC.x, y: scene.seedC.y) == 1)
         #expect(try mask.coverage(x: scene.seedA.x, y: scene.seedA.y) == 0)

@@ -41,15 +41,18 @@ extension PixelBuffer {
     ///   once unpremultiplied (so has no OKLab value); the message names it.
     public func floodMask(from seed: (x: Int, y: Int), tolerance: FillTolerance, contiguous: Bool = true,
                           connectivity: Connectivity = .four, antiAlias: Bool = true) throws -> Mask {
-        try floodMask(from: seed, tolerance: tolerance, contiguous: contiguous, connectivity: connectivity,
-                      antiAlias: antiAlias, pendingLimit: nil)
+        try floodMaskAndScratch(from: seed, tolerance: tolerance, contiguous: contiguous, connectivity: connectivity,
+                                antiAlias: antiAlias, pendingLimit: nil).mask
     }
 
     /// `floodMask` with the seed stack capped at `pendingLimit` entries
     /// (nil: the larger of 65 536 and one per 16 pixels), so tests can force
-    /// the sweeps that pick up seeds a full stack dropped. Same mask for any cap.
-    func floodMask(from seed: (x: Int, y: Int), tolerance: FillTolerance, contiguous: Bool,
-                   connectivity: Connectivity, antiAlias: Bool, pendingLimit: Int?) throws -> Mask {
+    /// the sweeps that pick up seeds a full stack dropped. Same mask for any
+    /// cap. `scratchBytes` is what the fill allocated past the mask: the
+    /// bitset words times 8 plus the seed stack's capacity times 4.
+    func floodMaskAndScratch(from seed: (x: Int, y: Int), tolerance: FillTolerance, contiguous: Bool,
+                             connectivity: Connectivity, antiAlias: Bool,
+                             pendingLimit: Int?) throws -> (mask: Mask, scratchBytes: Int) {
         guard (0..<width).contains(seed.x), (0..<height).contains(seed.y) else {
             throw RasterError.invalid("flood seed (\(seed.x), \(seed.y)) is outside the \(width)x\(height) buffer")
         }
@@ -61,103 +64,151 @@ extension PixelBuffer {
             limit = Double(t)
         }
         let reach = connectivity == .eight ? 1 : 0
-        let (w, h) = (width, height)
-        var coverage = [Float](repeating: 0, count: w * h)
-        var taken = [UInt64](repeating: 0, count: (w * h + 63) / 64)
-        try components.withUnsafeBufferPointer { pixels in
-            let match = try FloodMatch(pixels, width: w, seed: seed.y * w + seed.x, limit: limit)
-            func isTaken(_ i: Int) -> Bool { taken[i >> 6] & (1 << UInt64(i & 63)) != 0 }
-            func take(_ i: Int) {
-                taken[i >> 6] |= 1 << UInt64(i & 63)
-                coverage[i] = 1
+        let (w, h) = (width, height), n = w * h
+        // Each stack entry is a pixel known to match, marked in `queued` when
+        // found so it is never pushed twice. The stack is allocated once at
+        // its cap (UInt32: maxPixels fits); a pixel found while it is full
+        // stays only in `queued`, and sweeps of `queued` pick those up.
+        let cap = contiguous ? min(max(pendingLimit ?? max(1 << 16, n / 16), 1), n) : 0
+        let words = (n + 63) / 64
+        let taken = UnsafeMutableBufferPointer<UInt64>.allocate(capacity: words)
+        let queued = UnsafeMutableBufferPointer<UInt64>.allocate(capacity: contiguous ? words : 0)
+        let stack = UnsafeMutableBufferPointer<UInt32>.allocate(capacity: cap)
+        defer { taken.deallocate(); queued.deallocate(); stack.deallocate() }
+        taken.initialize(repeating: 0)
+        queued.initialize(repeating: 0)
+        let coverage = try [Float](unsafeUninitializedCapacity: n) { cover, count in
+            cover.initialize(repeating: 0)
+            count = n
+            try components.withUnsafeBufferPointer { pixels in
+                let match = try FloodMatch(pixels, width: w, seed: seed.y * w + seed.x, limit: limit)
+                var fill = FloodScan(match: match, coverage: cover, taken: taken, queued: queued, stack: stack,
+                                     w: w, h: h, reach: reach)
+                if !contiguous {
+                    for i in 0..<n where try fill.match.accepts(i) { fill.take(i) }
+                } else {
+                    try fill.fill(from: seed.y * w + seed.x)
+                }
+                if antiAlias, limit > 0 { try fill.softEdge(limit: limit) }
             }
-            if !contiguous {
-                for i in 0..<(w * h) { if try match.accepts(i) { take(i) } }
-            } else {
-                // Each stack entry is a pixel known to match, marked in `queued`
-                // when found so it is never pushed twice. The stack holds at
-                // most `limit` entries (UInt32: maxPixels fits); a pixel found
-                // while it is full stays only in `queued`, and sweeps of
-                // `queued` pick those up until a sweep drops none.
-                let limit = max(pendingLimit ?? max(1 << 16, w * h / 16), 1)
-                var queued = [UInt64](repeating: 0, count: taken.count)
-                var stack = [UInt32]()
-                stack.reserveCapacity(min(limit, w * h))
-                var dropped = false
-                func enqueue(_ i: Int) {
-                    queued[i >> 6] |= 1 << UInt64(i & 63)
-                    if stack.count < limit { stack.append(UInt32(truncatingIfNeeded: i)) } else { dropped = true }
-                }
-                func drain() throws {
-                    while let entry = stack.popLast() {
-                        let start = Int(entry)
-                        guard !isTaken(start) else { continue }
-                        let y = start / w, row = y * w
-                        var (left, right) = (start - row, start - row)
-                        while left > 0, !isTaken(row + left - 1), try match.accepts(row + left - 1) { left -= 1 }
-                        while right < w - 1, !isTaken(row + right + 1), try match.accepts(row + right + 1) { right += 1 }
-                        for x in left...right { take(row + x) }
-                        let (lo, hi) = (max(left - reach, 0), min(right + reach, w - 1))
-                        for ny in [y - 1, y + 1] where (0..<h).contains(ny) {
-                            var inRun = false
-                            for x in lo...hi {
-                                let i = ny * w + x
-                                let open = try !isTaken(i) && match.accepts(i)
-                                if open, !inRun, queued[i >> 6] & (1 << UInt64(i & 63)) == 0 { enqueue(i) }
-                                inRun = open
-                            }
-                        }
-                    }
-                }
-                enqueue(seed.y * w + seed.x)
-                try drain()
-                while dropped {
-                    dropped = false
-                    for word in queued.indices {
-                        var bits = queued[word] & ~taken[word]
-                        while bits != 0 {
-                            stack.append(UInt32(truncatingIfNeeded: word << 6 | bits.trailingZeroBitCount))
-                            bits &= bits - 1
-                            try drain()
-                        }
-                    }
-                }
-            }
-            if antiAlias, limit > 0 {
-                for y in 0..<h {
-                    for x in 0..<w where !isTaken(y * w + x) {
-                        var touches = false
-                        for dy in -1...1 where (0..<h).contains(y + dy) {
-                            for dx in -1...1 where (0..<w).contains(x + dx) && (reach == 1 || dx == 0 || dy == 0) {
-                                touches = touches || isTaken((y + dy) * w + x + dx)
-                            }
-                        }
-                        guard touches else { continue }
-                        let d = try match.distance(y * w + x)
-                        coverage[y * w + x] = Float(min(max(1 - (d - limit) / limit, 0), 1))
-                    }
+        }
+        let scratchBytes = (taken.count + queued.count) * 8 + stack.count * 4
+        return (Mask(checkedWidth: w, height: h, storage: coverage), scratchBytes)
+    }
+}
+
+/// One fill's pointers into its mask, bitsets and seed stack, and the
+/// scanline walk over them.
+private struct FloodScan {
+    var match: FloodMatch
+    let coverage: UnsafeMutableBufferPointer<Float>
+    let taken: UnsafeMutableBufferPointer<UInt64>
+    let queued: UnsafeMutableBufferPointer<UInt64>
+    let stack: UnsafeMutableBufferPointer<UInt32>
+    let w: Int, h: Int, reach: Int
+    var pending = 0
+    var dropped = false
+
+    func isTaken(_ i: Int) -> Bool { taken[i >> 6] & (1 << UInt64(i & 63)) != 0 }
+    func isQueued(_ i: Int) -> Bool { queued[i >> 6] & (1 << UInt64(i & 63)) != 0 }
+    func take(_ i: Int) {
+        taken[i >> 6] |= 1 << UInt64(i & 63)
+        coverage[i] = 1
+    }
+
+    /// Whether pixel `i` is untaken and matches; a queued pixel is known to.
+    mutating func open(_ i: Int) throws -> Bool { try !isTaken(i) && (isQueued(i) || match.accepts(i)) }
+
+    mutating func enqueue(_ i: Int) {
+        queued[i >> 6] |= 1 << UInt64(i & 63)
+        if pending < stack.count {
+            stack[pending] = UInt32(truncatingIfNeeded: i)
+            pending += 1
+        } else {
+            dropped = true
+        }
+    }
+
+    /// The contiguous fill from pixel `seed`: drain the stack, then sweep
+    /// `queued` for dropped seeds until a sweep drops none.
+    mutating func fill(from seed: Int) throws {
+        enqueue(seed)
+        try drain()
+        while dropped {
+            dropped = false
+            for word in queued.indices {
+                var bits = queued[word] & ~taken[word]
+                while bits != 0 {
+                    enqueue(word << 6 | bits.trailingZeroBitCount)
+                    bits &= bits - 1
+                    try drain()
                 }
             }
         }
-        return Mask(checkedWidth: w, height: h, storage: coverage)
+    }
+
+    mutating func drain() throws {
+        while pending > 0 {
+            pending -= 1
+            let start = Int(stack[pending])
+            guard !isTaken(start) else { continue }
+            let y = start / w, row = y * w
+            var (left, right) = (start - row, start - row)
+            while left > 0, try open(row + left - 1) { left -= 1 }
+            while right < w - 1, try open(row + right + 1) { right += 1 }
+            for x in left...right { take(row + x) }
+            let (lo, hi) = (max(left - reach, 0), min(right + reach, w - 1))
+            if y > 0 { try scan(row: row - w, lo, hi) }
+            if y < h - 1 { try scan(row: row + w, lo, hi) }
+        }
+    }
+
+    /// Queues the first pixel of each open run in `row + lo...row + hi`.
+    mutating func scan(row: Int, _ lo: Int, _ hi: Int) throws {
+        var inRun = false
+        for x in lo...hi {
+            let i = row + x
+            let isOpen = try open(i)
+            if isOpen, !inRun, !isQueued(i) { enqueue(i) }
+            inRun = isOpen
+        }
+    }
+
+    /// Gives each untaken pixel next to a taken one coverage `1 - (d - t) / t`.
+    mutating func softEdge(limit: Double) throws {
+        for y in 0..<h {
+            for x in 0..<w where !isTaken(y * w + x) {
+                var touches = false
+                for dy in -1...1 where (0..<h).contains(y + dy) {
+                    for dx in -1...1 where (0..<w).contains(x + dx) && (reach == 1 || dx == 0 || dy == 0) {
+                        touches = touches || isTaken((y + dy) * w + x + dx)
+                    }
+                }
+                guard touches else { continue }
+                let d = try match.distance(y * w + x)
+                coverage[y * w + x] = Float(min(max(1 - (d - limit) / limit, 0), 1))
+            }
+        }
     }
 }
 
 /// The seed's colour and the tolerance, for testing pixels of one buffer's
-/// premultiplied components.
+/// premultiplied components. The last colour measured and its distance are
+/// kept (first the seed's, at 0), so a flat region converts its colour once.
 private struct FloodMatch {
     let pixels: UnsafeBufferPointer<Float>
     let width: Int
-    let seed: RGBA
     let seedColor: FillColor
     let limit: Double
+    private var last: RGBA
+    private var lastDistance = 0.0
 
     init(_ pixels: UnsafeBufferPointer<Float>, width: Int, seed index: Int, limit: Double) throws {
         self.pixels = pixels
         self.width = width
         self.limit = limit
-        seed = Self.color(pixels, index)
-        seedColor = try FillColor(seed, what: "flood fill: pixel (\(index % width), \(index / width))")
+        last = Self.color(pixels, index)
+        seedColor = try FillColor(last, what: "flood fill: pixel (\(index % width), \(index / width))")
     }
 
     private static func color(_ pixels: UnsafeBufferPointer<Float>, _ i: Int) -> RGBA {
@@ -165,12 +216,14 @@ private struct FloodMatch {
     }
 
     /// The `FillColor` distance of pixel `i` from the seed.
-    func distance(_ i: Int) throws -> Double {
+    mutating func distance(_ i: Int) throws -> Double {
         let c = Self.color(pixels, i)
-        guard c != seed else { return 0 }
-        return try FillColor(c, what: "flood fill: pixel (\(i % width), \(i / width))").distance(to: seedColor)
+        guard c != last else { return lastDistance }
+        lastDistance = try FillColor(c, what: "flood fill: pixel (\(i % width), \(i / width))").distance(to: seedColor)
+        last = c
+        return lastDistance
     }
 
     /// Whether pixel `i` is within the tolerance: `d <= t`, so `.within(0)` takes exact matches.
-    func accepts(_ i: Int) throws -> Bool { try distance(i) <= limit }
+    mutating func accepts(_ i: Int) throws -> Bool { try distance(i) <= limit }
 }

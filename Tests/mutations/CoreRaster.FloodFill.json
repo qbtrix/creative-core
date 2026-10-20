@@ -28,6 +28,13 @@
     "filter": "FloodFillTests.cappedStackFillsTheSame"
   },
   {
+    "note": "the flood seed-stack cap is removed, so the stack is allocated at one UInt32 per pixel, caught by FloodFillTests.worstCaseCombMemory",
+    "file": "Sources/CoreRaster/Fill/FloodFill.swift",
+    "anchor": "max(1 << 16, n / 16)",
+    "replacement": "n",
+    "filter": "FloodFillTests.worstCaseCombMemory"
+  },
+  {
     "note": "the tolerance is exclusive, d < t for d <= t, so within(0) takes nothing, caught by FloodFillTests.toleranceIsInclusive",
     "file": "Sources/CoreRaster/Fill/FloodFill.swift",
     "anchor": "func accepts(_ i: Int) throws -> Bool { try distance(i) <= limit }",

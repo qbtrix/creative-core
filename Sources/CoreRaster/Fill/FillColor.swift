@@ -11,12 +11,17 @@ struct FillColor: Sendable {
     let alpha: Double
 
     /// Unpremultiplies `premultiplied` and converts it to OKLab.
-    /// - Throws: `RasterError.invalid` naming `what` when a component is, or
-    ///   becomes after unpremultiplying, non-finite.
+    /// - Throws: `RasterError.invalid` naming `what` and the colour when a
+    ///   finite colour overflows Float on unpremultiplying (a component far
+    ///   larger than a tiny alpha), or when CoreColor cannot convert it.
     init(_ premultiplied: RGBA, what: @autoclosure () -> String) throws {
         let s = premultiplied.unpremultiplied()
+        if premultiplied.isFinite, !s.isFinite {
+            throw RasterError.invalid("\(what()) \(premultiplied) overflows when unpremultiplied: its colour"
+                                      + " components are too large for its alpha (premultiplied)")
+        }
         lab = try Self.converted(Color3(Double(s.r), Double(s.g), Double(s.b)), from: .linearSRGB, to: .oklab,
-                                 what: "\(what()) is not finite, so it")
+                                 what: "\(what()) \(premultiplied)")
         alpha = Double(s.a)
     }
 
