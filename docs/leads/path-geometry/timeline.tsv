@@ -59,3 +59,4 @@ utc	stage	event	ref	note
 2026-10-19T23:40:16Z	resume	run act-1a15685b8d2-jkm8 on dev fb09fdc2 (P6a #743 merged)
 2026-10-19T23:40:16Z	P6b	rebased onto dev as ced9dc1; gating
 2026-10-19T23:47:27Z	P6b	opened #745 (ced9dc17), feature-done
+2026-10-20T00:02:08Z	P6b	#745 merged as 47c283f; CI 39343832741 macOS queued
