@@ -55,7 +55,7 @@ struct LottieImportAnimationTests {
         #expect(ball.placement(at: 48).transform.x == 0 && ball.placement(at: 48).transform.y == 100)
     }
 
-    /// The fixture's mask, and modes, inversion, opacity, the anchor fold and unsupported modes.
+    /// The fixture's mask, and modes, inversion, opacity, the anchor (kept as the layer's) and unsupported modes.
     @Test func masksImport() throws {
         let mask = try #require(try layer("ball").masks.first)
         #expect(mask.mode == .add && mask.opacity == 1 && !mask.inverted && mask.feather == 0)
@@ -65,7 +65,7 @@ struct LottieImportAnimationTests {
             + "{\"mode\":\"n\",\(pt)},{\"mode\":\"i\",\(pt),\"x\":{\"a\":0,\"k\":3}}]"
         let (layer, report) = try read("{\"a\":{\"a\":0,\"k\":[10,10]}}", extra: masks)
         #expect(layer.masks.map(\.mode) == [.subtract, .difference, .intersect] && layer.masks.first?.inverted == true)
-        #expect(layer.masks.first?.opacity == 0.5 && layer.masks.first?.path.elements.first == .move(to: Point(x: 0, y: 0)))
+        #expect(layer.masks.first?.opacity == 0.5 && layer.masks.first?.path.elements.first == .move(to: Point(x: 10, y: 10)))
         #expect(report.skipped == ["mask expansion (1)", "mask mode (1)"])
     }
 
@@ -102,8 +102,9 @@ struct LottieImportAnimationTests {
         let ks = "{\"a\":{\"a\":0,\"k\":[5,0]},\"p\":{\"s\":true,\"x\":{\"a\":1,\"k\":[{\"t\":0,\"s\":[0]},{\"t\":8,\"s\":[80]}]},\"y\":{\"a\":0,\"k\":7}}}"
         let (layer, report) = try read(ks, shapes: shapes)
         #expect(report.skipped == [])
-        let start = PathElement.move(to: Point(x: -5, y: 0))
-        #expect(layer.shapeTracks.first?.keys.map(\.path.elements) == [[start, .line(to: Point(x: 5, y: 0))], [start, .line(to: Point(x: 25, y: 0))]])
+        let start = PathElement.move(to: Point(x: 0, y: 0))
+        #expect(layer.shapeTracks.first?.keys.map(\.path.elements) == [[start, .line(to: Point(x: 10, y: 0))], [start, .line(to: Point(x: 30, y: 0))]])
+        #expect(layer.placement(at: 0).transform.anchorX == 5)
         #expect(layer.tracks["strokeWidth.0"]?.map(\.value) == [1, 5] && layer.tracks["x"]?.map(\.value) == [0, 80])
         #expect(layer.placement(at: 4).transform.x == 40 && layer.placement(at: 4).transform.y == 7)
     }

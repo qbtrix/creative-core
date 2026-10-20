@@ -1,7 +1,7 @@
 // ParentTests.swift: a layer may follow another layer of its list (`Layer.parentID`): its matrix is the parent's
 // world matrix times its own, so moving or turning the parent carries it. Opacity and visibility are not inherited,
 // and a hidden parent still moves its children. Files refuse a missing parent or a cycle, and the command keeps
-// undo exact.
+// undo exact. Lottie's parent is in LottieAnchorParentTests.
 import Foundation
 import Testing
 @testable import FlareCore
@@ -109,9 +109,5 @@ struct ParentTests {
         // Removing a parent while a child follows it is refused, as removing a matte source is.
         try engine.redo()
         #expect(throws: (any Error).self) { try engine.perform(RemoveLayer(owner: owner, layerID: "arm")) }
-    }
-
-    @Test func lottieRefusesAParentedLayerItCantWriteYet() throws {
-        #expect(throws: LottieExportError.self) { try LottieExporter.export(scene: Self.rig()) }
     }
 }
