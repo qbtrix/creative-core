@@ -2,9 +2,9 @@
 
 Issue: #779 · Packet: docs/blueprints/core/features/layer-style-engine.md
 Run: act-1a15b62a149-srko · Session: see Belt · Started: 2026-10-20T22:30Z
-Stage: 2 plan
+Stage: 3 wave 1 (LE-a)
 Base: 3ded188e8702de287fcc38dee63e1889220788b3
-Next: wave 1 (slice LE-a: LE-1 seam + LE-2 checks, one PR) builds on the base
+Next: LE-a builder (branch les/le-a) opens its PR; then LE-cpu builder stacks on les/le-a
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
@@ -37,6 +37,8 @@ Next: wave 1 (slice LE-a: LE-1 seam + LE-2 checks, one PR) builds on the base
 ## Decisions
 - Rule 20: one PR per slice. LE-a = LE-1 + LE-2 in one PR (tests-first commit, then seam).
 - Slice PRs stack: the next slice starts on a branch stacked on the open one; never wait on CI.
+- Builders are worktree subagents, one per slice (lead.md stage 3 fallback), so a builder can be messaged back on a lane ejection. Branches `les/<slice>`: `lead/layer-style-engine/<task>` collides with the lead ref.
+- Waves follow slices: wave 1 LE-a; 2 LE-cpu (LE-3..5); 3 LE-psd and LE-metal in parallel (both wait on LE-cpu, disjoint files except none); 4 LE-z.
 
 ## Open
 - Container had no Swift toolchain; ran scripts/cloud-setup.sh at start.
