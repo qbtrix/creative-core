@@ -2,9 +2,9 @@
 
 Issue: #436 · Packet: docs/blueprints/core/features/retouch-heal.md
 Run: act-1a157fd0281-warg · Session: 2df03724-340d-5741-940b-d32d0ef62e2a · Resumed: 2026-10-20T06:25Z
-Stage: 4 round 4 (last): mutation and critic panel on e09c6c3
+Stage: 4 round 4 (last): critic panel wf_3b84ca09-91b on e09c6c3
 Base: fa40b3427c6950e982d58c55d769f2dc5f7f1923
-Next: run mutate RH plans, then critic panel round 4
+Next: read panel wf_3b84ca09-91b, then fix batch, then RH-8 feature-done
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
