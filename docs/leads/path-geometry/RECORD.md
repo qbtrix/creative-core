@@ -31,6 +31,7 @@ Next: #745 merges and dispatches dev CI; Slice-Done PG-shape and PG-z on that ru
 |---|---|---|---|---|---|---|---|---|
 | 1 | a658945b | builders' gates | per plan, all caught | 39279766862 | correctness, robustness, reuse, tests+mutation, first-use clarity | 0 blockers, 5 should-fix, 7 nits (across both features) | lead/path-geometry-r1-b1 | no |
 | 2 | 305975a7 | CI: PASS | 195/195 (136 + 59 re-run after an OOM kill) | | first-use clarity, contract, undo, robustness, tests+mutation | 18 (8 major, 10 minor; 1 nit skipped) across both features | lead/masks-mattes-r2-b1, lead/masks-mattes-r2-b2, lead/path-geometry-r2-b1 | no |
+| 3 | 9714ff33 | CI: PASS | 221/221 | 39352093719 | first-use clarity, contract, undo, robustness, tests+mutation | 17 (5 major, 12 minor; 1 refuted) across both features | lead/path-geometry/r3-pg, lead/masks-mattes/r3-mm-model, lead/masks-mattes/r3-mm-export | no |
 
 - Round-1 path fixes: PR #733 (lead/path-geometry-r1-b1, 5/5 FlarePathEdit, 95 lines). Fixed the quad and closing-segment insert test, the curved removeAnchor test, closest via cubicAt plus a 1e-9 stop, and the docs; Wang's step count moved to a shared `Path.cubicSegments`. The `<=` index-mutant finding is answered: the remove traps before any error, so the run still fails and the mutant counts as caught; its note is reworded.
 
@@ -59,3 +60,4 @@ Next: #745 merges and dispatches dev CI; Slice-Done PG-shape and PG-z on that ru
 - Anatomy round 3 started on dev 9714ff33 (masks-mattes' last PR merged), covering both features.
 - Round 3 on 9714ff33: scripts/ci CI: PASS; mutate --changed-since base at 161/221 caught, 0 escaped so far. Next: critic panel.
 - Round 3 on 9714ff33: mutate --changed-since base 221/221 caught (53.7 min). Critic panel running (clarity, contract, undo, robustness, tests), run wf_89ce91c1-7f8.
+- Round 3 panel (wf_89ce91c1-7f8) on 9714ff33: not clean, 17 confirmed. Majors: outlined's bad width throws nonFinite with a NaN-only doc; outlined builds join/cap loops unbounded before combine's vertex cap; Stroker.vertex inner-side choice untested; render-list mask points not charged to maxExpandedPoints; SVG difference masks refused; SVG hard-clip predicate's feather/opacity/inverted conditions untested. Fix batch r3 (3 fixers, disjoint files) running; round 4 is the last.
