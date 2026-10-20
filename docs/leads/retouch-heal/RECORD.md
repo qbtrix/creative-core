@@ -3,7 +3,7 @@
 Issue: #436 · Packet: docs/blueprints/core/features/retouch-heal.md
 Run: act-1a157fd0281-warg · Session: 2df03724-340d-5741-940b-d32d0ef62e2a · Resumed: 2026-10-20T06:25Z
 Stage: Stage: 4 round 4 (last): fixes in flight (r4-rh, wf_88c6af29-b3d)
-Base: e41c2c9cf828f16e7200b38625166b8f10ee002e
+Base: cc27761484b9ed106af343ec3b813bbf86b3b797
 Next: Next: merge r4-rh, then RH-8 feature-done; leftovers become gap issues
 
 ## Tasks
