@@ -39,11 +39,11 @@ private func milliseconds(_ d: Duration) -> String {
     /// `runs` timings and, in an optimized build, expects it within `budget`.
     static func check<T>(_ row: String, budget: Duration, _ body: () throws -> T) throws -> T {
         let clock = ContinuousClock()
-        var result: T?
-        if optimized { result = try body() }
+        var last: T?
+        if optimized { last = try body() }
         var wall: [Duration] = []
-        for _ in 0..<runs { wall.append(try clock.measure { result = try body() }) }
-        guard let result else { throw GeometryError.notBuilt(row) }
+        for _ in 0..<runs { wall.append(try clock.measure { last = try body() }) }
+        let result = try #require(last, "\(row) did not run")
         let time = wall.sorted()[runs / 2]
         let suffix = optimized ? "budget \(milliseconds(budget)) ms" : "report only, debug; budget \(milliseconds(budget)) ms in release"
         print("budget \(row): \(milliseconds(time)) ms (\(suffix))")
