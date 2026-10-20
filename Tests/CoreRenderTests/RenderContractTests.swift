@@ -46,12 +46,12 @@ struct NullBackend: RenderBackend {
 }
 
 @Suite struct RenderContractTests {
-    @Test func opsAreTheThirteenFamiliesNamedByTheirRawValues() {
-        #expect(RenderOp.allCases.count == 13)
+    @Test func opsAreTheFourteenFamiliesNamedByTheirRawValues() {
+        #expect(RenderOp.allCases.count == 14)
         #expect(RenderOp.allCases.map(\.rawValue) == [
             "display", "composite", "blendSeparable", "blendNonSeparable",
             "transform", "resample", "blur", "adjust", "retouch",
-            "maskedComposite", "affine", "effect", "color",
+            "maskedComposite", "affine", "effect", "color", "style",
         ])
         for op in RenderOp.allCases {
             #expect(op.rawValue == "\(op)")

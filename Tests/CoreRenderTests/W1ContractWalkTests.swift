@@ -1,6 +1,7 @@
 // W1ContractWalkTests.swift: engine-contracts EC-9, the render half of KJ-EC.
 // One call per W1 RenderBackend method (the masked composite, the three
-// `.affine` calls, `applying`, and `adjusted` with each `.color` case) goes
+// `.affine` calls, `applying`, `adjusted` with each `.color` case, and
+// layer-style-engine's `styled`) goes
 // through a RenderDispatcher whose preferred FakeBackend lists none of the W1
 // families. Each must reach the CPU backend (`lastFallback` names its family,
 // and the fake only uploads the input), then give the CPU's answer for that
@@ -15,7 +16,8 @@ import Testing
     /// The W1 families whose `CPUBackend+<Family>.swift` is filled on dev:
     /// Color (tone-pack TP-7), Affine (affine-composite AC-6), Effect
     /// (effects-engine FX-7) and MaskedComposite (masks-mattes MM-5): every
-    /// W1 family, so the stub arm below is kept for the next one.
+    /// W1 family. `.style` (layer-style-engine) is still a stub until LE-5, so
+    /// it takes the stub arm below.
     static let cpuBuilt: Set<RenderOp> = [.affine, .color, .effect, .maskedComposite]
 
     /// A fake preferring every family from before W1 and none of the new ones.
@@ -61,7 +63,7 @@ import Testing
     }
 
     @Test func walk() throws {
-        #expect(Self.oldFamilies.isDisjoint(with: [.maskedComposite, .affine, .effect, .color]))
+        #expect(Self.oldFamilies.isDisjoint(with: [.maskedComposite, .affine, .effect, .color, .style]))
         try step(.maskedComposite, "masked composite") { d, s in
             var b = try backdrop(d)
             try d.composite(s, onto: &b, x: 0, y: 0, mode: .multiply, opacity: 0.5, mask: mask, maskX: 0, maskY: 0)
@@ -84,5 +86,7 @@ import Testing
         for adjustment in colorCases {
             try step(.color, "\(adjustment)") { d, s in try d.adjusted(s, adjustment) }
         }
+        let stack = LayerStyleStack(entries: [StyleEntry(op: .overlay(.color(RGBA(r: 1, g: 0, b: 0, a: 1))))])
+        try step(.style, "style") { d, s in try d.styled(s, stack) }
     }
 }

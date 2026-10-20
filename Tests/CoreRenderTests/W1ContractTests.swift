@@ -46,13 +46,13 @@ import Testing
         ]
     }
 
-    @Test func thirteenFamilies() {
-        #expect(RenderOp.allCases.count == 13)
-        #expect(RenderOp.allCases.suffix(4) == [.maskedComposite, .affine, .effect, .color])
+    @Test func fourteenFamilies() {
+        #expect(RenderOp.allCases.count == 14)
+        #expect(RenderOp.allCases.suffix(5) == [.maskedComposite, .affine, .effect, .color, .style])
     }
 
-    @Test func notOnMetalYetIsExactlyTheFour() {
-        #expect(RenderOp.notOnMetalYet == [.maskedComposite, .affine, .effect, .color])
+    @Test func notOnMetalYetIsExactlyTheFive() {
+        #expect(RenderOp.notOnMetalYet == [.maskedComposite, .affine, .effect, .color, .style])
         #expect(RenderOp.notOnMetalYet.isSubset(of: Set(RenderOp.allCases)))
         #expect(RenderOp.notOnMetalYet.isDisjoint(with: Set(RenderOp.allCases.prefix(9))),
                 "every family from before W1 may run on Metal")
