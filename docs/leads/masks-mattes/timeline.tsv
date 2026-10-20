@@ -74,3 +74,4 @@ utc	stage	event	ref	note
 2026-10-20T02:16:15Z	round-3	panel not clean: 17 confirmed (5 major); fix batch r3 running
 2026-10-20T02:17:03Z	round-3	fix batch r3 launched (3 fixers)
 2026-10-20T02:17:24Z	round-3	fix batch r3: 3 fixers on branches lead/*-r3-*, writing tests and fixes; no PR yet
+2026-10-20T02:36:19Z	round-3	fix batch r3: 3 fixers gating (scripts/ci, mutate); no PR yet
