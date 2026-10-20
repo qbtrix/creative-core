@@ -2,9 +2,9 @@
 
 Issue: #436 · Packet: docs/blueprints/core/features/retouch-heal.md
 Run: act-1a157fd0281-warg · Session: 2df03724-340d-5741-940b-d32d0ef62e2a · Resumed: 2026-10-20T06:25Z
-Stage: Stage: RH-8 feature-done PR #771 in the lane
-Base: 33664403f74e8c3d07ac3ec6c1f6c9d90453ffa4
-Next: Next: dev CI with #771 green Linux, then Belt-Slice-Done RH-z, Mac-Finish-Wanted RH-z, contact sheet
+Stage: RH-8 merged; dev CI 39406154571 running
+Base: 0b2cb33e9e6482a20c981aaa74e89fd7004c78a2
+Next: Linux green on 39406154571, then Belt-Slice-Done RH-z, Mac-Finish-Wanted RH-z, contact sheet
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
@@ -17,7 +17,7 @@ Next: Next: dev CI with #771 green Linux, then Belt-Slice-Done RH-z, Mac-Finish-
 | RH-5 | W3 | `dodge`, `burn`, `sponge`; turns on `ToneDabTests` | `Sources/CoreRaster/Heal/ToneDabs.swift`, `Tests/CoreRasterTests/ToneDabTests.swift`, `Tests/mutations/CoreRaster.ToneDabs.json` | `ToneDabTests`: a midtone dodge lifts luma 0.5 and leaves luma 0.1 and 0.95 within 1/255; burn mirrors; sponge +1 raises chroma, −1 greys; alpha never changes; exposure 0 is identity | `CoreRaster.ToneDabs`: midtone weight `\ | #606 | merged (Mutate 2/2) |  | building |
 | RH-6 | W3 | `SmudgeState`; turns on `SmudgeTests` | `Sources/CoreRaster/Heal/Smudge.swift`, `Tests/CoreRasterTests/SmudgeTests.swift`, `Tests/mutations/CoreRaster.Smudge.json` | `SmudgeTests`: the first dab changes nothing; ten dabs along a line move a red edge's colour forward and its strength fades monotonically; strength 0 is identity | `CoreRaster.Smudge`: carried patch not replaced after a dab → `SmudgeTests.colourFades`; first dab paints → `.firstDabPicksUp` | #602 | merged (Mutate 2/2) |
 | RH-7 | W5 | KJ-RH walk; `RetouchBudgetTests` (release, `.serialized`) | `Tests/CoreRasterTests/RetouchWalkTests.swift`, `Tests/CoreRasterTests/RetouchBudgetTests.swift` | `RetouchWalkTests.walk`; `RetouchBudgetTests`: heal of a 200 px dab ≤ 12 ms; fill from surroundings of a 300 × 300 spot ≤ 400 ms; a tone dab of 200 px ≤ 1 ms (release, reported) | none | #616 | merged |
-| RH-8 | W6 | The packet's status line; `feature-done` | `docs/blueprints/core/features/retouch-heal.md` | status line says built | – | #771 | open (feature-done) |
+| RH-8 | W6 | The packet's status line; `feature-done` | `docs/blueprints/core/features/retouch-heal.md` | status line says built | – | #771 | merged (feature-done) |
 
 ## Slices
 | slice | tasks | waits on | state | Slice-Done run | Mac-Finish |
