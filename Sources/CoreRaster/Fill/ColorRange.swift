@@ -57,26 +57,27 @@ extension PixelBuffer {
         guard (0...1).contains(fuzziness) else {
             throw RasterError.invalid("colour range fuzziness \(fuzziness): must be in 0...1")
         }
-        let target = try FillColor(color, what: "colour range colour \(color)")
-        var coverage = [Float](repeating: 0, count: width * height)
-        // Flat regions repeat one colour, so the last pixel's answer is reused.
-        var last: (pixel: RGBA, value: Float)?
-        for y in 0..<height {
-            for x in 0..<width {
-                let c = try pixel(x: x, y: y)
-                if let last, last.pixel == c {
-                    coverage[y * width + x] = last.value
-                    continue
+        let target = try FillColor(color, what: "colour range colour")
+        let (w, n) = (width, width * height)
+        // One linear pass over the raw components. Flat regions repeat one
+        // colour, so the last pixel's answer is reused (NaN matches nothing).
+        let coverage = try components.withUnsafeBufferPointer { px in
+            try [Float](unsafeUninitializedCapacity: n) { cover, count in
+                var last = RGBA(r: .nan, g: .nan, b: .nan, a: .nan), lastValue: Float = 0
+                for i in 0..<n {
+                    let c = RGBA(r: px[4 * i], g: px[4 * i + 1], b: px[4 * i + 2], a: px[4 * i + 3])
+                    if c != last {
+                        let d = try FillColor(c, what: "colour range: pixel (\(i % w), \(i / w))").distance(to: target)
+                        if fuzziness == 0 {
+                            lastValue = d == 0 ? 1 : 0
+                        } else {
+                            lastValue = 1 - Self.smoothstep(0, fuzziness, Float(d))
+                        }
+                        last = c
+                    }
+                    cover.initializeElement(at: i, to: lastValue)
+                    count = i + 1
                 }
-                let d = try FillColor(c, what: "colour range: pixel (\(x), \(y))").distance(to: target)
-                let value: Float
-                if fuzziness == 0 {
-                    value = d == 0 ? 1 : 0
-                } else {
-                    value = 1 - Self.smoothstep(0, fuzziness, Float(d))
-                }
-                coverage[y * width + x] = value
-                last = (c, value)
             }
         }
         return Mask(checkedWidth: width, height: height, storage: coverage)

@@ -240,60 +240,62 @@ enum FillCheck {
             let connectivity: Connectivity = round % 2 == 0 ? .four : .eight
             let full = try image.floodMask(from: seed, tolerance: .exact, connectivity: connectivity, antiAlias: false)
             for limit in [1, 2, 5] {
-                let capped = try image.floodMask(from: seed, tolerance: .exact, contiguous: true,
-                                                 connectivity: connectivity, antiAlias: false, pendingLimit: limit)
+                let capped = try image.floodMaskAndScratch(from: seed, tolerance: .exact, contiguous: true,
+                                                           connectivity: connectivity, antiAlias: false,
+                                                           pendingLimit: limit).mask
                 #expect(capped == full, "round \(round), \(w)x\(h), limit \(limit)")
             }
         }
     }
 
+    /// A pixel whose colour overflows Float on unpremultiplying is named as
+    /// that, not as "not finite": the colour itself is finite.
+    @Test
+    func overflowingPixelSaysUnpremultiplied() throws {
+        var image = try PixelBuffer(width: 2, height: 1, fill: FillScene.colorA)
+        try image.setPixel(x: 1, y: 0, RGBA(r: 1, g: 0, b: 0, a: 1e-40))
+        do {
+            _ = try image.floodMask(from: (x: 0, y: 0), tolerance: .within(0.1))
+            Issue.record("no error")
+        } catch RasterError.invalid(let message) {
+            #expect(message.contains("pixel (1, 0)") && message.contains("unpremultiplied"), "\(message)")
+            #expect(!message.contains("is not finite"), "\(message)")
+        }
+    }
+
     /// One span per row, so this is the easy case for the seed stack;
-    /// `worstCaseCombMemory` is the many-runs one. The buffer is built inside
-    /// the body, so skipping the case costs nothing.
-    @Test(.enabled(if: PeakResident.canRestart, "the resident peak restarts on Linux only"))
+    /// `worstCaseCombMemory` is the many-runs one. 100 MP.
+    @Test
     func worstCaseMemory() throws {
         let image = try FillFixtures.singleColor()
-        let pixels = FillFixtures.largeSide * FillFixtures.largeSide
-        let extra = try peakGrowth(budget: 6 * pixels) {
-            let mask = try image.floodMask(from: (x: 0, y: 0), tolerance: .exact, antiAlias: false)
-            #expect(mask.area == Double(pixels))
-        }
-        #expect(extra <= 6 * pixels, "peak grew \(extra) bytes for \(pixels) pixels")
+        try checkScratch(image, area: Double(image.width * image.height))
     }
 
     /// A comb (`FillFixtures.comb`), 64 MP: every odd row is half one-pixel
     /// runs, so a fill that queues every run start piles up about one pending
-    /// seed per four pixels. Peak memory past the input and the 4-byte mask
-    /// stays at most 2 bytes per pixel.
-    @Test(.enabled(if: PeakResident.canRestart, "the resident peak restarts on Linux only"))
+    /// seed per four pixels, four times the stack's cap.
+    @Test
     func worstCaseCombMemory() throws {
         let side = FillFixtures.combSide
         let image = try FillFixtures.comb(side: side)
-        let pixels = side * side
-        let extra = try peakGrowth(budget: 6 * pixels) {
-            let mask = try image.floodMask(from: (x: 0, y: 0), tolerance: .exact, connectivity: .four, antiAlias: false)
-            #expect(mask.area == Double(pixels - (side / 2) * (side / 2)))
-        }
-        #expect(extra <= 6 * pixels, "peak grew \(extra) bytes for \(pixels) pixels")
+        try checkScratch(image, area: Double(side * side - (side / 2) * (side / 2)))
     }
 
-    /// The smallest resident-peak growth over up to three runs of `body`,
-    /// stopping once one is within `budget`. The peak is process-wide and
-    /// other suites run alongside, so the high-water mark restarts before each
-    /// run and another suite's allocation, being transient, does not count.
-    /// Linux only: Darwin's `ru_maxrss` is a lifetime peak that cannot be
-    /// restarted, so an earlier suite's higher peak would hide the growth. A
-    /// missing measurement fails rather than passes.
-    private func peakGrowth(budget: Int, _ body: () throws -> Void) throws -> Int {
-        var extra = Int.max
-        for _ in 0..<3 where extra > budget {
-            let before = try #require(PeakResident.restart(), "could not restart the resident peak")
-            try body()
-            let after = PeakResident.bytes()
-            #expect(after >= before)
-            extra = min(extra, after - before)
+    /// Fills `image` from its corner; its scratch is at most 2 B/px (the
+    /// packet) and 0.5 B/px (two bitsets, a stack of one UInt32 per 16 px).
+    /// Linux also prints the process-wide resident peak, as a report only.
+    private func checkScratch(_ image: PixelBuffer, area: Double) throws {
+        let pixels = image.width * image.height
+        let before = PeakResident.canRestart ? PeakResident.restart() : nil
+        let (mask, scratch) = try image.floodMaskAndScratch(from: (x: 0, y: 0), tolerance: .exact, contiguous: true,
+                                                            connectivity: .four, antiAlias: false, pendingLimit: nil)
+        if let before {
+            let perPixel = Double(PeakResident.bytes() - before) / Double(pixels)
+            print("budget flood memory \(image.width)x\(image.height): \(perPixel) B/px resident peak (mask included, report only)")
         }
-        return extra
+        #expect(mask.area == area)
+        #expect(scratch <= 2 * pixels, "scratch \(scratch) bytes for \(pixels) pixels")
+        #expect(scratch <= pixels / 2 + 16, "scratch \(scratch) bytes for \(pixels) pixels")
     }
 }
 

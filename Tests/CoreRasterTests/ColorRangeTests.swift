@@ -138,6 +138,34 @@ import Testing
         #expect(throws: RasterError.self) { try noise.colorRangeMask(around: RGBA(r: .nan, g: 0, b: 0, a: 1), fuzziness: 0.2) }
     }
 
+    /// A finite colour that overflows Float on unpremultiplying (a component
+    /// far above a tiny alpha) is named as that, never as "not finite", as
+    /// the colour and as a buffer pixel; seeded tiny alphas throw or pass.
+    @Test
+    func overflowingColourSaysUnpremultiplied() throws {
+        let noise = try FillFixtures.noise()
+        func message(_ body: () throws -> Mask) -> String? {
+            do { _ = try body(); return nil } catch RasterError.invalid(let m) { return m } catch { return "other: \(error)" }
+        }
+        let tiny = RGBA(r: 1, g: 0, b: 0, a: 1e-40)
+        var image = noise
+        try image.setPixel(x: 2, y: 1, tiny)
+        for got in [message { try noise.colorRangeMask(around: tiny, fuzziness: 0.1) },
+                    message { try image.colorRangeMask(around: FillScene.colorA, fuzziness: 0.1) }] {
+            let m = try #require(got)
+            #expect(m.contains("unpremultiplied") && !m.contains("is not finite"), "\(m)")
+        }
+        #expect(message { try image.colorRangeMask(around: FillScene.colorA, fuzziness: 0.1) }?.contains("pixel (2, 1)") == true)
+        var rng = SplitMix64(seed: 0xF7_0F)
+        for _ in 0..<200 {
+            let a = Float(bitPattern: UInt32.random(in: 1...0x0100_0000, using: &rng))  // subnormal to ~1e-38
+            let c = RGBA(r: .random(in: 0...1e3, using: &rng), g: .random(in: 0...1, using: &rng), b: 0, a: a)
+            if let m = message({ try noise.colorRangeMask(around: c, fuzziness: 0.2) }) {
+                #expect(!m.hasPrefix("other: ") && !m.contains("is not finite"), "\(m)")
+            }
+        }
+    }
+
     /// Seeded colours and fuzziness, in and out of range: the mask throws
     /// `RasterError` or has coverage in 0...1, and two runs are `==`.
     @Test
