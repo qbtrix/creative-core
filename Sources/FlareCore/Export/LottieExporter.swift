@@ -229,7 +229,12 @@ struct LottieLayer: Encodable, Sendable {
         } else {
             position = .combined(LottieStatic([try value("x", 0), try value("y", 0)]))
         }
+        // Lottie keys the anchor as one 2-D property; a keyed Flare anchor isn't written yet, so it is refused.
+        guard (layer.tracks["anchorX"]?.count ?? 0) < 2, (layer.tracks["anchorY"]?.count ?? 0) < 2 else {
+            throw LottieExportError.unsupported("keyed anchor point")
+        }
         ks = LottieTransform(
+            a: LottieStatic([try value("anchorX", 0), try value("anchorY", 0)]),
             p: position,
             s: try LottieProperty(scaleOf: layer, x0: try value("scaleX", 1), y0: try value("scaleY", 1),
                                   durationFrames: durationFrames),
@@ -316,7 +321,7 @@ struct LottieItem: Encodable, Sendable {
         func f(_ v: Double) throws -> Double { try LottieExporter.finite(v) }
         var item = LottieItem(ty: "tr")
         item.p = LottieStatic([try f(t.x), try f(t.y)])
-        item.a = LottieStatic([0, 0])
+        item.a = LottieStatic([try f(t.anchorX), try f(t.anchorY)])
         item.s = .point(LottieStatic([try f(t.scaleX * 100), try f(t.scaleY * 100)]))
         item.r = .rotation(LottieStatic(try f(t.rotation)))
         item.o = .fixed(LottieStatic(min(max(try f(opacity), 0), 1) * 100))

@@ -40,6 +40,6 @@ public struct Instance: Codable, Sendable, Hashable {
 extension Transform {
     /// True if every component is finite (no NaN or infinity).
     var isFinite: Bool {
-        [x, y, scaleX, scaleY, rotation].allSatisfy(\.isFinite)
+        [x, y, scaleX, scaleY, rotation, anchorX, anchorY].allSatisfy(\.isFinite)
     }
 }
