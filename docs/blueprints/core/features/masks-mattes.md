@@ -11,7 +11,7 @@ commands with exact undo, carried by the render list as clip and matte
 entries, and written by the SVG and Lottie exporters.
 **Line:** `line:core` · **Wave:** 6 (`waves.md`) · **Lead branch:** `lead/masks-mattes`
 **Status:** built (MM-1 to MM-10). Merged PRs: #718, #720, #724, #726, #729,
-#730, #737, #738, #740, #742, #746, and MM-z (walk, budgets, this status line).
+#730, #737, #738, #740, #742, #746, #747, and MM-z (walk, budgets, this status line).
 
 **Covers:** beta-80 plan row E2; Photo blueprint 8.4 CR-3 (`Mask.feathered`),
 CR-4 (`Mask.contours`, `Mask.coveredBounds`), CR-6 (the masked composite);
@@ -242,5 +242,5 @@ a W2 follow-up).
   is unchanged and exact. The contour pass lists mixed cells from row flags
   first, and a masked composite keeps a weight-0 pixel's backdrop as is.
 - **MM-z is three PRs**, split at the 400-line cap: the feather (#746), the
-  contour pre-scan, composite skip and budgets (M7a2), and the walk and these
+  contour pre-scan, composite skip and budgets (#747), and the walk and these
   docs (M7b, `feature-done`), rebased onto path-geometry's built line.
