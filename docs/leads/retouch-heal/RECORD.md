@@ -1,10 +1,10 @@
 # retouch-heal lead record
 
 Issue: #436 · Packet: docs/blueprints/core/features/retouch-heal.md
-Run: act-1a150b99ea1-n4z4 · Session: 0dcfe60a-687f-5c9a-97c2-9e4695e35cea · Started: 2026-10-18T20:39Z
-Stage: Round-3 fixes merged (#710, #711, #712); round 4 (last) gate running on 0b5a641
-Base: d715348712c75935b56b0864cd2f0a623c38454f
-Next: Round-4 critic panel once the gate finishes
+Run: act-1a157fd0281-warg · Session: 2df03724-340d-5741-940b-d32d0ef62e2a · Resumed: 2026-10-20T06:25Z
+Stage: Round 4 (last): gate and critic panel on e09c6c3
+Base: e09c6c30190b6eee1a8f4a646cd7485e19abc97d
+Next: Round-4 fix batch incl. shared heal/fill grid helper, then RH-8 feature-done
 
 ## Tasks
 | id | wave | behavior | files | test | mutation | PR | state |
