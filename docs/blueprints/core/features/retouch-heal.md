@@ -10,7 +10,16 @@ a carried colour). Patch is a heal whose offset the user drags, so it has no
 op of its own. Every op works on the dab or mask's bounds only, so a brush
 stays at dab speed.
 **Line:** `line:core` · **Wave:** 6 (`waves.md`) · **Lead branch:** `lead/retouch-heal`
-**Status:** planned
+**Status:** built. Merged PRs: #560 (RH-0), #591 (RH-1), #566 (RH-2),
+#601 (RH-3), #613 (RH-4), #606 (RH-5), #602 (RH-6), #616 (RH-7), the
+review fixes #644, #657, #659, #661, #677, #684, #687, #710, #711, #712,
+#769, and this packet's closing `feature-done` PR (RH-8). Deviations from
+the text below: the heal solves with a multigrid V-cycle and stops when a
+whole cycle moves no cell by the tolerance (#657, #769); the fill heals
+the source matched by a per-pixel patch search within a search window
+(#644, #687); the release budgets run and report, and a miss is a known
+issue (the 200 px heal dab measured 16.7 to 19.3 ms against 12 ms on a
+loaded 4-core Linux host; #770); the `FillRandom` follow-up is #770.
 
 **Covers:** beta-80 plan row E7 ("true heal, spot heal, patch, dodge/burn and
 smudge dabs"); Photo blueprint 8.4 CR-7 (`healed(offset:through:)`, the
