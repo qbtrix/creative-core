@@ -1,0 +1,16 @@
+[
+  {
+    "note": "text on path puts the glyph centre at s + x without half the advance",
+    "file": "Sources/FlareCore/TextLayout+Path.swift",
+    "anchor": "            var centre = s + x + a / 2",
+    "replacement": "            var centre = s + x",
+    "filter": "TextOnPathTests.glyphCentredOnPath"
+  },
+  {
+    "note": "text on path ignores flipped",
+    "file": "Sources/FlareCore/TextLayout+Path.swift",
+    "anchor": "        let flip = spec.flipped",
+    "replacement": "        let flip = false",
+    "filter": "TextOnPathTests.flipReverses"
+  }
+]
