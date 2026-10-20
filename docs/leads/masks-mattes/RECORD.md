@@ -33,6 +33,7 @@ Next: M7a #746 open; M7a2 gating (stacked); M7b after #745 (P6b) merges; then An
 |---|---|---|---|---|---|---|---|---|
 | 1 | a658945b | builders' gates | per plan, all caught | 39279766862 | correctness, robustness, reuse, tests+mutation, first-use clarity | 0 blockers, 5 should-fix, 7 nits (across both features) | lead/masks-mattes-r1-b1 | no |
 | 2 | 305975a7 | CI: PASS | 195/195 (136 + 59 re-run after an OOM kill) | | first-use clarity, contract, undo, robustness, tests+mutation | 18 (8 major, 10 minor; 1 nit skipped) across both features | lead/masks-mattes-r2-b1, lead/masks-mattes-r2-b2, lead/path-geometry-r2-b1 | no |
+| 3 | 9714ff33 | CI: PASS | 221/221 | 39352093719 | first-use clarity, contract, undo, robustness, tests+mutation | 17 (5 major, 12 minor; 1 refuted) across both features | lead/path-geometry/r3-pg, lead/masks-mattes/r3-mm-model, lead/masks-mattes/r3-mm-export | no |
 
 - Round-1 masks fixes: PR #730 (lead/masks-mattes-r1-b1), merged 17:34.
 - Round-1 masks raster fix: PR #738 (lead/masks-mattes-r1-b2), merged 18:24 (305975a7).
@@ -63,3 +64,4 @@ Next: M7a #746 open; M7a2 gating (stacked); M7b after #745 (P6b) merges; then An
 - dev CI https://github.com/qbtrix/creative-core/actions/runs/39352093719 green on 9714ff3 (Linux, macOS, Mutation): Belt-Slice-Done MM-z and Mac-Finish-Wanted MM-z posted on #431. Every masks-mattes slice is merged-done.
 - Round 3 on 9714ff33: scripts/ci CI: PASS; mutate --changed-since base at 161/221 caught, 0 escaped so far. Next: the critic panel (clarity, contract, undo, robustness, tests) once mutation finishes.
 - Round 3 on 9714ff33: mutate --changed-since base 221/221 caught (53.7 min). Critic panel running (clarity, contract, undo, robustness, tests), run wf_89ce91c1-7f8.
+- Round 3 panel (wf_89ce91c1-7f8) on 9714ff33: not clean, 17 confirmed. Majors: outlined's bad width throws nonFinite with a NaN-only doc; outlined builds join/cap loops unbounded before combine's vertex cap; Stroker.vertex inner-side choice untested; render-list mask points not charged to maxExpandedPoints; SVG difference masks refused; SVG hard-clip predicate's feather/opacity/inverted conditions untested. Fix batch r3 (3 fixers, disjoint files) running; round 4 is the last.
