@@ -130,32 +130,7 @@ public struct TextLayout: Sendable, Hashable {
         let style = text.paragraph ?? ParagraphStyle()
         try check(style)
         let runs = text.resolvedRuns
-        guard measured.count == runs.count else {
-            throw ModelError.invalidText(
-                "\(measured.count) GlyphRunMetrics for \(runs.count) resolved runs; measure one per text.resolvedRuns, in order")
-        }
-        var adv: [Double] = [], runOf: [Int] = []
-        adv.reserveCapacity(chars.count)
-        runOf.reserveCapacity(chars.count)
-        for (r, (run, metrics)) in zip(runs, measured).enumerated() {
-            guard metrics.advances.count == run.length else {
-                throw ModelError.invalidText("run \(r) has \(metrics.advances.count) advances for \(run.length) graphemes; "
-                    + "give one advance per Character, not per UTF-16 unit or glyph")
-            }
-            guard run.fontSize.isFinite, run.fontSize > 0 else {
-                throw ModelError.invalidText("run \(r) font size \(run.fontSize) must be finite and > 0")
-            }
-            try GlyphRunMetrics.check(advances: metrics.advances, ascent: metrics.ascent, descent: metrics.descent)
-            let track = run.tracking + style.tracking
-            for a in metrics.advances {
-                guard (a + track).isFinite else {
-                    throw ModelError.invalidText("run \(r): advance \(a) + run tracking \(run.tracking) + paragraph tracking "
-                        + "\(style.tracking) overflows; keep them finite and small")
-                }
-                adv.append(a + track)
-                runOf.append(r)
-            }
-        }
+        let (adv, runOf) = try advances(runs, measured: measured, tracking: style.tracking)
         guard adv.count == chars.count else { throw ModelError.invalidText("runs do not cover the string") }
         let pieces = breakLines(chars, adv, box: style.boxWidth)
         let layout = place(pieces, chars: chars, adv: adv, runOf: runOf, runs: runs, measured: measured, style: style)
@@ -166,6 +141,43 @@ public struct TextLayout: Sendable, Hashable {
             throw ModelError.invalidText("layout overflows: an x, width, baseline or bound is not finite")
         }
         return layout
+    }
+
+    /// Each grapheme's advance plus its run's tracking and the paragraph's
+    /// `tracking`, and the index of its run, from `measured`, one per `runs`.
+    /// Throws `ModelError.invalidText` when the metrics don't match the runs,
+    /// hold a value `GlyphRunMetrics.init` rejects or a run font size is not
+    /// finite and > 0, or an advance plus tracking is not finite.
+    static func advances(_ runs: [ResolvedRun], measured: [GlyphRunMetrics],
+                         tracking: Double) throws -> (adv: [Double], runOf: [Int]) {
+        guard measured.count == runs.count else {
+            throw ModelError.invalidText(
+                "\(measured.count) GlyphRunMetrics for \(runs.count) resolved runs; measure one per text.resolvedRuns, in order")
+        }
+        var adv: [Double] = [], runOf: [Int] = []
+        let count = runs.reduce(0) { $0 + $1.length }
+        adv.reserveCapacity(count)
+        runOf.reserveCapacity(count)
+        for (r, (run, metrics)) in zip(runs, measured).enumerated() {
+            guard metrics.advances.count == run.length else {
+                throw ModelError.invalidText("run \(r) has \(metrics.advances.count) advances for \(run.length) graphemes; "
+                    + "give one advance per Character, not per UTF-16 unit or glyph")
+            }
+            guard run.fontSize.isFinite, run.fontSize > 0 else {
+                throw ModelError.invalidText("run \(r) font size \(run.fontSize) must be finite and > 0")
+            }
+            try GlyphRunMetrics.check(advances: metrics.advances, ascent: metrics.ascent, descent: metrics.descent)
+            let track = run.tracking + tracking
+            for a in metrics.advances {
+                guard (a + track).isFinite else {
+                    throw ModelError.invalidText("run \(r): advance \(a) + run tracking \(run.tracking) + paragraph tracking "
+                        + "\(tracking) overflows; keep them finite and small")
+                }
+                adv.append(a + track)
+                runOf.append(r)
+            }
+        }
+        return (adv, runOf)
     }
 
     /// Throws `ModelError.invalidText` naming the first paragraph field out of
@@ -272,9 +284,6 @@ public struct TextLayout: Sendable, Hashable {
         guard !lines.isEmpty else { return TextLayout(lines: [], bounds: Rect(minX: 0, minY: 0, maxX: 0, maxY: 0)) }
         return TextLayout(lines: lines, bounds: Rect(minX: minX, minY: 0, maxX: maxX, maxY: bottom))
     }
-
-    /// What a text-engine stub named `name` throws until its task builds it.
-    static func notBuilt(_ name: String) -> CommandError { .notBuilt("\(name) is not built yet (text-engine)") }
 }
 
 /// The platform-free measurer: every grapheme advances 0.5 em, and each run's
