@@ -1,7 +1,6 @@
 // SVGTextExportTests.swift: TE-7's acceptance checks for SVG text (runs as
-// tspans, lines at their layout baselines, alignment, justified x lists) and
-// TE-8's for type on a path (`textPath`). TE-7 built its cases; each TE-8 case waits, disabled by name,
-// until its task builds the writer and removes the trait.
+// tspans, lines at their layout baselines, alignment, justified x lists).
+// Type on a path (`textPath`) is TE-8's, in SVGTextPathExportTests.
 @testable import FlareCore
 import Testing
 
@@ -59,7 +58,8 @@ import Testing
     @Test func justifiedLineHasExplicitXList() throws {
         let text = Self.wrapped(.justified), layout = try TextLayout.lay(text, measured: FixedAdvances.measure(text))
         let first = try #require(layout.lines.first)
-        let xs = try first.x.map { try SVGExporter.number($0) }.joined(separator: " ")
+        // The trailing space is not written, so neither is its x.
+        let xs = try first.x.prefix("Bring the".count).map { try SVGExporter.number($0) }.joined(separator: " ")
         let svg = try Self.export(text)
         #expect(svg.contains("x=\"\(xs)\""))
         #expect(Self.count("x=\"\(xs)\"", in: svg) == 1)
@@ -74,15 +74,13 @@ import Testing
         <svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100">
         <rect width="200" height="100" fill="#ffffff"/>
         <g id="t" data-name="Text" transform="matrix(1 0 0 1 0 0)">
-        <text xml:space="preserve" text-anchor="middle">
-        <tspan x="60" y="19.2"><tspan font-family="Inter" font-size="24" fill="#000000" font-weight="700" \#
+        <text xml:space="preserve" text-anchor="middle"><tspan x="60" y="19.2"><tspan font-family="Inter" font-size="24" fill="#000000" font-weight="700" \#
         letter-spacing="0.5">Bring</tspan><tspan font-family="Inter" font-size="24" fill="#000000" letter-spacing="0.5"> \#
         </tspan><tspan font-family="Inter" font-size="24" fill="#ff0000" font-style="italic" letter-spacing="1.5">\#(String(TextFixtures.emoji.prefix(2)))\#
         </tspan><tspan font-family="Inter" font-size="24" fill="#000000" letter-spacing="0.5">\#
-        \#(String(TextFixtures.emoji.suffix(1)))</tspan></tspan>
-        <tspan x="60" y="48"><tspan font-family="Inter" font-size="24" fill="#000000" letter-spacing="0.5">\#(TextFixtures.combining) \#
-        home</tspan></tspan>
-        </text>
+        \#(String(TextFixtures.emoji.suffix(1)))</tspan></tspan><tspan x="60" y="48">\#
+        <tspan font-family="Inter" font-size="24" fill="#000000" letter-spacing="0.5">\#(TextFixtures.combining) \#
+        home</tspan></tspan></text>
         </g>
         </svg>
 
@@ -107,7 +105,7 @@ import Testing
         let layer = Layer(id: "t", name: "Text", texts: [text])
         let svg = try SVGExporter.export(scene: Scene(id: "s", name: "S", width: 200, height: 100, layers: [layer]),
                                          frame: 0, measure: ten)
-        #expect(svg.contains("x=\"\(try first.x.map { try SVGExporter.number($0) }.joined(separator: " "))\""))
+        #expect(svg.contains("x=\"\(try first.x.prefix("Bring the".count).map { try SVGExporter.number($0) }.joined(separator: " "))\""))
     }
     /// A layout the text model refuses throws its `ModelError`, not an `SVGExportError`.
     @Test func refusedLayoutThrowsModelError() {
@@ -167,14 +165,26 @@ import Testing
             #expect(written == string.filter { !$0.isWhitespace }, "\(string.debugDescription) \(runs)")
         }
     }
-    /// TE-8: type on a path writes `textPath` with the path in `defs` and the offset as a percentage.
-    @Test(.disabled("waits on TE-8")) func textPathInDefsWithPercentOffset() throws {
-        let svg = try Self.export(TextFixtures.text(onPath: TextOnPath(path: TextOnPathTests.line, startOffset: 0.25)))
-        #expect(svg.contains("<defs>") && svg.contains("d=\"M0 0 L100 0\"") && svg.contains("<textPath"))
-        #expect(svg.contains("startOffset=\"25%\""))
+    /// #706: under `xml:space="preserve"` a newline between line spans would draw as a space.
+    @Test func noWhitespaceBetweenLineSpans() throws {
+        let svg = try Self.export(Self.wrapped(.center))
+        let open = try #require(svg.range(of: "<text")), close = try #require(svg.range(of: "</text>"))
+        #expect(Self.count("<tspan x=", in: svg) == 2 && !svg[open.upperBound..<close.lowerBound].contains("\n"))
     }
-    @Test(.disabled("waits on TE-8")) func flipReversesPathData() throws {
-        let svg = try Self.export(TextFixtures.text(onPath: TextOnPath(path: TextOnPathTests.line, flipped: true)))
-        #expect(svg.contains("d=\"M100 0 L0 0\"") && !svg.contains("d=\"M0 0 L100 0\""))
+    /// #706: SVG gives the n-th x to the n-th character, so a multi-scalar
+    /// grapheme repeats its x once per scalar and the next grapheme keeps its own.
+    @Test func justifiedXListPerScalar() throws {
+        let string = TextFixtures.combining + " " + TextFixtures.emoji + " tail words here"
+        let text = TextFixtures.text(string, paragraph: ParagraphStyle(alignment: .justified, boxWidth: 120))
+        let line = try #require(try TextLayout.lay(text, measured: FixedAdvances.measure(text)).lines.first)
+        let kept = Array(string)[line.graphemes.lowerBound..<line.graphemes.upperBound - 1]
+        #expect(String(kept) == TextFixtures.combining + " " + TextFixtures.emoji)
+        var expected: [String] = []
+        for (x, ch) in zip(line.x, kept) {
+            expected += Array(repeating: try SVGExporter.number(x), count: ch.unicodeScalars.count)
+        }
+        #expect(expected.count == 17)
+        let svg = try Self.export(text)
+        #expect(svg.contains("<tspan x=\"\(expected.joined(separator: " "))\" y="))
     }
 }
