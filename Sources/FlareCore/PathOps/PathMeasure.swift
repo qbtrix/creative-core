@@ -8,6 +8,8 @@
 //   past Double's range, or more than 64 entries, throws
 //   GeometryError.invalidPattern
 // - a non-finite point or length throws nonFinite; a dash walk past `maxDashSteps` throws tooComplex
+// - the ruler never holds more than `maxMeasurePoints` flattened points:
+//   one more throws tooComplex(maxMeasurePoints) before it is stored
 //
 // ponytail: trim and dash cut the flattened polyline, so curves come back as
 // lines; ceiling: exact cubic trim if a caller needs editable curves.
@@ -16,10 +18,15 @@ extension Path {
     /// Most dash and gap entries one `dashed` call walks; past it, `dashed`
     /// throws `GeometryError.tooComplex(maxDashSteps)`.
     public static let maxDashSteps = 1_000_000
+    /// Most flattened points `length`, `sample`, `trimmed` and `dashed` measure;
+    /// past it they throw `GeometryError.tooComplex(maxMeasurePoints)` before
+    /// storing more (many large curves at a fine tolerance flatten to millions).
+    public static let maxMeasurePoints = 1_000_000
 
     /// The length of the path flattened to `tolerance`.
     ///
-    /// Throws `GeometryError.invalidTolerance` for a bad tolerance, `.nonFinite` for a non-finite point.
+    /// Throws `GeometryError.invalidTolerance` for a bad tolerance, `.nonFinite` for a non-finite point,
+    /// and `.tooComplex(maxMeasurePoints)` past `maxMeasurePoints` flattened points.
     public func length(tolerance: Double) throws -> Double {
         try Ruler(self, tolerance: tolerance).total
     }
@@ -27,7 +34,8 @@ extension Path {
     /// The point `s` along the path and the unit tangent there; nil when `s`
     /// is outside 0...length or the path is empty. A corner takes the tangent leaving it.
     ///
-    /// Throws `GeometryError.invalidTolerance` for a bad tolerance, `.nonFinite` for a non-finite point.
+    /// Throws `GeometryError.invalidTolerance` for a bad tolerance, `.nonFinite` for a non-finite point,
+    /// and `.tooComplex(maxMeasurePoints)` past `maxMeasurePoints` flattened points.
     public func sample(atLength s: Double, tolerance: Double) throws -> (point: Point, tangent: Point)? {
         let ruler = try Ruler(self, tolerance: tolerance)
         guard ruler.total > 0, s >= 0, s <= ruler.total else { return nil }
@@ -46,8 +54,9 @@ extension Path {
     /// and `offset` wraps (1 is one full turn, so 1.25 is 0.25). A start past
     /// the end after wrapping gives two pieces.
     ///
-    /// Throws `GeometryError.invalidTolerance` for a bad tolerance and
-    /// `GeometryError.nonFinite` for a non-finite start, end or offset.
+    /// Throws `GeometryError.invalidTolerance` for a bad tolerance,
+    /// `GeometryError.nonFinite` for a non-finite start, end or offset, and
+    /// `GeometryError.tooComplex(maxMeasurePoints)` past `maxMeasurePoints` flattened points.
     public func trimmed(start: Double, end: Double, offset: Double, mode: TrimMode,
                         tolerance: Double) throws -> Path {
         guard start.isFinite, end.isFinite, offset.isFinite else { throw GeometryError.nonFinite }
@@ -72,7 +81,8 @@ extension Path {
     /// Throws `GeometryError.invalidPattern` for a bad pattern,
     /// `GeometryError.invalidTolerance` for a bad tolerance, `.nonFinite` for a
     /// non-finite phase or point, and `GeometryError.tooComplex(1_000_000)` when
-    /// the walk passes `maxDashSteps` (1,000,000) dash and gap entries over all contours.
+    /// the walk passes `maxDashSteps` (1,000,000) dash and gap entries over all
+    /// contours or the path passes `maxMeasurePoints` (1,000,000) flattened points.
     public func dashed(_ pattern: [Double], phase: Double, tolerance: Double) throws -> Path {
         guard (1...64).contains(pattern.count), pattern.allSatisfy({ $0.isFinite && $0 >= 0 }) else {
             throw GeometryError.invalidPattern
@@ -162,8 +172,10 @@ private struct Ruler {
     }
 
     init(_ path: Path, tolerance: Double) throws {
-        var lines: [RulerLine] = [], points: [Point] = [], sums: [Double] = [], finite = true
-        try path.forEachFlattenedPoint(tolerance: tolerance) { point, starts in
+        var lines: [RulerLine] = [], points: [Point] = [], sums: [Double] = [], finite = true, count = 0
+        let stopped = try path.forEachFlattenedPoint(tolerance: tolerance) { point, starts in
+            count += 1
+            guard count <= Path.maxMeasurePoints else { return true }
             if starts || points.isEmpty {
                 if !points.isEmpty { lines.append(RulerLine(points: points, sums: sums)) }
                 (points, sums) = ([], [0])
@@ -174,6 +186,7 @@ private struct Ruler {
             finite = finite && point.isFinite
             return false
         }
+        guard !stopped else { throw GeometryError.tooComplex(Path.maxMeasurePoints) }
         if !points.isEmpty { lines.append(RulerLine(points: points, sums: sums)) }
         guard finite, lines.allSatisfy(\.length.isFinite) else { throw GeometryError.nonFinite }
         self.init(lines: lines)
