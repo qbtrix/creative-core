@@ -45,6 +45,19 @@ struct ParentTests {
         #expect(try Self.hand(scene, at: 0).opacity == 1, "opacity isn't inherited")
     }
 
+    /// A chain composes outermost first: a shoulder turned a quarter carries an arm 100 to its right, which
+    /// carries a hand 50 further, so the hand ends 150 below the shoulder.
+    @Test func aChainComposesFromTheTop() throws {
+        var scene = Self.rig()
+        var shoulder = Layer(id: "shoulder", name: "Shoulder")
+        shoulder.tracks = ["rotation": [Keyframe(frame: 0, value: 90)]]
+        scene.layers.insert(shoulder, at: 0)
+        scene.layers[1].tracks = ["x": [Keyframe(frame: 0, value: 100)]]
+        scene.layers[1].parentID = "shoulder"
+        let hand = try Self.hand(scene, at: 0).matrix.apply(Point(x: 0, y: 0))
+        #expect(abs(hand.x) < 1e-9 && abs(hand.y - 150) < 1e-9, "\(hand)")
+    }
+
     @Test func aHiddenParentStillMovesItsChild() throws {
         let scene = Self.rig(armVisible: false)
         let list = scene.renderList(at: 24, symbols: [])
@@ -86,7 +99,10 @@ struct ParentTests {
         let owner = LayerOwner.scene("s")
         try engine.perform(SetLayerParent(owner: owner, layerID: "hand", parentID: "arm"))
         #expect(engine.document.scenes.first?.layers.last?.parentID == "arm")
-        #expect(throws: CommandError.self) { try engine.perform(SetLayerParent(owner: owner, layerID: "arm", parentID: "hand")) }
+        // The command names the cycle itself, before the format check would.
+        #expect(throws: CommandError.invalidDocument("hand already follows arm, so arm can't follow it.")) {
+            try engine.perform(SetLayerParent(owner: owner, layerID: "arm", parentID: "hand"))
+        }
         #expect(throws: CommandError.self) { try engine.perform(SetLayerParent(owner: owner, layerID: "arm", parentID: "ghost")) }
         try engine.undo()
         #expect(engine.document.scenes.first?.layers.last?.parentID == nil)
