@@ -31,7 +31,7 @@ public struct AddScene: Command {
         guard !document.scenes.contains(where: { $0.id == scene.id }) else {
             throw CommandError.duplicateID(scene.id)
         }
-        guard scene.fps > 0 else { throw CommandError.invalidFPS(scene.fps) }
+        guard scene.rate.isValid else { throw CommandError.invalidFPS(scene.rate.numerator) }
         guard scene.durationFrames >= 0 else { throw CommandError.invalidDuration(scene.durationFrames) }
         guard scene.background.isFinite else {
             throw CommandError.invalidDocument("background color channels must be finite")
@@ -77,31 +77,37 @@ public struct SetSceneTiming: Command {
     public var sceneID: String
     public var fps: Int
     public var durationFrames: Int
-    var oldFPS: Int?
+    /// The exact rate, e.g. 30000/1001 for 29.97. Nil means the whole `fps`, except that an `fps` equal to the
+    /// scene's nominal rate keeps its rate, so changing only the duration leaves a 29.97 scene at 29.97.
+    public var rate: SceneRate?
+    var oldRate: SceneRate?
     var oldDurationFrames: Int?
 
-    private enum CodingKeys: String, CodingKey { case sceneID, fps, durationFrames }
+    private enum CodingKeys: String, CodingKey { case sceneID, fps, durationFrames, rate }
 
-    public init(sceneID: String, fps: Int, durationFrames: Int) {
+    public init(sceneID: String, fps: Int, durationFrames: Int, rate: SceneRate? = nil) {
         self.sceneID = sceneID
         self.fps = fps
         self.durationFrames = durationFrames
+        self.rate = rate
     }
 
     public mutating func execute(_ document: inout Document) throws {
-        guard fps > 0 else { throw CommandError.invalidFPS(fps) }
         guard durationFrames >= 0 else { throw CommandError.invalidDuration(durationFrames) }
         let s = try document.sceneIndex(sceneID)
-        oldFPS = document.scenes[s].fps
+        let current = document.scenes[s].rate
+        let newRate = rate ?? (fps == current.nominal ? current : SceneRate(whole: fps))
+        guard newRate.isValid else { throw CommandError.invalidFPS(newRate.numerator) }
+        oldRate = document.scenes[s].rate
         oldDurationFrames = document.scenes[s].durationFrames
-        document.scenes[s].fps = fps
+        document.scenes[s].rate = newRate
         document.scenes[s].durationFrames = durationFrames
     }
 
     public func undo(_ document: inout Document) throws {
-        guard let oldFPS, let oldDurationFrames else { throw CommandError.notExecuted }
+        guard let oldRate, let oldDurationFrames else { throw CommandError.notExecuted }
         let s = try document.sceneIndex(sceneID)
-        document.scenes[s].fps = oldFPS
+        document.scenes[s].rate = oldRate
         document.scenes[s].durationFrames = oldDurationFrames
     }
 }

@@ -1,0 +1,58 @@
+[
+  {
+    "note": "scene rate times frames by the whole rate, so 29.97 drifts",
+    "file": "Sources/FlareCore/Timeline.swift",
+    "anchor": "public func seconds(ofFrame frame: Int) -> Double { Double(frame) * Double(denominator) / Double(numerator) }",
+    "replacement": "public func seconds(ofFrame frame: Int) -> Double { Double(frame) / Double(nominal) }",
+    "filter": "SceneRateTests"
+  },
+  {
+    "note": "scene rate writes frameRate for a whole rate, so old files re-save with new bytes",
+    "file": "Sources/FlareCore/Document.swift",
+    "anchor": "if !rate.isWhole { try c.encode(rate, forKey: .frameRate) }",
+    "replacement": "try c.encode(rate, forKey: .frameRate)",
+    "filter": "SceneRateTests"
+  },
+  {
+    "note": "scene rate drops frameRate on decode, so a 29.97 file opens at 30",
+    "file": "Sources/FlareCore/Document.swift",
+    "anchor": "rate = try c.decodeIfPresent(SceneRate.self, forKey: .frameRate) ?? SceneRate(whole: whole)",
+    "replacement": "rate = SceneRate(whole: whole)",
+    "filter": "SceneRateTests"
+  },
+  {
+    "note": "scene rate import reads 29.97 as 30",
+    "file": "Sources/FlareCore/Timeline.swift",
+    "anchor": "for n in [24, 30, 48, 60, 120] where abs(fps - Double(n) * 1000 / 1001) < 0.005 {",
+    "replacement": "for n in [Int]() where abs(fps - Double(n) * 1000 / 1001) < 0.005 {",
+    "filter": "SceneRateTests"
+  },
+  {
+    "note": "scene timing undo keeps the new rate",
+    "file": "Sources/FlareCore/SceneCommands.swift",
+    "anchor": "        document.scenes[s].rate = oldRate\n",
+    "replacement": "",
+    "filter": "SceneRateTests"
+  },
+  {
+    "note": "scene rate validation accepts a zero denominator",
+    "file": "Sources/FlareCore/Timeline.swift",
+    "anchor": "numerator > 0 && denominator > 0 && denominator",
+    "replacement": "numerator > 0 && denominator",
+    "filter": "SceneRateTests"
+  },
+  {
+    "note": "scene timing with no rate snaps a 29.97 scene to 30 on a duration-only change",
+    "file": "Sources/FlareCore/SceneCommands.swift",
+    "anchor": "let newRate = rate ?? (fps == current.nominal ? current : SceneRate(whole: fps))",
+    "replacement": "let newRate = rate ?? SceneRate(whole: fps)",
+    "filter": "SceneRateTests"
+  },
+  {
+    "note": "scene rate accepts any denominator, so a file can time frames by a 1/Int.max rate",
+    "file": "Sources/FlareCore/Timeline.swift",
+    "anchor": "denominator <= Self.maxDenominator && ",
+    "replacement": "",
+    "filter": "SceneRateTests"
+  }
+]
