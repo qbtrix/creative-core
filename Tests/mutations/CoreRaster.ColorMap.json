@@ -15,9 +15,9 @@
   },
   {
     "note": "gradientMap interpolates by the raw luma instead of the position between the two stops, so luma 0.375 on stops at 0.25 and 0.5 is not the half mix, caught by ColorMapTests.threeStopsInterpolateAndHold",
-    "file": "Sources/CoreRaster/Tone/ColorMap.swift",
-    "anchor": "let t = (l - offsets[hi - 1]) / (offsets[hi] - offsets[hi - 1])",
-    "replacement": "let t = l",
+    "file": "Sources/CoreRaster/Fill/StopRamp.swift",
+    "anchor": "return (lo, (t - offsets[lo]) / (offsets[hi] - offsets[lo]))",
+    "replacement": "return (lo, t)",
     "filter": "ColorMapTests"
   },
   {
@@ -43,9 +43,9 @@
   },
   {
     "note": "gradientMap stop check drops the upper bound, so a stop at offset 1.5 is accepted instead of throwing for stop 1, caught by ColorMapTests.gradientMapNamesTheFailingStop",
-    "file": "Sources/CoreRaster/Tone/ColorMap.swift",
-    "anchor": "guard s.offset.isFinite, (0...1).contains(s.offset) else {",
-    "replacement": "guard s.offset.isFinite, s.offset >= 0 else {",
+    "file": "Sources/CoreRaster/Fill/StopRamp.swift",
+    "anchor": "guard (0...1).contains(o) else {",
+    "replacement": "guard o >= 0 else {",
     "filter": "ColorMapTests"
   }
 ]

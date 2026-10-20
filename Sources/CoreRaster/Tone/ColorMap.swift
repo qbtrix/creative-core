@@ -8,48 +8,26 @@
 // Parameters are checked before any pixel is touched and a bad one throws
 // `RasterError.invalid`.
 extension PixelBuffer {
-    /// The stop counts a gradient map accepts.
-    private static let gradientStops = 2...64
-
     /// Rec. 709 luma of the sRGB-encoded (not linear) straight colour, 0...1,
-    /// mapped through 2...64 stops, sorted by offset (equal offsets make a
-    /// hard edge), each offset finite and in 0...1. Between two stops the
-    /// encoded colour is interpolated linearly; below the first stop or above
-    /// the last, that stop's colour holds. Stop colours are clamped to 0...1.
+    /// mapped through 2...`maxGradientStops` stops, sorted by offset, each
+    /// offset in 0...1. Two stops at one offset make a hard edge: a luma
+    /// exactly on it takes the later stop, as `gradient(...)` does (both read
+    /// stops through `StopRamp`). Between two stops the encoded colour is
+    /// interpolated linearly; below the first stop or above the last, that
+    /// stop's colour holds. Stop colours are clamped to 0...1.
     public func gradientMap(_ stops: [GradientMapStop]) throws -> PixelBuffer {
-        guard Self.gradientStops.contains(stops.count) else {
-            throw RasterError.invalid("gradientMap with \(stops.count) stops: needs \(Self.gradientStops)")
-        }
         // Each error names the failing stop by its index in `stops`.
+        let ramp = try StopRamp(stops.map(\.offset), what: "gradientMap")
         for (i, s) in stops.enumerated() {
-            guard s.offset.isFinite, (0...1).contains(s.offset) else {
-                throw RasterError.invalid("gradientMap stop \(i) offset \(s.offset): must be in 0...1")
-            }
-            if i > 0, s.offset < stops[i - 1].offset {
-                throw RasterError.invalid("gradientMap stop \(i) offset \(s.offset): below stop \(i - 1) offset "
-                    + "\(stops[i - 1].offset), stops must be sorted by offset")
-            }
             try Self.checkFinite("gradientMap stop \(i) colour", [s.color.r, s.color.g, s.color.b])
         }
-        let offsets = stops.map(\.offset)
         let colors = stops.map {
             SIMD3($0.color.r, $0.color.g, $0.color.b).clamped(lowerBound: .zero, upperBound: .one)
         }
         let luma = Self.lumaWeights
         return try mappingStraight { p in
-            let l = (SIMD3<Float>(Self.encoded(p)) * luma).sum()
-            var hi = 0
-            while hi < offsets.count, offsets[hi] < l { hi += 1 }
-            let out: SIMD3<Float>
-            if hi == 0 {
-                out = colors[0]
-            } else if hi == offsets.count {
-                out = colors[hi - 1]
-            } else {
-                let t = (l - offsets[hi - 1]) / (offsets[hi] - offsets[hi - 1])
-                out = colors[hi - 1] + (colors[hi] - colors[hi - 1]) * t
-            }
-            return Self.decoded(out, a: p.a)
+            let (lo, f) = ramp.segment(at: Double((SIMD3<Float>(Self.encoded(p)) * luma).sum()))
+            return Self.decoded(colors[lo] + (colors[lo + 1] - colors[lo]) * Float(f), a: p.a)
         }
     }
 

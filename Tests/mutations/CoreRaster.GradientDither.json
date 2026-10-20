@@ -12,5 +12,19 @@
     "anchor": "let index = matrix[(y & 7) * 8 + (x & 7)]",
     "replacement": "let index = matrix[x & 7]",
     "filter": "GradientDitherTests.usesBothAxes"
+  },
+  {
+    "note": "the gradient dither shifts alpha as well as the colour, so a half-transparent dithered pixel changes its alpha, caught by GradientDitherTests.semiTransparentKeepsStraightColour",
+    "file": "Sources/CoreRaster/Fill/GradientDither.swift",
+    "anchor": "let out = RGBA(r: shift(s.r), g: shift(s.g), b: shift(s.b), a: s.a)",
+    "replacement": "let out = RGBA(r: shift(s.r), g: shift(s.g), b: shift(s.b), a: shift(s.a))",
+    "filter": "GradientDitherTests.semiTransparentKeepsStraightColour"
+  },
+  {
+    "note": "the gradient dither's transfer table drops its lerp between entries, so the dithered encode is off by up to a fifth of a step, caught by GradientDitherTests",
+    "file": "Sources/CoreRaster/Fill/GradientDither.swift",
+    "anchor": "return table[i] + (table[i + 1] - table[i]) * w",
+    "replacement": "return table[i]",
+    "filter": "GradientDitherTests"
   }
 ]

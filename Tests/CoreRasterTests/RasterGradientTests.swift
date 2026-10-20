@@ -213,6 +213,62 @@ import Testing
         #expect(image.width == 8 && image.height == 8)
     }
 
+    /// The public limit is the one both stop APIs enforce: `maxGradientStops`
+    /// stops render, one more throws, for the gradient and the gradient map.
+    @Test
+    func stopLimitIsPublicAndShared() throws {
+        let n = PixelBuffer.maxGradientStops
+        func offsets(_ count: Int) -> [Float] { (0..<count).map { Float($0) / Float(count - 1) } }
+        func gradient(_ count: Int) throws -> PixelBuffer {
+            try PixelBuffer.gradient(width: 4, height: 4, shape: .linear, from: FillFixtures.gradientA, to: FillFixtures.gradientB,
+                                     stops: offsets(count).map { RasterGradientStop(offset: $0, color: Self.white) })
+        }
+        let source = try PixelBuffer(width: 2, height: 2, fill: Self.white)
+        func map(_ count: Int) throws -> PixelBuffer {
+            try source.gradientMap(offsets(count).map { GradientMapStop(offset: $0, color: Self.white) })
+        }
+        #expect(n == 64)
+        _ = try gradient(n)
+        _ = try map(n)
+        #expect(throws: RasterError.invalid("gradient with \(n + 1) stops: needs 2...\(n)")) { try gradient(n + 1) }
+        #expect(throws: RasterError.invalid("gradientMap with \(n + 1) stops: needs 2...\(n)")) { try map(n + 1) }
+    }
+
+    /// An unsorted stop's message names the earlier offset and says to sort;
+    /// an offset outside 0...1 says so and nothing about sorting.
+    @Test
+    func unsortedStopMessageNamesOrder() {
+        func message(_ offsets: [Float]) -> String {
+            let stops = offsets.map { RasterGradientStop(offset: $0, color: Self.white) }
+            do {
+                _ = try PixelBuffer.gradient(width: 4, height: 4, shape: .linear, from: FillFixtures.gradientA,
+                                             to: FillFixtures.gradientB, stops: stops)
+            } catch let RasterError.invalid(m) { return m } catch { return "\(error)" }
+            return "no error"
+        }
+        let unsorted = message([0.5, 0.2]), outside = message([0, 1.5])
+        #expect(unsorted == "gradient stop 1 offset 0.2: below stop 0 offset 0.5, stops must be sorted by offset")
+        #expect(outside.contains("0...1") && !outside.contains("sort"), "\(outside)")
+    }
+
+    /// One hard-edge rule for both stop APIs: a `t` (or luma) exactly on a
+    /// shared offset takes the later stop. Black's luma is exactly 0.
+    @Test
+    func hardEdgeTakesLaterStopInGradientAndMap() throws {
+        let red = RGBA(r: 1, g: 0, b: 0, a: 1), blue = RGBA(r: 0, g: 0, b: 1, a: 1)
+        let image = try PixelBuffer.gradient(width: 32, height: 24, shape: .linear, from: FillFixtures.gradientA,
+                                             to: FillFixtures.gradientB,
+                                             stops: [RasterGradientStop(offset: 0, color: red), RasterGradientStop(offset: 0, color: blue),
+                                                     RasterGradientStop(offset: 1, color: Self.white)],
+                                             space: .linear, dither: false)
+        #expect(try image.pixel(x: 10, y: 10) == blue)  // t = 0 exactly
+        let mapped = try PixelBuffer(width: 1, height: 1, fill: Self.black)
+            .gradientMap([GradientMapStop(offset: 0, color: red), GradientMapStop(offset: 0, color: blue),
+                          GradientMapStop(offset: 1, color: Self.white)])
+        let got = try mapped.pixel(x: 0, y: 0)
+        #expect(abs(got.r) < 1e-6 && abs(got.g) < 1e-6 && abs(got.b - 1) < 1e-6, "\(got)")
+    }
+
     @Test
     func badStopsPointsOrSizeThrow() {
         let (a, b) = (FillFixtures.gradientA, FillFixtures.gradientB)
