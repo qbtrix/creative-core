@@ -1,6 +1,6 @@
 utc	stage	event	ref	note
-2026-10-20T22:30Z	0	stage-start	3ded188	setup, base verified
-2026-10-20T22:35Z	1	stage-end	#779	packet read
-2026-10-20T22:36Z	2	stage-start	-	plan slices
-2026-10-20T22:50Z	2	stage-end	-	waves = slices
-2026-10-20T22:50Z	3	stage-start	les/le-a	LE-a builder started
+2026-10-20T22:05Z	0	stage-start	3ded188	setup, base verified
+2026-10-20T22:08Z	1	stage-end	#779	packet read
+2026-10-20T22:08Z	2	stage-start	-	plan slices
+2026-10-20T22:15Z	2	stage-end	-	waves = slices
+2026-10-20T22:15Z	3	stage-start	les/le-a	LE-a builder started
