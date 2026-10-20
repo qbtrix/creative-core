@@ -66,6 +66,18 @@ import Testing
         #expect(after != before)
     }
 
+    /// Only the width or only the height changes: each half of the size check
+    /// alone must stop the old patch being laid.
+    @Test(arguments: [(7, 5), (5, 7)])
+    func oneSideChangeOnlyPicksUp(width: Int, height: Int) throws {
+        let before = try RetouchFixtures.redEdge(width: 30, height: 20, edgeX: 10)
+        var after = before
+        var state = try SmudgeState(strength: 1)
+        try state.dab(Mask(width: 5, height: 5, fill: 1), x: 6, y: 6, on: &after)
+        try state.dab(Mask(width: width, height: height, fill: 1), x: 8, y: 6, on: &after)
+        #expect(after == before, "\(width)x\(height) laid the 5x5 patch")
+    }
+
     @Test func statesCompareByCarriedPatch() throws {
         let buffer = try RetouchFixtures.redEdge(width: 30, height: 20, edgeX: 10)
         let dab = try RetouchFixtures.roundDab(radius: 3)

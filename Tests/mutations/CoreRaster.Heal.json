@@ -9,16 +9,16 @@
   {
     "note": "the heal's convergence test is flipped, > for <, so the solve stops after one V-cycle and the clone's tone is not matched, caught by HealTests.reproducesField",
     "file": "Sources/CoreRaster/Heal/HealSolver.swift",
-    "anchor": "if vCycle(0) < tolerance { break }",
-    "replacement": "if vCycle(0) > tolerance { break }",
+    "anchor": "if cycleChange() < tolerance { break }",
+    "replacement": "if cycleChange() > tolerance { break }",
     "filter": "HealTests.reproducesField"
   },
   {
-    "note": "the heal's convergence tolerance is loosened from 1e-5 to 1e-3, so a large region stops early with visible error, caught by HealTests.reproducesFieldOnLargeRegion",
+    "note": "the heal's convergence tolerance is loosened from 1e-5 to 1e-3, so the solve stops well short of the converged field, caught by HealTests.solveStopsOnCycleChange",
     "file": "Sources/CoreRaster/Heal/Heal.swift",
     "anchor": "static let healTolerance: Float = 1e-5",
     "replacement": "static let healTolerance: Float = 1e-3",
-    "filter": "HealTests.reproducesFieldOnLargeRegion"
+    "filter": "HealTests.solveStopsOnCycleChange"
   },
   {
     "note": "the heal's V-cycle cap drops from 40 to 4, so a large region stops before it converges, caught by HealTests.reproducesFieldOnLargeRegion",
@@ -68,5 +68,33 @@
     "anchor": "right.partialValue < width,",
     "replacement": "right.partialValue <= width,",
     "filter": "HealTests.offsetOffBufferThrows"
+  },
+  {
+    "note": "the heal's source guard drops its left check, so a source left of the buffer clamps to column 0 instead of throwing, caught by HealTests.offsetOffBufferThrows",
+    "file": "Sources/CoreRaster/Heal/Heal.swift",
+    "anchor": "left.partialValue >= 0, right.partialValue < width,",
+    "replacement": "right.partialValue < width,",
+    "filter": "HealTests.offsetOffBufferThrows"
+  },
+  {
+    "note": "the multigrid leaves a coarse cell free over fixed children, so the coarse correction moves the ring's boundary values, caught by HealTests.featherBlendsByCoverage",
+    "file": "Sources/CoreRaster/Heal/HealSolver.swift",
+    "anchor": "where fine.inv[fine.index(x, y)] == 0 { coarse.inv[coarse.index(x / 2, y / 2)] = 0 }",
+    "replacement": "where fine.inv[fine.index(x, y)] == 0 { _ = coarse }",
+    "filter": "HealTests.featherBlendsByCoverage"
+  },
+  {
+    "note": "the multigrid restriction negates the residual, so the coarse correction pushes the wrong way and the solve stalls, caught by HealTests.reproducesFieldOnLargeRegion",
+    "file": "Sources/CoreRaster/Heal/HealSolver.swift",
+    "anchor": "coarse.rhs[p] += sum - u[i] / inv[i]",
+    "replacement": "coarse.rhs[p] -= sum - u[i] / inv[i]",
+    "filter": "HealTests.reproducesFieldOnLargeRegion"
+  },
+  {
+    "note": "the solve's stop rule measures no change for a V-cycle, so it stops after the first cycle short of convergence, caught by HealTests.solveStopsOnCycleChange",
+    "file": "Sources/CoreRaster/Heal/HealSolver.swift",
+    "anchor": "for (old, new) in zip(before, levels[0].u) { largest = max(largest, pointwiseMax(new - old, old - new).max()) }",
+    "replacement": "largest = before.isEmpty ? 0 : 0",
+    "filter": "HealTests.solveStopsOnCycleChange"
   }
 ]

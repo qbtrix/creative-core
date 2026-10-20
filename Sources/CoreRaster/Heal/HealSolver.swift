@@ -25,11 +25,9 @@ struct HealSolver {
             inv[index(x, y)] = n > 0 ? 1 / Float(n) : 0
         }
 
-        /// One red-black sweep; its largest step when `measured`, else 0.
-        @discardableResult
-        mutating func smooth(measured: Bool = false) -> Float {
+        /// One red-black sweep.
+        mutating func smooth() {
             let width = width, height = height, s = stride
-            var largest: Float = 0
             rhs.withUnsafeBufferPointer { rhs in
                 inv.withUnsafeBufferPointer { inv in
                     u.withUnsafeMutableBufferPointer { u in
@@ -37,16 +35,13 @@ struct HealSolver {
                             for y in 0..<height {
                                 let row = (y + 1) * s + 1
                                 for i in Swift.stride(from: row + (y + colour) & 1, to: row + width, by: 2) where inv[i] > 0 {
-                                    let next = (rhs[i] + u[i - 1] + u[i + 1] + u[i - s] + u[i + s]) * inv[i]
-                                    if measured { largest = max(largest, pointwiseMax(next - u[i], u[i] - next).max()) }
-                                    u[i] = next
+                                    u[i] = (rhs[i] + u[i - 1] + u[i + 1] + u[i - s] + u[i + s]) * inv[i]
                                 }
                             }
                         }
                     }
                 }
             }
-            return largest
         }
     }
 
@@ -59,7 +54,8 @@ struct HealSolver {
     mutating func load(_ x: Int, _ y: Int, rhs: SIMD4<Float>) { levels[0].rhs[levels[0].index(x, y)] = rhs }
     func value(_ x: Int, _ y: Int) -> SIMD4<Float> { levels[0].u[levels[0].index(x, y)] }
 
-    /// V-cycles until one's last sweep moves no cell by `tolerance`, at most
+    /// V-cycles until one moves no cell by `tolerance` (the whole cycle's
+    /// change: smoothing and the coarse correction together), at most
     /// `maxCycles`. A coarse cell is free only when all its children are.
     mutating func solve(tolerance: Float, maxCycles: Int) {
         while let fine = levels.last, max(fine.width, fine.height) > 4 {
@@ -73,14 +69,23 @@ struct HealSolver {
             levels.append(coarse)
         }
         for _ in 0..<maxCycles {
-            if vCycle(0) < tolerance { break }
+            if cycleChange() < tolerance { break }
         }
     }
 
-    private mutating func vCycle(_ l: Int) -> Float {
+    /// Runs one V-cycle and returns the largest change it made to any cell.
+    mutating func cycleChange() -> Float {
+        let before = levels[0].u
+        vCycle(0)
+        var largest: Float = 0
+        for (old, new) in zip(before, levels[0].u) { largest = max(largest, pointwiseMax(new - old, old - new).max()) }
+        return largest
+    }
+
+    private mutating func vCycle(_ l: Int) {
         guard l + 1 < levels.count else {
-            for _ in 0..<63 { levels[l].smooth() }
-            return levels[l].smooth(measured: true)
+            for _ in 0..<64 { levels[l].smooth() }
+            return
         }
         levels[l].smooth()
         levels[l].smooth()
@@ -101,7 +106,7 @@ struct HealSolver {
             }
         }
         levels[l + 1] = coarse
-        _ = vCycle(l + 1)
+        vCycle(l + 1)
         // Prolong: 9/16 of the parent, 3/16 of each side, 1/16 of the diagonal.
         let solved = levels[l + 1], fine = (width: levels[l].width, height: levels[l].height, stride: levels[l].stride)
         var u = levels[l].u
@@ -117,6 +122,6 @@ struct HealSolver {
         }
         levels[l].u = u
         levels[l].smooth()
-        return levels[l].smooth(measured: true)
+        levels[l].smooth()
     }
 }

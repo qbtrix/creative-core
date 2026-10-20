@@ -33,13 +33,17 @@ extension PixelBuffer {
     /// mask's covered bounds plus r and max(32, half the bounds' longer side)
     /// pixels on each side, clipped to the buffer. The same `seed` gives the
     /// same pixels; an empty mask returns the input, and a feathered mask
-    /// blends the fill by coverage. Throws `RasterError.invalid` when the
-    /// mask's size differs from the buffer's, `patchRadius` is below 1, the
-    /// search window holds more than `maxHealPixels` pixels, or the mask
-    /// covers the whole window.
+    /// blends the fill by coverage. `mask` is buffer-sized, not a dab placed
+    /// at x, y: place a brush dab into a buffer-sized mask first. Throws
+    /// `RasterError.invalid` when the mask's size differs from the buffer's,
+    /// `patchRadius` is below 1, the search window holds more than
+    /// `maxHealPixels` pixels, the mask covers the whole window, or the
+    /// window holds values so large that the heal overflows and the result
+    /// would not be finite.
     public func filledFromSurroundings(_ mask: Mask, seed: UInt64, patchRadius: Int = 3) throws -> PixelBuffer {
         guard mask.width == width, mask.height == height else {
-            throw RasterError.invalid("fill mask \(mask.width)x\(mask.height) differs from buffer \(width)x\(height)")
+            throw RasterError.invalid("fill mask \(mask.width)x\(mask.height) differs from buffer \(width)x\(height); "
+                + "fill takes a buffer-sized mask; place the dab into one")
         }
         guard patchRadius >= 1 else {
             throw RasterError.invalid("fill patch radius \(patchRadius): must be at least 1")
@@ -56,10 +60,8 @@ extension PixelBuffer {
             throw RasterError.invalid("fill mask bounds \(box.width)x\(box.height) plus their search window "
                 + "hold \(windowPixels) pixels, over \(Self.maxHealPixels); mask a smaller area")
         }
-        // The grid, in window coordinates: the bounds plus the ring the heal reads, clipped.
-        let gx0 = max(box.x - 1, 0) - wx0, gx1 = min(box.x + box.width, width - 1) - wx0
-        let gy0 = max(box.y - 1, 0) - wy0, gy1 = min(box.y + box.height, height - 1) - wy0
-        let gw = gx1 - gx0 + 1, gh = gy1 - gy0 + 1
+        // The heal's grid, moved into window coordinates.
+        let grid = healGrid(box), gx0 = grid.x0 - wx0, gy0 = grid.y0 - wy0, gw = grid.w, gh = grid.h
         var cover = [Float](repeating: 0, count: gw * gh), hole = [Bool](repeating: false, count: windowPixels)
         for gy in 0..<gh {
             for gx in 0..<gw {
@@ -129,11 +131,9 @@ extension PixelBuffer {
         var result = self
         for i in cover.indices where cover[i] > 0 {
             let gx = i % grid.w, gy = i / grid.w, x = origin.x + grid.x0 + gx, y = origin.y + grid.y0 + gy
-            let p = try pixel(x: x, y: y), dest = SIMD4(p.r, p.g, p.b, p.a), c = min(cover[i], 1)
-            let out = dest + (g(grid.x0 + gx, grid.y0 + gy) + solver.value(gx, gy) - dest) * c
-            guard out.x.isFinite, out.y.isFinite, out.z.isFinite, out.w.isFinite else {
-                throw RasterError.invalid("fill produced a non-finite pixel at (\(x), \(y))")
-            }
+            let p = try pixel(x: x, y: y), dest = SIMD4(p.r, p.g, p.b, p.a)
+            let f = g(grid.x0 + gx, grid.y0 + gy) + solver.value(gx, gy)
+            let out = try Self.healBlend(dest, toward: f, by: cover[i], op: "fill", x: x, y: y)
             try result.setPixel(x: x, y: y, RGBA(r: out.x, g: out.y, b: out.z, a: out.w))
         }
         return result
