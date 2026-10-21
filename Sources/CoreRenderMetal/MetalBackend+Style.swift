@@ -1,6 +1,6 @@
 // MetalBackend+Style.swift: a layer style entry's light layers on the GPU (layer-style-engine LE-9a), CoreRaster
 // `styleLayers` with the same modes, opacities and placements: shadows and glows spread on the distance field,
-// padded and box blurred; the stroke from jump-flooded anti-aliased edge points (LE-9a2); the bevel's height,
+// padded and box blurred; the stroke from anti-aliased edge points, nearest by the exact transform (LE-9a2); the bevel's height,
 // normal and lean (LE-9a2); the overlay is its fill, drawn on the CPU. Each call is one command buffer over
 // whole-image buffers.
 // The distance field at level 0.5 is cached per surface with the alpha it came from: a call whose surface alpha is
@@ -134,13 +134,19 @@ extension MetalBackend {
         let (pw, ph) = try RenderError.mapping {
             try PixelBuffer.paddedWorkSize(width: w, height: h, pad: 1, cause: "stroke", remedy: nil)
         }
-        guard SurfaceTiling.wholeImageFits(width: pw, height: ph, bytesPerPixel: 16, maxBufferLength: device.maxBufferLength) else {
+        // The exact transform's scratch is 5 int64s a pixel; int64 holds its cross-products for sides up to 2^20.
+        guard max(pw, ph) <= 1 << 20,
+              SurfaceTiling.wholeImageFits(width: pw, height: ph, bytesPerPixel: 40, maxBufferLength: device.maxBufferLength) else {
             throw RenderError.unsupported(.style)
         }
-        let out = try styleBuffer(paint.components)
-        let seeds = try styleBuffer(count: pw * ph * 4), points = try styleBuffer(count: pw * ph * 4)
-        try styleDispatch(commands, styleKernel("edge_seed"), [job.pixels, seeds, points], ints: [w, h], width: pw, height: ph)
-        let nearest = try encodeFlood(commands, seeds, scratch: styleBuffer(count: pw * ph * 4), width: pw, height: ph)
+        let out = try styleBuffer(paint.components), n = pw * ph
+        let squared = try styleBuffer(count: n * 2), nearest = try styleBuffer(count: n), points = try styleBuffer(count: n * 4)
+        try styleDispatch(commands, styleKernel("edge_seed"), [job.pixels, squared, points, nearest], ints: [w, h],
+                          width: pw, height: ph)
+        let edt = try styleKernel("edt_pass"), scratch = try styleBuffer(count: n * 10)
+        let squared2 = try styleBuffer(count: n * 2), nearest2 = try styleBuffer(count: n)
+        try styleDispatch(commands, edt, [squared, nearest, squared2, nearest2, scratch], ints: [pw, ph, pw, 1], width: pw, height: 1)
+        try styleDispatch(commands, edt, [squared2, nearest2, squared, nearest, scratch], ints: [ph, pw, 1, pw], width: ph, height: 1)
         let code = position == .outside ? 0 : position == .inside ? 1 : 2
         try styleDispatch(commands, styleKernel("stroke"), [nearest, points, out, job.pixels], ints: [w, h, code],
                           level: Float(strokeWidth), width: w, height: h)
