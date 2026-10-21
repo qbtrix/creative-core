@@ -2,9 +2,8 @@
 // LE-1): a bevel's shape, technique and light, a style fill (a colour or a
 // gradient in the layer's pixel space), the seven style ops, one entry per op
 // with its own blend mode, opacity and switch, and the stack of entries with
-// the layer's fill opacity. `styled(_:)` draws a stack; it is declared here so
-// callers compile and is built in LE-4 (StyleComposite.swift), which also
-// fills `reach`. Invariants: every type is a Hashable, Sendable value; no
+// the layer's fill opacity. `styled(_:)` and `reach` (StyleComposite.swift,
+// LE-4) draw a stack and measure how far it reaches. Invariants: every type is a Hashable, Sendable value; no
 // field is validated here, the ops that read them throw `RasterError.invalid`
 // for a NaN, infinite or over-cap value.
 
@@ -93,16 +92,5 @@ public struct LayerStyleStack: Hashable, Sendable {
 
     public init(entries: [StyleEntry], fillOpacity: Float = 1) {
         (self.entries, self.fillOpacity) = (entries, fillOpacity)
-    }
-
-    /// The px a caller pads on each side so nothing the stack draws clips.
-    /// A stub returning 0 until LE-4 builds it.
-    public var reach: Int { 0 }
-}
-
-extension PixelBuffer {
-    /// The layer drawn with `stack`, the same size. Not built yet: throws until LE-4.
-    public func styled(_ stack: LayerStyleStack) throws -> PixelBuffer {
-        throw RasterError.invalid("styled is not built (LE-4)")
     }
 }

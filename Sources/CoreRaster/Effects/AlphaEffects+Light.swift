@@ -107,7 +107,7 @@ extension PixelBuffer {
     /// padded by `pad` pixels with its outside value and box blurred three
     /// times by `reach` / 3 (see `lightWork`). `cause` and `remedy` name the
     /// effect in the error when the padded copy is too large.
-    private func blurredAlpha(reach: Double, inner: Bool, pad: Int, cause: String,
+    func blurredAlpha(reach: Double, inner: Bool, pad: Int, cause: String,
                               remedy: String?) throws -> LightMask {
         let (pw, ph) = try Self.paddedWorkSize(width: width, height: height, pad: pad, cause: cause, remedy: remedy)
         let outside: Float = inner ? 1 : 0, c = Self.channels, src = components
@@ -127,7 +127,7 @@ extension PixelBuffer {
 
 /// A blurred, padded alpha mask read bilinearly in the layer's pixel
 /// coordinates; anything past the padding reads as `outside`.
-private struct LightMask {
+struct LightMask {
     let values: [Double]
     let width: Int, height: Int, pad: Int
     let outside: Double
