@@ -52,6 +52,23 @@ import Testing
         #expect(modes(try PSD.read(try PSD.write(try bothModes()))) == [.linearDodge, .linearBurn])
     }
 
+    /// A drop shadow in `mode`, read from an `lfx2` block (`Desc` is in PSDDescriptorTests.swift).
+    @Test func effectDescriptorsKeepBoth() throws {
+        for (value, mode) in [("linearDodge", BlendMode.linearDodge), ("linearBurn", .linearBurn)] {
+            let shadow = Desc.obj("DrSh", [("enab", .bool(true)), ("Md  ", .enm("BlnM", value)),
+                                           ("Clr ", .obj("RGBC", [("Rd  ", .doub(255)), ("Grn ", .doub(0)), ("Bl  ", .doub(0))])),
+                                           ("Opct", .untf("#Prc", 75)), ("uglg", .bool(false)), ("lagl", .untf("#Ang", 120)),
+                                           ("Dstn", .untf("#Pxl", 10)), ("Ckmt", .untf("#Pxl", 20)), ("blur", .untf("#Pxl", 5))])
+            var block = BigEndian(); block.ascii("8BIMlfx2")
+            block.sized(pad: 2) { b in b.u32(0); b.u32(16); Desc.obj("null", [("DrSh", shadow)]).write(&b) }
+            var record = PSDRecord.layer("L", top: 0, left: 0, height: 8, width: 8)
+            record.extra = block.out
+            let image = try PSD.read(PSDFile(width: 16, height: 16, records: [record]).data)
+            #expect(pixelLayer(image.nodes.first)?.style?.entries.first?.mode == mode, "\(value)")
+            #expect(!image.notes.contains { $0.contains(value) }, "\(image.notes)")
+        }
+    }
+
     @Test func unknownKeyNotesItsName() throws {
         let (layer, notes) = try read(key: "zzzz")
         #expect(layer?.blendMode == .normal)

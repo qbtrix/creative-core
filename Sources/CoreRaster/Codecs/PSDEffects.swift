@@ -81,7 +81,9 @@ enum PSDEffects {
     static let modes: [String: BlendMode] = [
         "Nrml": .normal, "Mltp": .multiply, "Scrn": .screen, "Ovrl": .overlay, "Drkn": .darken, "Lghn": .lighten,
         "CDdg": .colorDodge, "CBrn": .colorBurn, "HrdL": .hardLight, "SftL": .softLight, "Dfrn": .difference,
-        "Xclu": .exclusion, "H   ": .hue, "Strt": .saturation, "Clr ": .color, "Lmns": .luminosity]
+        "Xclu": .exclusion, "H   ": .hue, "Strt": .saturation, "Clr ": .color, "Lmns": .luminosity,
+        // Descriptors spell these two as long IDs, not as the layer record's `lddg` and `lbrn`.
+        "linearDodge": .linearDodge, "linearBurn": .linearBurn]
 }
 
 /// Maps one layer's effect descriptors to entries, collecting notes.
