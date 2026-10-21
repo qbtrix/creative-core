@@ -58,3 +58,4 @@ utc	stage	event	ref	note
 2026-10-21T05:51:01Z	le-z-scope	LE-10 depends on le-9b only via MetalStyleWalkTests; approved 5-file LE-z without Metal walk (kept on les/le-z-metal), Refs #779, fast-lane only
 2026-10-21T05:59:17Z	le-z-pr	#798 opened (LE-z, 4 files +302/-11, head 0378c7d2, fast-lane, Refs #779); Metal walk kept on les/le-z-metal
 2026-10-21T06:16:10Z	anatomy-1	round 1 started on dev 772b0f3f (gate, mutate, critics); first base 3ded188e
+2026-10-21T06:34:52Z	anatomy-1	gate PASS 2197 tests; validate 1141 anchors; critics clarity/contract/robustness/design; 7 major confirmed (incl. double knockout bug); not clean; fix batches r1-b1 (style composite) r1-b2 (docs, C4) started
