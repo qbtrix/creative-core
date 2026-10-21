@@ -5,22 +5,67 @@
 // padded by 1 px, `style_edt_pass` finds each pixel's nearest seed as CoreRaster's exact transform does (columns,
 // then rows; not the jump flood, whose ties differ in thin stems), and `style_stroke` turns it into the stroke's
 // smoothstep cover of the fill; `style_bevel_height` raises the signed distance through the shape's rise and profile, and
-// `style_bevel_light` leans its central-difference normal toward the light into highlight and shadow. Distances are
-// clamped to 1e30 before use, so no infinity reaches arithmetic. Grids may round up; every kernel bounds-checks.
+// `style_bevel_light` leans its central-difference normal toward the light into highlight and shadow (LE-9a2);
+// `style_composite` puts one layer on the canvas in place with the blend shaders' B(Cb, Cs), as CoreRaster's
+// `sourceOver`, or clipped to the layer's alpha as `compositeClipped` (LE-9b). Distances are clamped to 1e30 before
+// use, so no infinity reaches arithmetic. Grids may round up; every kernel bounds-checks.
 #if canImport(Metal)
+import CoreRaster
 import CoreRender
 
 enum StyleShader {
     /// The kernels' variants, for the warmup.
-    static let variants = ["pad", "light", "edge_seed", "edt_pass", "stroke", "bevel_height", "bevel_light"]
+    static let variants = ["pad", "light", "edge_seed", "edt_pass", "stroke", "bevel_height", "bevel_light", "composite"]
 
     /// The pipeline key of `variant`.
     static func key(_ variant: String) -> PipelineKey { PipelineKey(op: .style, variant: variant) }
 
+    /// The index `style_composite` takes for `mode`: its place in `BlendMode.allCases`.
+    static func modeIndex(_ mode: BlendMode) -> Int { BlendMode.allCases.firstIndex(of: mode) ?? 0 }
+
+    /// The blend shaders' B(Cb, Cs) (their source opens with the include), the light kernels and the composite.
+    static let source = BlendSeparableShader.functions + BlendNonSeparableShader.functions + kernels + composite
+
+    /// B(Cb, Cs) for a `modeIndex`: Cs for `.normal`, per channel for a separable mode, on the colour otherwise.
+    static let blend = "static float3 style_blend(int mode, float3 cb, float3 cs) {\n    switch (mode) {\n"
+        + BlendSeparableShader.modes.map { m in
+            let f = "blend_\(m.rawValue)"
+            return "    case \(modeIndex(m)): return float3(\(f)(cb.r, cs.r), \(f)(cb.g, cs.g), \(f)(cb.b, cs.b));\n"
+        }.joined()
+        + BlendNonSeparableShader.modes.map { "    case \(modeIndex($0)): return blend_\($0.rawValue)(cb, cs);\n" }.joined()
+        + "    default: return cs;\n    }\n}\n"
+
+    /// `style_over` is `sourceOver`; `style_composite` puts buffer 1 at `opacity` onto the canvas (buffer 0) in
+    /// place, with ints w, h, `modeIndex` and 1 to clip to buffer 2's alpha as `compositeClipped` does.
+    static let composite = blend + """
+    static float4 style_over(float4 src, float4 b, int mode, float opacity) {
+        float4 s = src * opacity;
+        float3 cs = s.a != 0.0f ? s.rgb / s.a : float3(0.0f), cb = b.a != 0.0f ? b.rgb / b.a : float3(0.0f);
+        float3 blended = mode == 0 ? cs : style_blend(mode, cb, cs);
+        float keep = 1.0f - s.a;
+        return float4((cs + b.a * (blended - cs)) * s.a + b.rgb * keep, s.a + b.a * keep);
+    }
+    kernel void style_composite(device float4 *canvas [[buffer(0)]], device const float4 *src [[buffer(1)]],
+                                device const float4 *clip [[buffer(2)]], constant int *p [[buffer(3)]],
+                                constant float &opacity [[buffer(4)]], uint2 gid [[thread_position_in_grid]]) {
+        int w = p[0], x = int(gid.x), y = int(gid.y), i = y * w + x;
+        if (x >= w || y >= p[1]) { return; }
+        float4 d = canvas[i], s = src[i];
+        if (p[3] == 0) { canvas[i] = style_over(s, d, p[2], opacity); return; }
+        float inside = clamp(clip[i].w, 0.0f, 1.0f);
+        if (inside <= 0) { return; }
+        float alpha = d.a;
+        float3 straight = alpha > 0 ? d.rgb / alpha : float3(0.0f);
+        float4 opaque = float4(select(float3(0.0f), straight, isfinite(straight)), 1.0f);
+        float4 blended = style_over(s, opaque, p[2], opacity);
+        float covered = min(alpha, inside), hole = max(inside - alpha, 0.0f) * opacity;
+        canvas[i] = float4(covered * blended.rgb + (alpha - covered) * opaque.rgb + hole * s.rgb, alpha + hole * s.a);
+    }
+
+    """
+
     /// Buffers 0, 1, 2 then 6, 7 as `styleDispatch` binds them; ints at 3, the float at 4, the float table at 5.
-    static let source = """
-    #include <metal_stdlib>
-    using namespace metal;
+    static let kernels = """
     constant float style_far = 1e30;
     kernel void style_pad(device const float4 *in [[buffer(0)]], device const float *field [[buffer(1)]],
                           device float4 *out [[buffer(2)]], constant int *p [[buffer(3)]],

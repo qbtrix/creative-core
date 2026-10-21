@@ -31,7 +31,7 @@ package struct StyleLayer {
 
 extension StyleOp {
     /// The op's place in the fixed paint order, bottom up.
-    var paintRank: Int {
+    package var paintRank: Int {
         switch self {
         case .dropShadow: 0
         case .outerGlow: 1

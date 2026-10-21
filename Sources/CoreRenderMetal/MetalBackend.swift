@@ -6,7 +6,7 @@
 // `supports` is empty while not healthy, `residentBytes` sums the live surfaces' resident tiles and stays
 // at or under `budgetBytes` after every upload (MetalBackend+Memory.swift), a surface this backend did not
 // make throws `surfaceMismatch`. The enabled families are display, transform (crop, rotate), resample, blur
-// (blur and unsharp), adjust, retouch (clone through a mask) and, on read-write tier 2, composite,
+// (blur and unsharp), adjust, retouch (clone through a mask), style (layer styles, on buffers) and, on read-write tier 2, composite,
 // blendSeparable and blendNonSeparable; every one of them throws `unsupported(<family>)` while unhealthy (each checks
 // `effectiveSupports`), and display, resample, blur (gaussianBlur and unsharpMask) and retouch (cloned) also
 // throw it, without failing the backend, when a buffer would exceed `maxBufferLength`. A probe, a command buffer or a texture allocation that fails
@@ -25,7 +25,7 @@ import Foundation
 import Metal
 
 /// The Metal `RenderBackend`: tiled rgba16Float surfaces on one GPU. Display, transform (crop, rotate),
-/// resample, blur, unsharp, adjust and clone through a mask run; `.normal`, the separable and the non-separable blend
+/// resample, blur, unsharp, adjust, clone through a mask and layer styles run; `.normal`, the separable and the non-separable blend
 /// modes composite on read-write texture tier 2 (elsewhere they throw `RenderError.unsupported`). While the
 /// backend is unhealthy `supports` is empty and every op throws `unsupported(<family>)`, never `deviceLost`;
 /// display, resample, blur (gaussianBlur and unsharpMask) and retouch (cloned) also throw it, with the backend
@@ -86,6 +86,7 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
         state.enable(.adjust)  // MB-14
         state.enable(.blur)  // MB-11 blur, MB-12 unsharp
         state.enable(.retouch)  // MB-15
+        state.enable(.style)  // LE-9b, on buffers
     }
 
     /// "Metal (<device name>)": the status note's text and every surface's `backend`.
