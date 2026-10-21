@@ -79,7 +79,7 @@ extension PixelBuffer {
     /// fix when the padded size passes `maxWorkPixels` (or `maxPixels`);
     /// `remedy` is what to reduce besides the buffer ("offset", or nil when
     /// the padding is fixed). Nothing is allocated before the check.
-    static func paddedWorkSize(width: Int, height: Int, pad: Int, cause: String,
+    package static func paddedWorkSize(width: Int, height: Int, pad: Int, cause: String,
                                remedy: String?) throws -> (width: Int, height: Int) {
         let pw = width + 2 * pad, ph = height + 2 * pad, limit = min(maxWorkPixels, maxPixels)
         let (pixels, overflow) = pw.multipliedReportingOverflow(by: ph)
