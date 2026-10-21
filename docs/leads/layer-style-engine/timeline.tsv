@@ -83,3 +83,4 @@ utc	stage	event	ref	note
 2026-10-21T11:41:55Z	round-2	r2-b6 on its 4th gate run; #806 #807 merged
 2026-10-21T11:49:02Z	round-3-start	round 2 closed (#801-#809 merged); round 3 on dev 6b0aaa1e: gate+validate+mutate running, clarity/contract and robustness/design critics launched
 2026-10-21T12:10:16Z	round-3	gate CI: PASS (2240 tests), validate 1208 anchors OK; mutate 108 caught 0 escaped so far; 2 critics running
+2026-10-21T12:21:56Z	round-3	clarity/contract critic: 0 blocker, 1 major (PSD gradient from/to not shifted by reach padding; verified), 2 minor (notes doc, packet test names)
