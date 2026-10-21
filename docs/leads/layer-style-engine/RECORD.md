@@ -116,3 +116,4 @@ Next: builders on LE-a2 (les/le-a2), LE-3 (les/le-3) and LE-6 (les/le-6) from de
 - 09:37Z: r2-b5 (#803, docs: packet bevel formula, LayerStyleStack docs, styled padding docs) merged.
 - 09:48Z: LE-z merged-done: dev CI run 427 (7b77adc8) Linux green; posted Belt-Slice-Done and Mac-Finish-Wanted on #779. Tests critic hit a rate limit and was resumed. r2-b3 and r2-b4 still running (r2-b4 mutating, 16/40).
 - 10:08Z: r2-b4 opened #804 (head 044d6058): styled streams entries (<=2 effect buffers live), 64-entry cap, StylePlacement Sendable+Hashable, shared light/stroke checks, F3 test, F5 doc; 40/40 mutants caught. Memory-budget test skipped (Linux peak RSS is process-wide).
+- 10:13Z: #804 (r2-b4) merged at 10:08Z, footer clean. Waiting on r2-b3 (PSD gaps + F1) and the tests critic (probing mutants in scratch).
