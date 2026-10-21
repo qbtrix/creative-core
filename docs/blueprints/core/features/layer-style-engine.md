@@ -17,7 +17,7 @@ Metal half.
 **Status:** built. Beta (captain, 2026-10-21: "layer styles in beta,
 shared"). Merged: #780, #785, #786, #788, #789, #790, #791, #792, #793 (LE-7),
 #794 (LE-9a), #795 (the PSD effect colour fix the walk found), #796 (LE-9a2),
-#PR9B (LE-9b) and this packet's LE-z PR.
+#797 (LE-9b) and this packet's LE-z PR.
 
 **Covers:** creative-apps feature map S2 (the engine half of layer styles;
 packet `suiteui/layer-styles` in creative-apps); the core half of
@@ -209,7 +209,7 @@ extension RenderBackend { func styled(_ s: RenderSurface, _ stack: LayerStyleSta
 | LE-7 | #3497 (creative-apps) | `linearDodge` and `linearBurn`: the CPU formulas; the PSD key table (`PSDRead.blendModes`, whose inverse `PSD.blendKeys` writes them back) and the unknown-key note; OpenRaster's op names (`svg:plus` for linear dodge, `afterglow:linear-burn` for linear burn, which other readers treat as src-over by the spec's unknown-op rule); the Metal separable kernel lookup and shader cases | `Sources/CoreRaster/BlendMode.swift`, `Sources/CoreRaster/Codecs/PSDRead.swift`, `Sources/CoreRaster/Codecs/StackXML.swift`, `Sources/CoreRenderMetal/MetalBackend+BlendSeparable.swift`, `Sources/CoreRenderMetal/Shaders/BlendSeparableShader.swift`, `Tests/CoreRasterTests/BlendModeTests.swift`, `Tests/CoreRenderMetalTests/MetalBlendTests.swift`, `Tests/mutations/CoreRaster.BlendMode.json` | LE-6 | ~240, 8 |
 | LE-8 | – | Metal: the jump-flood distance field and the three-pass box blur kernels, each with a parity test against `DistanceField` and `boxBlurred` | `Sources/CoreRenderMetal/MetalBackend+Distance.swift`, `Sources/CoreRenderMetal/Shaders/DistanceShader.swift`, `Tests/CoreRenderMetalTests/MetalDistanceTests.swift` | LE-5 | ~320, 3 |
 | LE-9a | – | Metal: shadow, glow and overlay light layers on the jump-flood field, cached per surface; turns on `MetalStyleTests` | `Sources/CoreRenderMetal/MetalBackend+Style.swift`, `Sources/CoreRenderMetal/Shaders/StyleShader.swift`, `Sources/CoreRenderMetal/MetalBackend+Distance.swift`, `Tests/CoreRenderMetalTests/MetalStyleTests.swift` | LE-8 | ~390, 6 |
-| LE-9a2 | – | Metal: stroke and bevel light layers from the cached field | `Sources/CoreRenderMetal/MetalBackend+Style.swift`, `Sources/CoreRenderMetal/Shaders/StyleShader.swift`, `Tests/CoreRenderMetalTests/MetalStrokeBevelTests.swift` | LE-9a | ~300, 4 |
+| LE-9a2 | – | Metal: the stroke layer from CoreRaster's exact separable distance transform (the jump flood picked other seeds in thin stems) and the bevel layers from the cached field | `Sources/CoreRenderMetal/MetalBackend+Style.swift`, `Sources/CoreRenderMetal/Shaders/StyleShader.swift`, `Tests/CoreRenderMetalTests/MetalStrokeBevelTests.swift` | LE-9a | ~300, 4 |
 | LE-9b | – | Metal claims `style`: `styled` composites the layers in paint order in one command buffer (`style_composite`); the warmup compiles the style kernels, `notOnMetalYet` loses `style`; turns on `MetalStyleParityTests` | `Sources/CoreRenderMetal/MetalBackend+Style.swift`, `Sources/CoreRenderMetal/Shaders/StyleShader.swift`, `Sources/CoreRenderMetal/MetalBackend+Warmup.swift`, `Sources/CoreRender/RenderOp.swift`, `Tests/CoreRenderMetalTests/MetalStyleParityTests.swift` | LE-9a2 | ~390, 12 |
 | LE-10 | – | KJ-LE walk; `StyleBudgetTests` (release, `.serialized`); the Metal leg and budget in `MetalStyleWalkTests` | `Tests/CoreRenderTests/StyleWalkTests.swift`, `Tests/CoreRasterTests/StyleBudgetTests.swift`, `Tests/CoreRenderMetalTests/MetalStyleWalkTests.swift` | LE-7, LE-9b | ~330, 3 |
 | LE-11 | – | The `image-ops` and `corerendermetal` part descriptions; this packet's status line; `feature-done` | `docs/c4/parts/creative-core/coreraster/image-ops.json`, `docs/c4/parts/creative-core/corerendermetal/metal-backend.json`, `docs/blueprints/core/features/layer-style-engine.md` | LE-10 | ~20, 3 |
@@ -274,8 +274,9 @@ backends and the two budget numbers. Each slice's last merge is followed by a
 ## Where the code differs from this packet
 
 - LE-9 shipped as three PRs: LE-9a (shadow, glow and overlay layers, #794),
-  LE-9a2 (stroke and bevel layers, #796) and LE-9b (Metal claims `style`:
-  the composite and the parity suite, #PR9B).
+  LE-9a2 (stroke and bevel layers, #796; the stroke uses an exact distance
+  transform, not the jump flood) and LE-9b (Metal claims `style`:
+  the composite and the parity suite, #797).
 - There is no `ParityTolerance.style`. Metal style output is compared to the
   CPU at the LE-9a tolerance, `MetalStyleTests.expectClose` (2 levels, edge
   pixels within 8 on at most 0.5% of pixels), in `MetalStyleParityTests` and
