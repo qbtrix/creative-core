@@ -114,3 +114,4 @@ Next: builders on LE-a2 (les/le-a2), LE-3 (les/le-3) and LE-6 (les/le-6) from de
 - 2026-10-21T09:04:07Z round 2: clarity+contract critic found 1 major and 4 minors, all assigned (r2-b3, r2-b4, new docs batch r2-b5). Round is not clean. Mutation on dev: 265 caught, none escaped so far.
 - 09:26Z: Round 2 mutate scored 276/276 (AlphaEffects#9 was caught only by a timeout). Dev CI run 427 on 7b77adc8 is in progress and covers LE-z (#798). Fixers r2-b3, b4 and b5 and the tests critic are still running.
 - 09:37Z: r2-b5 (#803, docs: packet bevel formula, LayerStyleStack docs, styled padding docs) merged.
+- 09:48Z: LE-z merged-done: dev CI run 427 (7b77adc8) Linux green; posted Belt-Slice-Done and Mac-Finish-Wanted on #779. Tests critic hit a rate limit and was resumed. r2-b3 and r2-b4 still running (r2-b4 mutating, 16/40).

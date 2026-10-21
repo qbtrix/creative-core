@@ -70,3 +70,4 @@ utc	stage	event	ref	note
 2026-10-21T09:04:07Z	round-2	clarity+contract critic: 0 blocker, 1 major (PSD glow/shadow settings dropped without note), 4 minor; F1 to r2-b3, F3/F5 to r2-b4, F2/F4/F5 docs to r2-b5; round-2 mutate 265 caught, 0 escaped so far; no dev CI past 426
 2026-10-21T09:26:56Z	round-2	mutate 276/276 caught (AlphaEffects#9 caught only by a test timeout); tests critic running; r2-b3/b4/b5 fixers running; dev CI run 427 (7b77adc8, contains #798) in progress
 2026-10-21T09:37:02Z	round-2	r2-b5 docs fix #803 merged (head 3d556889)
+2026-10-21T09:48:09Z	LE-z	Belt-Slice-Done + Mac-Finish-Wanted posted (dev CI 427, Linux green on 7b77adc8); tests critic resumed after rate limit
