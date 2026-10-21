@@ -49,6 +49,18 @@ import Testing
         #expect(stride(from: 3, to: src.count, by: 4).allSatisfy { src[$0] < 1 || out[$0] == 0 })
     }
 
+    /// A fill opacity below 1 fades the layer even with no active entry: an
+    /// empty stack, a disabled entry and a zero-opacity entry each give the
+    /// layer times the fill opacity, not the layer itself.
+    @Test func fillOpacityFadesALayerWithNoActiveEntry() throws {
+        let badge = try StyleFixtures.badge()
+        let glow = StyleOp.outerGlow(color: StyleFixtures.white, spread: 0, size: 2)
+        let half = badge.components.map { $0 * 0.5 }
+        for entries in [[], [StyleEntry(op: glow, isEnabled: false)], [StyleEntry(op: glow, opacity: 0)]] {
+            #expect(try badge.styled(LayerStyleStack(entries: entries, fillOpacity: 0.5)).components == half, "\(entries)")
+        }
+    }
+
     /// A stack past `maxEntries` throws naming the count and the limit; one at the limit draws.
     @Test func tooManyEntriesThrow() throws {
         let badge = try StyleFixtures.badge(), clear = StyleEntry(op: .overlay(.color(RGBA(r: 0, g: 0, b: 0, a: 0))))
@@ -121,6 +133,27 @@ import Testing
                        StyleEntry(op: .outerGlow(color: StyleFixtures.white, spread: 0, size: 2), opacity: 2)]
         #expect(throws: RasterError.invalid("style entry 1 (outer glow) opacity 2.0: must be a finite value in 0...1")) {
             try badge.styled(LayerStyleStack(entries: entries))
+        }
+    }
+
+    /// A finite spread outside 0...1 is refused, naming the effect and the spread.
+    @Test func spreadOutsideZeroToOneThrows() throws {
+        let badge = try StyleFixtures.badge()
+        for spread in [1.5, -0.25] {
+            let shadow = StyleEntry(op: .dropShadow(color: StyleFixtures.black, dx: 0, dy: 0, spread: spread, blur: 4))
+            #expect(throws: RasterError.invalid("drop shadow spread \(spread): must be finite and in 0...1")) {
+                try badge.styled(LayerStyleStack(entries: [shadow]))
+            }
+        }
+    }
+
+    /// A finite fill opacity outside 0...1 is refused, even with no entries.
+    @Test func fillOpacityErrorNamesTheValue() throws {
+        let badge = try StyleFixtures.badge()
+        for fill: Float in [1.5, -0.5] {
+            #expect(throws: RasterError.invalid("fill opacity \(fill): must be a finite value in 0...1")) {
+                try badge.styled(LayerStyleStack(entries: [], fillOpacity: fill))
+            }
         }
     }
 

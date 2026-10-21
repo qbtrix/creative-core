@@ -166,5 +166,89 @@
     "anchor": "guard reach.isFinite, reach >= 0, reach <= maxLightReach else {",
     "replacement": "guard reach.isFinite, reach >= 0 else {",
     "filter": "StyleCompositeTests"
+  },
+  {
+    "note": "fill opacity ignored with no active entries, so a faded layer with no effects shows at full, caught by StyleCompositeTests.fillOpacityFadesALayerWithNoActiveEntry",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": "guard !active.isEmpty || stack.fillOpacity < 1 else { return self }",
+    "replacement": "guard !active.isEmpty else { return self }",
+    "filter": "StyleCompositeTests"
+  },
+  {
+    "note": "spread range unchecked, so a drop shadow spread of 1.5 chokes past its size instead of throwing, caught by StyleCompositeTests.spreadOutsideZeroToOneThrows",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": "guard (0...1).contains(spread) else {",
+    "replacement": "guard spread.isFinite else {",
+    "filter": "StyleCompositeTests"
+  },
+  {
+    "note": "fill opacity range unchecked, so a fill opacity of 1.5 brightens the layer instead of throwing, caught by StyleCompositeTests.fillOpacityErrorNamesTheValue",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": "guard (0...1).contains(stack.fillOpacity) else {",
+    "replacement": "guard stack.fillOpacity.isFinite else {",
+    "filter": "StyleCompositeTests"
+  },
+  {
+    "note": "clipped composite not clipped to the layer alpha, so an overlay covers a half-covered edge pixel in full, caught by StyleCompositeCoverageTests.clippedOverlayKeepsTheCanvasPastAPartialClip",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": "let covered = min(alpha, inside), hole",
+    "replacement": "let covered = alpha, hole",
+    "filter": "StyleCompositeCoverageTests"
+  },
+  {
+    "note": "canvas past the clip dropped, so the shadow under a half-covered edge pixel loses its colour under an overlay, caught by StyleCompositeCoverageTests.clippedOverlayKeepsTheCanvasPastAPartialClip",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": "let kept: Float = (alpha - covered) * opaque[o + k]",
+    "replacement": "let kept: Float = 0",
+    "filter": "StyleCompositeCoverageTests"
+  },
+  {
+    "note": "bevel shadow drawn in the highlight mode, so a Multiply shadow screens, caught by StyleCompositeCoverageTests.bevelLayersTakeTheirModesAndTheEntryOpacity",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": "StyleLayer(source: shadow, mode: bevel.shadowMode,",
+    "replacement": "StyleLayer(source: shadow, mode: bevel.highlightMode,",
+    "filter": "StyleCompositeCoverageTests"
+  },
+  {
+    "note": "bevel highlight ignores the entry opacity, so a half-opacity bevel lights at full, caught by StyleCompositeCoverageTests.bevelLayersTakeTheirModesAndTheEntryOpacity",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": "StyleLayer(source: highlight, mode: bevel.highlightMode, opacity: entry.opacity,",
+    "replacement": "StyleLayer(source: highlight, mode: bevel.highlightMode, opacity: 1,",
+    "filter": "StyleCompositeCoverageTests"
+  },
+  {
+    "note": "centre stroke clipped to the layer, so its outer half past the edge is lost, caught by StyleCompositeCoverageTests.strokePlacementFollowsThePosition",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": "position == .inside ? .clipped : .over",
+    "replacement": "position == .inside ? .clipped : .clipped",
+    "filter": "StyleCompositeCoverageTests"
+  },
+  {
+    "note": "paint order drop shadow swapped with outer glow, so a drop shadow covers the outer glow, caught by StyleCompositeCoverageTests.paintOrderIsFixedForEveryRank",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": "case .dropShadow: 0\n        case .outerGlow: 1",
+    "replacement": "case .dropShadow: 1\n        case .outerGlow: 0",
+    "filter": "StyleCompositeCoverageTests"
+  },
+  {
+    "note": "paint order outer glow swapped with outside stroke, so an outer glow covers the outside stroke, caught by StyleCompositeCoverageTests.paintOrderIsFixedForEveryRank",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": "case .outerGlow: 1\n        case .stroke(_, _, .outside): 2",
+    "replacement": "case .outerGlow: 2\n        case .stroke(_, _, .outside): 1",
+    "filter": "StyleCompositeCoverageTests"
+  },
+  {
+    "note": "paint order bevel swapped with inside stroke, so a bevel covers the inside stroke, caught by StyleCompositeCoverageTests.paintOrderIsFixedForEveryRank",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": "case .bevel: 7\n        case .stroke(_, _, .inside): 8",
+    "replacement": "case .bevel: 8\n        case .stroke(_, _, .inside): 7",
+    "filter": "StyleCompositeCoverageTests"
+  },
+  {
+    "note": "paint order inside stroke swapped with centre stroke, so an inside stroke covers the centre stroke, caught by StyleCompositeCoverageTests.paintOrderIsFixedForEveryRank",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": "case .stroke(_, _, .inside): 8\n        case .stroke: 9",
+    "replacement": "case .stroke(_, _, .inside): 9\n        case .stroke: 8",
+    "filter": "StyleCompositeCoverageTests"
   }
 ]
