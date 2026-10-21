@@ -29,3 +29,4 @@ utc	stage	event	ref	note
 2026-10-21T01:34:39Z	LE-9	builder started stacked on les/le-8
 2026-10-21T01:36:42Z	LE-9	split into LE-9a (light layers + cache) and LE-9b (claims style) — ~850 lines estimate over cap
 2026-10-21T01:38:53Z	LE-7	opened #793 (a8717989, 15 files +176/-20, mutate 2/2 BlendMode), Metal (macOS) pending
+2026-10-21T01:46:18Z	LE-9	re-split: LE-9a (~330), LE-9a2 stroke+bevel (~250), LE-9b
