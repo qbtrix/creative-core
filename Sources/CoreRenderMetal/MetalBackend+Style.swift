@@ -1,7 +1,8 @@
 // MetalBackend+Style.swift: a layer style entry's light layers on the GPU (layer-style-engine LE-9a), CoreRaster
 // `styleLayers` with the same modes, opacities and placements: shadows and glows spread on the distance field,
-// padded and box blurred; the overlay is its fill, drawn on the CPU; a stroke or bevel throws `unsupported(.style)`
-// (not on the GPU yet). Each call is one command buffer over whole-image buffers.
+// padded and box blurred; the stroke from anti-aliased edge points, nearest by the exact transform (LE-9a2); the bevel's height,
+// normal and lean (LE-9a2); the overlay is its fill, drawn on the CPU. Each call is one command buffer over
+// whole-image buffers.
 // The distance field at level 0.5 is cached per surface with the alpha it came from: a call whose surface alpha is
 // unchanged reuses it, a new upload re-encodes it, `release` drops it. Invariants: every parameter is checked by
 // CoreRaster's own code first, so a bad entry throws the CPU's error before any GPU work; a padded work buffer over
@@ -70,7 +71,11 @@ extension MetalBackend {
             return [try encodeLight(commands, &job, color, 0, 0, spread, size, inner: false, effect: "outer glow")]
         case let .innerGlow(color, spread, size):
             return [try encodeLight(commands, &job, color, 0, 0, spread, size, inner: true, effect: "inner glow")]
-        case .stroke, .bevel, .overlay:
+        case let .stroke(fill, width, position):
+            return [try encodeStroke(commands, job, fill, width: width, position: position)]
+        case let .bevel(bevel):
+            return try encodeBevel(commands, &job, bevel)
+        case .overlay:
             throw RenderError.unsupported(.style)
         }
     }
@@ -118,6 +123,62 @@ extension MetalBackend {
         try styleDispatch(commands, styleKernel("light"), [job.pixels, padded, out], ints: ints,
                           floats: [Float(dx), Float(dy), color.r, color.g, color.b, color.a], width: w, height: h)
         return out
+    }
+
+    /// A stroke: CoreRaster `strokeLayer`, its fill drawn on the CPU and covered on the GPU.
+    func encodeStroke(_ commands: any MTLCommandBuffer, _ job: StyleJob, _ fill: StyleFill, width strokeWidth: Double,
+                      position: StrokePosition) throws -> any MTLBuffer {
+        let (w, h) = (job.image.width, job.image.height)
+        let paint = try RenderError.mapping { try job.image.fillLayer(fill) }
+        guard strokeWidth > 0 else { return try styleBuffer(count: w * h * 4) }
+        let (pw, ph) = try RenderError.mapping {
+            try PixelBuffer.paddedWorkSize(width: w, height: h, pad: 1, cause: "stroke", remedy: nil)
+        }
+        // The exact transform's scratch is 5 int64s a pixel; int64 holds its cross-products for sides up to 2^20.
+        guard max(pw, ph) <= 1 << 20,
+              SurfaceTiling.wholeImageFits(width: pw, height: ph, bytesPerPixel: 40, maxBufferLength: device.maxBufferLength) else {
+            throw RenderError.unsupported(.style)
+        }
+        let out = try styleBuffer(paint.components), n = pw * ph
+        let squared = try styleBuffer(count: n * 2), nearest = try styleBuffer(count: n), points = try styleBuffer(count: n * 4)
+        try styleDispatch(commands, styleKernel("edge_seed"), [job.pixels, squared, points, nearest], ints: [w, h],
+                          width: pw, height: ph)
+        let edt = try styleKernel("edt_pass"), scratch = try styleBuffer(count: n * 10)
+        let squared2 = try styleBuffer(count: n * 2), nearest2 = try styleBuffer(count: n)
+        try styleDispatch(commands, edt, [squared, nearest, squared2, nearest2, scratch], ints: [pw, ph, pw, 1], width: pw, height: 1)
+        try styleDispatch(commands, edt, [squared2, nearest2, squared, nearest, scratch], ints: [ph, pw, 1, pw], width: ph, height: 1)
+        let code = position == .outside ? 0 : position == .inside ? 1 : 2
+        try styleDispatch(commands, styleKernel("stroke"), [nearest, points, out, job.pixels], ints: [w, h, code],
+                          level: Float(strokeWidth), width: w, height: h)
+        return out
+    }
+
+    /// A bevel: CoreRaster `beveled`, as [shadow, highlight].
+    func encodeBevel(_ commands: any MTLCommandBuffer, _ job: inout StyleJob, _ bevel: Bevel) throws -> [any MTLBuffer] {
+        let (w, h) = (job.image.width, job.image.height), n = w * h
+        let highlight = try styleBuffer(count: n * 4), shadow = try styleBuffer(count: n * 4)
+        guard bevel.size > 0 else { return [shadow, highlight] }
+        let field = try styleField(commands, &job)
+        let heights = try styleBuffer(count: n * 4), signed = try styleBuffer(count: n), scratch = try styleBuffer(count: n * 4)
+        let shapes: [BevelShape] = [.innerBevel, .outerBevel, .emboss, .pillowEmboss]
+        let shape = shapes.firstIndex(of: bevel.shape) ?? 0
+        try styleDispatch(commands, styleKernel("bevel_height"), [field.outside, field.inside, heights, signed],
+                          ints: [w, h, shape, bevel.technique == .smooth ? 0 : 1, bevel.up ? 1 : 0],
+                          level: Float(bevel.size), width: w, height: h)
+        if bevel.technique == .chiselSoft {
+            try encodeBoxBlur(commands, heights, scratch: scratch, width: w, height: h, radius: 1.0 / 3)
+        }
+        if bevel.soften > 0 {
+            try encodeBoxBlur(commands, heights, scratch: scratch, width: w, height: h, radius: bevel.soften / 3)
+        }
+        let theta = bevel.angle * .pi / 180, alt = bevel.altitude * .pi / 180
+        let cosA = abs(cos(alt)) < 1e-12 ? 0 : cos(alt)
+        let (lit, dark) = (bevel.highlight, bevel.shadow), (ko, kd) = (bevel.highlightOpacity, bevel.shadowOpacity)
+        let floats = [Float(bevel.size), Float(bevel.depth * bevel.size), Float(cosA * cos(theta)), Float(cosA * sin(theta)),
+                      lit.r * ko, lit.g * ko, lit.b * ko, lit.a * ko, dark.r * kd, dark.g * kd, dark.b * kd, dark.a * kd]
+        try styleDispatch(commands, styleKernel("bevel_light"), [job.pixels, heights, highlight, shadow, signed],
+                          ints: [w, h, shape], floats: floats, width: w, height: h)
+        return [shadow, highlight]
     }
 
     /// The style pipeline `variant` of `StyleShader`.
