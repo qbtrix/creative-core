@@ -42,3 +42,4 @@ utc	stage	event	ref	note
 2026-10-21T02:51:56Z	heartbeat	#794 Metal (macOS) green 02:43Z (runner back), waits on the lane; #793 Metal still queued since 01:38Z; no dev CI after 425
 2026-10-21T02:57:22Z	LE-10-found-bug	les/le-10 d24512fe built (6 files +380/-12); walk PSD leg finds LE-6 bug: Mapper.add reads Clr for every effect, drops GrFl/ebbl. Fix round 1 for LE-psd routed to ab8bff2252ae5a667 as own PR
 2026-10-21T03:06:10Z	LE-6-fix-open	#795 fix(psd) colour read, f301b339, 3 files +33/-7, mutate 4/4 CoreRaster.PSDEffects
+2026-10-21T03:13:05Z	merged	#793 #794 #795 merged 03:06Z; dev 3ad633b5; dev CI run 426 (39536751190) queued; LE-9a2 open as #796
