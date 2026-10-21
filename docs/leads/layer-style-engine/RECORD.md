@@ -121,3 +121,4 @@ Next: builders on LE-a2 (les/le-a2), LE-3 (les/le-3) and LE-6 (les/le-6) from de
 - 10:28Z: #805 (r2-b3) merged. Tests critic on 7b77adc8: 0 blockers, 3 majors (PSD list-depth guard untested; PSD skipped value types untested; empty stack with fill < 1), 7 minors (spread range, bevel past-size, cosA snap, default styled, fill-opacity wording, golden-only invariants, AlphaEffects#9 timeout catch). Each backed by an escaped mutant. Launched fix batches r2-b6, r2-b7, r2-b8 on disjoint test/json files.
 - 2026-10-21T10:57:49Z round 2: tests-critic fixers r2-b6, r2-b7, r2-b8 still running; round 3 waits on their merges.
 - 2026-10-21T11:20:26Z round 2: r2-b6, r2-b7, r2-b8 still running their harness; no PRs yet.
+- 2026-10-21T11:23:56Z round 2: #806 (r2-b7, StyleComposite test gaps M3, m1, m5, m6-S) merged; disk was 89% full and slowed a timed CoreAsset test, so stale agent worktrees were removed (19G free).
