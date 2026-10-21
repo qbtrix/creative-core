@@ -73,3 +73,4 @@ utc	stage	event	ref	note
 2026-10-21T09:48:09Z	LE-z	Belt-Slice-Done + Mac-Finish-Wanted posted (dev CI 427, Linux green on 7b77adc8); tests critic resumed after rate limit
 2026-10-21T10:08:33Z	round-2	r2-b4 #804 opened (044d6058): streamed styled, 64-entry cap, Sendable/Hashable, shared checks, F3, F5
 2026-10-21T10:13:13Z	round-2	r2-b4 #804 merged 10:08Z; r2-b3 and tests critic still running
+2026-10-21T10:16:35Z	round-2	r2-b3 #805 opened (839bf775): PSD mapping/iOpa/notes/global light tests, silent drops noted, F1 glow settings noted; 41/41
