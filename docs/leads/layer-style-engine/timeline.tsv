@@ -74,3 +74,4 @@ utc	stage	event	ref	note
 2026-10-21T10:08:33Z	round-2	r2-b4 #804 opened (044d6058): streamed styled, 64-entry cap, Sendable/Hashable, shared checks, F3, F5
 2026-10-21T10:13:13Z	round-2	r2-b4 #804 merged 10:08Z; r2-b3 and tests critic still running
 2026-10-21T10:16:35Z	round-2	r2-b3 #805 opened (839bf775): PSD mapping/iOpa/notes/global light tests, silent drops noted, F1 glow settings noted; 41/41
+2026-10-21T10:28:23Z	round-2	#805 merged 10:16Z; tests critic: 0 blocker, 3 major, 7 minor (mutant-backed); launched r2-b6 (PSD descriptor M1/M2), r2-b7 (StyleComposite M3/m1/m5/m6-S), r2-b8 (Bevel m2/m3/m6-B, W1 m4, AlphaEffects m7)
