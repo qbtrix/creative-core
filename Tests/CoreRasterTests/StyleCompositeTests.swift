@@ -34,13 +34,30 @@ import Testing
         #expect(try badge.styled(off) == badge && badge.styled(zero) == badge)
     }
 
+    /// LE-4: fill opacity 0 keeps the drop shadow and removes the layer, so
+    /// the result is the shadow alone, knocked out where the layer was.
     @Test func fillOpacityFadesOnlyTheLayer() throws {
         let badge = try StyleFixtures.badge()
-        let glow = StyleEntry(op: .outerGlow(color: StyleFixtures.white, spread: 0, size: 4))
-        let full = try badge.styled(LayerStyleStack(entries: [glow]))
-        let faded = try badge.styled(LayerStyleStack(entries: [glow], fillOpacity: 0))
-        #expect(try full.pixel(x: 4, y: 16) == faded.pixel(x: 4, y: 16))
-        #expect(try faded.pixel(x: 24, y: 16).a < full.pixel(x: 24, y: 16).a)
+        let shadow = StyleEntry(op: .dropShadow(color: StyleFixtures.black, dx: 4, dy: 4, spread: 0, blur: 2))
+        let full = try badge.styled(LayerStyleStack(entries: [shadow]))
+        let faded = try badge.styled(LayerStyleStack(entries: [shadow], fillOpacity: 0))
+        #expect(try full.pixel(x: 42, y: 26).a > 0.1)
+        #expect(try full.pixel(x: 42, y: 26) == faded.pixel(x: 42, y: 26))
+        #expect(try full.pixel(x: 24, y: 16).a == 1 && faded.pixel(x: 24, y: 16).a == 0)
+        // Wherever the layer is opaque the shadow is knocked out, so at fill 0 nothing is left there.
+        let (src, out) = (badge.components, faded.components)
+        #expect(stride(from: 3, to: src.count, by: 4).allSatisfy { src[$0] < 1 || out[$0] == 0 })
+    }
+
+    /// A stack past `maxEntries` throws naming the count and the limit; one at the limit draws.
+    @Test func tooManyEntriesThrow() throws {
+        let badge = try StyleFixtures.badge(), clear = StyleEntry(op: .overlay(.color(RGBA(r: 0, g: 0, b: 0, a: 0))))
+        #expect(LayerStyleStack.maxEntries == 64)
+        let most = LayerStyleStack(entries: Array(repeating: clear, count: LayerStyleStack.maxEntries))
+        #expect(try badge.styled(most) == badge)
+        #expect(throws: RasterError.invalid("style stack of 65 entries: at most 64")) {
+            try badge.styled(LayerStyleStack(entries: most.entries + [clear]))
+        }
     }
 
     /// A Multiply grey overlay on a Normal grey one gives grey times grey, so the clipped entry's mode is applied.

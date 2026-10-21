@@ -29,9 +29,7 @@ extension PixelBuffer {
     /// padded copy passes `PixelBuffer.maxPixels`; the error names only the buffer,
     /// since the width does not set the padding), or a result that overflows.
     public func stroked(color: RGBA, width strokeWidth: Double, position: StrokePosition) throws -> PixelBuffer {
-        guard strokeWidth.isFinite, strokeWidth >= 0, strokeWidth <= Self.maxStrokeWidth else {
-            throw RasterError.invalid("stroke width \(strokeWidth): must be finite and in 0...\(Int(Self.maxStrokeWidth))")
-        }
+        try Self.checkStrokeWidth(strokeWidth)
         guard color.isFinite else { throw RasterError.invalid("stroke color \(color): must be finite") }
         guard strokeWidth > 0 else { return self }
         let distance = try edgeDistances()
@@ -59,6 +57,14 @@ extension PixelBuffer {
             }
         }
         return PixelBuffer(checkedWidth: width, height: height, storage: out)
+    }
+
+    /// Throws `RasterError.invalid` unless the stroke width is finite and in
+    /// 0...`maxStrokeWidth`; shared by `stroked` and the style stack's stroke layer.
+    static func checkStrokeWidth(_ strokeWidth: Double) throws {
+        guard strokeWidth.isFinite, strokeWidth >= 0, strokeWidth <= maxStrokeWidth else {
+            throw RasterError.invalid("stroke width \(strokeWidth): must be finite and in 0...\(Int(maxStrokeWidth))")
+        }
     }
 
     /// The stroke's coverage at `edge` pixels from its near side, `width` wide:

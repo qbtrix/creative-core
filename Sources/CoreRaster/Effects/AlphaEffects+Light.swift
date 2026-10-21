@@ -55,9 +55,7 @@ extension PixelBuffer {
     private func lit(color: RGBA, dx: Double, dy: Double, reach: Double, scale: Double, inner: Bool,
                      effect: String, reachName: String) throws -> PixelBuffer {
         guard color.isFinite else { throw RasterError.invalid("\(effect) color \(color): must be finite") }
-        guard reach.isFinite, reach >= 0, reach <= Self.maxLightReach else {
-            throw RasterError.invalid("\(effect) \(reachName) \(reach): must be finite and in 0...\(Int(Self.maxLightReach))")
-        }
+        try Self.checkLightReach(reach, effect: effect, reachName: reachName)
         guard scale > 0 else { return self }
         let work = Self.lightWork(effect: effect, reachName: reachName, reach: reach, dx: dx, dy: dy)
         let mask = try blurredAlpha(reach: reach, inner: inner, pad: work.pad, cause: work.cause, remedy: work.remedy)
@@ -82,6 +80,15 @@ extension PixelBuffer {
             }
         }
         return PixelBuffer(checkedWidth: width, height: height, storage: out)
+    }
+
+    /// Throws `RasterError.invalid` naming `effect` and `reachName` unless
+    /// `reach` is finite and in 0...`maxLightReach`; shared by the single
+    /// effects and the style stack's light layers.
+    static func checkLightReach(_ reach: Double, effect: String, reachName: String) throws {
+        guard reach.isFinite, reach >= 0, reach <= maxLightReach else {
+            throw RasterError.invalid("\(effect) \(reachName) \(reach): must be finite and in 0...\(Int(maxLightReach))")
+        }
     }
 
     /// The padding a side of a glow or shadow's work buffer, and the words

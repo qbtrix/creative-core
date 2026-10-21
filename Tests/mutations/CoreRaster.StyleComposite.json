@@ -9,8 +9,8 @@
   {
     "note": "fill opacity applied to effects, so a glow under a layer at fill opacity 0 vanishes with it, caught by StyleCompositeTests.fillOpacityFadesOnlyTheLayer",
     "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
-    "anchor": "try canvas.composite(under.source, x: 0, y: 0, mode: under.mode, opacity: under.opacity)\n        }\n        var sum",
-    "replacement": "try canvas.composite(under.source, x: 0, y: 0, mode: under.mode, opacity: under.opacity * stack.fillOpacity)\n        }\n        var sum",
+    "anchor": "try canvas.composite(layer.source, x: 0, y: 0, mode: layer.mode, opacity: layer.opacity)\n                    continue",
+    "replacement": "try canvas.composite(layer.source, x: 0, y: 0, mode: layer.mode, opacity: layer.opacity * stack.fillOpacity)\n                    continue",
     "filter": "StyleCompositeTests"
   },
   {
@@ -23,8 +23,8 @@
   {
     "note": "layer composited src-over onto knocked-out under layers, so a lone drop shadow or outside stroke is lighter at the edge than the single effect, caught by StyleCompositeTests.loneShadowAndOutsideStrokeEqualTheEffect",
     "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
-    "anchor": "sum[i] += src[i] * stack.fillOpacity",
-    "replacement": "sum[i] = src[i] * stack.fillOpacity + sum[i] * (1 - src[i - i % 4 + 3] * stack.fillOpacity)",
+    "anchor": "sum[i] += src[i] * fillOpacity",
+    "replacement": "sum[i] = src[i] * fillOpacity + sum[i] * (1 - src[i - i % 4 + 3] * fillOpacity)",
     "filter": "StyleCompositeTests"
   },
   {
@@ -37,8 +37,8 @@
   {
     "note": "under-layer mode ignored, so a Screen glow over a drop shadow draws as Normal, caught by StyleCompositeTests.screenGlowOverShadowDiffersFromNormal",
     "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
-    "anchor": "try canvas.composite(under.source, x: 0, y: 0, mode: under.mode, opacity: under.opacity)",
-    "replacement": "try canvas.composite(under.source, x: 0, y: 0, mode: .normal, opacity: under.opacity)",
+    "anchor": "mode: layer.mode, opacity: layer.opacity)\n                    continue",
+    "replacement": "mode: .normal, opacity: layer.opacity)\n                    continue",
     "filter": "StyleCompositeTests"
   },
   {
@@ -131,5 +131,40 @@
     "anchor": "hole = max(inside - alpha, 0) * layer.opacity",
     "replacement": "hole = max(inside - alpha, 0)",
     "filter": "StyleCompositeCoverageTests"
+  },
+  {
+    "note": "styled accepts any number of entries, so a stack of 65 draws instead of throwing, caught by StyleCompositeTests.tooManyEntriesThrow",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": "guard stack.entries.count <= LayerStyleStack.maxEntries else {",
+    "replacement": "guard stack.entries.count <= Int.max else {",
+    "filter": "StyleCompositeTests"
+  },
+  {
+    "note": "fill opacity floor, so a layer at fill opacity 0 still shows at half, caught by StyleCompositeTests.fillOpacityFadesOnlyTheLayer",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": "sum[i] += src[i] * fillOpacity",
+    "replacement": "sum[i] += src[i] * max(fillOpacity, 0.5)",
+    "filter": "StyleCompositeTests"
+  },
+  {
+    "note": "streamed composite adds the layer before every over-layer, not once, caught by StyleCompositeCoverageTests.streamedEqualsEveryLayerDrawnFirst",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": "if !filled { (canvas, filled)",
+    "replacement": "if true { (canvas, filled)",
+    "filter": "StyleCompositeCoverageTests"
+  },
+  {
+    "note": "streamed composite never adds the layer when every layer is under it, so a lone drop shadow loses the layer, caught by StyleCompositeTests.loneShadowAndOutsideStrokeEqualTheEffect",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": "return filled ? canvas : try adding(onto: canvas, fillOpacity: stack.fillOpacity)",
+    "replacement": "return canvas",
+    "filter": "StyleCompositeTests"
+  },
+  {
+    "note": "shared light reach check uncapped, so a 2000 px drop shadow blur is drawn instead of refused, caught by StyleCompositeTests.shadowBlurErrorNamesBlur",
+    "file": "Sources/CoreRaster/Effects/AlphaEffects+Light.swift",
+    "anchor": "guard reach.isFinite, reach >= 0, reach <= maxLightReach else {",
+    "replacement": "guard reach.isFinite, reach >= 0 else {",
+    "filter": "StyleCompositeTests"
   }
 ]
