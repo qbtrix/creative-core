@@ -90,8 +90,9 @@ private struct SplitMix64: RandomNumberGenerator {
     func freshBackendSupportsLandedFamiliesAndIsHealthy() throws {
         let backend = try Self.backend()
         #expect(backend.isHealthy && backend.residentBytes == 0 && backend.capabilities.lastError == nil)
-        let landed: Set<RenderOp> = backend.device.readWriteTextureSupport == .tier2 ? [.display, .transform, .resample, .adjust, .blur, .retouch, .composite, .blendSeparable, .blendNonSeparable] : [.display, .transform, .resample, .adjust, .blur, .retouch]
-        #expect(backend.supports == landed, "only the families whose slices landed (MB-3, MB-7, MB-8, MB-12, MB-14, MB-15; MB-4, MB-6 and MB-10 on read-write tier 2)")
+        let anyTier: Set<RenderOp> = [.display, .transform, .resample, .adjust, .blur, .retouch, .style]
+        let landed = backend.device.readWriteTextureSupport == .tier2 ? anyTier.union([.composite, .blendSeparable, .blendNonSeparable]) : anyTier
+        #expect(backend.supports == landed, "only the families whose slices landed (MB-3, MB-7, MB-8, MB-12, MB-14, MB-15, and LE-metal's style on buffers; MB-4, MB-6 and MB-10 on read-write tier 2)")
         #expect(backend.name.hasPrefix("Metal ("))
     }
 
