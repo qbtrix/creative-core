@@ -1,11 +1,9 @@
-// StyleWalkTests.swift: layer-style-engine LE-10, journey KJ-LE. A white 400 x 300 rounded-rect badge on
-// transparency, padded on each side by its stack's `reach`, styled with drop shadow, outer glow, outside
-// stroke, gradient overlay, inner shadow and an inner smooth bevel through a `RenderDispatcher` with Metal
-// off: it `==` the direct `styled` call (the Metal-on leg is MetalStyleWalkTests, in the one target that may
-// import Metal). The shadow alone ends 6 px right and down of the badge, the bevel lights the edges facing
-// 120° and darkens the ones facing away, and a disabled entry changes nothing. Then the badge goes into a PSD
-// the test writes with that stack as its `lfx2` block, and `PSD.read` gives the stack back within the
-// file's precision (offsets and gradient ends to 1e-9 px).
+// StyleWalkTests.swift: layer-style-engine LE-10, journey KJ-LE. A white 400 x 300 rounded-rect badge padded
+// by its stack's `reach`, styled with drop shadow, outer glow, outside stroke, gradient overlay, inner shadow
+// and an inner smooth bevel through a `RenderDispatcher` with Metal off, `==` the direct `styled` call (Metal on
+// is MetalStyleWalkTests). The shadow ends 6 px right and down of the badge, the bevel lights the edges facing
+// 120°, a disabled entry changes nothing, and a PSD written with the stack as `lfx2` reads it back (offsets and
+// gradient ends to 1e-9 px).
 import CoreColor
 import CoreRaster
 import CoreRender
@@ -207,14 +205,6 @@ indirect enum Desc {
     }
 
     var type: String {
-        switch self {
-        case .obj: "Objc"
-        case .doub: "doub"
-        case .untf: "UntF"
-        case .long: "long"
-        case .bool: "bool"
-        case .enm: "enum"
-        case .list: "VlLs"
-        }
+        switch self { case .obj: "Objc"; case .doub: "doub"; case .untf: "UntF"; case .long: "long"; case .bool: "bool"; case .enm: "enum"; case .list: "VlLs" }
     }
 }

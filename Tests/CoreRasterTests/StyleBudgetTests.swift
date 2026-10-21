@@ -1,9 +1,6 @@
-// StyleBudgetTests.swift: the layer-style-engine CPU budget (LE-10): the KJ-LE walk's stack (drop shadow,
-// outer glow, outside stroke, gradient overlay, inner shadow, inner smooth bevel) on a 2,000 x 2,000 layer
-// takes at most 250 ms. Release-only and reported: a debug build skips it (the walk itself, StyleWalkTests,
-// proves the result), so no wall-clock check can flake the gate; the Mac finisher runs it optimized. The
-// time is the median of three runs, printed as `budget <row>: <ms> ms (budget <ms> ms)`. The Metal row
-// (16 ms p95 per step) is MetalStyleWalkTests, in the one target that may import Metal.
+// StyleBudgetTests.swift: the layer-style-engine CPU budget (LE-10): the KJ-LE walk's stack on a 2,000 x 2,000
+// layer takes at most 250 ms, the median of three runs. Release-only and reported (debug skips it, so no clock
+// can flake the gate; the walk proves the result). The Metal row is MetalStyleWalkTests.
 import CoreRaster
 import Testing
 
