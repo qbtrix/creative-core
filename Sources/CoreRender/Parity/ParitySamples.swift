@@ -110,6 +110,7 @@ extension ParityHarness {
             case .affine: return try AffineSamples.all
             case .effect: return try EffectSamples.all
             case .color: return try ColorSamples.all
+            case .style: return try StyleSamples.all
             }
         }
     }

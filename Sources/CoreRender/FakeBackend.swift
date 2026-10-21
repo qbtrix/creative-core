@@ -7,9 +7,9 @@
 // ops (blur, unsharp, adjust, clone) return a new surface with the pixels
 // unchanged, and composite checks both surfaces and leaves `b` alone. The W1
 // calls (engine-contracts EC-3) follow the same rules: `transformed` gives a
-// blank surface of the asked size, `flipped` and `applying` the pixels
-// unchanged, and both W1 composites leave `b` alone; each records its
-// arguments (`Call.maskedComposite` and the four after it), and `adjusted` is
+// blank surface of the asked size, `flipped`, `applying` and `styled` the
+// pixels unchanged, and both W1 composites leave `b` alone; each records its
+// arguments (`Call.maskedComposite` and the five after it), and `adjusted` is
 // gated by its adjustment's `family`, so a `.color` case needs `.color`.
 // Invariants: every method records its call first; an op outside `supports`
 // then throws `unsupported` with the family that gates it; a surface this fake
@@ -43,6 +43,8 @@ public struct FakeBackend: RenderBackend {
         case compositeThrough(AffineMatrix, mode: BlendMode, opacity: Float, filter: ResampleFilter)
         /// `applying` (`.effect`), with its effect.
         case applying(LayerEffect)
+        /// `styled` (`.style`), with its stack.
+        case styled(LayerStyleStack)
     }
 
     public let name: String
@@ -144,6 +146,9 @@ public struct FakeBackend: RenderBackend {
     }
     public func applying(_ s: RenderSurface, _ effect: LayerEffect) throws -> RenderSurface {
         store.insert(try input(s, .effect, recording: .applying(effect)))
+    }
+    public func styled(_ s: RenderSurface, _ stack: LayerStyleStack) throws -> RenderSurface {
+        store.insert(try input(s, .style, recording: .styled(stack)))
     }
 
     /// Throws `surfaceMismatch` unless `b` is a live surface of this fake.
