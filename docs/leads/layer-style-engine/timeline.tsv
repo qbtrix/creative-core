@@ -33,3 +33,5 @@ utc	stage	event	ref	note
 2026-10-21T01:50:43Z	heartbeat	#792 Metal in progress; #793 Metal queued; LE-9a building; no dev CI past run 425
 2026-10-21T02:01:53Z	LE-8	#792 Metal (macOS) green 01:50Z, awaiting lane
 2026-10-21T02:01:53Z	LE-9a	ready on les/le-9 0ded51b9 (9 files, 395 lines), opens after #792
+2026-10-21T02:09:58Z	LE-8	merged #792 at 2d242a0d
+2026-10-21T02:09:58Z	heartbeat	#793 Metal (macOS) still queued since 01:38Z; LE-9a builder to open after rebase
