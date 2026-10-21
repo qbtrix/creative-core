@@ -50,3 +50,4 @@ utc	stage	event	ref	note
 2026-10-21T04:34:23Z	LE-metal	#796 green but unmerged: lane last ran 03:46 (Metal still running), sparse schedule; body edit at 04:36 to fire the lane edited trigger
 2026-10-21T04:35:12Z	LE-metal	#796 merged as 0407c94f after the edited-trigger lane run; LE-9b builder resumed
 2026-10-21T04:42:20Z	LE-metal	LE-9b open as #797 head 7facfdb4, gated, fast-lane; Metal (macOS) queued
+2026-10-21T04:55:57Z	LE-metal	#797 Metal red: landed set lacks .style; samplesMatchTheCPU style/stroke-center worst 204 (63 px). Fix round 2/2 to a83f4fc
