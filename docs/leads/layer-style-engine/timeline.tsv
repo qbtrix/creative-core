@@ -52,3 +52,4 @@ utc	stage	event	ref	note
 2026-10-21T04:42:20Z	LE-metal	LE-9b open as #797 head 7facfdb4, gated, fast-lane; Metal (macOS) queued
 2026-10-21T04:55:57Z	LE-metal	#797 Metal red: landed set lacks .style; samplesMatchTheCPU style/stroke-center worst 204 (63 px). Fix round 2/2 to a83f4fc
 2026-10-21T05:05:41Z	le-metal-size	#797 at 16 files lost fast-lane; chose to revert C4 part edit on le-9b (15 files) and fold the sentence into LE-10 (fold rule <50 lines)
+2026-10-21T05:11:09Z	le-metal-15	#797 back to 15 files at aceafc6d, fast-lane re-added, Metal queued; C4 sentence handed to LE-10
