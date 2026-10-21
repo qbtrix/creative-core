@@ -130,3 +130,4 @@ Next: builders on LE-a2 (les/le-a2), LE-3 (les/le-3) and LE-6 (les/le-6) from de
 - 2026-10-21T12:32:13Z round 3: mutation run 200 caught, none escaped so far; robustness/design critic running.
 - 2026-10-21T12:55:31Z round 3: mutation run 337 caught, none escaped so far; robustness/design critic running.
 - 2026-10-21T12:56:00Z round 3: mutation run 339/339 caught in 60.1 min, all by assertions; tests critic launched; robustness/design critic still running.
+- 13:14Z round 3 robustness/design critic: 1 major, verified. A repeated effect key (two DrSh, or two multi lists) is kept, not noted, so a crafted file can push the stack past 64 entries. The tests critic is still running.

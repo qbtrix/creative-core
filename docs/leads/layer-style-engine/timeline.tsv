@@ -87,3 +87,4 @@ utc	stage	event	ref	note
 2026-10-21T12:32:13Z	round-3	mutate 200 caught 0 escaped so far; robustness/design critic running
 2026-10-21T12:55:31Z	round-3	mutate 337 caught 0 escaped so far; robustness/design critic running
 2026-10-21T12:56:00Z	round-3	mutate 339/339 caught (60.1 min, no timeouts); tests critic launched
+2026-10-21T13:14:09Z	anatomy-r3-critic	robustness/design: 1 major (repeated lfx2 effect key kept, not noted; >64 entries then throw at render), verified in code
