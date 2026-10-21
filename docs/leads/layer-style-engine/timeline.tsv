@@ -19,3 +19,4 @@ utc	stage	event	ref	note
 00:50Z	merge	#789 LE-4 merged (footer stripped by builder)
 00:50Z	build	LE-5 builder started on dev (les/le-5)
 00:59Z	restart	container restart; LE-6b rebased 471fa009 regating; LE-5 builder resumed (WIP in worktree); first LE-6b gate failed only on ThumbnailStoreRecovery flake, mutate PSDEffects 3/3
+01:05Z	pr	#790 LE-6b opened (471fa009, 351 lines, mutate 3/3 PSDEffects), footer stripped before label
