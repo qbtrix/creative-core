@@ -125,3 +125,4 @@ Next: builders on LE-a2 (les/le-a2), LE-3 (les/le-3) and LE-6 (les/le-6) from de
 - 2026-10-21T11:32:14Z round 2: #807 (r2-b8, Bevel/W1/AlphaEffects test gaps m2, m3, m4, m6-B, m7; AlphaEffects#9 now caught in 33s, not by timeout) merged. Note: ThumbnailStoreRecoveryTests timing test flakes under load.
 - 2026-10-21T11:41:55Z round 2: r2-b6 (PSD descriptor tests) on its final gate run; round 3 waits on it.
 - 2026-10-21T11:49:02Z round 2 closed: #809 (r2-b6, PSD descriptor depth and skipped types M1, M2) merged; all round-2 batches in. Round 3 started on dev 6b0aaa1e: gate, validate and mutate --changed-since 3ded188e running (TMPDIR on tmpfs); clarity/contract and robustness/design critics running; tests critic follows the mutation run. Clean rounds so far: 0.
+- 2026-10-21T12:10:16Z round 3: gate CI: PASS on 6b0aaa1e (2240 tests), 1208 anchors resolve; mutation run 108 caught so far, none escaped; clarity/contract and robustness/design critics running.
