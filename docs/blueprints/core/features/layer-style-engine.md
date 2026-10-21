@@ -16,7 +16,8 @@ Metal half.
 **Line:** `line:core` · **Wave:** 7 (`waves.md`) · **Lead branch:** `lead/layer-style-engine`
 **Status:** built. Beta (captain, 2026-10-21: "layer styles in beta,
 shared"). Merged: #780, #785, #786, #788, #789, #790, #791, #792, #793 (LE-7),
-#794 (LE-9a), #PR9A2 (LE-9a2), #PR9B (LE-9b) and this packet's LE-z PR.
+#794 (LE-9a), #795 (the PSD effect colour fix the walk found), #796 (LE-9a2),
+#PR9B (LE-9b) and this packet's LE-z PR.
 
 **Covers:** creative-apps feature map S2 (the engine half of layer styles;
 packet `suiteui/layer-styles` in creative-apps); the core half of
@@ -273,7 +274,7 @@ backends and the two budget numbers. Each slice's last merge is followed by a
 ## Where the code differs from this packet
 
 - LE-9 shipped as three PRs: LE-9a (shadow, glow and overlay layers, #794),
-  LE-9a2 (stroke and bevel layers, #PR9A2) and LE-9b (Metal claims `style`:
+  LE-9a2 (stroke and bevel layers, #796) and LE-9b (Metal claims `style`:
   the composite and the parity suite, #PR9B).
 - There is no `ParityTolerance.style`. Metal style output is compared to the
   CPU at the LE-9a tolerance, `MetalStyleTests.expectClose` (2 levels, edge
