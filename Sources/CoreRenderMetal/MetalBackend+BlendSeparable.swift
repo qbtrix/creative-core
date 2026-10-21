@@ -11,11 +11,13 @@ import Metal
 
 extension MetalBackend {
     /// The in-place kernel's key and MSL for `mode`: `composite_normal` for `.normal`, `blendSeparable_<mode>`
-    /// for the other separable modes, `blendNonSeparable_<mode>` for hue, saturation, color and luminosity.
+    /// for the other separable modes (linear dodge and burn among them, LE-7), `blendNonSeparable_<mode>` for hue,
+    /// saturation, color and luminosity. A mode whose family has no kernel for it throws `unsupported`.
     static func compositeKernel(for mode: BlendMode) throws -> (key: PipelineKey, source: String) {
         switch RenderOp(compositing: mode) {
         case .composite: return (CompositeShader.key, CompositeShader.source)
-        case .blendSeparable: return (BlendSeparableShader.key(mode), BlendSeparableShader.source)
+        case .blendSeparable where BlendSeparableShader.modes.contains(mode):
+            return (BlendSeparableShader.key(mode), BlendSeparableShader.source)
         case .blendNonSeparable: return (BlendNonSeparableShader.key(mode), BlendNonSeparableShader.source)
         default: throw RenderError.unsupported(RenderOp(compositing: mode))
         }

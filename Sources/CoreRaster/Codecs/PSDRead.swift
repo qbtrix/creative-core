@@ -29,7 +29,7 @@ import Foundation
 
 extension PSD {
     /// Opens PSD bytes. Throws a `CodecError` for damaged or unsupported files.
-    /// A blend key this reader does not know opens as `.normal`.
+    /// A blend key this reader does not know opens as `.normal` and adds a note naming it.
     public static func read(_ data: Data) throws -> LayeredImage {
         var reader = ByteReader(data)
         let header = try PSDHeader(&reader)
@@ -94,12 +94,13 @@ extension PSD {
                 }
                 let key = record.sectionKey ?? record.blendKey
                 node = .group(LayerGroup(name: record.name, children: current, opacity: record.opacityFraction,
-                                         blendMode: key == "pass" ? nil : blendMode(key),
+                                         blendMode: key == "pass" ? nil : blendMode(key, record.name, &notes),
                                          isHidden: record.isHidden, isOpen: type == 1))
                 if record.effects != nil || record.oldEffects { notes.append("\(record.name): layer effects (not kept)") }
                 current = parent
             } else {
                 var layer = try pixelLayer(record, planes, colorChannels: header.colorChannels, depth: header.depth)
+                layer.blendMode = blendMode(record.blendKey, record.name, &notes)
                 let (style, styleNotes) = PSDEffects.style(record.effects, fill: record.fill, oldBlock: record.oldEffects,
                                                            layer: record.name, width: record.rect.width,
                                                            height: record.rect.height, light: light)
@@ -133,7 +134,7 @@ extension PSD {
                               x: m.rect.left, y: m.rect.top, defaultCoverage: Float(m.color) / 255, isDisabled: m.flags & 0x02 != 0)
         }
         return PixelLayer(name: record.name, pixels: pixels, x: rect.left, y: rect.top, opacity: record.opacityFraction,
-                          blendMode: blendMode(record.blendKey), isHidden: record.isHidden,
+                          isHidden: record.isHidden,
                           clipsToBelow: record.clipping != 0, mask: mask)
     }
 
@@ -219,10 +220,17 @@ extension PSD {
     static let blendModes: [String: BlendMode] = [
         "norm": .normal, "mul ": .multiply, "scrn": .screen, "over": .overlay, "dark": .darken, "lite": .lighten,
         "div ": .colorDodge, "idiv": .colorBurn, "hLit": .hardLight, "sLit": .softLight, "diff": .difference,
-        "smud": .exclusion, "hue ": .hue, "sat ": .saturation, "colr": .color, "lum ": .luminosity]
+        "smud": .exclusion, "hue ": .hue, "sat ": .saturation, "colr": .color, "lum ": .luminosity,
+        "lddg": .linearDodge, "lbrn": .linearBurn]
 
-    /// A blend key's mode; a key this reader does not know opens as normal.
-    private static func blendMode(_ key: String) -> BlendMode { blendModes[key] ?? .normal }
+    /// A blend key's mode; a key this reader does not know opens as normal and notes its name.
+    private static func blendMode(_ key: String, _ layer: String, _ notes: inout [String]) -> BlendMode {
+        guard let mode = blendModes[key] else {
+            notes.append("\(layer): blend mode \(key) (not kept)")
+            return .normal
+        }
+        return mode
+    }
 }
 
 /// The file header: canvas size, channel count and how many of them are colour.

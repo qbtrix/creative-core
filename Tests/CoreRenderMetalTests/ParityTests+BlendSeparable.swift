@@ -1,5 +1,5 @@
 // ParityTests+BlendSeparable.swift: MB-5 enables `ParityTests/blendSeparable` (metal-backend) and owns this
-// file. All twelve separable modes at opacities 0, 0.37, 1 on the seeded parity set and on multi-tile sources
+// file. All fourteen separable modes (linear dodge and burn since LE-7) at opacities 0, 0.37, 1 on the seeded parity set and on multi-tile sources
 // off every edge match the CPU on the GPU's pixels within `.standard`; MB-10 enables the non-separable modes
 // beside them (their parity is `ParityTests/blendNonSeparable`). MB-6 enables `.blendSeparable` at init on read-write tier 2, so this runs through the public
 // composite path (opaque rows blitted at opacity 1). Skipped without a device; returns early without tier 2.
@@ -18,7 +18,7 @@ extension ParityTests {
             guard metal.supports.contains(.blendSeparable) else { return }
             try Self.expectGoldens(for: .blendSeparable, on: metal)
             let modes = BlendMode.allCases.filter { RenderOp(compositing: $0) != .blendNonSeparable }
-            #expect(modes.count == 12)
+            #expect(modes.count == 14)
             let samples = try ParityHarness.sampleSet(for: .blendSeparable)
             let (backdrop, source) = (try PixelBuffer.seeded(width: 300, height: 270, seed: 0xB1E0), try PixelBuffer.seeded(width: 260, height: 200, seed: 0x5E9A))
             let offsets = [(-130, -100), (170, -100), (-130, 170), (170, 170), (20, 35)]
