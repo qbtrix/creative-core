@@ -33,6 +33,7 @@ public struct ParityPack: Equatable, Sendable {
         ParityPack(.transform, tolerance: .standard),
         ParityPack(.resample, tolerance: .standard),
     ] + MaskedCompositeSamples.packs + AffineSamples.packs + EffectSamples.packs + ColorSamples.packs
+        + StyleSamples.packs
 
     /// The golden's file name: the ops' raw values joined by `-`.
     public var name: String { ops.map(\.rawValue).joined(separator: "-") }
@@ -51,14 +52,14 @@ public struct ParityPack: Equatable, Sendable {
 
     /// The height of `sample`'s result: the backdrop's for a composite (offset, masked or through
     /// a matrix), the requested one for a resample or transform, the source's width for a quarter or
-    /// three-quarter turn, else the source's (a flip or an effect keeps it).
+    /// three-quarter turn, else the source's (a flip, an effect or a style keeps it).
     private static func resultHeight(_ sample: ParitySample) -> Int {
         switch sample.call {
         case .composite, .compositeThrough, .maskedComposite: return sample.backdrop?.height ?? sample.source.height
         case let .resampled(_, height, _): return height
         case let .transformed(_, _, height, _): return height
         case .rotated(.degrees90), .rotated(.degrees270): return sample.source.width
-        case .rotated, .display, .gaussianBlur, .adjusted, .cloned, .flipped, .applied: return sample.source.height
+        case .rotated, .display, .gaussianBlur, .adjusted, .cloned, .flipped, .applied, .styled: return sample.source.height
         }
     }
 

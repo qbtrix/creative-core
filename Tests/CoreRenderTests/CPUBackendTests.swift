@@ -201,6 +201,7 @@ private func seededBuffer(width: Int, height: Int, seed: UInt64) throws -> Pixel
                                            mask: mask, maskX: maskX, maskY: maskY)
                     expected = backdrop
                 case .applied(let effects): expected = try effects.reduce(sample.source) { try $0.applying($1) }
+                case .styled(let stack): expected = try sample.source.styled(stack)
                 default:
                     Issue.record("unexpected call for \(op): \(sample.name)")
                     continue

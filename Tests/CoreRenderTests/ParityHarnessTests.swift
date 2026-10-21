@@ -287,25 +287,35 @@ private struct CountingBackend: RenderBackend {
         #expect(hue.contains("mode-hue") && hue.contains("mode-luminosity") && !hue.contains("mode-multiply"))
     }
 
-    /// A golden equal to its input pins nothing: the effect could be removed and still pass.
+    /// A golden equal to its input pins nothing: the effect or style could be removed and still pass.
     @Test func everyEffectSampleChangesItsInput() throws {
         let cpu = CPUBackend()
-        for sample in try ParityHarness.sampleSet(for: .effect) {
-            #expect(try ParityHarness.render(sample, on: cpu) != sample.source, "effect/\(sample.name) leaves its input unchanged")
+        for op in [RenderOp.effect, .style] {
+            for sample in try ParityHarness.sampleSet(for: op) {
+                #expect(try ParityHarness.render(sample, on: cpu) != sample.source, "\(op)/\(sample.name) leaves its input unchanged")
+            }
         }
     }
 
+    @Test func styleSamplesAreStableNamedAndStyled() throws {
+        let style = try ParityHarness.sampleSet(for: .style)
+        #expect(try style == ParityHarness.sampleSet(for: .style) && style.count == 17)
+        #expect(Set(style.map(\.name)).count == style.count, "style: names are unique")
+        #expect(style.allSatisfy { $0.backdrop == nil && $0.source.width == 9 && $0.source.height == 7 })
+        #expect(style.allSatisfy { if case .styled = $0.call { true } else { false } }, "style: every sample is styled")
+    }
+
     @Test func w1FamiliesHaveEmptySetsAndOldFamiliesAreUnchanged() throws {
-        for op in RenderOp.notOnMetalYet.subtracting([.affine, .effect, .maskedComposite]).sorted(by: { $0.rawValue < $1.rawValue }) {
+        for op in RenderOp.notOnMetalYet.subtracting([.affine, .effect, .maskedComposite, .style]).sorted(by: { $0.rawValue < $1.rawValue }) {
             let names = try ParityHarness.sampleSet(for: op).map(\.name)
             // tone-pack filled `.color`: 11 colour cases on the four edge-case sources.
             #expect(names.count == (op == .color ? 44 : 0), "\(op) has no samples until its feature adds them")
             #expect(Set(names).count == names.count, "\(op): names are unique")
             #expect(try ParityHarness.sampleSet(for: op) == ParityHarness.sampleSet(for: op), "\(op)")
         }
-        #expect(ParityPack.all.count == 9 && ParityPack.all.map(\.name) == ["display-blur-adjust-retouch", "composite-blendSeparable",
+        #expect(ParityPack.all.count == 10 && ParityPack.all.map(\.name) == ["display-blur-adjust-retouch", "composite-blendSeparable",
                                                "blendNonSeparable", "transform", "resample", "maskedComposite", "affine",
-                                               "effect", "color"])
+                                               "effect", "color", "style"])
         // FNV-1a over each old family's names, calls and input Float bits: the goldens were cut from these.
         var counts: [String: Int] = [:], prints: [String: UInt64] = [:]
         for op in RenderOp.allCases where !RenderOp.notOnMetalYet.contains(op) {

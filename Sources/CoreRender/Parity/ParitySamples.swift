@@ -48,6 +48,8 @@ public enum ParityCall: Equatable, Sendable {
     /// `composite` of the source onto the backdrop at (`x`, `y`), its coverage scaled by `mask`
     /// with the mask's top-left at (`maskX`, `maskY`) of the backdrop.
     case maskedComposite(x: Int, y: Int, mode: BlendMode, opacity: Float, mask: Mask, maskX: Int, maskY: Int)
+    /// `styled` with the layer style stack.
+    case styled(LayerStyleStack)
 }
 
 /// One named input for one op; `backdrop` is set for the three composite calls only.
@@ -144,6 +146,7 @@ extension ParityHarness {
         case let .transformed(m, w, h, filter): out = try backend.transformed(s, m, width: w, height: h, filter: filter)
         case .flipped(let axis): out = try backend.flipped(s, axis)
         case .applied(let effects): out = try applied(effects, to: s, on: backend, sample.name)
+        case .styled(let stack): out = try backend.styled(s, stack)
         }
         defer { backend.release(out) }
         return try backend.read(out)
