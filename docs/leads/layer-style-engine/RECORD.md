@@ -112,3 +112,4 @@ Next: builders on LE-a2 (les/le-a2), LE-3 (les/le-3) and LE-6 (les/le-6) from de
 - 2026-10-21T08:42:34Z round 2: critic panel launched on 390f4b00 (clarity+contract, robustness+design); the tests lens follows the mutation run. Fixers r2-b1 and r2-b2 are still working. LE-z waits on a dev CI run past 426.
 - 2026-10-21T09:01:53Z round 2: #801 and #802 merged. Robustness+design critic: 1 major (styled keeps every effect buffer alive), 4 minor. Fix batches r2-b3 (PSD test gaps and silent drops) and r2-b4 (stream styled, entry cap) launched.
 - 2026-10-21T09:04:07Z round 2: clarity+contract critic found 1 major and 4 minors, all assigned (r2-b3, r2-b4, new docs batch r2-b5). Round is not clean. Mutation on dev: 265 caught, none escaped so far.
+- 09:26Z: Round 2 mutate scored 276/276 (AlphaEffects#9 was caught only by a timeout). Dev CI run 427 on 7b77adc8 is in progress and covers LE-z (#798). Fixers r2-b3, b4 and b5 and the tests critic are still running.
