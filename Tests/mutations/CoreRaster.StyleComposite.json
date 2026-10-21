@@ -47,5 +47,89 @@
     "anchor": "guard strokeWidth > 0 else { return try PixelBuffer(width: width, height: height) }",
     "replacement": "guard strokeWidth >= 0 else { return try PixelBuffer(width: width, height: height) }",
     "filter": "StyleCompositeTests"
+  },
+  {
+    "note": "reach centre stroke counts its full width, so padding for a centre stroke is twice what it draws, caught by StyleCompositeCoverageTests.reachCountsEveryOuterTerm",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": "case .stroke(_, let width, .center): far = width / 2",
+    "replacement": "case .stroke(_, let width, .center): far = width",
+    "filter": "StyleCompositeCoverageTests"
+  },
+  {
+    "note": "reach outer glow counts as 0, so a caller pads nothing for a glow and clips it, caught by StyleCompositeCoverageTests.reachCountsEveryOuterTerm",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": "case let .outerGlow(_, _, size): far = size",
+    "replacement": "case let .outerGlow(_, _, size): far = size * 0",
+    "filter": "StyleCompositeCoverageTests"
+  },
+  {
+    "note": "reach outside stroke counts half its width, so a caller clips the outer half of the stroke, caught by StyleCompositeCoverageTests.reachCountsEveryOuterTerm",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": "case .stroke(_, let width, .outside): far = width",
+    "replacement": "case .stroke(_, let width, .outside): far = width / 2",
+    "filter": "StyleCompositeCoverageTests"
+  },
+  {
+    "note": "reach bevel exclusion flipped, so an inner bevel pads and an outer bevel does not, caught by StyleCompositeCoverageTests.reachCountsEveryOuterTerm",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": "where bevel.shape != .innerBevel: far = bevel.size",
+    "replacement": "where bevel.shape != .outerBevel: far = bevel.size",
+    "filter": "StyleCompositeCoverageTests"
+  },
+  {
+    "note": "reach counts disabled entries, so a switched-off glow still pads the layer, caught by StyleCompositeCoverageTests.reachCountsEveryOuterTerm",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": "for entry in entries where entry.isEnabled {",
+    "replacement": "for entry in entries {",
+    "filter": "StyleCompositeCoverageTests"
+  },
+  {
+    "note": "reach not capped at maxReach, so a huge glow asks for a huge padding, caught by StyleCompositeCoverageTests.reachCountsEveryOuterTerm",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": "return Int(min(most, Self.maxReach).rounded(.up))",
+    "replacement": "return Int(most.rounded(.up))",
+    "filter": "StyleCompositeCoverageTests"
+  },
+  {
+    "note": "paint order gradient overlay swapped with colour overlay, so a gradient overlay covers the colour overlay, caught by StyleCompositeCoverageTests.paintOrderIsFixedForEveryRank",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": "case .overlay(.gradient): 3\n        case .overlay(.color): 4",
+    "replacement": "case .overlay(.gradient): 4\n        case .overlay(.color): 3",
+    "filter": "StyleCompositeCoverageTests"
+  },
+  {
+    "note": "paint order inner glow swapped with inner shadow, so an inner glow covers the inner shadow, caught by StyleCompositeCoverageTests.paintOrderIsFixedForEveryRank",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": "case .innerGlow: 5\n        case .innerShadow: 6",
+    "replacement": "case .innerGlow: 6\n        case .innerShadow: 5",
+    "filter": "StyleCompositeCoverageTests"
+  },
+  {
+    "note": "inner spread ignored, so an inner glow or shadow with spread does not choke inward, caught by StyleCompositeCoverageTests.innerSpreadChokesInward",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": "data[o + 3] = inner ? min(data[o + 3], 1 - grown) : max(data[o + 3], grown)",
+    "replacement": "data[o + 3] = inner ? data[o + 3] : max(data[o + 3], grown)",
+    "filter": "StyleCompositeCoverageTests"
+  },
+  {
+    "note": "spread ramp a pixel short, so a spread stops one pixel before its choke, caught by StyleCompositeCoverageTests.innerSpreadChokesInward",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": "let grown = Float(min(max(choke - d + 1, 0), 1))",
+    "replacement": "let grown = Float(min(max(choke - d, 0), 1))",
+    "filter": "StyleCompositeCoverageTests"
+  },
+  {
+    "note": "clipped hole drops the layer, so an inner glow under a faded fill paints nothing inside the shape, caught by StyleCompositeCoverageTests.clippedEffectShowsThroughAFadedFill",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": "hole = max(inside - alpha, 0) * layer.opacity",
+    "replacement": "hole = max(inside - alpha, 0) * 0",
+    "filter": "StyleCompositeCoverageTests"
+  },
+  {
+    "note": "clipped hole ignores the entry opacity, so a half-opacity inner glow under a faded fill shows at full, caught by StyleCompositeCoverageTests.clippedEffectShowsThroughAFadedFill",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": "hole = max(inside - alpha, 0) * layer.opacity",
+    "replacement": "hole = max(inside - alpha, 0)",
+    "filter": "StyleCompositeCoverageTests"
   }
 ]
