@@ -148,9 +148,11 @@ import Testing
         }
     }
 
-    /// 200 seeded stacks of one to three entries: a stack throws exactly when
-    /// one of its values is NaN, infinite or past its cap, and otherwise draws
-    /// a finite buffer of the same size.
+    /// 200 seeded stacks of one to three entries, with colour and gradient
+    /// fills, seeded on/off switches and entry opacities: a stack throws
+    /// exactly when an entry opacity or the fill opacity is bad, or an active
+    /// entry (enabled, opacity above 0) has a value NaN, infinite or past its
+    /// cap, and otherwise draws a finite buffer of the same size.
     @Test func fuzz() throws {
         let badge = try StyleFixtures.badge(width: 24, height: 20, pad: 5)
         var rng = SplitMix64(seed: 0x5_7F1E)
@@ -166,21 +168,35 @@ import Testing
             func spread() -> Double { value([0, 0.5, 1]) }
             var entries: [StyleEntry] = []
             for _ in 0..<(1 + Int(rng.next() % 3)) {
+                let wasBad = bad
+                bad = false
                 let tint = RGBA(r: 0.2, g: 0.4, b: Float(value([0, 0.5, 1], capped: false)), a: 1)
                 let op: StyleOp
-                switch rng.next() % 7 {
+                switch rng.next() % 8 {
                 case 0: op = .dropShadow(color: tint, dx: value(capped: false), dy: value(capped: false), spread: spread(), blur: value())
                 case 1: op = .innerShadow(color: tint, dx: value(capped: false), dy: value(capped: false), spread: spread(), blur: value())
                 case 2: op = .outerGlow(color: tint, spread: spread(), size: value())
                 case 3: op = .innerGlow(color: tint, spread: spread(), size: value())
                 case 4: op = .stroke(fill: .color(tint), width: value(), position: StrokePosition.allCases[Int(rng.next() % 3)])
                 case 5: op = .overlay(.color(tint))
+                case 6:
+                    let count = 2 + Int(rng.next() % 3)
+                    let stops = (0..<count).map { RasterGradientStop(offset: Float($0) / Float(count - 1), color: $0 == 0 ? tint : StyleFixtures.white) }
+                    let from = Mask.Point(x: value(capped: false), y: value(capped: false))
+                    let to = Mask.Point(x: from.x + 3 + value(capped: false), y: from.y - 2)
+                    let shape = [RasterGradientShape.linear, .radial, .angle, .reflected, .diamond][Int(rng.next() % 5)]
+                    let fill = StyleFill.gradient(stops: stops, shape: shape, from: from, to: to)
+                    op = rng.next() % 2 == 0 ? .overlay(fill) : .stroke(fill: fill, width: value(), position: StrokePosition.allCases[Int(rng.next() % 3)])
                 default:
                     var bevel = StyleFixtures.bevel(size: value())
                     bevel.highlight = tint
                     op = .bevel(bevel)
                 }
-                entries.append(StyleEntry(op: op, mode: rng.next() % 2 == 0 ? .normal : .multiply))
+                // A bad value in an inactive entry is never read; a bad opacity always throws.
+                let isEnabled = rng.next() % 4 != 0
+                let opacity = [Float(0), 0.5, 1, 1, .nan, .infinity, 2][Int(rng.next() % 7)]
+                bad = wasBad || (bad && isEnabled && opacity > 0) || !(0...1).contains(opacity)
+                entries.append(StyleEntry(op: op, mode: rng.next() % 2 == 0 ? .normal : .multiply, opacity: opacity, isEnabled: isEnabled))
             }
             let stack = LayerStyleStack(entries: entries, fillOpacity: Float(value([0, 0.5, 1])))
             if bad {

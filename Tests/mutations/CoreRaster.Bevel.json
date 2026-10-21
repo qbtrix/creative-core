@@ -19,5 +19,40 @@
     "anchor": "return min(max(r, 0), 1)",
     "replacement": "return max(r, 0)",
     "filter": "BevelTests"
+  },
+  {
+    "note": "bevel opacity ignored, so a half-opacity highlight or shadow draws at full, caught by StyleCompositeCoverageTests.bevelOpacityScalesTheLight",
+    "file": "Sources/CoreRaster/Effects/Bevel.swift",
+    "anchor": "let k = cover * opacity, o = i * c",
+    "replacement": "let k = cover, o = i * c",
+    "filter": "StyleCompositeCoverageTests"
+  },
+  {
+    "note": "emboss clipped to the alpha like an inner bevel, so emboss and pillow light nothing outside the edge, caught by StyleCompositeCoverageTests.embossLightsBothSidesOfTheEdge",
+    "file": "Sources/CoreRaster/Effects/Bevel.swift",
+    "anchor": "case .emboss, .pillowEmboss: clip = 1",
+    "replacement": "case .emboss, .pillowEmboss: clip = alpha",
+    "filter": "StyleCompositeCoverageTests"
+  },
+  {
+    "note": "emboss rise starts at the edge, so an emboss rises like an inner bevel, caught by StyleCompositeCoverageTests.riseAndProfilePerShapeAndTechnique",
+    "file": "Sources/CoreRaster/Effects/Bevel.swift",
+    "anchor": "case .emboss: r = 0.5 + t",
+    "replacement": "case .emboss: r = t",
+    "filter": "StyleCompositeCoverageTests"
+  },
+  {
+    "note": "pillow emboss rise at half rate, so a pillow reaches its top at twice the size, caught by StyleCompositeCoverageTests.riseAndProfilePerShapeAndTechnique",
+    "file": "Sources/CoreRaster/Effects/Bevel.swift",
+    "anchor": "case .pillowEmboss: r = 2 * abs(t)",
+    "replacement": "case .pillowEmboss: r = abs(t)",
+    "filter": "StyleCompositeCoverageTests"
+  },
+  {
+    "note": "smooth profile is a straight ramp, so a smooth bevel lights like a chisel, caught by StyleCompositeCoverageTests.riseAndProfilePerShapeAndTechnique",
+    "file": "Sources/CoreRaster/Effects/Bevel.swift",
+    "anchor": "technique == .smooth ? 1 - (1 - r) * (1 - r) : r",
+    "replacement": "technique == .smooth ? r : r",
+    "filter": "StyleCompositeCoverageTests"
   }
 ]
