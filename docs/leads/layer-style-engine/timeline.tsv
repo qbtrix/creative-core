@@ -48,3 +48,4 @@ utc	stage	event	ref	note
 2026-10-21T03:47:03Z	fix-pushed	LE-metal round 1 pushed #796 head 29576313 (exact EDT kernel replaces jump-flood seed for stroke); Metal check queued
 2026-10-21T04:03:10Z	metal-green	#796 Metal (macOS) green at 29576313 after fix round 1; waiting on lane sweep
 2026-10-21T04:34:23Z	LE-metal	#796 green but unmerged: lane last ran 03:46 (Metal still running), sparse schedule; body edit at 04:36 to fire the lane edited trigger
+2026-10-21T04:35:12Z	LE-metal	#796 merged as 0407c94f after the edited-trigger lane run; LE-9b builder resumed
