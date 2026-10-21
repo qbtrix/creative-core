@@ -35,3 +35,4 @@ utc	stage	event	ref	note
 2026-10-21T02:01:53Z	LE-9a	ready on les/le-9 0ded51b9 (9 files, 395 lines), opens after #792
 2026-10-21T02:09:58Z	LE-8	merged #792 at 2d242a0d
 2026-10-21T02:09:58Z	heartbeat	#793 Metal (macOS) still queued since 01:38Z; LE-9a builder to open after rebase
+2026-10-21T02:10:56Z	LE-9a	opened #794 (14b4871e, 9 files 395 lines), Metal (macOS) queued; 9a2 building
