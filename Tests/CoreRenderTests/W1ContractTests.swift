@@ -51,8 +51,8 @@ import Testing
         #expect(RenderOp.allCases.suffix(5) == [.maskedComposite, .affine, .effect, .color, .style])
     }
 
-    @Test func notOnMetalYetIsExactlyTheFive() {
-        #expect(RenderOp.notOnMetalYet == [.maskedComposite, .affine, .effect, .color, .style])
+    @Test func notOnMetalYetIsExactlyTheFour() {
+        #expect(RenderOp.notOnMetalYet == [.maskedComposite, .affine, .effect, .color], "style went to Metal in LE-9b")
         #expect(RenderOp.notOnMetalYet.isSubset(of: Set(RenderOp.allCases)))
         #expect(RenderOp.notOnMetalYet.isDisjoint(with: Set(RenderOp.allCases.prefix(9))),
                 "every family from before W1 may run on Metal")
