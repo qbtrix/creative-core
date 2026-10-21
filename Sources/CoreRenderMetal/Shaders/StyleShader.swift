@@ -2,7 +2,7 @@
 // over whole-image float4 buffers. `style_pad` spreads the alpha on the distance field (choke > 0 only) and pads it
 // with the outside value for the glows' box blur; `style_light` reads that mask bilinearly at (x - dx, y - dy) and
 // tints it (an outer one knocked out by the alpha); `style_edge_seed` seeds the anti-aliased edge points of a copy
-// padded by 1 px, `style_edt_pass` finds each pixel's nearest seed as CoreRaster's exact transform does (columns,
+// padded by 1 px (a subnormal alpha read from its bits, since the GPU flushes it), `style_edt_pass` finds each pixel's nearest seed as CoreRaster's exact transform does (columns,
 // then rows; not the jump flood, whose ties differ in thin stems), and `style_stroke` turns it into the stroke's
 // smoothstep cover of the fill; `style_bevel_height` raises the signed distance through the shape's rise and profile, and
 // `style_bevel_light` leans its central-difference normal toward the light into highlight and shadow (LE-9a2);
@@ -111,6 +111,25 @@ enum StyleShader {
         int ix = x - 1, iy = y - 1;
         return (ix >= 0 && iy >= 0 && ix < w && iy < h) ? clamp(in[iy * w + ix].w, 0.0f, 1.0f) : 0.0f;
     }
+    // A positive subnormal alpha in units of 2^-149 (0 otherwise). The GPU flushes subnormals to 0 in arithmetic and
+    // compares, but CoreRaster reads them in Double, where they are above 0: an edge and part of the gradient.
+    static float style_edge_tiny(device const float4 *in, int w, int h, int x, int y) {
+        int ix = x - 1, iy = y - 1;
+        uint bits = (ix >= 0 && iy >= 0 && ix < w && iy < h) ? as_type<uint>(in[iy * w + ix].w) : 0u;
+        return (bits >> 23) == 0u ? float(bits) : 0.0f;
+    }
+    static bool style_edge_is(device const float4 *in, int w, int h, int x, int y, float opposite) {
+        return style_edge_alpha(in, w, h, x, y) == opposite && (opposite != 0 || style_edge_tiny(in, w, h, x, y) == 0);
+    }
+    static float2 style_edge_gradient(device const float4 *in, int w, int h, int x, int y, bool tiny) {
+        float a[9];
+        for (int k = 0; k < 9; k++) {
+            int ax = x + k % 3 - 1, ay = y + k / 3 - 1;
+            a[k] = tiny ? style_edge_tiny(in, w, h, ax, ay) : style_edge_alpha(in, w, h, ax, ay);
+        }
+        float r2 = sqrt(2.0);
+        return float2(a[2] + r2 * a[5] + a[8] - a[0] - r2 * a[3] - a[6], a[6] + r2 * a[7] + a[8] - a[0] - r2 * a[1] - a[2]);
+    }
     static float style_edge_offset(float alpha, float gx, float gy) {
         float u = max(gx, gy), v = min(gx, gy), a1 = 0.5 * v / u;
         if (alpha < a1) { return 0.5 * (u + v) - sqrt(2 * u * v * alpha); }
@@ -123,22 +142,19 @@ enum StyleShader {
         int w = p[0], h = p[1], pw = w + 2, x = int(gid.x), y = int(gid.y), i = y * pw + x;
         if (x >= pw || y >= h + 2) { return; }
         float v = style_edge_alpha(in, w, h, x, y), opposite = v >= 1 ? 0.0 : 1.0;
-        bool seed = (v > 0 && v < 1) || style_edge_alpha(in, w, h, x - 1, y) == opposite
-            || style_edge_alpha(in, w, h, x + 1, y) == opposite || style_edge_alpha(in, w, h, x, y - 1) == opposite
-            || style_edge_alpha(in, w, h, x, y + 1) == opposite;
+        bool seed = ((v > 0 || style_edge_tiny(in, w, h, x, y) > 0) && v < 1)
+            || style_edge_is(in, w, h, x - 1, y, opposite) || style_edge_is(in, w, h, x + 1, y, opposite)
+            || style_edge_is(in, w, h, x, y - 1, opposite) || style_edge_is(in, w, h, x, y + 1, opposite);
         if (!seed) { f[i] = -1; nearest[i] = -1; points[i] = float4(0); return; }
-        float r2 = sqrt(2.0);
-        float gx = style_edge_alpha(in, w, h, x + 1, y - 1) + r2 * style_edge_alpha(in, w, h, x + 1, y)
-            + style_edge_alpha(in, w, h, x + 1, y + 1) - style_edge_alpha(in, w, h, x - 1, y - 1)
-            - r2 * style_edge_alpha(in, w, h, x - 1, y) - style_edge_alpha(in, w, h, x - 1, y + 1);
-        float gy = style_edge_alpha(in, w, h, x - 1, y + 1) + r2 * style_edge_alpha(in, w, h, x, y + 1)
-            + style_edge_alpha(in, w, h, x + 1, y + 1) - style_edge_alpha(in, w, h, x - 1, y - 1)
-            - r2 * style_edge_alpha(in, w, h, x, y - 1) - style_edge_alpha(in, w, h, x + 1, y - 1);
-        float g = sqrt(gx * gx + gy * gy);
-        float d = g > 0 ? style_edge_offset(v, abs(gx) / g, abs(gy) / g) / g : 0.0;
+        // Where the normal alphas cancel (or are all 0), the subnormal ones set the direction, as in Double.
+        float2 grad = style_edge_gradient(in, w, h, x, y, false);
+        if (length(grad) == 0) { grad = style_edge_gradient(in, w, h, x, y, true); }
+        float g = length(grad);
+        float2 n = g > 0 ? grad / g : float2(0);
+        float off = g > 0 ? style_edge_offset(v, abs(n.x), abs(n.y)) : 0.0;
         f[i] = 0;
         nearest[i] = i;
-        points[i] = float4(float(x) + d * gx, float(y) + d * gy, 1, 0);
+        points[i] = float4(float(x) + off * n.x, float(y) + off * n.y, 1, 0);
     }
     // CoreRaster `DistanceField.envelopePass` (border off) for line gid.x: squared distances in `f` (-1 for none) and
     // their seeds, in exact int64, the breakpoints kept as fractions, so ties fall to the same seed as on the CPU.
