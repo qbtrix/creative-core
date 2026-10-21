@@ -14,10 +14,13 @@ layer effects (`lfx2`) as a `LayerStyleStack` on the layer and names what it
 drops, and `BlendMode` gains Linear Dodge and Linear Burn. Linux-safe but the
 Metal half.
 **Line:** `line:core` · **Wave:** 7 (`waves.md`) · **Lead branch:** `lead/layer-style-engine`
-**Status:** built. Beta (captain, 2026-10-21: "layer styles in beta,
-shared"). Merged: #780, #785, #786, #788, #789, #790, #791, #792, #793 (LE-7),
-#794 (LE-9a), #795 (the PSD effect colour fix the walk found), #796 (LE-9a2),
-#797 (LE-9b) and this packet's LE-z PR.
+**Status:** in progress, not built. Beta (captain, 2026-10-21: "layer styles
+in beta, shared"). Merged: #780, #785, #786, #788, #789, #790, #791, #792, #793
+(LE-7), #794 (LE-9a), #795 (the PSD effect colour fix the walk found), #796
+(LE-9a2) and this packet's LE-z PR (the walk with Metal off, the CPU budget).
+Held: LE-9b (#797, Metal claims `style`) and the walk's Metal leg and Metal
+budget (`MetalStyleWalkTests`, kept on branch `les/le-z-metal`); see the
+contact sheet on #779 (comment 6309081602).
 
 **Covers:** creative-apps feature map S2 (the engine half of layer styles;
 packet `suiteui/layer-styles` in creative-apps); the core half of
@@ -211,11 +214,11 @@ extension RenderBackend { func styled(_ s: RenderSurface, _ stack: LayerStyleSta
 | LE-9a | – | Metal: shadow, glow and overlay light layers on the jump-flood field, cached per surface; turns on `MetalStyleTests` | `Sources/CoreRenderMetal/MetalBackend+Style.swift`, `Sources/CoreRenderMetal/Shaders/StyleShader.swift`, `Sources/CoreRenderMetal/MetalBackend+Distance.swift`, `Tests/CoreRenderMetalTests/MetalStyleTests.swift` | LE-8 | ~390, 6 |
 | LE-9a2 | – | Metal: the stroke layer from CoreRaster's exact separable distance transform (the jump flood picked other seeds in thin stems) and the bevel layers from the cached field | `Sources/CoreRenderMetal/MetalBackend+Style.swift`, `Sources/CoreRenderMetal/Shaders/StyleShader.swift`, `Tests/CoreRenderMetalTests/MetalStrokeBevelTests.swift` | LE-9a | ~300, 4 |
 | LE-9b | – | Metal claims `style`: `styled` composites the layers in paint order in one command buffer (`style_composite`); the warmup compiles the style kernels, `notOnMetalYet` loses `style`; turns on `MetalStyleParityTests` | `Sources/CoreRenderMetal/MetalBackend+Style.swift`, `Sources/CoreRenderMetal/Shaders/StyleShader.swift`, `Sources/CoreRenderMetal/MetalBackend+Warmup.swift`, `Sources/CoreRender/RenderOp.swift`, `Tests/CoreRenderMetalTests/MetalStyleParityTests.swift` | LE-9a2 | ~390, 12 |
-| LE-10 | – | KJ-LE walk; `StyleBudgetTests` (release, `.serialized`); the Metal leg and budget in `MetalStyleWalkTests` | `Tests/CoreRenderTests/StyleWalkTests.swift`, `Tests/CoreRasterTests/StyleBudgetTests.swift`, `Tests/CoreRenderMetalTests/MetalStyleWalkTests.swift` | LE-7, LE-9b | ~330, 3 |
+| LE-10 | – | KJ-LE walk; `StyleBudgetTests` (release, `.serialized`); the Metal leg and budget in `MetalStyleWalkTests` (held with LE-9b) | `Tests/CoreRenderTests/StyleWalkTests.swift`, `Tests/CoreRasterTests/StyleBudgetTests.swift`, `Tests/CoreRenderMetalTests/MetalStyleWalkTests.swift` | LE-7, LE-9b | ~330, 3 |
 | LE-11 | – | The `image-ops` and `corerendermetal` part descriptions; this packet's status line; `feature-done` | `docs/c4/parts/creative-core/coreraster/image-ops.json`, `docs/c4/parts/creative-core/corerendermetal/metal-backend.json`, `docs/blueprints/core/features/layer-style-engine.md` | LE-10 | ~20, 3 |
 
 LE-7 edits the Metal shader, so its PR gets the `Metal (macOS)` check
-(`metal-pr.yml`), and so do LE-8, LE-9a, LE-9a2, LE-9b and LE-10. LE-2's `LayeredImage` edit is two
+(`metal-pr.yml`), and so do LE-8, LE-9a, LE-9a2, LE-9b and LE-10's held Metal leg. LE-2's `LayeredImage` edit is two
 stored fields with defaults, so no reader or writer changes until LE-6.
 
 ## Build waves
@@ -250,7 +253,7 @@ LE-11 is the status task.
 | LE-9a | `MetalStyleTests`: shadow, glow and overlay layers match CoreRaster's within `MetalStyleTests.expectClose` (2 levels; edge pixels within 8 on at most 0.5% of pixels); the field is encoded once per surface alpha | a kernel drifts or the field recomputes every step | none: kernels |
 | LE-9a2 | `MetalStrokeBevelTests`: stroke and bevel layers within `expectClose` on the style fixtures | a stroke edge or the light drifts | none: kernels |
 | LE-9b | `MetalStyleParityTests`: `styled` within `expectClose` of the CPU on the parity samples and every fixture stack; a second `styled` reuses the cached field | the composite drifts or Metal does not claim `style` | none: kernels |
-| LE-10 | `StyleWalkTests.walk` (Metal off), `MetalStyleWalkTests.walkWithMetalOn`; `StyleBudgetTests`: the walk's stack on a 2,000 × 2,000 layer ≤ 250 ms on the CPU, `MetalStyleWalkTests`: ≤ 16 ms p95 per step on Metal (release, reported) | the walk's checks fail | none |
+| LE-10 | `StyleWalkTests.walk` (Metal off), `MetalStyleWalkTests.walkWithMetalOn` (held with LE-9b); `StyleBudgetTests`: the walk's stack on a 2,000 × 2,000 layer ≤ 250 ms on the CPU, `MetalStyleWalkTests`: ≤ 16 ms p95 per step on Metal (release, reported; held with LE-9b) | the walk's checks fail | none |
 | LE-11 | status line says built; `scripts/c4-assemble --check` | – | – |
 
 ## Quality tests
@@ -258,8 +261,8 @@ LE-11 is the status task.
 | quality row | budget | test |
 |---|---|---|
 | Style stack on a 4 MP layer, CPU | ≤ 250 ms (release) | `StyleBudgetTests.walkStackOn4MPUnder250ms` (reported) |
-| One style step on Metal, resident | ≤ 16 ms p95, field cached | `MetalStyleWalkTests.styleStepP95Under16ms` (reported, Mac) |
-| CPU equals Metal | within `MetalStyleTests.expectClose` on every fixture | `MetalStyleParityTests` |
+| One style step on Metal, resident | ≤ 16 ms p95, field cached | `MetalStyleWalkTests.styleStepP95Under16ms` (reported, Mac; held with LE-9b) |
+| CPU equals Metal | within `MetalStyleTests.expectClose` on every fixture | `MetalStyleParityTests` (held with LE-9b) |
 | Identity at zero | every op at zero strength or disabled `==` identity | `StyleCompositeTests` |
 | Never crashes | NaN, infinite and over-cap parameters throw; 200 seeded stacks; a truncated `lfx2` notes, never throws | `StyleCompositeTests.fuzz`, `PSDEffectsTests.fuzz` |
 
@@ -276,13 +279,17 @@ backends and the two budget numbers. Each slice's last merge is followed by a
 - LE-9 shipped as three PRs: LE-9a (shadow, glow and overlay layers, #794),
   LE-9a2 (stroke and bevel layers, #796; the stroke uses an exact distance
   transform, not the jump flood) and LE-9b (Metal claims `style`:
-  the composite and the parity suite, #797).
-- There is no `ParityTolerance.style`. Metal style output is compared to the
-  CPU at the LE-9a tolerance, `MetalStyleTests.expectClose` (2 levels, edge
-  pixels within 8 on at most 0.5% of pixels), in `MetalStyleParityTests` and
-  the walk's Metal leg; `ParityTolerance.swift` is unchanged.
-- The walk's Metal leg and the Metal budget live in
-  `Tests/CoreRenderMetalTests/MetalStyleWalkTests.swift`: CoreRenderTests and
+  the composite and the parity suite, #797, held: see the contact sheet on
+  #779, comment 6309081602). Until LE-9b lands, Metal does not claim `style`
+  and the dispatcher styles on the CPU.
+- There is no `ParityTolerance.style`. The Metal light layers are compared to
+  CoreRaster's at `MetalStyleTests.expectClose` (2 levels, edge pixels within
+  8 on at most 0.5% of pixels); `MetalStyleParityTests` and the walk's Metal
+  leg use the same tolerance once LE-9b lands; `ParityTolerance.swift` is
+  unchanged.
+- The walk's Metal leg and the Metal budget go in
+  `Tests/CoreRenderMetalTests/MetalStyleWalkTests.swift`, held with LE-9b on
+  branch `les/le-z-metal`: CoreRenderTests and
   CoreRasterTests cannot import CoreRenderMetal, so `StyleWalkTests` runs the
   Metal-off leg and `StyleBudgetTests` the CPU budget. Each file defines the
   walk's stack, since no test target can import another.

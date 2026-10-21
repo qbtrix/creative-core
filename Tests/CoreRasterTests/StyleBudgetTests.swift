@@ -1,6 +1,6 @@
 // StyleBudgetTests.swift: the layer-style-engine CPU budget (LE-10): the KJ-LE walk's stack on a 2,000 x 2,000
 // layer takes at most 250 ms, the median of three runs. Release-only and reported (debug skips it, so no clock
-// can flake the gate; the walk proves the result). The Metal row is MetalStyleWalkTests.
+// can flake the gate; the walk proves the result). The Metal row is held with LE-9b.
 import CoreRaster
 import Testing
 

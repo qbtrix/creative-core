@@ -1,7 +1,7 @@
 // StyleWalkTests.swift: layer-style-engine LE-10, journey KJ-LE. A white 400 x 300 rounded-rect badge padded
 // by its stack's `reach`, styled with drop shadow, outer glow, outside stroke, gradient overlay, inner shadow
-// and an inner smooth bevel through a `RenderDispatcher` with Metal off, `==` the direct `styled` call (Metal on
-// is MetalStyleWalkTests). The shadow ends 6 px right and down of the badge, the bevel lights the edges facing
+// and an inner smooth bevel through a `RenderDispatcher` with Metal off, `==` the direct `styled` call (the Metal-on
+// leg is held with LE-9b). The shadow ends 6 px right and down of the badge, the bevel lights the edges facing
 // 120°, a disabled entry changes nothing, and a PSD written with the stack as `lfx2` reads it back (offsets and
 // gradient ends to 1e-9 px).
 import CoreColor
