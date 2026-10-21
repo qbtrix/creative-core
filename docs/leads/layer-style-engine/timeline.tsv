@@ -64,3 +64,4 @@ utc	stage	event	ref	note
 2026-10-21T07:27:41Z	anatomy-r1	#800 merged 69250623; mutation 261/272 caught 0 escaped; tests-lens critic started; no dev ci.yml run past 426
 2026-10-21T07:48:39Z	anatomy-r1	round 1 mutation 272/272 caught; round 2 gate+mutate started on dev 390f4b00; tests critic still running
 2026-10-21T08:15:23Z	anatomy-r2	gate PASS 2202 tests on 390f4b00; 1145 anchors; mutate running (59 caught); r2-b1 PSD minors fixer started; r1 tests critic still running
+2026-10-21T08:23:31Z	anatomy-r1-close	round 1 NOT clean: tests lens 5 major 3 minor (planted-mutant proven); r2-b2 (style composite coverage) started; PSD test gaps (3,4,5,7) queued as r2-b3 after r2-b1 merges
