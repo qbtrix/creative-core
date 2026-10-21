@@ -66,3 +66,4 @@ utc	stage	event	ref	note
 2026-10-21T08:15:23Z	anatomy-r2	gate PASS 2202 tests on 390f4b00; 1145 anchors; mutate running (59 caught); r2-b1 PSD minors fixer started; r1 tests critic still running
 2026-10-21T08:23:31Z	anatomy-r1-close	round 1 NOT clean: tests lens 5 major 3 minor (planted-mutant proven); r2-b2 (style composite coverage) started; PSD test gaps (3,4,5,7) queued as r2-b3 after r2-b1 merges
 2026-10-21T08:42:34Z	round-2	critic panel launched (clarity+contract, robustness+design) on dev 390f4b00; tests lens waits for round-2 mutate (154 caught so far); r2-b1 resumed to finish harness, r2-b2 running; LE-z still waits on a dev ci.yml run past 426
+2026-10-21T09:01:53Z	round-2	#801 (r2-b2) and #802 (r2-b1) merged; robustness+design critic: 0 blocker, 1 major (styled holds every effect buffer), 4 minor; launched r2-b3 (PSD test gaps 3,4,5,7 + silent drops) and r2-b4 (stream styled, cap entries, Sendable/Hashable)
