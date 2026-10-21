@@ -79,3 +79,4 @@ Next: builders on LE-a2 (les/le-a2), LE-3 (les/le-3) and LE-6 (les/le-6) from de
 - 2026-10-21T02:01:53Z: #792 Metal (macOS) green. LE-9a ready (0ded51b9, 9 files +366/-29), waiting for #792 to merge. No mutation entry: the packet says "none: kernels" for LE-8 and LE-9, and Linux compiles the Metal code out, so the parity tests are the check (lead agrees).
 - 2026-10-21T02:09:58Z: #792 (LE-8) merged at 2d242a0d. #793 (LE-7) Metal (macOS) still queued since 01:38Z (the mac runner is the bottleneck). LE-9a builder is opening its PR now. No dev ci.yml run past 425 yet.
 - 2026-10-21T02:10:56Z: LE-9a opened as #794 (head 14b4871e, rebased on 2d242a0d, 9 files +366/-29). Footer stripped, fast-lane on. Metal (macOS) queued. LE-9a2 building, stacked on les/le-9.
+- 2026-10-21T02:19:23Z LE-9a2 built and gated on les/le-9a2 (4fbe7b28, 5 files +249/-16: stroke + bevel kernels, MetalStrokeBevelTests). Opens after #794 merges.
