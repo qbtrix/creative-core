@@ -31,3 +31,5 @@ utc	stage	event	ref	note
 2026-10-21T01:38:53Z	LE-7	opened #793 (a8717989, 15 files +176/-20, mutate 2/2 BlendMode), Metal (macOS) pending
 2026-10-21T01:46:18Z	LE-9	re-split: LE-9a (~330), LE-9a2 stroke+bevel (~250), LE-9b
 2026-10-21T01:50:43Z	heartbeat	#792 Metal in progress; #793 Metal queued; LE-9a building; no dev CI past run 425
+2026-10-21T02:01:53Z	LE-8	#792 Metal (macOS) green 01:50Z, awaiting lane
+2026-10-21T02:01:53Z	LE-9a	ready on les/le-9 0ded51b9 (9 files, 395 lines), opens after #792
