@@ -6,8 +6,22 @@
 import Foundation
 import Testing
 
+/// One 8 x 8 layer named "L" carrying `extra` in a 16 x 16 image whose global light is
+/// `angle` (resource 1037) and, when given, `altitude` (1049): the layer and the image's notes.
+func readEffectsLayer(_ extra: [UInt8], angle: Int = 30, altitude: Int? = nil) throws -> (PixelLayer?, [String]) {
+    var record = PSDRecord.layer("L", top: 0, left: 0, height: 8, width: 8)
+    record.extra = extra
+    var light = BigEndian()
+    for (id, value) in [(1037, angle), (1049, altitude)] {
+        guard let value else { continue }
+        light.ascii("8BIM"); light.u16(id); light.u16(0); light.sized { $0.u32(value) }
+    }
+    let image = try PSD.read(PSDFile(width: 16, height: 16, records: [record], resources: light.out).data)
+    return (pixelLayer(image.nodes.first), image.notes)
+}
+
 /// Effect descriptors for the tests below; `Desc` is in PSDDescriptorTests.swift.
-private extension Desc {
+extension Desc {
     /// An `lfx2` tagged block holding this descriptor.
     var lfx2: [UInt8] {
         var w = BigEndian(); w.ascii("8BIMlfx2")
@@ -36,11 +50,8 @@ private extension Desc {
 
     /// One 8 x 8 layer named "L" carrying `extra`, under a global light of 30 degrees.
     private func read(_ extra: [UInt8]) throws -> (LayerStyleStack?, [String]) {
-        var record = PSDRecord.layer("L", top: 0, left: 0, height: 8, width: 8)
-        record.extra = extra
-        var light = BigEndian(); light.ascii("8BIM"); light.u16(1037); light.u16(0); light.sized { $0.u32(30) }
-        let image = try PSD.read(PSDFile(width: 16, height: 16, records: [record], resources: light.out).data)
-        return (pixelLayer(image.nodes.first)?.style, image.notes)
+        let (layer, notes) = try readEffectsLayer(extra)
+        return (layer?.style, notes)
     }
 
     @Test func usesGlobalLight() throws {
