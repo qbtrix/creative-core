@@ -9,8 +9,8 @@
   {
     "note": "fill opacity applied to effects, so a glow under a layer at fill opacity 0 vanishes with it, caught by StyleCompositeTests.fillOpacityFadesOnlyTheLayer",
     "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
-    "anchor": "try canvas.composite(layer.source, x: 0, y: 0, mode: layer.mode, opacity: layer.opacity)\n        }\n        try canvas.composite(self",
-    "replacement": "try canvas.composite(layer.source, x: 0, y: 0, mode: layer.mode, opacity: layer.opacity * stack.fillOpacity)\n        }\n        try canvas.composite(self",
+    "anchor": "try canvas.composite(under.source, x: 0, y: 0, mode: under.mode, opacity: under.opacity)\n        }\n        var sum",
+    "replacement": "try canvas.composite(under.source, x: 0, y: 0, mode: under.mode, opacity: under.opacity * stack.fillOpacity)\n        }\n        var sum",
     "filter": "StyleCompositeTests"
   },
   {
@@ -18,6 +18,34 @@
     "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
     "anchor": "return one(try fillLayer(fill), .clipped)",
     "replacement": "return one(try fillLayer(fill), .over)",
+    "filter": "StyleCompositeTests"
+  },
+  {
+    "note": "layer composited src-over onto knocked-out under layers, so a lone drop shadow or outside stroke is lighter at the edge than the single effect, caught by StyleCompositeTests.loneShadowAndOutsideStrokeEqualTheEffect",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": "sum[i] += src[i] * stack.fillOpacity",
+    "replacement": "sum[i] = src[i] * stack.fillOpacity + sum[i] * (1 - src[i - i % 4 + 3] * stack.fillOpacity)",
+    "filter": "StyleCompositeTests"
+  },
+  {
+    "note": "entry mode ignored in compositeClipped, so a Multiply overlay draws as Normal, caught by StyleCompositeTests.multiplyOverlayMultipliesTheOneBelow",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": "try onto.composite(layer.source, x: 0, y: 0, mode: layer.mode, opacity: layer.opacity)",
+    "replacement": "try onto.composite(layer.source, x: 0, y: 0, mode: .normal, opacity: layer.opacity)",
+    "filter": "StyleCompositeTests"
+  },
+  {
+    "note": "under-layer mode ignored, so a Screen glow over a drop shadow draws as Normal, caught by StyleCompositeTests.screenGlowOverShadowDiffersFromNormal",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": "try canvas.composite(under.source, x: 0, y: 0, mode: under.mode, opacity: under.opacity)",
+    "replacement": "try canvas.composite(under.source, x: 0, y: 0, mode: .normal, opacity: under.opacity)",
+    "filter": "StyleCompositeTests"
+  },
+  {
+    "note": "zero-width style stroke layer draws the anti-aliased edge, caught by StyleCompositeTests.zeroWidthStrokeZeroBevelAndClearOverlayAreIdentity",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": "guard strokeWidth > 0 else { return try PixelBuffer(width: width, height: height) }",
+    "replacement": "guard strokeWidth >= 0 else { return try PixelBuffer(width: width, height: height) }",
     "filter": "StyleCompositeTests"
   }
 ]

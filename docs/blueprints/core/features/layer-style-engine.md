@@ -154,11 +154,13 @@ extension RenderBackend { func styled(_ s: RenderSurface, _ stack: LayerStyleSta
 ## Pseudocode
 
 - **Paint order** (entries' order inside one kind is kept): under the layer,
-  bottom up: drop shadow, outer glow, outside stroke; the layer times
-  `fillOpacity`; over it, clipped to its alpha: overlay (a gradient before a
+  bottom up: drop shadow, outer glow, outside stroke, each knocked out by the
+  layer's alpha; the layer times `fillOpacity`, added to them (not src-over,
+  which would knock them out twice); over it, clipped to its alpha: overlay (a gradient before a
   colour), inner glow, inner shadow, bevel; then inside and centre strokes.
   Each entry composites with its `mode` and `opacity`; a disabled entry is
-  skipped.
+  skipped. Opacity 0, a disabled entry, stroke width 0, bevel size 0 and a
+  clear overlay are identity; a 0 px shadow or glow is a hard edge effect.
 - **Spread** (shadows and glows): the alpha thresholded at
   `d ≤ spread·size` on the outside distance before the blur (`DistanceField`),
   so spread 1 is a hard edge the size of the reach.
@@ -245,7 +247,7 @@ LE-11 is the status task.
 | LE-1 | builds on Linux and macOS; `RenderDispatcherTests.everyFamilyIsOn` with `style` on the CPU; a `StrokePosition` round-trips JSON as `"outside"` | a switch misses `style` or Metal claims it | – (seam) |
 | LE-2 | suites compile, disabled; every PSD and ORA test unchanged (the fields default to nil and empty) | a codec changes output | – (checks) |
 | LE-3 | `BevelTests`: on a disc lit from 0° the brightest highlight pixel is on the +x edge and the darkest shadow on the −x edge; `up: false` swaps them; altitude 90 gives no shadow; size 0 is identity; outer bevel paints only outside the alpha within `size`; soften 4 lowers the highlight peak | the light comes from the wrong side or leaks off the edge | `CoreRaster.Bevel`: y sign flipped in the light → `BevelTests.lightFromBelowAtNinety`; `up` ignored → `.downSwapsLight`; height not clamped at `size` → `.flatPastSize` |
-| LE-4 | `StyleCompositeTests`: a disabled entry is identity; fill opacity 0 leaves the drop shadow and removes the layer; a Multiply shadow over white is darker than Normal at the same opacity; paint order puts an inside stroke over a colour overlay; spread 1 gives a hard shadow edge; `reach` of a 6,6 shadow with blur 12 is 21; every op at zero strength is identity | an entry is drawn in the wrong order, mode or place | `CoreRaster.StyleComposite`: entries drawn in list order → `.paintOrderFixed`; fill opacity applied to effects → `.fillOpacityOnlyTheLayer`; overlay not clipped to alpha → `.overlayStaysInside` |
+| LE-4 | `StyleCompositeTests`: a disabled entry is identity; fill opacity 0 leaves the drop shadow and removes the layer; a Multiply overlay over a Normal one multiplies it, and a Screen glow over a Normal drop shadow differs from a Normal one; a lone drop shadow or outside stroke `==` `shadowed` or `stroked`; paint order puts an inside stroke over a colour overlay; spread 1 gives a hard shadow edge; `reach` of a 6,6 shadow with blur 12 is 21; stroke width 0, bevel size 0 and a clear overlay are identity | an entry is drawn in the wrong order, mode or place | `CoreRaster.StyleComposite`: entries drawn in list order → `.paintOrderFixed`; fill opacity applied to effects → `.fillOpacityOnlyTheLayer`; overlay not clipped to alpha → `.overlayStaysInside` |
 | LE-5 | `CPUStyleTests`: the CPU backend's `styled` `==` the direct call for every op; `CPUGoldenTests` zero delta on the style goldens | a case maps wrong | `CoreRenderCPUStyle`: `fillOpacity` dropped → `CPUStyleTests.fillOpacityKept` |
 | LE-6 | `PSDEffectsTests`: a test-written `lfx2` with a stroke and a drop shadow reads to their entries (mode, opacity, angle with global light, distance, size); `masterFXSwitch` off gives every entry disabled; satin and a second drop shadow are notes; an `lfx2` of zeros notes "unreadable" and opens the layer; a file without effects reads byte-for-byte as before | an effect is lost, a field is misread, or a drop is silent | `CoreRaster.PSDEffects`: global angle ignored → `.usesGlobalLight`; `Opct` read as 0...1 → `.opacityIsPercent`; second instance kept → `.multiNoted` |
 | LE-7 | `BlendModeTests`: linear dodge of 0.6 over 0.6 is 1, linear burn 0.2 over 0.2 is 0; `lddg` and `lbrn` read as themselves; an unknown key notes its name; `MetalBlendTests` parity for both | a mode clamps wrong or opens as Normal | `CoreRaster.BlendMode`: burn without the −1 → `BlendModeTests.linearBurnFloor`; `lbrn` mapped to dodge → `.keysMapApart` |
@@ -263,7 +265,7 @@ LE-11 is the status task.
 | Style stack on a 4 MP layer, CPU | ≤ 250 ms (release) | `StyleBudgetTests.walkStackOn4MPUnder250ms` (reported) |
 | One style step on Metal, resident | ≤ 16 ms p95, field cached | `MetalStyleWalkTests.styleStepP95Under16ms` (reported, Mac; held with LE-9b) |
 | CPU equals Metal | within `MetalStyleTests.expectClose` on every fixture | `MetalStyleParityTests` (held with LE-9b) |
-| Identity at zero | every op at zero strength or disabled `==` identity | `StyleCompositeTests` |
+| Identity at zero | opacity 0, disabled, stroke width 0 (every position), bevel size 0 (every shape) and a clear overlay `==` identity; a 0 px shadow or glow is a hard edge effect, not identity | `StyleCompositeTests.zeroWidthStrokeZeroBevelAndClearOverlayAreIdentity`, `.disabledOrZeroOpacityEntriesAreIdentity` |
 | Never crashes | NaN, infinite and over-cap parameters throw; 200 seeded stacks; a truncated `lfx2` notes, never throws | `StyleCompositeTests.fuzz`, `PSDEffectsTests.fuzz` |
 
 ## Done check
@@ -293,6 +295,11 @@ backends and the two budget numbers. Each slice's last merge is followed by a
   CoreRasterTests cannot import CoreRenderMetal, so `StyleWalkTests` runs the
   Metal-off leg and `StyleBudgetTests` the CPU budget. Each file defines the
   walk's stack, since no test target can import another.
+- `styled` has no backdrop: under-layer modes apply only among the
+  under-layers and the bottom one draws as Normal; per-entry modes against
+  the scene need the caller to composite the under-layers on their own,
+  follow-up work. So LE-4's "Multiply shadow over white" check is a Multiply
+  overlay over a Normal one and a Screen glow over a Normal drop shadow.
 - The walk checks the shadow's half-darkness edge 6 px past the badge's right
   and bottom edges (outer effects are knocked out under the layer, so there
   is no darkest pixel at the corner), and the lit edge by the bevel's shadow

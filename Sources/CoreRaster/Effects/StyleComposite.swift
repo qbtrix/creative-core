@@ -3,15 +3,18 @@
 // one premultiplied light layer (two for a bevel) the buffer's size, and the
 // layers go down in a fixed paint order whatever the list order: under the
 // layer, drop shadow, outer glow, outside stroke, each knocked out by the
-// layer's alpha; then the layer at the fill opacity; then over it, clipped to
-// its alpha, gradient overlay, colour overlay, inner glow, inner shadow; then
-// the bevel's shadow and highlight (already clipped by `beveled`) and the
-// inside (clipped) and centre strokes. Entries of one kind keep their list
-// order. Each layer composites with its entry's mode and opacity (a bevel's
-// with its own two modes, times the entry's opacity); the fill opacity fades
-// only the layer. Shadows and glows reuse the glows' blurred alpha: `spread`
-// first grows the shape (or, inner, its complement) by spread x size on the
-// distance field, then the blur runs over the rest, so spread 1 is a hard
+// layer's alpha; then the layer at the fill opacity, added to them (they are
+// knocked out already, so a src-over would weight them by (1 - a) twice, and
+// a lone shadow or outside stroke equals `shadowed` or `stroked`); then over
+// it, clipped to its alpha, gradient overlay, colour overlay, inner glow,
+// inner shadow; then the bevel's shadow and highlight (already clipped by
+// `beveled`) and the inside (clipped) and centre strokes. Entries of one kind
+// keep their list order. Each layer composites with its entry's mode and
+// opacity (a bevel's with its own two modes, times the entry's opacity); the
+// fill opacity fades only the layer. There is no backdrop: an under-layer's
+// mode applies among the under-layers, so the bottom one draws as Normal.
+// Shadows and glows reuse the glows' blurred alpha: `spread` first grows the
+// shape (or, inner, its complement) by spread x size on the distance field, then the blur runs over the rest, so spread 1 is a hard
 // edge. A clipped layer composites onto the canvas made opaque, and the result
 // is weighted by the canvas alpha inside the clip; where the clip is not yet
 // covered (fill opacity under 1) the layer shows on its own, so a clipped
@@ -43,6 +46,19 @@ extension StyleOp {
         case .bevel: 7
         case .stroke(_, _, .inside): 8
         case .stroke: 9
+        }
+    }
+
+    /// The op's name in errors.
+    var name: String {
+        switch self {
+        case .dropShadow: "drop shadow"
+        case .innerShadow: "inner shadow"
+        case .outerGlow: "outer glow"
+        case .innerGlow: "inner glow"
+        case .stroke: "stroke"
+        case .overlay: "overlay"
+        case .bevel: "bevel"
         }
     }
 }
@@ -85,18 +101,24 @@ extension PixelBuffer {
         guard (0...1).contains(stack.fillOpacity) else {
             throw RasterError.invalid("fill opacity \(stack.fillOpacity): must be a finite value in 0...1")
         }
-        for entry in stack.entries where !(0...1).contains(entry.opacity) {
-            throw RasterError.invalid("style entry opacity \(entry.opacity): must be a finite value in 0...1")
+        for (i, entry) in stack.entries.enumerated() where !(0...1).contains(entry.opacity) {
+            throw RasterError.invalid("style entry \(i) (\(entry.op.name)) opacity \(entry.opacity): must be a finite value in 0...1")
         }
         let active = stack.entries.enumerated().filter { $0.element.isEnabled && $0.element.opacity > 0 }
             .sorted { ($0.element.op.paintRank, $0.offset) < ($1.element.op.paintRank, $1.offset) }
         guard !active.isEmpty || stack.fillOpacity < 1 else { return self }
         let layers = try active.flatMap { try styleLayers($0.element) }
         var canvas = try PixelBuffer(width: width, height: height)
-        for layer in layers where layer.placement == .under {
-            try canvas.composite(layer.source, x: 0, y: 0, mode: layer.mode, opacity: layer.opacity)
+        for under in layers where under.placement == .under {
+            try canvas.composite(under.source, x: 0, y: 0, mode: under.mode, opacity: under.opacity)
         }
-        try canvas.composite(self, x: 0, y: 0, mode: .normal, opacity: stack.fillOpacity)
+        var sum = canvas.components
+        let src = components
+        for i in sum.indices {
+            sum[i] += src[i] * stack.fillOpacity
+            guard sum[i].isFinite else { throw RasterError.invalid("styled layer: result overflows") }
+        }
+        canvas = PixelBuffer(checkedWidth: width, height: height, storage: sum)
         for layer in layers where layer.placement != .under {
             if layer.placement == .clipped {
                 try canvas.compositeClipped(layer, clip: self)
@@ -114,13 +136,13 @@ extension PixelBuffer {
         }
         switch entry.op {
         case let .dropShadow(color, dx, dy, spread, blur):
-            return one(try lightLayer(color, dx, dy, spread, blur, inner: false, effect: "drop shadow"), .under)
+            return one(try lightLayer(color, dx, dy, spread, blur, inner: false, effect: entry.op.name, reachName: "blur"), .under)
         case let .innerShadow(color, dx, dy, spread, blur):
-            return one(try lightLayer(color, dx, dy, spread, blur, inner: true, effect: "inner shadow"), .clipped)
+            return one(try lightLayer(color, dx, dy, spread, blur, inner: true, effect: entry.op.name, reachName: "blur"), .clipped)
         case let .outerGlow(color, spread, size):
-            return one(try lightLayer(color, 0, 0, spread, size, inner: false, effect: "outer glow"), .under)
+            return one(try lightLayer(color, 0, 0, spread, size, inner: false, effect: entry.op.name, reachName: "size"), .under)
         case let .innerGlow(color, spread, size):
-            return one(try lightLayer(color, 0, 0, spread, size, inner: true, effect: "inner glow"), .clipped)
+            return one(try lightLayer(color, 0, 0, spread, size, inner: true, effect: entry.op.name, reachName: "size"), .clipped)
         case let .stroke(fill, width, position):
             let placement: StylePlacement = position == .outside ? .under : position == .inside ? .clipped : .over
             return one(try strokeLayer(fill, width: width, position: position), placement)
@@ -136,18 +158,18 @@ extension PixelBuffer {
     /// A shadow or glow alone: premultiplied `color` times the spread and
     /// blurred alpha (its complement when `inner`) read at (`dx`, `dy`) back;
     /// an outer one is knocked out by the layer's alpha, an inner one is left
-    /// unclipped for `compositeClipped`.
+    /// unclipped for `compositeClipped`. `reachName` names `size` in errors.
     func lightLayer(_ color: RGBA, _ dx: Double, _ dy: Double, _ spread: Double, _ size: Double,
-                    inner: Bool, effect: String) throws -> PixelBuffer {
+                    inner: Bool, effect: String, reachName: String) throws -> PixelBuffer {
         guard color.isFinite, dx.isFinite, dy.isFinite else {
             throw RasterError.invalid("\(effect) color \(color) at (\(dx), \(dy)): must be finite")
         }
         guard (0...1).contains(spread) else { throw RasterError.invalid("\(effect) spread \(spread): must be finite and in 0...1") }
         guard size.isFinite, size >= 0, size <= Self.maxLightReach else {
-            throw RasterError.invalid("\(effect) size \(size): must be finite and in 0...\(Int(Self.maxLightReach))")
+            throw RasterError.invalid("\(effect) \(reachName) \(size): must be finite and in 0...\(Int(Self.maxLightReach))")
         }
         let choke = spread * size, blur = size - choke
-        let work = Self.lightWork(effect: effect, reachName: "size", reach: blur, dx: dx, dy: dy)
+        let work = Self.lightWork(effect: effect, reachName: reachName, reach: blur, dx: dx, dy: dy)
         let mask = try spreadAlpha(choke: choke, inner: inner)
             .blurredAlpha(reach: blur, inner: inner, pad: work.pad, cause: work.cause, remedy: work.remedy)
         let src = components, c = Self.channels, paint = [color.r, color.g, color.b, color.a]
@@ -155,10 +177,11 @@ extension PixelBuffer {
         for y in 0..<height {
             for x in 0..<width {
                 let o = (y * width + x) * c
-                var cover = Float(mask.sample(Double(x) - dx, Double(y) - dy))
-                if !inner { cover *= 1 - min(max(src[o + 3], 0), 1) }
-                guard cover > 0 else { continue }
-                for k in 0..<c { out[o + k] = paint[k] * cover }
+                // Multiplied in `shadowed`'s order, so a lone drop shadow equals it.
+                let cover = Float(mask.sample(Double(x) - dx, Double(y) - dy))
+                let knock: Float = inner ? 1 : 1 - min(max(src[o + 3], 0), 1)
+                guard cover * knock > 0 else { continue }
+                for k in 0..<c { out[o + k] = paint[k] * cover * knock }
             }
         }
         return PixelBuffer(checkedWidth: width, height: height, storage: out)
@@ -195,13 +218,14 @@ extension PixelBuffer {
         var out = paint.components
         for i in 0..<(width * height) {
             let o = i * c, alpha = src[o + 3], inShape = alpha >= 0.5
-            let cover: Float
+            let cover: Float, knock: Float = position == .outside ? 1 - min(max(alpha, 0), 1) : 1
             switch position {
-            case .outside: cover = (inShape ? 1 : Self.coverage(edge: distance[i], width: strokeWidth)) * (1 - min(max(alpha, 0), 1))
+            case .outside: cover = inShape ? 1 : Self.coverage(edge: distance[i], width: strokeWidth)
             case .inside: cover = inShape ? Self.coverage(edge: distance[i], width: strokeWidth) : 1
             case .center: cover = Self.coverage(edge: distance[i], width: strokeWidth / 2)
             }
-            for k in 0..<c { out[o + k] *= cover }
+            // Multiplied in `stroked`'s order, so a lone outside stroke equals it.
+            for k in 0..<c { out[o + k] = out[o + k] * cover * knock }
         }
         return PixelBuffer(checkedWidth: width, height: height, storage: out)
     }
