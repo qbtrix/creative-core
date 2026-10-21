@@ -10,3 +10,4 @@ utc	stage	event	ref	note
 2026-10-20T22:33Z	3	pr-merged	#780	6e8f82c
 2026-10-20T22:33Z	3	stage-start	les/le-a2,les/le-3,les/le-6	wave 2 builders from 6e8f82c
 2026-10-21T00:10Z	3	resume	les/le-a2,les/le-3,les/le-6	builders stopped on session limit; lead ships local gated heads; LE-6 split 6a/6b
+2026-10-21T00:24Z	3	pr-opened	#785	LE-a2 4f23b3e8
