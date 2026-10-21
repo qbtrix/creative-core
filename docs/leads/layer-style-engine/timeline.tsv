@@ -41,3 +41,4 @@ utc	stage	event	ref	note
 2026-10-21T02:34:51Z	LE-9b-built	les/le-9b ba469709 gated 15 files +223/-32; parity vs CPU at expectClose tolerance (approved). LE-10+11 builder started on les/le-10 stacked on les/le-9b
 2026-10-21T02:51:56Z	heartbeat	#794 Metal (macOS) green 02:43Z (runner back), waits on the lane; #793 Metal still queued since 01:38Z; no dev CI after 425
 2026-10-21T02:57:22Z	LE-10-found-bug	les/le-10 d24512fe built (6 files +380/-12); walk PSD leg finds LE-6 bug: Mapper.add reads Clr for every effect, drops GrFl/ebbl. Fix round 1 for LE-psd routed to ab8bff2252ae5a667 as own PR
+2026-10-21T03:06:10Z	LE-6-fix-open	#795 fix(psd) colour read, f301b339, 3 files +33/-7, mutate 4/4 CoreRaster.PSDEffects
