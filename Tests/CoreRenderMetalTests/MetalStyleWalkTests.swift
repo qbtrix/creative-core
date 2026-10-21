@@ -1,11 +1,7 @@
-// MetalStyleWalkTests.swift: layer-style-engine LE-10, the KJ-LE walk with Metal on. The walk's badge (a white
-// 400 x 300 rounded rectangle padded by its stack's reach) and stack (drop shadow, outer glow, outside stroke,
-// gradient overlay, inner shadow, inner smooth bevel) through a `RenderDispatcher` preferring Metal: the style
-// runs on Metal and matches CoreRaster's `styled` of the uploaded badge within the LE-9a tolerance
-// (`MetalStyleTests.expectClose`). Then the Metal budget, release-only and reported: a style step (one entry
-// changed, the cached field reused) on a 2,000 x 2,000 layer has a p95 at or under 16 ms over thirty steps.
-// The stack is StyleWalkTests' (CoreRenderTests cannot be imported here). Skipped without a device; compiled
-// out on Linux, where the Metal-off leg (StyleWalkTests) and the CPU budget (StyleBudgetTests) run.
+// MetalStyleWalkTests.swift: layer-style-engine LE-10, the KJ-LE walk with Metal on: the walk's badge and stack
+// through a `RenderDispatcher` preferring Metal run on Metal within `MetalStyleTests.expectClose` of CoreRaster's
+// `styled`; and the Metal budget (release, reported): a style step on a 2,000 x 2,000 layer, p95 ≤ 16 ms over
+// thirty. The stack is StyleWalkTests' (not importable here). Skipped without a device; compiled out on Linux.
 #if canImport(Metal)
 import CoreRaster
 import CoreRender
