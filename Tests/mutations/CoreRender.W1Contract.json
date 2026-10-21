@@ -12,5 +12,12 @@
     "anchor": "public func flipped(_ s: RenderSurface, _ axis: FlipAxis) throws -> RenderSurface { throw RenderError.unsupported(.affine) }",
     "replacement": "public func flipped(_ s: RenderSurface, _ axis: FlipAxis) throws -> RenderSurface { throw RenderError.unsupported(.transform) }",
     "filter": "W1ContractTests.defaultsNameTheirFamily"
+  },
+  {
+    "note": "the styled default names the effect family instead of style",
+    "file": "Sources/CoreRender/RenderBackend+NotOnThisBackend.swift",
+    "anchor": "throw RenderError.unsupported(.style)",
+    "replacement": "throw RenderError.unsupported(.effect)",
+    "filter": "W1ContractTests.defaultsNameTheirFamily"
   }
 ]
