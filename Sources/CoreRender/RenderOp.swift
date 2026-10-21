@@ -47,7 +47,7 @@ public enum RenderOp: String, CaseIterable, Codable, Sendable {
     /// `adjusted` with a tone adjustment whose `family` is `.color`: the W1
     /// colour adjustments (vibrance to invert). CPU first (`notOnMetalYet`).
     case color
-    /// `styled(_:_:)`: a `LayerStyleStack` drawn on a layer. CPU first (`notOnMetalYet`).
+    /// `styled(_:_:)`: a `LayerStyleStack` drawn on a layer. CPU first, on Metal since LE-9b.
     case style
 }
 
@@ -55,7 +55,7 @@ extension RenderOp {
     /// The CPU-first families no Metal kernel implements yet. The Metal
     /// backend enables none of them, so RenderDispatcher sends each to the
     /// CPU; a family leaves this set when its kernel and parity test land.
-    public static let notOnMetalYet: Set<RenderOp> = [.maskedComposite, .affine, .effect, .color, .style]
+    public static let notOnMetalYet: Set<RenderOp> = [.maskedComposite, .affine, .effect, .color]
 }
 
 extension RenderOp {

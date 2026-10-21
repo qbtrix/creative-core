@@ -1,8 +1,9 @@
 // MetalBackend+Style.swift: a layer style entry's light layers on the GPU (layer-style-engine LE-9a), CoreRaster
 // `styleLayers` with the same modes, opacities and placements: shadows and glows spread on the distance field,
 // padded and box blurred; the stroke from jump-flooded anti-aliased edge points (LE-9a2); the bevel's height,
-// normal and lean (LE-9a2); the overlay is its fill, drawn on the CPU. Each call is one command buffer over
-// whole-image buffers.
+// normal and lean (LE-9a2); the overlay is its fill, drawn on the CPU. `styled` (LE-9b) encodes every active
+// entry's layers and composites them in CoreRaster's paint order with `style_composite`. Each call is one command
+// buffer over whole-image buffers.
 // The distance field at level 0.5 is cached per surface with the alpha it came from: a call whose surface alpha is
 // unchanged reuses it, a new upload re-encodes it, `release` drops it. Invariants: every parameter is checked by
 // CoreRaster's own code first, so a bad entry throws the CPU's error before any GPU work; a padded work buffer over
@@ -42,10 +43,6 @@ extension MetalBackend {
         // CoreRaster's checks and the layers' modes and placements, on one pixel.
         let shape = try RenderError.mapping { try PixelBuffer(width: 1, height: 1).styleLayers(entry) }
         let (w, h) = (image.width, image.height)
-        if case .overlay(let fill) = entry.op {
-            let paint = try RenderError.mapping { try image.fillLayer(fill) }
-            return shape.map { var layer = $0; layer.source = paint; return layer }
-        }
         let commands = try styleCommands(queue)
         var job = StyleJob(surface: s.id, image: image, pixels: try styleBuffer(image.components))
         let outputs = try encodeStyleLayers(commands, &job, entry.op)
@@ -75,9 +72,47 @@ extension MetalBackend {
             return [try encodeStroke(commands, job, fill, width: width, position: position)]
         case let .bevel(bevel):
             return try encodeBevel(commands, &job, bevel)
-        case .overlay:
-            throw RenderError.unsupported(.style)
+        case let .overlay(fill):
+            return [try styleBuffer(RenderError.mapping { try job.image.fillLayer(fill) }.components)]
         }
+    }
+
+    /// CoreRaster `styled(stack)` of `s`'s pixels as a new surface: every active entry's layers, then the paint
+    /// order's composites onto a clear canvas (under, the layer at the fill opacity, clipped and over), in one
+    /// command buffer.
+    public func styled(_ s: RenderSurface, _ stack: LayerStyleStack) throws -> RenderSurface {
+        guard withLock({ state.effectiveSupports.contains(.style) }) else { throw RenderError.unsupported(.style) }
+        let (image, queue) = try styleSource(s)
+        // CoreRaster's opacity checks, then each active entry's in paint order, on one pixel.
+        let pixel = try RenderError.mapping { try PixelBuffer(width: 1, height: 1) }
+        let off = stack.entries.map { var entry = $0; entry.isEnabled = false; return entry }
+        _ = try RenderError.mapping { try pixel.styled(LayerStyleStack(entries: off, fillOpacity: stack.fillOpacity)) }
+        let active = stack.entries.enumerated().filter { $0.element.isEnabled && $0.element.opacity > 0 }
+            .sorted { ($0.element.op.paintRank, $0.offset) < ($1.element.op.paintRank, $1.offset) }.map(\.element)
+        guard !active.isEmpty || stack.fillOpacity < 1 else { return try surface(image) }
+        let shapes = try active.map { entry in try RenderError.mapping { try pixel.styleLayers(entry) } }
+        let (w, h) = (image.width, image.height)
+        let commands = try styleCommands(queue)
+        var job = StyleJob(surface: s.id, image: image, pixels: try styleBuffer(image.components))
+        var layers: [(layer: StyleLayer, buffer: any MTLBuffer)] = []
+        for (entry, shape) in zip(active, shapes) {
+            layers += zip(shape, try encodeStyleLayers(commands, &job, entry.op)).map { (layer: $0, buffer: $1) }
+        }
+        let canvas = try styleBuffer(count: w * h * 4), kernel = try styleKernel("composite")
+        func put(_ source: any MTLBuffer, _ mode: BlendMode, _ opacity: Float, clipped: Bool) throws {
+            try styleDispatch(commands, kernel, [canvas, source, job.pixels], ints: [w, h, StyleShader.modeIndex(mode), clipped ? 1 : 0],
+                              level: opacity, width: w, height: h)
+        }
+        for (layer, buffer) in layers where layer.placement == .under { try put(buffer, layer.mode, layer.opacity, clipped: false) }
+        try put(job.pixels, .normal, stack.fillOpacity, clipped: false)
+        for (layer, buffer) in layers where layer.placement != .under {
+            try put(buffer, layer.mode, layer.opacity, clipped: layer.placement == .clipped)
+        }
+        try styleFinish(commands, label: "layer style")
+        if let fresh = job.fresh {
+            withLock { if surfaces[s.id] != nil { styleFields[s.id] = fresh } }
+        }
+        return try surface(stylePixels(styleFloats(canvas, w * h * 4), width: w, height: h))
     }
 
     /// The job's distance field: the cached one when the surface's alpha is unchanged, else encoded into `commands`.
