@@ -16,3 +16,5 @@ utc	stage	event	ref	note
 2026-10-21T00:41Z	3	ready-unopened	les/le-7	3222eebc on les/le-6; 173 lines 14 files; mutate 2/2
 00:46Z	merge	#785 LE-a, #786 LE-3, #788 LE-6a merged to dev (d2021453); #788 footer stripped
 00:46Z	gate	LE-6b rebased onto dev (804bbc83), gate+mutate PSDEffects running
+00:50Z	merge	#789 LE-4 merged (footer stripped by builder)
+00:50Z	build	LE-5 builder started on dev (les/le-5)

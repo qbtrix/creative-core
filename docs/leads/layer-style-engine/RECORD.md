@@ -63,3 +63,9 @@ Next: builders on LE-a2 (les/le-a2), LE-3 (les/le-3) and LE-6 (les/le-6) from de
 - LE-6b rebased onto dev at 804bbc83 (328+/23-, 5 files); its gate and the CoreRaster.PSDEffects mutate run are going.
 - Next: open LE-6b, then resume the LE-7 builder to rebase onto dev and open its PR. LE-4 is building on dev.
 - Belt-Slice-Done LE-a waits for a dev ci.yml run that contains #785.
+
+## 00:52Z stage: LE-4 merged, LE-5 started
+- #789 (LE-4, `styled` and `reach`) merged. Mutate 3/3 CoreRaster.StyleComposite. Its builder stripped the footer.
+- LE-5 builder started on dev as `les/le-5`. It is not stacked, so it opens at once when its gate passes.
+- LE-6b: once its gate passes, rebase onto dev (which now has #789), regate, then open.
+- LE-8 starts when LE-5 merges.
