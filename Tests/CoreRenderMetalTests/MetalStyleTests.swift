@@ -1,8 +1,8 @@
 // MetalStyleTests.swift: layer-style-engine LE-9a. The Metal shadow and glow layers match CoreRaster `styleLayers`
 // on the style fixtures (within 2 levels, edge pixels within 8 on at most 0.5%), with its modes, opacities and
 // placements; an overlay is the CPU's fill exactly; the distance field is encoded once per surface alpha (a second
-// call reuses it, a new upload re-encodes, release drops it); a bad entry throws CoreRaster's error; a stroke or bevel
-// throws `unsupported(.style)`; the backend stays healthy. Skipped without a device; compiled out on Linux.
+// call reuses it, a new upload re-encodes, release drops it); a bad entry, a bad stroke or bevel among them, throws
+// CoreRaster's error; the backend stays healthy. Skipped without a device; compiled out on Linux.
 #if canImport(Metal)
 import CoreRaster
 import CoreRender
@@ -102,6 +102,10 @@ import Testing
             .innerGlow(color: RGBA(r: .infinity, g: 0, b: 0, a: 1), spread: 0, size: 1),
             .overlay(.color(RGBA(r: .nan, g: 0, b: 0, a: 1))),
             .stroke(fill: .color(Self.ink), width: -1, position: .outside),
+            .stroke(fill: .color(Self.ink), width: .infinity, position: .center),
+            .bevel(Self.bevel { $0.depth = 0 }),
+            .bevel(Self.bevel { $0.angle = .nan }),
+            .bevel(Self.bevel { $0.size = 251 }),
         ]
         for op in bad {
             do {
@@ -111,9 +115,6 @@ import Testing
                 #expect(throws: RenderError(expected)) { try metal.styleLayers(source, StyleEntry(op: op)) }
             }
         }
-        for op: StyleOp in [.stroke(fill: .color(Self.ink), width: 2, position: .center), .bevel(Self.bevel)] {
-            #expect(throws: RenderError.unsupported(.style)) { try metal.styleLayers(source, StyleEntry(op: op)) }
-        }
         #expect(metal.isHealthy, "a bad entry does not fail the backend")
     }
 
@@ -121,5 +122,8 @@ import Testing
                              altitude: 30, highlight: RGBA(r: 1, g: 1, b: 1, a: 1), highlightMode: .screen,
                              highlightOpacity: 0.75, shadow: RGBA(r: 0, g: 0, b: 0, a: 1), shadowMode: .multiply,
                              shadowOpacity: 0.75)
+
+    /// `bevel` with `change` applied.
+    static func bevel(_ change: (inout Bevel) -> Void) -> Bevel { var made = bevel; change(&made); return made }
 }
 #endif
