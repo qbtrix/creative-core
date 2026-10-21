@@ -2,7 +2,8 @@
 // `RenderOp.notOnMetalYet`, the family of every tone case (the six original
 // ones `.adjust`, the W1 colour ones `.color`), the "not on this backend"
 // defaults (the null backend from RenderContractTests.swift, written before
-// W1, throws `unsupported(<family>)` from each new method), and FakeBackend
+// W1, throws `unsupported(<family>)` from each new method, `styled` included),
+// and FakeBackend
 // recording the W1 calls and gating them by `supports`.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
@@ -89,6 +90,7 @@ import Testing
                 try backend.composite(s, onto: &b, through: quarter, mode: .multiply, opacity: 0.5, filter: .bilinear)
             }),
             (.effect, { _ = try backend.applying(s, .boxBlur(radius: 2)) }),
+            (.style, { _ = try backend.styled(s, LayerStyleStack(entries: [])) }),
         ]
     }
 
@@ -96,7 +98,7 @@ import Testing
         let backend = NullBackend()
         let surface = RenderSurface(id: UUID(), width: 1, height: 1, backend: backend.name)
         let calls = try Self.newCalls(backend, surface)
-        #expect(calls.map(\.family) == [.maskedComposite, .affine, .affine, .affine, .effect])
+        #expect(calls.map(\.family) == [.maskedComposite, .affine, .affine, .affine, .effect, .style])
         for (family, call) in calls {
             #expect(throws: RenderError.unsupported(family)) { try call() }
         }

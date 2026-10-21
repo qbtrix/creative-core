@@ -56,7 +56,7 @@
     "filter": "AlphaEffectTests"
   },
   {
-    "note": "the padded work size adds the pad once instead of on both sides, so a stroke, glow or shadow too large to pad passes the guard and its error names the wrong size, caught by AlphaEffectLightTests.tooLargeToPadNamesTheEffect",
+    "note": "the padded work size adds the pad once instead of on both sides, so a stroke, glow or shadow too large to pad passes the guard and its error names the wrong size, caught by AlphaEffectLightTests.paddedWorkSizePadsBothSides (and tooLargeToPadNamesTheEffect stops at its require before the slow shadow)",
     "file": "Sources/CoreRaster/Effects/AlphaEffects.swift",
     "anchor": "let pw = width + 2 * pad, ph = height + 2 * pad",
     "replacement": "let pw = width + pad, ph = height + pad",

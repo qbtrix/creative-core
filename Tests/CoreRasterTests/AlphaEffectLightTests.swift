@@ -158,10 +158,24 @@ import Testing
         #expect(throws: RasterError.self) { try disc.shadowed(color: bad, dx: 0, dy: 0, blur: 2, inner: true) }
     }
 
+    /// The work copy is padded on both sides of each axis, so the guard and its
+    /// error see the size the effect really allocates. Fast: it builds no buffer.
+    @Test func paddedWorkSizePadsBothSides() throws {
+        let fits = try PixelBuffer.paddedWorkSize(width: 100, height: 50, pad: 2, cause: "glow", remedy: "radius")
+        #expect(fits.width == 104 && fits.height == 54)
+        #expect(throws: RasterError.invalid("shadow on 132000x1: padded work buffer 134004x2005 "
+            + "exceeds 268435456 pixels; reduce the offset or the buffer")) {
+            try PixelBuffer.paddedWorkSize(width: 132_000, height: 1, pad: 1_002, cause: "shadow", remedy: "offset")
+        }
+    }
+
     /// A valid buffer whose padded work copy passes `maxPixels` throws naming
     /// the effect, its parameter, the padded size and the fix, not a size the
     /// caller never passed.
     @Test func tooLargeToPadNamesTheEffect() throws {
+        // Stop here if the padding is one-sided: the shadow below would then pass the guard and blur for minutes.
+        let probe = try PixelBuffer.paddedWorkSize(width: 10, height: 1, pad: 3, cause: "shadow", remedy: nil)
+        try #require(probe.width == 16 && probe.height == 7)
         // 132,000 x 1 is small, but a 1,000 px blur and offset pad it 1,002 px a side.
         let strip = try PixelBuffer(width: 132_000, height: 1)
         // The offset is within the blur + 3, so the offset alone sets the padding.
