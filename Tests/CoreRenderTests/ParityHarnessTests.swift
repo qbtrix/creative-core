@@ -335,10 +335,10 @@ private struct CountingBackend: RenderBackend {
             }
             (counts[op.rawValue], prints[op.rawValue]) = (samples.count, hash)
         }
-        #expect(counts == ["display": 4, "composite": 8, "blendSeparable": 19, "blendNonSeparable": 12,
+        #expect(counts == ["display": 4, "composite": 8, "blendSeparable": 21, "blendNonSeparable": 12,
                            "transform": 4, "resample": 4, "blur": 4, "adjust": 4, "retouch": 8])
         #expect(prints == ["display": 0x880E_5D17_D8B7_2D19, "composite": 0xACF4_5786_E9D7_8CAE,
-                           "blendSeparable": 0xD436_907E_83CE_792E, "blendNonSeparable": 0x67A2_3BE4_662C_04B8,
+                           "blendSeparable": 0xEF67_6585_A2C2_3834, "blendNonSeparable": 0x67A2_3BE4_662C_04B8,
                            "transform": 0x020E_1289_31E3_A7E3, "resample": 0x0F53_4C7E_75E6_A1C9,
                            "blur": 0x1DA2_79A0_D5EE_C08D, "adjust": 0x0B81_CE5F_0F57_7E6D,
                            "retouch": 0xB5BB_BC99_07B5_9AB4], "\(prints)")

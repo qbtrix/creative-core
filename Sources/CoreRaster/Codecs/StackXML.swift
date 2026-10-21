@@ -44,6 +44,8 @@ struct StackXML: Equatable, Sendable {
         "svg:color-burn": .colorBurn, "svg:hard-light": .hardLight, "svg:soft-light": .softLight,
         "svg:difference": .difference, "svg:exclusion": .exclusion, "svg:hue": .hue,
         "svg:saturation": .saturation, "svg:color": .color, "svg:luminosity": .luminosity,
+        // The spec's additive op is linear dodge; it has no linear burn, so readers without this name use src-over.
+        "svg:plus": .linearDodge, "afterglow:linear-burn": .linearBurn,
     ]
 
     private enum Kind { case image, stack, layer, skipped }

@@ -1,14 +1,17 @@
 // BlendMode.swift: the blend modes of W3C Compositing and Blending Level 1,
 // each the spec's B(Cb, Cs) on straight-alpha colors (Cb backdrop, Cs source).
 // Separable modes act on each channel alone; hue, saturation, color and
-// luminosity use the spec's Lum, Sat, SetLum, SetSat and ClipColor. Only
-// r, g and b are blended; alpha is Composite.swift's job.
+// luminosity use the spec's Lum, Sat, SetLum, SetSat and ClipColor. Linear
+// dodge and linear burn, which the spec does not define, are the separable
+// min(1, Cb + Cs) and max(0, Cb + Cs - 1); they come last so the order of the
+// spec's modes stays put. Only r, g and b are blended; alpha is Composite.swift's job.
 
 /// How a source color mixes with the backdrop color under it.
 public enum BlendMode: String, CaseIterable, Codable, Hashable, Sendable {
     case normal, multiply, screen, overlay, darken, lighten, colorDodge, colorBurn
     case hardLight, softLight, difference, exclusion
     case hue, saturation, color, luminosity
+    case linearDodge, linearBurn
 
     /// B(Cb, Cs) for straight-alpha colors. The result carries the source's alpha.
     func blend(backdrop b: RGBA, source s: RGBA) -> RGBA {
@@ -41,6 +44,8 @@ public enum BlendMode: String, CaseIterable, Codable, Hashable, Sendable {
         case .saturation: return Self.setLum(Self.setSat(b, Self.sat(s)), Self.lum(b))
         case .color: return Self.setLum(s, Self.lum(b))
         case .luminosity: return Self.setLum(b, Self.lum(s))
+        case .linearDodge: return perChannel(b, s) { cb, cs in min(1, cb + cs) }
+        case .linearBurn: return perChannel(b, s) { cb, cs in max(0, cb + cs - 1) }
         }
     }
 

@@ -3,7 +3,7 @@
 // backend, is checked in under Golden/ as display bytes, and the CPU backend
 // must reproduce each one with zero delta. Another backend checks its results
 // against them with `ParityHarness.compare(golden:_:)`, in bytes.
-// Layout: one golden per `ParityPack.all` entry, 162 samples in 10 goldens (maskedComposite/maskedComposite
+// Layout: one golden per `ParityPack.all` entry, 164 samples in 10 goldens (maskedComposite/maskedComposite
 // holds the 12 masked samples, 11 wide; affine/affine the 10 affine samples, effect/effect
 // the 12 effect samples and style/style the 17 style samples, all 9 wide; color/color the 44
 // colour samples, 11 cases on the four sources, each case's four in a row), as

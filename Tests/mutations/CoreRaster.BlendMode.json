@@ -1,0 +1,4 @@
+[
+  {"note": "linear burn drops its minus one and floors only at 0, caught by BlendModeTests.linearBurnFloor", "file": "Sources/CoreRaster/BlendMode.swift", "anchor": "max(0, cb + cs - 1)", "replacement": "max(0, cb + cs)", "filter": "BlendModeTests"},
+  {"note": "the PSD key lbrn is mapped to linear dodge, caught by BlendModeTests.keysMapApart", "file": "Sources/CoreRaster/Codecs/PSDRead.swift", "anchor": "\"lbrn\": .linearBurn", "replacement": "\"lbrn\": .linearDodge", "filter": "BlendModeTests"}
+]

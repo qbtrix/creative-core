@@ -1,4 +1,4 @@
-// BlendSeparableShader.swift: the eleven separable blend kernels besides `.normal` (MB-5), one per mode, each
+// BlendSeparableShader.swift: the thirteen separable blend kernels besides `.normal` (MB-5, LE-7), one per mode, each
 // the in-place composite of CompositeShader with CoreRaster's B(Cb, Cs) for that mode (BlendMode.swift) per
 // channel and CoreRaster's `sourceOver` mix: opacity scales the source first, alpha exactly 0 gives straight
 // colour 0 on either side (the CPU's `unpremultiplied` guard), Cs' = Cs + αb (B - Cs), and the result is
@@ -11,7 +11,7 @@ enum BlendSeparableShader {
     /// The modes with a kernel here: every separable mode but `.normal`, which runs `composite_normal`.
     static let modes: [BlendMode] = [
         .multiply, .screen, .overlay, .darken, .lighten, .colorDodge, .colorBurn,
-        .hardLight, .softLight, .difference, .exclusion,
+        .hardLight, .softLight, .difference, .exclusion, .linearDodge, .linearBurn,
     ]
 
     /// The kernel `blendSeparable_<mode>` (for example `blendSeparable_colorDodge`).
@@ -50,6 +50,8 @@ enum BlendSeparableShader {
     }
     static float blend_difference(float cb, float cs) { return fabs(cb - cs); }
     static float blend_exclusion(float cb, float cs) { return cb + cs - 2.0f * cb * cs; }
+    static float blend_linearDodge(float cb, float cs) { return min(1.0f, cb + cs); }
+    static float blend_linearBurn(float cb, float cs) { return max(0.0f, cb + cs - 1.0f); }
     /// sourceOver after the blend: premultiply Cs' by the scaled source alpha, then add the backdrop's share.
     static half4 separable_over(float4 s, float4 b, float3 cs, float3 blended) {
         float3 mixed = (cs + b.a * (blended - cs)) * s.a;

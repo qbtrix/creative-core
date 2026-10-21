@@ -37,6 +37,8 @@ private func expectComposite(_ source: PixelBuffer, _ backdrop: PixelBuffer, opa
         (.saturation, [0.376, 0.626, 0.126, 1]),
         (.color, [0.824, 0.324, 0.524, 1]),
         (.luminosity, [0.376, 0.576, 0.176, 1]),
+        (.linearDodge, [1, 0.9, 0.7, 1]),
+        (.linearBurn, [0.2, 0, 0, 1]),
     ]
     #expect(table.map(\.0) == BlendMode.allCases)
     try expectComposite(pixel(0.8, 0.3, 0.5, 1), pixel(0.4, 0.6, 0.2, 1), opacity: 1, table)
@@ -62,6 +64,8 @@ private func expectComposite(_ source: PixelBuffer, _ backdrop: PixelBuffer, opa
         (.saturation, [0.196845588, 0.375963235, 0.554345588, 0.65]),
         (.color, [0.319025, 0.319025, 0.526525, 0.65]),
         (.luminosity, [0.170975, 0.365975, 0.550975, 0.65]),
+        (.linearDodge, [0.32, 0.41, 0.5725, 0.65]),
+        (.linearBurn, [0.17, 0.275, 0.505, 0.65]),
     ]
     #expect(table.map(\.0) == BlendMode.allCases)
     try expectComposite(pixel(0.9, 0.2, 0.6, 0.6), pixel(0.1, 0.7, 0.95, 0.5), opacity: 0.5, table)
