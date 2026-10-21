@@ -59,6 +59,10 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     var blittedRows = 0
     /// Whether the background compile ran on the main thread, nil until it starts (MB-17); under the lock.
     var compiledOnMainThread: Bool?
+    /// Each surface's last style distance field and the alpha it came from (LE-9, MetalBackend+Style.swift),
+    /// and how many fields the style path has encoded; under the lock.
+    var styleFields: [UUID: StyleField] = [:]
+    var styleFieldEncodes = 0
     /// One full tile's texture bytes (256 x 256 x 8): the floor of `budgetBytes`.
     private static let tileBytes = SurfaceTiling.tileSize * SurfaceTiling.tileSize * MetalSurface.bytesPerPixel
 
@@ -293,7 +297,7 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     }
 
     /// Frees a surface's textures; an unknown or already released id is a no-op.
-    public func release(_ surface: RenderSurface) { withLock { surfaces[surface.id] = nil } }
+    public func release(_ surface: RenderSurface) { withLock { (surfaces[surface.id], styleFields[surface.id]) = (nil, nil) } }
 
     /// Display encode through the DisplayTransfer tables (MB-3): see MetalBackend+Display.swift. Bytes over this
     /// GPU's `maxBufferLength` throw `unsupported(.display)`, backend still healthy: run it on the CPU backend.

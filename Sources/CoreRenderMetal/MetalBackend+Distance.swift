@@ -40,7 +40,11 @@ extension MetalBackend {
         let pixels = try styleBuffer(image.components)
         try encodeBoxBlur(commands, pixels, scratch: styleBuffer(count: w * h * 4), width: w, height: h, radius: radius)
         try styleFinish(commands, label: "box blur")
-        let values = styleFloats(pixels, w * h * 4)
+        return try stylePixels(styleFloats(pixels, w * h * 4), width: w, height: h)
+    }
+
+    /// `values` (`width` x `height` float4s) as a pixel buffer.
+    func stylePixels(_ values: [Float], width w: Int, height h: Int) throws -> PixelBuffer {
         var out = try RenderError.mapping { try PixelBuffer(width: w, height: h) }
         for y in 0..<h {
             for x in 0..<w {
@@ -56,13 +60,24 @@ extension MetalBackend {
     /// returns its outside and inside float buffers, filled once `commands` completes.
     func encodeDistanceField(_ commands: any MTLCommandBuffer, pixels: any MTLBuffer, width w: Int, height h: Int,
                              level: Float) throws -> (outside: any MTLBuffer, inside: any MTLBuffer) {
-        let (seed, step, distance) = try withLock { () throws -> (any MTLComputePipelineState, any MTLComputePipelineState, any MTLComputePipelineState) in
+        let (seed, distance) = try withLock { () throws -> (any MTLComputePipelineState, any MTLComputePipelineState) in
             (try pipelines.pipeline(for: DistanceShader.seed, source: DistanceShader.source),
-             try pipelines.pipeline(for: DistanceShader.step, source: DistanceShader.source),
              try pipelines.pipeline(for: DistanceShader.distance, source: DistanceShader.source))
         }
-        var front = try styleBuffer(count: w * h * 4), back = try styleBuffer(count: w * h * 4)
-        try styleDispatch(commands, seed, [pixels, front], ints: [w, h], level: level, width: w, height: h)
+        let seeds = try styleBuffer(count: w * h * 4)
+        try styleDispatch(commands, seed, [pixels, seeds], ints: [w, h], level: level, width: w, height: h)
+        let front = try encodeFlood(commands, seeds, scratch: styleBuffer(count: w * h * 4), width: w, height: h)
+        let outside = try styleBuffer(count: w * h), inside = try styleBuffer(count: w * h)
+        try styleDispatch(commands, distance, [front, outside, inside], ints: [w, h], width: w, height: h)
+        return (outside, inside)
+    }
+
+    /// Encodes the jump-flood steps over `seeds` (`width` x `height` int4s, as `style_jfa_seed` writes them) with
+    /// `scratch` beside it, and returns whichever of the two holds the flooded seeds once `commands` completes.
+    func encodeFlood(_ commands: any MTLCommandBuffer, _ seeds: any MTLBuffer, scratch: any MTLBuffer,
+                     width w: Int, height h: Int) throws -> any MTLBuffer {
+        let step = try withLock { try pipelines.pipeline(for: DistanceShader.step, source: DistanceShader.source) }
+        var front = seeds, back = scratch
         var size = 1
         while size < max(w, h) { size *= 2 }
         var jumps: [Int] = []
@@ -72,9 +87,7 @@ extension MetalBackend {
             try styleDispatch(commands, step, [front, back], ints: [w, h, jump], width: w, height: h)
             swap(&front, &back)
         }
-        let outside = try styleBuffer(count: w * h), inside = try styleBuffer(count: w * h)
-        try styleDispatch(commands, distance, [front, outside, inside], ints: [w, h], width: w, height: h)
-        return (outside, inside)
+        return front
     }
 
     /// Encodes `boxBlurred(radius:)` of `pixels` (`width` x `height` float4s) in place: six `blur_pass` passes
@@ -95,7 +108,7 @@ extension MetalBackend {
 
     /// `s`'s pixels, read like `read`, and the queue, checking the backend is healthy and the whole-image float4
     /// buffer fits this GPU.
-    private func styleSource(_ s: RenderSurface) throws -> (PixelBuffer, any MTLCommandQueue) {
+    func styleSource(_ s: RenderSurface) throws -> (PixelBuffer, any MTLCommandQueue) {
         let (image, queue) = try withLock { () throws -> (PixelBuffer, any MTLCommandQueue) in
             guard state.healthy else { throw RenderError.unsupported(.style) }
             let stored = try lookup(s)
@@ -109,19 +122,23 @@ extension MetalBackend {
         return (image, queue)
     }
 
-    /// Encodes `pipeline` over `width` x `height` threads with `buffers` at 0, 1, ... (int4 or float data), `ints`
-    /// as Int32s (clamped) at buffer 3 and `level`, when given, as a float at buffer 4.
-    private func styleDispatch(_ commands: any MTLCommandBuffer, _ pipeline: any MTLComputePipelineState,
-                               _ buffers: [any MTLBuffer], ints: [Int], level: Float? = nil,
-                               width: Int, height: Int) throws {
+    /// Encodes `pipeline` over `width` x `height` threads with `buffers` at 0, 1, 2, then 6, 7, ... (int4 or float
+    /// data), `ints` as Int32s (clamped) at buffer 3, `level`, when given, as a float at buffer 4 and `floats`, when
+    /// any, at buffer 5.
+    func styleDispatch(_ commands: any MTLCommandBuffer, _ pipeline: any MTLComputePipelineState,
+                       _ buffers: [any MTLBuffer], ints: [Int], level: Float? = nil, floats: [Float] = [],
+                       width: Int, height: Int) throws {
         guard let encoder = commands.makeComputeCommandEncoder() else { throw styleLost("style: no compute encoder on \(device.name)") }
         encoder.setComputePipelineState(pipeline)
-        for (index, buffer) in buffers.enumerated() { encoder.setBuffer(buffer, offset: 0, index: index) }
+        for (index, buffer) in buffers.enumerated() { encoder.setBuffer(buffer, offset: 0, index: index < 3 ? index : index + 3) }
         let packed = ints.map { Int32(clamping: $0) }
         packed.withUnsafeBytes { raw in
             if let base = raw.baseAddress { encoder.setBytes(base, length: raw.count, index: 3) }
         }
         if var level { encoder.setBytes(&level, length: MemoryLayout<Float>.size, index: 4) }
+        floats.withUnsafeBytes { raw in
+            if let base = raw.baseAddress { encoder.setBytes(base, length: raw.count, index: 5) }
+        }
         let across = max(pipeline.threadExecutionWidth, 1), down = max(pipeline.maxTotalThreadsPerThreadgroup / across, 1)
         encoder.dispatchThreadgroups(MTLSize(width: (width + across - 1) / across, height: (height + down - 1) / down, depth: 1),
                                      threadsPerThreadgroup: MTLSize(width: across, height: down, depth: 1))
@@ -129,20 +146,20 @@ extension MetalBackend {
     }
 
     /// A new command buffer on `queue`.
-    private func styleCommands(_ queue: any MTLCommandQueue) throws -> any MTLCommandBuffer {
+    func styleCommands(_ queue: any MTLCommandQueue) throws -> any MTLCommandBuffer {
         guard let commands = queue.makeCommandBuffer() else { throw styleLost("style: no command buffer on \(device.name)") }
         return commands
     }
 
     /// Commits `commands`, waits with the lock free and records a failure under `label`.
-    private func styleFinish(_ commands: any MTLCommandBuffer, label: String) throws {
+    func styleFinish(_ commands: any MTLCommandBuffer, label: String) throws {
         commands.commit()
         commands.waitUntilCompleted()
         try recordCompletion(status: commands.status, error: commands.error, label: label)
     }
 
     /// A shared buffer holding `values`, or `count` zero floats when `values` is nil; never empty here.
-    private func styleBuffer(_ values: [Float]? = nil, count: Int = 0) throws -> any MTLBuffer {
+    func styleBuffer(_ values: [Float]? = nil, count: Int = 0) throws -> any MTLBuffer {
         let floats = values ?? [Float](repeating: 0, count: max(count, 1))
         let made = floats.withUnsafeBytes { raw -> (any MTLBuffer)? in
             raw.baseAddress.flatMap { device.makeBuffer(bytes: $0, length: raw.count, options: .storageModeShared) }
@@ -152,11 +169,11 @@ extension MetalBackend {
     }
 
     /// The first `count` floats of shared `buffer`.
-    private func styleFloats(_ buffer: any MTLBuffer, _ count: Int) -> [Float] {
+    func styleFloats(_ buffer: any MTLBuffer, _ count: Int) -> [Float] {
         Array(UnsafeBufferPointer(start: buffer.contents().bindMemory(to: Float.self, capacity: count), count: count))
     }
 
     /// Marks the backend failed with `reason` (lock free) and returns the `deviceLost` error to throw.
-    private func styleLost(_ reason: String) -> RenderError { fail(reason); return RenderError.deviceLost(reason) }
+    func styleLost(_ reason: String) -> RenderError { fail(reason); return RenderError.deviceLost(reason) }
 }
 #endif

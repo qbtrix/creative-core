@@ -22,11 +22,11 @@
 // throws `RasterError.invalid`.
 
 /// Where a light layer goes: under the layer, over it clipped to its alpha, or over it as it is.
-enum StylePlacement { case under, clipped, over }
+package enum StylePlacement { case under, clipped, over }
 
 /// One premultiplied light layer of an entry, ready to composite.
-struct StyleLayer {
-    var source: PixelBuffer, mode: BlendMode, opacity: Float, placement: StylePlacement
+package struct StyleLayer {
+    package var source: PixelBuffer, mode: BlendMode, opacity: Float, placement: StylePlacement
 }
 
 extension StyleOp {
@@ -108,7 +108,7 @@ extension PixelBuffer {
     }
 
     /// The entry's light layers, each the buffer's size.
-    func styleLayers(_ entry: StyleEntry) throws -> [StyleLayer] {
+    package func styleLayers(_ entry: StyleEntry) throws -> [StyleLayer] {
         func one(_ source: PixelBuffer, _ placement: StylePlacement) -> [StyleLayer] {
             [StyleLayer(source: source, mode: entry.mode, opacity: entry.opacity, placement: placement)]
         }
@@ -208,7 +208,7 @@ extension PixelBuffer {
 
     /// `fill` over the whole buffer: a colour flood, or `RasterGradient`'s
     /// ramp in this buffer's pixel space.
-    func fillLayer(_ fill: StyleFill) throws -> PixelBuffer {
+    package func fillLayer(_ fill: StyleFill) throws -> PixelBuffer {
         switch fill {
         case let .color(color):
             guard color.isFinite else { throw RasterError.invalid("style fill color \(color): must be finite") }

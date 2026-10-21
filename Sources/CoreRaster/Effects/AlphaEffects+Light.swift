@@ -93,7 +93,7 @@ extension PixelBuffer {
     /// overflows Int. The error names only what sets the padding: nothing but
     /// the buffer for a glow (its padding is fixed), the offset alone when it
     /// is within the reach + 3, else the reach and the offset.
-    static func lightWork(effect: String, reachName: String, reach: Double, dx: Double,
+    package static func lightWork(effect: String, reachName: String, reach: Double, dx: Double,
                           dy: Double) -> (pad: Int, cause: String, remedy: String?) {
         let offset = max(abs(dx), abs(dy))
         let pad = Int(min(offset, reach + 3).rounded(.up)) + 2
