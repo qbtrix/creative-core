@@ -13,9 +13,9 @@ public enum BevelShape: String, CaseIterable, Codable, Sendable {
     case innerBevel
     /// Outside the edge, under the layer.
     case outerBevel
-    /// Half inside and half outside.
+    /// Straddles the edge: raised inside, sunk outside.
     case emboss
-    /// Inside raised and outside sunk, so the edge looks pressed in.
+    /// Low at the edge and rising on both sides, so the edge looks pressed in.
     case pillowEmboss
 }
 
@@ -37,10 +37,11 @@ public struct Bevel: Hashable, Sendable {
     /// `size` 0...250 px is how far from the edge the height rises; `soften` 0...16 px blurs it.
     public var depth: Double, up: Bool, size: Double, soften: Double
     /// Degrees: angle 0 is light from +x, 90 from +y (down); altitude 0...90, 90 straight above.
+    /// The angle turns clockwise (y down); a counterclockwise UI angle a is 360 − a.
     public var angle: Double, altitude: Double
-    /// The lit side's colour, blend mode and opacity 0...1.
+    /// The lit side's premultiplied colour, blend mode and opacity 0...1.
     public var highlight: RGBA, highlightMode: BlendMode, highlightOpacity: Float
-    /// The side facing away: colour, blend mode and opacity 0...1.
+    /// The side facing away: premultiplied colour, blend mode and opacity 0...1.
     public var shadow: RGBA, shadowMode: BlendMode, shadowOpacity: Float
 
     public init(shape: BevelShape, technique: BevelTechnique, depth: Double, up: Bool, size: Double, soften: Double,
@@ -54,13 +55,21 @@ public struct Bevel: Hashable, Sendable {
 }
 
 /// A colour or a gradient in the layer's pixel space.
+///
+/// Every `RGBA` here is linear and premultiplied (r, g, b ≤ a), as `PixelBuffer`
+/// stores it; a gradient's stops are straight alpha (`RasterGradientStop`).
 public enum StyleFill: Hashable, Sendable {
     case color(RGBA)
     /// `RasterGradient`'s ramp from `from` to `to` in the layer's pixels.
     case gradient(stops: [RasterGradientStop], shape: RasterGradientShape, from: Mask.Point, to: Mask.Point)
 }
 
-/// One effect of a layer style. Distances are px, +y down; `spread` is 0...1.
+/// One effect of a layer style. Distances are px, +y down.
+///
+/// Every `RGBA` here is linear and premultiplied (r, g, b ≤ a), as `PixelBuffer`
+/// stores it; a gradient's stops are straight alpha (`RasterGradientStop`).
+/// For a shadow or a glow, `blur`/`size` px is the whole extent past the edge
+/// (a shadow's offset aside); `spread` 0...1 is the hard fraction of it.
 public enum StyleOp: Hashable, Sendable {
     case dropShadow(color: RGBA, dx: Double, dy: Double, spread: Double, blur: Double)
     case innerShadow(color: RGBA, dx: Double, dy: Double, spread: Double, blur: Double)
@@ -73,6 +82,8 @@ public enum StyleOp: Hashable, Sendable {
 }
 
 /// One op in a stack, composited with `mode` at `opacity` 0...1; skipped when not enabled.
+/// For `.bevel`, `mode` is unused; the bevel's `highlightMode` and `shadowMode`
+/// apply, each times `opacity`.
 public struct StyleEntry: Hashable, Sendable {
     public var op: StyleOp
     public var mode: BlendMode
