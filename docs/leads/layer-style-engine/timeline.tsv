@@ -12,3 +12,5 @@ utc	stage	event	ref	note
 2026-10-21T00:10Z	3	resume	les/le-a2,les/le-3,les/le-6	builders stopped on session limit; lead ships local gated heads; LE-6 split 6a/6b
 2026-10-21T00:24Z	3	pr-opened	#785	LE-a2 4f23b3e8
 2026-10-21T00:31Z	3	heartbeat	#785,les/le-3,les/le-6a	LE-3 gate rerun (budget flake under load); 6a gate queued
+2026-10-21T00:40Z	3	pr-opened	#786	LE-3 c9c61caf mutate 3/3
+2026-10-21T00:41Z	3	ready-unopened	les/le-7	3222eebc on les/le-6; 173 lines 14 files; mutate 2/2
