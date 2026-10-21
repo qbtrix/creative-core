@@ -35,10 +35,11 @@ extension PSD {
         let header = try PSDHeader(&reader)
         try reader.skip(try reader.length32()) // colour mode data
         var resources = try reader.reader(try reader.length32())
-        let light = (try? PSDGlobalLight(resources: resources)) ?? PSDGlobalLight()
+        // Walks the resources as `profile` does, so a damaged section throws from either.
+        let light = try PSDGlobalLight(resources: resources)
         let profile = try profile(in: &resources)
         var section = try reader.reader(try reader.length32())
-        var notes: [String] = []
+        var notes = light.damaged ? ["global light (unreadable, default used)"] : []
         let (nodes, mergedAlpha) = try readLayers(&section, header, light: light, notes: &notes)
         let keep = min(header.channels, header.colorChannels + (mergedAlpha ? 1 : 0))
         let planes = try readPlanes(&reader, count: header.channels, keep: keep,
@@ -97,6 +98,7 @@ extension PSD {
                                          blendMode: key == "pass" ? nil : blendMode(key, record.name, &notes),
                                          isHidden: record.isHidden, isOpen: type == 1))
                 if record.effects != nil || record.oldEffects { notes.append("\(record.name): layer effects (not kept)") }
+                if record.fill != 255 { notes.append("\(record.name): fill opacity (not kept)") }
                 current = parent
             } else {
                 var layer = try pixelLayer(record, planes, colorChannels: header.colorChannels, depth: header.depth)
