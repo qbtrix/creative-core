@@ -1,8 +1,9 @@
 // StyleCompositeCoverageTests.swift: the layer style stack's invariants that
 // only the CPU golden guarded (layer-style-engine LE-3, LE-4): every term of
 // `reach`, the paint order of every neighbouring rank pair, the inner spread,
-// the clipped hole under a faded fill, and the bevel's opacity, emboss clip,
-// per-shape rise and smooth profile. Each test names the planted bug in
+// the clipped hole under a faded fill, the clip at a partly covered edge, the
+// bevel layers' modes and opacity, the stroke placements, and the bevel's
+// opacity, emboss clip, per-shape rise and smooth profile. Each test names the planted bug in
 // Tests/mutations/CoreRaster.StyleComposite.json or CoreRaster.Bevel.json
 // that it catches.
 @testable import CoreRaster
@@ -175,5 +176,41 @@ import Testing
             }
             #expect(try badge.styled(stack) == canvas, "fill \(fill)")
         }
+    }
+
+    /// At an edge pixel half covered by the layer, over an opaque drop
+    /// shadow, a colour overlay takes only the layer's share (the clip
+    /// alpha) and the canvas past the clip is kept: the result is the clip
+    /// alpha times red plus the rest of the canvas's straight colour.
+    @Test func clippedOverlayKeepsTheCanvasPastAPartialClip() throws {
+        let badge = try StyleFixtures.badge(pad: 7.5)
+        let shadow = StyleEntry(op: .dropShadow(color: Self.black, dx: 0, dy: 0, spread: 1, blur: 2))
+        let red = StyleEntry(op: .overlay(.color(RGBA(r: 1, g: 0, b: 0, a: 1))))
+        let (clip, under) = try (badge.pixel(x: 7, y: 16).a, badge.styled(LayerStyleStack(entries: [shadow])).pixel(x: 7, y: 16))
+        #expect(clip > 0.4 && clip < 0.6 && under.a > clip + 0.3)
+        let out = try badge.styled(LayerStyleStack(entries: [shadow, red])).pixel(x: 7, y: 16)
+        let rest = under.a - clip
+        #expect(abs(out.r - (clip + rest * under.r / under.a)) < 1e-4, "\(out)")
+        #expect(abs(out.g - rest * under.g / under.a) < 1e-4 && out.g > 0.1, "\(out)")
+        #expect(abs(out.a - under.a) < 1e-5)
+    }
+
+    /// A bevel's two layers draw over the layer, shadow first, each in its own
+    /// mode and both at the entry's opacity.
+    @Test func bevelLayersTakeTheirModesAndTheEntryOpacity() throws {
+        let entry = StyleEntry(op: .bevel(StyleFixtures.bevel()), mode: .difference, opacity: 0.6)
+        let layers = try StyleFixtures.disc().styleLayers(entry)
+        #expect(layers.map(\.mode) == [.multiply, .screen])
+        #expect(layers.map(\.opacity) == [0.6, 0.6] && layers.map(\.placement) == [.over, .over])
+    }
+
+    /// An outside stroke goes under the layer, an inside one is clipped to it
+    /// and a centre one draws over it as it is, so it paints past the edge.
+    @Test func strokePlacementFollowsThePosition() throws {
+        let badge = try StyleFixtures.badge()
+        let placements = try StrokePosition.allCases.map { try badge.styleLayers(StyleEntry(op: Self.stroke(4, $0)))[0].placement }
+        #expect(Dictionary(uniqueKeysWithValues: zip(StrokePosition.allCases, placements)) == [.outside: .under, .inside: .clipped, .center: .over])
+        let centre = try badge.styled(LayerStyleStack(entries: [StyleEntry(op: Self.stroke(4, .center))]))
+        #expect(try badge.pixel(x: 7, y: 16).a == 0 && centre.pixel(x: 7, y: 16).a > 0.9)
     }
 }
