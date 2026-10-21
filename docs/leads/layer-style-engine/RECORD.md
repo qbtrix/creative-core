@@ -71,3 +71,4 @@ Next: builders on LE-a2 (les/le-a2), LE-3 (les/le-3) and LE-6 (les/le-6) from de
 - LE-8 starts when LE-5 merges.
 
 - 2026-10-21T01:12:13Z: #790 (LE-6b) merged at 24caf911. LE-7 rebased onto dev cleanly (d84b3849); builder resumed to gate, mutate and open PR (Slice LE-psd). LE-5 builder still running. No dev ci.yml run contains #785 yet (latest run #425 at 7966e5a9).
+- 2026-10-21T01:21:41Z: #791 (LE-5, slice LE-cpu last PR) merged at bddb0961, 12 files +175/-40, mutate 3/3. LE-8 builder started (slice LE-metal). LE-7 told to rebase on bddb0961 before push.
