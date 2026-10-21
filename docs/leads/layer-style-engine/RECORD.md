@@ -99,3 +99,4 @@ Next: builders on LE-a2 (les/le-a2), LE-3 (les/le-3) and LE-6 (les/le-6) from de
 - 05:11Z: #797 at aceafc6d (15 files, gate PASS 2195 tests), fast-lane back on; Metal (macOS) queued. Exact C4 sentence forwarded to LE-10 builder.
 - 05:27Z: heartbeat. #797 Metal still queued (runner wait). Next check in 20 min.
 - 05:50Z: LE-metal stopped. #797 failed Metal again at aceafc6d (style/stroke-center, subnormal alpha flushed before the bit read). 2 fix rounds used; contact sheet on #779 (comment 6309081602) with 3 options. #797 left open, held by the lane. LE-10 asked to rebase straight onto dev (no le-9b), Refs #779, no feature-done.
+- 05:51Z: LE-z rescoped: drop MetalStyleWalkTests and the Metal-walk C4 clause (held with LE-metal on les/le-z-metal); ship CPU walk, budgets, status. Refs #779, no feature-done.
