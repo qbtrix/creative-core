@@ -18,3 +18,4 @@ utc	stage	event	ref	note
 00:46Z	gate	LE-6b rebased onto dev (804bbc83), gate+mutate PSDEffects running
 00:50Z	merge	#789 LE-4 merged (footer stripped by builder)
 00:50Z	build	LE-5 builder started on dev (les/le-5)
+00:59Z	restart	container restart; LE-6b rebased 471fa009 regating; LE-5 builder resumed (WIP in worktree); first LE-6b gate failed only on ThumbnailStoreRecovery flake, mutate PSDEffects 3/3
