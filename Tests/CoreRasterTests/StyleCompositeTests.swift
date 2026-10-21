@@ -1,7 +1,8 @@
 // StyleCompositeTests.swift: the layer style stack (layer-style-engine LE-1,
 // LE-4): the contract types' defaults and StrokePosition's coding, and
 // `styled(_:)` and `reach`: identity, fill opacity, modes, the fixed paint
-// order, clipping, spread, reach, and a seeded fuzz of bad parameters.
+// order, clipping, spread, reach, equality with the single effects, error
+// wording, and a seeded fuzz of bad parameters.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -42,12 +43,68 @@ import Testing
         #expect(try faded.pixel(x: 24, y: 16).a < full.pixel(x: 24, y: 16).a)
     }
 
-    @Test func multiplyOverlayIsDarkerThanNormal() throws {
+    /// A Multiply grey overlay on a Normal grey one gives grey times grey, so the clipped entry's mode is applied.
+    @Test func multiplyOverlayMultipliesTheOneBelow() throws {
         let badge = try StyleFixtures.badge()
-        let grey = RGBA(r: 0.5, g: 0.5, b: 0.5, a: 1)
-        let normal = try badge.styled(LayerStyleStack(entries: [StyleEntry(op: .overlay(.color(grey)))]))
-        let multiply = try badge.styled(LayerStyleStack(entries: [StyleEntry(op: .overlay(.color(grey)), mode: .multiply)]))
-        #expect(try multiply.pixel(x: 24, y: 16).r <= normal.pixel(x: 24, y: 16).r)
+        let grey = StyleEntry(op: .overlay(.color(RGBA(r: 0.5, g: 0.5, b: 0.5, a: 1))))
+        var times = grey
+        times.mode = .multiply
+        let normal = try badge.styled(LayerStyleStack(entries: [grey, grey])).pixel(x: 24, y: 16)
+        let multiply = try badge.styled(LayerStyleStack(entries: [grey, times])).pixel(x: 24, y: 16)
+        #expect(abs(multiply.r - 0.25) < 1e-5 && multiply.r < normal.r)
+    }
+
+    /// Under-layer modes apply among the under-layers: a Screen glow over a Normal drop shadow is not a Normal glow.
+    @Test func screenGlowOverShadowDiffersFromNormal() throws {
+        let badge = try StyleFixtures.badge()
+        let shadow = StyleEntry(op: .dropShadow(color: RGBA(r: 0.6, g: 0.2, b: 0.2, a: 1), dx: 0, dy: 0, spread: 0, blur: 6))
+        let glow = StyleEntry(op: .outerGlow(color: RGBA(r: 0.5, g: 0.5, b: 0.5, a: 1), spread: 0, size: 4))
+        var screen = glow
+        screen.mode = .screen
+        let normal = try badge.styled(LayerStyleStack(entries: [shadow, glow]))
+        let screened = try badge.styled(LayerStyleStack(entries: [shadow, screen]))
+        #expect(try screened.pixel(x: 6, y: 16).r > normal.pixel(x: 6, y: 16).r)
+    }
+
+    /// The layer is added onto the knocked-out under-layers, so a lone drop
+    /// shadow or outside stroke equals the single effect exactly.
+    @Test func loneShadowAndOutsideStrokeEqualTheEffect() throws {
+        let badge = try StyleFixtures.badge(), black = StyleFixtures.black
+        for blur in [0.0, 4] {
+            let shadow = StyleEntry(op: .dropShadow(color: black, dx: 3, dy: 2, spread: 0, blur: blur))
+            #expect(try badge.styled(LayerStyleStack(entries: [shadow])) == badge.shadowed(color: black, dx: 3, dy: 2, blur: blur, inner: false))
+        }
+        let stroke = StyleEntry(op: .stroke(fill: .color(black), width: 2, position: .outside))
+        #expect(try badge.styled(LayerStyleStack(entries: [stroke])) == badge.stroked(color: black, width: 2, position: .outside))
+    }
+
+    /// Stroke width 0 at every position, bevel size 0 in every shape and a
+    /// clear overlay draw nothing (a 0 px shadow or glow is a hard edge effect, not identity).
+    @Test func zeroWidthStrokeZeroBevelAndClearOverlayAreIdentity() throws {
+        let badge = try StyleFixtures.badge()
+        var ops: [StyleOp] = StrokePosition.allCases.map { .stroke(fill: .color(StyleFixtures.black), width: 0, position: $0) }
+        ops += BevelShape.allCases.map { .bevel(StyleFixtures.bevel(shape: $0, size: 0)) }
+        ops.append(.overlay(.color(RGBA(r: 0, g: 0, b: 0, a: 0))))
+        for op in ops {
+            #expect(try badge.styled(LayerStyleStack(entries: [StyleEntry(op: op)])) == badge, "\(op)")
+        }
+    }
+
+    @Test func shadowBlurErrorNamesBlur() throws {
+        let badge = try StyleFixtures.badge()
+        let shadow = StyleEntry(op: .dropShadow(color: StyleFixtures.black, dx: 0, dy: 0, spread: 0, blur: 2_000))
+        #expect(throws: RasterError.invalid("drop shadow blur 2000.0: must be finite and in 0...1000")) {
+            try badge.styled(LayerStyleStack(entries: [shadow]))
+        }
+    }
+
+    @Test func entryOpacityErrorNamesEntry() throws {
+        let badge = try StyleFixtures.badge()
+        let entries = [StyleEntry(op: .overlay(.color(StyleFixtures.black))),
+                       StyleEntry(op: .outerGlow(color: StyleFixtures.white, spread: 0, size: 2), opacity: 2)]
+        #expect(throws: RasterError.invalid("style entry 1 (outer glow) opacity 2.0: must be a finite value in 0...1")) {
+            try badge.styled(LayerStyleStack(entries: entries))
+        }
     }
 
     @Test func paintOrderIsFixed() throws {
