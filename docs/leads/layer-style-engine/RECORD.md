@@ -106,3 +106,4 @@ Next: builders on LE-a2 (les/le-a2), LE-3 (les/le-3) and LE-6 (les/le-6) from de
 - 2026-10-21T07:06:41Z Round 1: #799 (r1-b2, docs and C4) merged as 4d71686a. Mutation run 114 caught, 0 escaped so far. Fixer r1-b1 (double knockout, multiply test, zero-strength claim) is running its gate. No dev ci.yml run since 426, so LE-z Belt-Slice-Done waits.
 - 2026-10-21T07:15:14Z Round 1: r1-b1 opened #800 (double knockout, real multiply test, zero-strength claim narrowed, error messages name blur and entry). Gate PASS, 7/7 mutants caught. Follow-up for LE-9b: the Metal shadow error still says "size".
 - 2026-10-21T07:27:41Z Round 1: #800 (r1-b1) merged as 69250623. Mutation 261/272 caught, 0 escaped. Tests-lens critic started. Still no dev ci.yml run past 426, so LE-z Done waits.
+- 2026-10-21T07:48:39Z Round 1 mutation: 272/272 caught (100%, 64 min). Round 2 gate and mutation started on dev 390f4b00 while the tests-lens critic finishes.

@@ -62,3 +62,4 @@ utc	stage	event	ref	note
 2026-10-21T07:06:41Z	anatomy-r1	#799 (r1-b2 docs+C4) merged 4d71686a; mutation 114 caught 0 escaped so far; r1-b1 gating; no dev ci.yml run past 426 yet, LE-z Done waits
 2026-10-21T07:15:14Z	anatomy-r1	r1-b1 PR #800 open (head 0b55bb0f, 5 files +158/-42, gate pass, 7/7 mutants)
 2026-10-21T07:27:41Z	anatomy-r1	#800 merged 69250623; mutation 261/272 caught 0 escaped; tests-lens critic started; no dev ci.yml run past 426
+2026-10-21T07:48:39Z	anatomy-r1	round 1 mutation 272/272 caught; round 2 gate+mutate started on dev 390f4b00; tests critic still running
