@@ -205,7 +205,8 @@ public struct RenderDispatcher: Sendable {
     public func applying(_ s: RenderSurface, _ effect: LayerEffect) throws -> RenderSurface {
         try run(.effect, s) { try $0.applying($1, effect) }
     }
-    /// A layer style on the backend routed for `.style`.
+    /// A layer style on the backend routed for `.style`, the same size as `s`.
+    /// Nothing is drawn past its edge: pad the layer by `stack.reach` px on each side first.
     public func styled(_ s: RenderSurface, _ stack: LayerStyleStack) throws -> RenderSurface {
         try run(.style, s) { try $0.styled($1, stack) }
     }

@@ -169,10 +169,13 @@ extension RenderBackend { func styled(_ s: RenderSurface, _ stack: LayerStyleSta
   and clamped to 0...1; smooth `h = 1 − (1 − d)²`, chisel hard `h = d`,
   chisel soft `h = d` blurred by 1 px; `up: false` gives `−h`; then box blur by
   `soften`. Normal `n = normalize(−∂h/∂x·depth·size, −∂h/∂y·depth·size, 1)`
-  (central differences); light `l` from angle and altitude, y down;
-  `s = n·l − l.z`: highlight where `s > 0` with coverage `s / (1 − l.z)`,
-  shadow where `s < 0` with `−s / l.z`; both clipped to the alpha (outer
-  bevel: to its complement within `size`).
+  (central differences); light `l = (cos alt·cos θ, cos alt·sin θ, sin alt)`
+  from angle θ and altitude alt, y down; `lean = n.x·l.x + n.y·l.y` (Lambert's
+  `n·l` less the flat term `n.z·l.z`): highlight where `lean > 0`, shadow
+  where `lean < 0`, coverage `min(|lean|, 1)`, so a flat top and an overhead
+  light (altitude 90) cast nothing. An inner bevel is clipped to the alpha,
+  an outer bevel to its complement; emboss and pillow emboss are not clipped;
+  nothing is painted more than `size` outside the edge.
 - **Overlay.** The fill over the layer's alpha: a colour flood, or
   `RasterGradient` in the layer's pixel space (fill-tools' ramp and dither).
 - **reach.** max over enabled entries: drop shadow `hypot(dx, dy) + blur`,
@@ -300,6 +303,11 @@ backends and the two budget numbers. Each slice's last merge is followed by a
   the scene need the caller to composite the under-layers on their own,
   follow-up work. So LE-4's "Multiply shadow over white" check is a Multiply
   overlay over a Normal one and a Screen glow over a Normal drop shadow.
+- The bevel's lighting is the `lean` rule above, not the first draft's
+  `s = n·l − l.z` with highlight coverage `s / (1 − l.z)` and shadow
+  `−s / l.z`: at altitude 90 that draft gives every sloped pixel `s < 0`,
+  a shadow, which breaks LE-3's "altitude 90 gives no shadow"
+  (`BevelTests.overheadLightCastsNoShadow`), and its highlight divides by 0.
 - The walk checks the shadow's half-darkness edge 6 px past the badge's right
   and bottom edges (outer effects are knocked out under the layer, so there
   is no darkest pixel at the corner), and the lit edge by the bevel's shadow
