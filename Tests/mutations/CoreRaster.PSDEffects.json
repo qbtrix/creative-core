@@ -1,0 +1,5 @@
+[
+  {"note": "the global angle is ignored and every effect uses its own light angle, caught by PSDEffectsTests.usesGlobalLight", "file": "Sources/CoreRaster/Codecs/PSDEffects.swift", "anchor": "d.bool(\"uglg\") == true ? light.angle : nil", "replacement": "d.bool(\"uglg\") == nil ? light.angle : nil", "filter": "PSDEffectsTests"},
+  {"note": "an effect's Opct is read as 0...1 instead of percent, caught by PSDEffectsTests.opacityIsPercent", "file": "Sources/CoreRaster/Codecs/PSDEffects.swift", "anchor": "Float(unit((d.number(key) ?? 100) / 100))", "replacement": "Float(unit(d.number(key) ?? 1))", "filter": "PSDEffectsTests"},
+  {"note": "a second instance of one effect is kept as well as noted, caught by PSDEffectsTests.multiNoted", "file": "Sources/CoreRaster/Codecs/PSDEffects.swift", "anchor": "guard index == 0 else { map.note(\"\\(names[base] ?? base) \\(index + 1)\"); continue }", "replacement": "if index > 0 { map.note(\"\\(names[base] ?? base) \\(index + 1)\") }", "filter": "PSDEffectsTests"}
+]

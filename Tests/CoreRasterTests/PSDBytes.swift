@@ -23,6 +23,8 @@ struct PSDRecord {
     var mask: (top: Int, left: Int, bottom: Int, right: Int, color: UInt8, flags: UInt8)?, unicodeName: String?
     /// `lsct`: 1 open, 2 closed, 3 bounding divider, and a blend key. Compression 0 raw, 1 RLE, 2 and 3 zip.
     var section: (type: Int, key: String?)?, compression = 1
+    /// Further tagged blocks, written as given after `lsct`.
+    var extra: [UInt8] = []
     static let divider = PSDRecord(name: "</Layer group>", section: (3, nil), compression: 0)
     static func folder(_ name: String, type: Int = 1, key: String = "pass") -> PSDRecord { PSDRecord(name: name, blendKey: key, section: (type, key), compression: 0) }
     static func layer(_ name: String, top: Int, left: Int, height: Int, width: Int) -> PSDRecord { PSDRecord(name: name, top: top, left: left, bottom: top + height, right: left + width) }
@@ -41,6 +43,8 @@ struct PSDFile {
     var version = 1, channels = 4, width = 64, height = 48, depth = 8, mode = 3, records: [PSDRecord] = []
     /// A negative layer count: the merged image's first alpha channel is its transparency.
     var negativeCount = false
+    /// The image resources section's bytes.
+    var resources: [UInt8] = []
     static func sample(_ x: Int, _ y: Int, _ id: Int16) -> UInt8 {
         id == -1 ? UInt8(255 - (x + y) % 64) : id == -2 ? UInt8((x * 11 + y * 3) % 256) : UInt8((x * 7 + y * 13 + Int(id) * 50) % 256)
     }
@@ -66,7 +70,8 @@ struct PSDFile {
     var data: Data {
         var w = BigEndian()
         w.ascii("8BPS"); w.u16(version); w.out += [0, 0, 0, 0, 0, 0]
-        for v in [channels, height >> 16, height, width >> 16, width, depth, mode, 0, 0, 0, 0] { w.u16(v) } // no mode data or resources
+        for v in [channels, height >> 16, height, width >> 16, width, depth, mode, 0, 0] { w.u16(v) } // no mode data
+        w.sized { $0.out += resources }
         let data = records.map(\.channelData)
         w.sized { section in
             section.sized(pad: 2) { info in
@@ -99,6 +104,7 @@ struct PSDFile {
             e.out += [UInt8(name.count)] + name + Array(repeating: 0, count: 3 - name.count % 4)
             if let u = r.unicodeName { e.ascii("8BIMluni"); e.sized(pad: 2) { b in b.u32(u.utf16.count); u.utf16.forEach { b.u16(Int($0)) } } }
             if let s = r.section { e.ascii("8BIMlsct"); e.sized { b in b.u32(s.type); if let key = s.key { b.ascii("8BIM" + key) } } }
+            e.out += r.extra
         }
     }
     /// Bottom to top: Base; Group (Masked, Multiply at 60% raw); Hidden; Clipped (0x0C: bit 2 is not hidden); Unicode.
