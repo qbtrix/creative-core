@@ -86,3 +86,4 @@ utc	stage	event	ref	note
 2026-10-21T12:21:56Z	round-3	clarity/contract critic: 0 blocker, 1 major (PSD gradient from/to not shifted by reach padding; verified), 2 minor (notes doc, packet test names)
 2026-10-21T12:32:13Z	round-3	mutate 200 caught 0 escaped so far; robustness/design critic running
 2026-10-21T12:55:31Z	round-3	mutate 337 caught 0 escaped so far; robustness/design critic running
+2026-10-21T12:56:00Z	round-3	mutate 339/339 caught (60.1 min, no timeouts); tests critic launched

@@ -129,3 +129,4 @@ Next: builders on LE-a2 (les/le-a2), LE-3 (les/le-3) and LE-6 (les/le-6) from de
 - 2026-10-21T12:21:56Z round 3 clarity/contract critic: 1 major confirmed (PSD gradient overlay/stroke points are in tight layer pixels, but styled docs say to pad by reach first; the gradient lands offset), 2 minors (LayeredImage.notes doc lists one format, packet mutation table names 3 wrong test filters). Round 3 not clean.
 - 2026-10-21T12:32:13Z round 3: mutation run 200 caught, none escaped so far; robustness/design critic running.
 - 2026-10-21T12:55:31Z round 3: mutation run 337 caught, none escaped so far; robustness/design critic running.
+- 2026-10-21T12:56:00Z round 3: mutation run 339/339 caught in 60.1 min, all by assertions; tests critic launched; robustness/design critic still running.
