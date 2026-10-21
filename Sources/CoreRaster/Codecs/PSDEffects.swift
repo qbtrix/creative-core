@@ -7,9 +7,15 @@
 // Invariants: this never throws. Every effect the stack cannot hold (satin,
 // pattern overlay, a contour, a bevel's gloss contour or texture, a pattern
 // stroke, a second instance of one effect, an unknown blend mode or effect)
-// adds a "<layer>: <what> (not kept)" note; an effect or a block the reader
-// cannot map notes "<what> (unreadable, not kept)", and for the block the
-// layer opens bare. A number outside the model's range (opacity and spread
+// and every glow or shadow setting off its default that the stack has no
+// field for (an inner glow's centre source, noise, jitter, the precise
+// technique, a range other than 50%, a glow gradient, a drop shadow's
+// knock-out off) adds a "<layer>: <what> (not kept)" note, and the effect is
+// kept; an effect, an effect list or a block the reader cannot map (a known
+// key or list item of the wrong type included) notes
+// "<what> (unreadable, not kept)", and for the block the layer opens bare.
+// A 1037 or 1049 resource too short to hold its number marks the global
+// light `damaged`, which the reader notes. A number outside the model's range (opacity and spread
 // 0...100%, size 0...1,000 px or a bevel's 0...250, distance 0...30,000,
 // stroke width 0...1,000, depth 1...1,000%, soften 0...16, altitude 0...90,
 // gradient scale 1...1,000% and offset -1,000...1,000%) is clamped, a
@@ -31,6 +37,8 @@ import Darwin
 /// The image's global light angle (resource 1037) and altitude (1049), degrees; nil when absent.
 struct PSDGlobalLight: Sendable {
     var angle: Double?, altitude: Double?
+    /// A global light resource was too short to read; effects that use it fall back to their own light.
+    var damaged = false
 
     init() {}
 
@@ -43,7 +51,8 @@ struct PSDGlobalLight: Sendable {
             let size = try r.length32()
             var data = try r.reader(size)
             try r.skip(min(size % 2, r.remaining))
-            guard isBIM, size >= 4 else { continue }
+            guard isBIM, id == 1037 || id == 1049 else { continue }
+            guard size >= 4 else { damaged = true; continue }
             if id == 1037 { angle = Double(try data.i32()) } else if id == 1049 { altitude = Double(try data.i32()) }
         }
     }
@@ -64,15 +73,25 @@ enum PSDEffects {
         } catch { return (bare, ["\(layer): layer effects (unreadable, not kept)"]) }
         var map = Mapper(layer: layer, width: Double(max(width, 1)), height: Double(max(height, 1)),
                          light: light, master: fx.bool("masterFXSwitch") ?? true)
-        let listed = Set(fx.items.compactMap { multi[$0.key] })
+        // A well-formed list replaces its effect's single key; a malformed one leaves the single key read.
+        let listed = Set(fx.items.compactMap { item in
+            if case .list = item.value { multi[item.key] } else { nil }
+        })
         for (key, value) in fx.items {
-            if let base = multi[key], case let .list(list) = value {
+            if let base = multi[key] {
+                guard case let .list(list) = value else { map.unreadable("\(names[base] ?? base) list"); continue }
                 for (index, item) in list.enumerated() {
                     guard index == 0 else { map.note("\(names[base] ?? base) \(index + 1)"); continue }
-                    if case let .object(d) = item { map.add(base, d) }
+                    if case let .object(d) = item { map.add(base, d) } else { map.unreadable(names[base] ?? base) }
                 }
-            } else if case let .object(d) = value, !listed.contains(key) {
+            } else if listed.contains(key) {
+                continue
+            } else if case let .object(d) = value {
                 if names[key] != nil { map.add(key, d) } else { map.note(dropped[key] ?? "effect \(key)") }
+            } else if let name = names[key] {
+                map.unreadable(name)
+            } else if let name = dropped[key] {
+                map.note(name)
             }
         }
         return (LayerStyleStack(entries: map.entries, fillOpacity: Float(fill) / 255), map.notes)
@@ -102,6 +121,20 @@ private struct Mapper {
 
     mutating func note(_ what: String) { notes.append("\(layer): \(what) (not kept)") }
 
+    mutating func unreadable(_ what: String) { notes.append("\(layer): \(what) (unreadable, not kept)") }
+
+    /// Notes a shadow's or glow's settings that the stack has no field for, when off their defaults.
+    mutating func unkept(_ key: String, _ name: String, _ d: PSDDescriptor) {
+        if (d.number("Nose") ?? 0) != 0 { note("\(name) noise") }
+        if key == "DrSh", d.bool("layerConceals") == false { note("drop shadow knock-out off") }
+        guard key == "OrGl" || key == "IrGl" else { return }
+        if key == "IrGl", d.enumValue("glwS") == "SrcC" { note("inner glow source centre") }
+        if (d.number("ShdN") ?? 0) != 0 { note("\(name) jitter") }
+        if d.enumValue("GlwT") == "PrBL" { note("\(name) precise technique") }
+        if (d.number("Inpr") ?? 50) != 50 { note("\(name) range") }
+        if d.object("Grad") != nil { note("\(name) gradient") }
+    }
+
     /// Notes "<layer>: <effect> <field> (clamped)", once per effect and field.
     mutating func clamped(_ field: String) {
         let line = "\(layer): \(effect) \(field) (clamped)"
@@ -128,6 +161,7 @@ private struct Mapper {
         let name = PSDEffects.names[key] ?? key
         effect = name
         if key != "ebbl", (d.object("TrnS")?.list("Crv ")?.count ?? 0) > 2 { note("\(name) contour") }
+        unkept(key, name, d)
         do {
             let op: StyleOp
             /// `Clr `, read only by the effects that carry one (a gradient overlay and a bevel have none).
@@ -153,7 +187,7 @@ private struct Mapper {
             }
             entries.append(StyleEntry(op: op, mode: key == "ebbl" ? .normal : mode(d, "Md  ", name),
                                       opacity: key == "ebbl" ? 1 : opacity(d, "Opct"), isEnabled: master && (d.bool("enab") ?? true)))
-        } catch { notes.append("\(layer): \(name) (unreadable, not kept)") }
+        } catch { unreadable(name) }
     }
 
     /// The light's angle, degrees counterclockwise: the global one when the effect uses it.
