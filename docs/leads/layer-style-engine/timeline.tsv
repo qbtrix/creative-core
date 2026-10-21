@@ -45,3 +45,4 @@ utc	stage	event	ref	note
 2026-10-21T03:13:05Z	merged	#793 #794 #795 merged 03:06Z; dev 3ad633b5; dev CI run 426 (39536751190) queued; LE-9a2 open as #796
 2026-10-21T03:36:09Z	slice-done	LE-a, LE-cpu, LE-psd Belt-Slice-Done on dev CI 426 (Linux green)
 2026-10-21T03:36:09Z	fix-round	LE-metal round 1: #796 Metal stroke inside/center parity off (up to 161 levels); routed to builder a83f4fc
+2026-10-21T03:47:03Z	fix-pushed	LE-metal round 1 pushed #796 head 29576313 (exact EDT kernel replaces jump-flood seed for stroke); Metal check queued
