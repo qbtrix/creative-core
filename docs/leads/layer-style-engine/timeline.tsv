@@ -14,3 +14,5 @@ utc	stage	event	ref	note
 2026-10-21T00:31Z	3	heartbeat	#785,les/le-3,les/le-6a	LE-3 gate rerun (budget flake under load); 6a gate queued
 2026-10-21T00:40Z	3	pr-opened	#786	LE-3 c9c61caf mutate 3/3
 2026-10-21T00:41Z	3	ready-unopened	les/le-7	3222eebc on les/le-6; 173 lines 14 files; mutate 2/2
+00:46Z	merge	#785 LE-a, #786 LE-3, #788 LE-6a merged to dev (d2021453); #788 footer stripped
+00:46Z	gate	LE-6b rebased onto dev (804bbc83), gate+mutate PSDEffects running

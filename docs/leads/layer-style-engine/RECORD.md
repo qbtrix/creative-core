@@ -56,3 +56,10 @@ Next: builders on LE-a2 (les/le-a2), LE-3 (les/le-3) and LE-6 (les/le-6) from de
 - LE-4 (les/le-4, on les/le-3) and LE-7 (les/le-7, on les/le-6) builders started at 00:08Z. They open their PRs only after the lower PR merges.
 - #786 (LE-3, c9c61caf, `Mutate: 3/3 CoreRaster.Bevel`) opened at 00:40Z after the gate rerun passed. The footer was stripped. #785 is mergeable (`Metal (macOS)` is green).
 - LE-7 is ready but unopened as les/le-7 3222eebc (gate passed, 2/2 caught). It left one gap: `PSDEffects.modes`, the blend mode inside each effect, doesn't map `lddg` or `lbrn` yet. Fold that into the next PSD-side change (under 50 lines), or into LE-10.
+
+## 00:47Z stage: LE-a/LE-3/LE-6a merged
+- #785 (LE-a), #786 (LE-3) and #788 (LE-6a) merged into dev; dev is d2021453.
+- #788 footer stripped after merge.
+- LE-6b rebased onto dev at 804bbc83 (328+/23-, 5 files); its gate and the CoreRaster.PSDEffects mutate run are going.
+- Next: open LE-6b, then resume the LE-7 builder to rebase onto dev and open its PR. LE-4 is building on dev.
+- Belt-Slice-Done LE-a waits for a dev ci.yml run that contains #785.
