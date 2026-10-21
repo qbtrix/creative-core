@@ -1,0 +1,23 @@
+[
+  {
+    "note": "styled drops the stack's fill opacity on the CPU backend, so a faded layer draws at full strength, caught by CPUStyleTests.fillOpacityKept",
+    "file": "Sources/CoreRender/CPU/CPUBackend+Style.swift",
+    "anchor": "try derived(s, .style) { try $0.styled(stack) }",
+    "replacement": "try derived(s, .style) { try $0.styled(LayerStyleStack(entries: stack.entries)) }",
+    "filter": "CPUStyleTests.fillOpacityKept"
+  },
+  {
+    "note": "styled maps every entry to Normal on the CPU backend, so a Multiply shadow or Screen glow blends wrong, caught by CPUStyleTests.everyOpEqualsTheDirectCall",
+    "file": "Sources/CoreRender/CPU/CPUBackend+Style.swift",
+    "anchor": "try derived(s, .style) { try $0.styled(stack) }",
+    "replacement": "try derived(s, .style) { try $0.styled(LayerStyleStack(entries: stack.entries.map { StyleEntry(op: $0.op, opacity: $0.opacity, isEnabled: $0.isEnabled) }, fillOpacity: stack.fillOpacity)) }",
+    "filter": "CPUStyleTests.everyOpEqualsTheDirectCall"
+  },
+  {
+    "note": "the parity harness renders a style sample with every entry at opacity 1, so a backend is checked against the wrong stack, caught by CPUGoldenTests.cpuReproducesGoldenWithZeroDelta",
+    "file": "Sources/CoreRender/Parity/ParitySamples.swift",
+    "anchor": "case .styled(let stack): out = try backend.styled(s, stack)",
+    "replacement": "case .styled(let stack): out = try backend.styled(s, LayerStyleStack(entries: stack.entries.map { var e = $0; e.opacity = 1; return e }, fillOpacity: stack.fillOpacity))",
+    "filter": "CPUGoldenTests"
+  }
+]
