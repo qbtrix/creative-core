@@ -79,6 +79,29 @@ private extension Desc {
         #expect(notes == ["L: drop shadow 2 (not kept)", "L: satin (not kept)"])
     }
 
+    private func rgb(_ v: Double) -> Desc { .obj("RGBC", [("Rd  ", .doub(v)), ("Grn ", .doub(v)), ("Bl  ", .doub(v))]) }
+
+    /// A gradient overlay carries no `Clr ` key; it reads as an entry with no notes.
+    @Test func gradientOverlayNeedsNoColourKey() throws {
+        let stops = Desc.list([.obj("Clrt", [("Clr ", rgb(0)), ("Lctn", .long(0))]), .obj("Clrt", [("Clr ", rgb(255)), ("Lctn", .long(4096))])])
+        let gradient = Desc.obj("GrFl", [("enab", .bool(true)), ("Md  ", .enm("BlnM", "Nrml")), ("Opct", .untf("#Prc", 60)),
+                                         ("Grad", .obj("Grdn", [("Clrs", stops)])), ("Angl", .untf("#Ang", 90))])
+        let (style, notes) = try read(Desc.effects([("GrFl", gradient)]).lfx2)
+        #expect(notes.isEmpty)
+        guard case .overlay(.gradient)? = style?.entries.first?.op else { Issue.record("no overlay: \(String(describing: style))"); return }
+        #expect(style?.entries.first?.opacity == 0.6)
+    }
+
+    /// A bevel carries no `Clr ` key (its colours are hglC and sdwC); it reads as an entry with no notes.
+    @Test func bevelNeedsNoColourKey() throws {
+        let bevel = Desc.obj("ebbl", [("enab", .bool(true)), ("bvlS", .enm("BESl", "InrB")), ("blur", .untf("#Pxl", 8)),
+                                      ("hglC", rgb(255)), ("hglM", .enm("BlnM", "Scrn")), ("sdwC", rgb(0)), ("sdwM", .enm("BlnM", "Mltp"))])
+        let (style, notes) = try read(Desc.effects([("ebbl", bevel)]).lfx2)
+        #expect(notes.isEmpty)
+        guard case let .bevel(b)? = style?.entries.first?.op else { Issue.record("no bevel: \(String(describing: style))"); return }
+        #expect(b.size == 8 && b.highlightMode == .screen && b.shadowMode == .multiply)
+    }
+
     @Test func zerosNoteUnreadableAndTheLayerStillOpens() throws {
         var w = BigEndian(); w.ascii("8BIMlfx2"); w.sized { $0.out += Array(repeating: 0, count: 16) }
         let (style, notes) = try read(w.out)

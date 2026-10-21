@@ -98,21 +98,23 @@ private struct Mapper {
         if (d.object("TrnS")?.list("Crv ")?.count ?? 0) > 2 { note("\(name) contour") }
         do {
             let op: StyleOp
-            let color = try self.color(d, "Clr "), spread = unit((d.number("Ckmt") ?? 0) / 100), size = d.number("blur") ?? 0
+            let spread = unit((d.number("Ckmt") ?? 0) / 100), size = d.number("blur") ?? 0
+            /// `Clr `, read only by the effects that carry one (a gradient overlay and a bevel have none).
+            func fill() throws -> RGBA { try color(d, "Clr ") }
             switch key {
             case "DrSh", "IrSh":
-                let a = angle(d) * .pi / 180, distance = d.number("Dstn") ?? 0
+                let a = angle(d) * .pi / 180, distance = d.number("Dstn") ?? 0, color = try fill()
                 let (dx, dy) = (-cos(a) * distance, sin(a) * distance)
                 op = key == "DrSh" ? .dropShadow(color: color, dx: dx, dy: dy, spread: spread, blur: size)
                     : .innerShadow(color: color, dx: dx, dy: dy, spread: spread, blur: size)
-            case "OrGl": op = .outerGlow(color: color, spread: spread, size: size)
-            case "IrGl": op = .innerGlow(color: color, spread: spread, size: size)
+            case "OrGl": op = .outerGlow(color: try fill(), spread: spread, size: size)
+            case "IrGl": op = .innerGlow(color: try fill(), spread: spread, size: size)
             case "FrFX":
                 let position: StrokePosition = d.enumValue("Styl") == "InsF" ? .inside : d.enumValue("Styl") == "CtrF" ? .center : .outside
                 let paint = d.enumValue("PntT") ?? "SClr"
                 guard paint == "SClr" || paint == "GrFl" else { throw CodecError.unsupported("stroke paint \(paint)") }
-                op = .stroke(fill: paint == "GrFl" ? try gradient(d) : .color(color), width: d.number("Sz  ") ?? 0, position: position)
-            case "SoFi": op = .overlay(.color(color))
+                op = .stroke(fill: paint == "GrFl" ? try gradient(d) : .color(try fill()), width: d.number("Sz  ") ?? 0, position: position)
+            case "SoFi": op = .overlay(.color(try fill()))
             case "GrFl": op = .overlay(try gradient(d))
             default: op = .bevel(try bevel(d))
             }
