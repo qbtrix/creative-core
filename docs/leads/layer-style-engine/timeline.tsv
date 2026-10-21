@@ -79,3 +79,4 @@ utc	stage	event	ref	note
 2026-10-21T10:57:49Z	round-2	r2-b6/b7/b8 fixers active (tests-critic M1-M3, m1-m7); no PRs yet
 2026-10-21T11:20:26Z	round-2	r2-b6/b7/b8 still active (gate/mutate runs); no PRs yet
 2026-10-21T11:23:56Z	round-2	#806 r2-b7 merged (M3,m1,m5,m6-S); freed 14G of stale worktrees; r2-b6,r2-b8 running
+2026-10-21T11:32:14Z	round-2	#807 r2-b8 merged (m2,m3,m4,m6-B,m7); r2-b6 running
