@@ -1,7 +1,7 @@
 {
   "id": "compositing",
   "name": "Compositing",
-  "description": "W3C blend modes and source-over compositing with opacity on premultiplied pixels, in place on the backdrop one row at a time (an opaque normal row at full opacity is copied in), with free functions that composite a copy. Compositing/ holds the W1 composites, such as compositing through a mask at its own offset.",
+  "description": "W3C blend modes plus linear dodge and linear burn, and source-over compositing with opacity on premultiplied pixels, in place on the backdrop one row at a time (an opaque normal row at full opacity is copied in), with free functions that composite a copy. Compositing/ holds the W1 composites, such as compositing through a mask at its own offset.",
   "technology": "Swift 6, Foundation",
   "paths": [
     "Sources/CoreRaster/BlendMode.swift",
