@@ -1,0 +1,23 @@
+[
+  {
+    "note": "entries drawn in list order, not the fixed paint order, so an inside stroke listed before an overlay is painted under it, caught by StyleCompositeTests.paintOrderIsFixed",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": ".sorted { ($0.element.op.paintRank, $0.offset) < ($1.element.op.paintRank, $1.offset) }",
+    "replacement": ".sorted { $0.offset < $1.offset }",
+    "filter": "StyleCompositeTests"
+  },
+  {
+    "note": "fill opacity applied to effects, so a glow under a layer at fill opacity 0 vanishes with it, caught by StyleCompositeTests.fillOpacityFadesOnlyTheLayer",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": "try canvas.composite(layer.source, x: 0, y: 0, mode: layer.mode, opacity: layer.opacity)\n        }\n        try canvas.composite(self",
+    "replacement": "try canvas.composite(layer.source, x: 0, y: 0, mode: layer.mode, opacity: layer.opacity * stack.fillOpacity)\n        }\n        try canvas.composite(self",
+    "filter": "StyleCompositeTests"
+  },
+  {
+    "note": "overlay not clipped to alpha, so a colour overlay floods the whole buffer and adds alpha outside the layer, caught by StyleCompositeTests.overlayStaysInside",
+    "file": "Sources/CoreRaster/Effects/StyleComposite.swift",
+    "anchor": "return one(try fillLayer(fill), .clipped)",
+    "replacement": "return one(try fillLayer(fill), .over)",
+    "filter": "StyleCompositeTests"
+  }
+]
