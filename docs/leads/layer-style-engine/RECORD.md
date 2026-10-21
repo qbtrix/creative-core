@@ -69,3 +69,5 @@ Next: builders on LE-a2 (les/le-a2), LE-3 (les/le-3) and LE-6 (les/le-6) from de
 - LE-5 builder started on dev as `les/le-5`. It is not stacked, so it opens at once when its gate passes.
 - LE-6b: once its gate passes, rebase onto dev (which now has #789), regate, then open.
 - LE-8 starts when LE-5 merges.
+
+- 2026-10-21T01:12:13Z: #790 (LE-6b) merged at 24caf911. LE-7 rebased onto dev cleanly (d84b3849); builder resumed to gate, mutate and open PR (Slice LE-psd). LE-5 builder still running. No dev ci.yml run contains #785 yet (latest run #425 at 7966e5a9).
