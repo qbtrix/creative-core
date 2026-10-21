@@ -21,14 +21,15 @@
 // layer never adds alpha outside the layer's shape and adds none at all where
 // the layer is drawn in full. Invariants: no active entry at fill opacity 1
 // returns the buffer itself; the result is the buffer's size and finite; a
-// NaN, infinite or over-cap value, or an opacity or spread outside 0...1,
-// throws `RasterError.invalid`.
+// NaN, infinite or over-cap value, an opacity or spread outside 0...1, or more
+// than `maxEntries` entries throws `RasterError.invalid`; each entry's layers
+// are composited before the next entry's are drawn, so at most two are alive.
 
 /// Where a light layer goes: under the layer, over it clipped to its alpha, or over it as it is.
-package enum StylePlacement { case under, clipped, over }
+package enum StylePlacement: Sendable, Hashable { case under, clipped, over }
 
-/// One premultiplied light layer of an entry, ready to composite.
-package struct StyleLayer {
+/// One premultiplied light layer of an entry, ready to composite. Equatable, not Hashable, as `PixelBuffer` is.
+package struct StyleLayer: Sendable, Equatable {
     package var source: PixelBuffer, mode: BlendMode, opacity: Float, placement: StylePlacement
 }
 
@@ -67,6 +68,11 @@ extension LayerStyleStack {
     /// The largest reach, so a caller's padding stays a sane allocation.
     static let maxReach = 1_000_000.0
 
+    /// The most entries `styled` draws; a longer stack throws `RasterError.invalid`.
+    /// A file's layer has one entry per effect kind and few instances of
+    /// each, far below this.
+    public static let maxEntries = 64
+
     /// The px a caller pads on each side so nothing the stack draws clips:
     /// the most any enabled entry draws past the layer's edge (a drop
     /// shadow's offset length plus its blur, an outer glow's size, an
@@ -93,11 +99,20 @@ extension LayerStyleStack {
 
 extension PixelBuffer {
     /// The layer drawn with `stack`, the same size, in the fixed paint order
-    /// (see the file header). Throws `RasterError.invalid` for a fill opacity
-    /// or entry opacity outside 0...1, and for an active entry with a NaN,
-    /// infinite or over-cap value (spread outside 0...1, blur or size outside
-    /// 0...1,000, stroke width outside 0...1,000, a bevel `beveled` refuses).
+    /// (see the file header). Nothing is drawn past the buffer's edge, so pad
+    /// the layer by `stack.reach` px on each side first, or a drop shadow,
+    /// outer glow, outside stroke or outer bevel is cut off at the edge with
+    /// no error. Each entry's light layers are composited as soon as they are
+    /// drawn, so memory stays a few buffers whatever the entry count. Throws
+    /// `RasterError.invalid` for more than `LayerStyleStack.maxEntries`
+    /// entries, a fill opacity or entry opacity outside 0...1, and an active
+    /// entry with a NaN, infinite or over-cap value (spread outside 0...1,
+    /// blur or size outside 0...1,000, stroke width outside 0...1,000, a
+    /// bevel `beveled` refuses).
     public func styled(_ stack: LayerStyleStack) throws -> PixelBuffer {
+        guard stack.entries.count <= LayerStyleStack.maxEntries else {
+            throw RasterError.invalid("style stack of \(stack.entries.count) entries: at most \(LayerStyleStack.maxEntries)")
+        }
         guard (0...1).contains(stack.fillOpacity) else {
             throw RasterError.invalid("fill opacity \(stack.fillOpacity): must be a finite value in 0...1")
         }
@@ -107,26 +122,34 @@ extension PixelBuffer {
         let active = stack.entries.enumerated().filter { $0.element.isEnabled && $0.element.opacity > 0 }
             .sorted { ($0.element.op.paintRank, $0.offset) < ($1.element.op.paintRank, $1.offset) }
         guard !active.isEmpty || stack.fillOpacity < 1 else { return self }
-        let layers = try active.flatMap { try styleLayers($0.element) }
-        var canvas = try PixelBuffer(width: width, height: height)
-        for under in layers where under.placement == .under {
-            try canvas.composite(under.source, x: 0, y: 0, mode: under.mode, opacity: under.opacity)
-        }
-        var sum = canvas.components
-        let src = components
-        for i in sum.indices {
-            sum[i] += src[i] * stack.fillOpacity
-            guard sum[i].isFinite else { throw RasterError.invalid("styled layer: result overflows") }
-        }
-        canvas = PixelBuffer(checkedWidth: width, height: height, storage: sum)
-        for layer in layers where layer.placement != .under {
-            if layer.placement == .clipped {
-                try canvas.compositeClipped(layer, clip: self)
-            } else {
-                try canvas.composite(layer.source, x: 0, y: 0, mode: layer.mode, opacity: layer.opacity)
+        // Under-layers (ranks 0-2) sort first, so the layer is added once, before the first layer over it.
+        var canvas = try PixelBuffer(width: width, height: height), filled = false
+        for entry in active {
+            for layer in try styleLayers(entry.element) {
+                if layer.placement == .under {
+                    try canvas.composite(layer.source, x: 0, y: 0, mode: layer.mode, opacity: layer.opacity)
+                    continue
+                }
+                if !filled { (canvas, filled) = (try adding(onto: canvas, fillOpacity: stack.fillOpacity), true) }
+                if layer.placement == .clipped {
+                    try canvas.compositeClipped(layer, clip: self)
+                } else {
+                    try canvas.composite(layer.source, x: 0, y: 0, mode: layer.mode, opacity: layer.opacity)
+                }
             }
         }
-        return canvas
+        return filled ? canvas : try adding(onto: canvas, fillOpacity: stack.fillOpacity)
+    }
+
+    /// `under` plus this layer at `fillOpacity`: the under-layers are knocked out already, so the layer is added.
+    private func adding(onto under: PixelBuffer, fillOpacity: Float) throws -> PixelBuffer {
+        var sum = under.components
+        let src = components
+        for i in sum.indices {
+            sum[i] += src[i] * fillOpacity
+            guard sum[i].isFinite else { throw RasterError.invalid("styled layer: result overflows") }
+        }
+        return PixelBuffer(checkedWidth: width, height: height, storage: sum)
     }
 
     /// The entry's light layers, each the buffer's size.
@@ -165,9 +188,7 @@ extension PixelBuffer {
             throw RasterError.invalid("\(effect) color \(color) at (\(dx), \(dy)): must be finite")
         }
         guard (0...1).contains(spread) else { throw RasterError.invalid("\(effect) spread \(spread): must be finite and in 0...1") }
-        guard size.isFinite, size >= 0, size <= Self.maxLightReach else {
-            throw RasterError.invalid("\(effect) \(reachName) \(size): must be finite and in 0...\(Int(Self.maxLightReach))")
-        }
+        try Self.checkLightReach(size, effect: effect, reachName: reachName)
         let choke = spread * size, blur = size - choke
         let work = Self.lightWork(effect: effect, reachName: reachName, reach: blur, dx: dx, dy: dy)
         let mask = try spreadAlpha(choke: choke, inner: inner)
@@ -209,9 +230,7 @@ extension PixelBuffer {
     /// inside left unclipped for `compositeClipped`, centre as it is. The
     /// coverage is `stroked`'s, on the same anti-aliased edge distances.
     func strokeLayer(_ fill: StyleFill, width strokeWidth: Double, position: StrokePosition) throws -> PixelBuffer {
-        guard strokeWidth.isFinite, strokeWidth >= 0, strokeWidth <= Self.maxStrokeWidth else {
-            throw RasterError.invalid("stroke width \(strokeWidth): must be finite and in 0...\(Int(Self.maxStrokeWidth))")
-        }
+        try Self.checkStrokeWidth(strokeWidth)
         let paint = try fillLayer(fill)
         guard strokeWidth > 0 else { return try PixelBuffer(width: width, height: height) }
         let distance = try edgeDistances(), src = components, c = Self.channels

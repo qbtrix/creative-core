@@ -146,4 +146,34 @@ import Testing
         #expect(PixelBuffer.profile(0.5, .smooth) == 0.75)
         #expect(PixelBuffer.profile(0.5, .chiselHard) == 0.5 && PixelBuffer.profile(0.5, .chiselSoft) == 0.5)
     }
+
+    /// `styled` composites each entry as it draws it; the result equals the
+    /// earlier way, every layer drawn first, then the under-layers, the layer
+    /// added at the fill opacity, and the rest in order, bit for bit, on a
+    /// stack with every op twice plus a centre stroke, at two fill opacities.
+    @Test func streamedEqualsEveryLayerDrawnFirst() throws {
+        let badge = try StyleFixtures.badge()
+        var entries = StyleFixtures.everyOp().entries
+        entries += entries.reversed() + [StyleEntry(op: Self.stroke(1.5, .center), opacity: 0.8)]
+        for fill: Float in [1, 0.4] {
+            let stack = LayerStyleStack(entries: entries, fillOpacity: fill)
+            let sorted = stack.entries.enumerated().sorted { ($0.element.op.paintRank, $0.offset) < ($1.element.op.paintRank, $1.offset) }
+            let layers = try sorted.flatMap { try badge.styleLayers($0.element) }
+            var canvas = try PixelBuffer(width: badge.width, height: badge.height)
+            for under in layers where under.placement == .under {
+                try canvas.composite(under.source, x: 0, y: 0, mode: under.mode, opacity: under.opacity)
+            }
+            let (src, under) = (badge.components, canvas.components)
+            canvas = PixelBuffer(checkedWidth: badge.width, height: badge.height,
+                                 storage: under.indices.map { under[$0] + src[$0] * fill })
+            for layer in layers where layer.placement != .under {
+                if layer.placement == .clipped {
+                    try canvas.compositeClipped(layer, clip: badge)
+                } else {
+                    try canvas.composite(layer.source, x: 0, y: 0, mode: layer.mode, opacity: layer.opacity)
+                }
+            }
+            #expect(try badge.styled(stack) == canvas, "fill \(fill)")
+        }
+    }
 }
