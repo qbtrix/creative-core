@@ -97,3 +97,4 @@ Next: builders on LE-a2 (les/le-a2), LE-3 (les/le-3) and LE-6 (les/le-6) from de
 - 04:55Z: #797 Metal (macOS) failed (job 119042317141). (1) MetalSurfaceTests `landed` lacks .style. (2) `samplesMatchTheCPU` style/stroke-center: worst 204 levels, 63 px past 2, while strokeAndBevelLayersMatchTheCPU and stacksMatchTheCPU pass. Fix round 2 of 2 sent to a83f4fc. If it is still red after this round, the slice gets a contact sheet.
 - 05:05Z: #797 fix round 2 (subnormal alpha seed) pushed at 2797e556; 16 files tripped the lane cap. Decision: drop the C4 part sentence from #797, fold it into LE-10. LE-10 rebases onto dev past the final le-9b head.
 - 05:11Z: #797 at aceafc6d (15 files, gate PASS 2195 tests), fast-lane back on; Metal (macOS) queued. Exact C4 sentence forwarded to LE-10 builder.
+- 05:27Z: heartbeat. #797 Metal still queued (runner wait). Next check in 20 min.
