@@ -1,0 +1,23 @@
+[
+  {
+    "note": "the light's y sign is flipped, so a bevel lit from 90 degrees lights the top edge instead of the bottom, caught by BevelTests.lightFromBelowAtNinety",
+    "file": "Sources/CoreRaster/Effects/Bevel.swift",
+    "anchor": "ly = cosA * sin(theta)",
+    "replacement": "ly = -cosA * sin(theta)",
+    "filter": "BevelTests"
+  },
+  {
+    "note": "the bevel ignores up, so a sunk edge is lit like a raised one, caught by BevelTests.downSwapsTheLight",
+    "file": "Sources/CoreRaster/Effects/Bevel.swift",
+    "anchor": "heights[i * c] = Float(bevel.up ? h : -h)",
+    "replacement": "heights[i * c] = Float(h)",
+    "filter": "BevelTests"
+  },
+  {
+    "note": "the bevel height is not clamped at size, so the top keeps sloping past it and lights the middle, caught by BevelTests.flatPastSize",
+    "file": "Sources/CoreRaster/Effects/Bevel.swift",
+    "anchor": "return min(max(r, 0), 1)",
+    "replacement": "return max(r, 0)",
+    "filter": "BevelTests"
+  }
+]
