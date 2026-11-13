@@ -84,6 +84,15 @@ private func anchorCount(_ path: Path) -> Int { path.contours.reduce(0) { $0 + $
         }
     }
 
+    @Test func closingCurveWithoutEndHandleFoldsIntoFirstAnchor() throws {
+        // Two anchors left: p1 writes a closing cubic back to p0 whose second control sits on p0.
+        let two = [PathAnchor(point: pt(110, 80)), PathAnchor(point: pt(275, 80), handleOut: pt(330, 60))]
+        let path = Path(contours: [PathContour(anchors: two, closed: true)])
+        let back = path.contours
+        #expect(back.count == 1 && back[0].closed && back[0].anchors.count == 2, "\(back)")
+        #expect(Path(contours: back).elements == path.elements)
+    }
+
     @Test func removingAnchorJoinsNeighbours() throws {
         let three = [pt(0, 0), pt(10, 10), pt(0, 10)].map { PathAnchor(point: $0) }
         #expect(try square.removingAnchor(contour: 0, index: 1).contours == [PathContour(anchors: three, closed: true)])

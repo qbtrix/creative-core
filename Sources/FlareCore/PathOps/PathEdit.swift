@@ -247,13 +247,13 @@ extension PathContour {
         anchors.append(PathAnchor(point: to, handleIn: c2 == to ? nil : c2))
     }
 
-    /// Closes the contour, folding a last anchor that a curve brought back onto the first into it.
+    /// Closes the contour, folding a last anchor that a curve brought back onto the first into it,
+    /// with or without an in-handle (a control on the first point is no handle).
     fileprivate mutating func close() {
         guard !closed else { return }
         closed = true
-        if anchors.count > 1, let first = anchors.first, let last = anchors.last, last.point == first.point,
-           let handle = last.handleIn {
-            anchors[0].handleIn = handle
+        if anchors.count > 1, let first = anchors.first, let last = anchors.last, last.point == first.point {
+            if let handle = last.handleIn { anchors[0].handleIn = handle }
             anchors.removeLast()
         }
     }
