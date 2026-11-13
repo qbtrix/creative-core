@@ -4,7 +4,7 @@
 // CoreRaster's `styled` for every op and the fill opacity; a backend without a
 // `styled` of its own throws `unsupported(.style)`; the fake records the
 // stack; and the dispatcher sends it to the CPU when the preferred backend
-// lacks `.style`.
+// lacks `.style`, which Metal claims since LE-9b.
 import CoreColor
 import CoreRaster
 import CoreRender
@@ -25,7 +25,7 @@ import Testing
     @Test func cpuChecksTheSurfaceAndLeavesItUnchanged() throws {
         let cpu = CPUBackend()
         #expect(cpu.supports.contains(.style))
-        #expect(RenderOp.notOnMetalYet.contains(.style))
+        #expect(!RenderOp.notOnMetalYet.contains(.style), "on Metal since LE-9b")
         let input = try layer()
         let s = try cpu.surface(input)
         #expect(throws: RenderError.self) { _ = try cpu.styled(s, LayerStyleStack(entries: [], fillOpacity: .nan)) }

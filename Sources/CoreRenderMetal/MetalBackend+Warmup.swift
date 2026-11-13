@@ -43,7 +43,11 @@ extension MetalBackend {
         case .retouch: return [(RetouchShader.key, RetouchShader.source)]
         case .composite, .blendSeparable, .blendNonSeparable:
             return BlendMode.allCases.filter { RenderOp(compositing: $0) == op }.compactMap { try? compositeKernel(for: $0) }
-        case .maskedComposite, .affine, .effect, .color, .style: return []  // `RenderOp.notOnMetalYet`: no kernels yet
+        case .style:
+            let styles = StyleShader.variants.map { (key: StyleShader.key($0), source: StyleShader.source) }
+            let fields = [DistanceShader.seed, DistanceShader.step, DistanceShader.distance].map { (key: $0, source: DistanceShader.source) }
+            return styles + fields + [(key: BlurShader.pass, source: BlurShader.source)]
+        case .maskedComposite, .affine, .effect, .color: return []  // `RenderOp.notOnMetalYet`: no kernels yet
         }
     }
 

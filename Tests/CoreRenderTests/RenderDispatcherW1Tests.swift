@@ -18,7 +18,7 @@ private func seededBuffer(width: Int, height: Int, seed: UInt64) throws -> Pixel
 }
 
 /// Every family from before W1.
-private let oldFamilies = Set(RenderOp.allCases).subtracting(RenderOp.notOnMetalYet)
+private let oldFamilies = Set(RenderOp.allCases.prefix(9))
 
 private func fallback(_ d: RenderDispatcher) -> String? {
     d.lastFallback.map { "\($0.op.rawValue) \($0.reason)" }

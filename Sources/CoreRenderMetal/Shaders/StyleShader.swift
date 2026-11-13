@@ -2,25 +2,70 @@
 // over whole-image float4 buffers. `style_pad` spreads the alpha on the distance field (choke > 0 only) and pads it
 // with the outside value for the glows' box blur; `style_light` reads that mask bilinearly at (x - dx, y - dy) and
 // tints it (an outer one knocked out by the alpha); `style_edge_seed` seeds the anti-aliased edge points of a copy
-// padded by 1 px, `style_edt_pass` finds each pixel's nearest seed as CoreRaster's exact transform does (columns,
+// padded by 1 px (a subnormal alpha read from its bits, since the GPU flushes it), `style_edt_pass` finds each pixel's nearest seed as CoreRaster's exact transform does (columns,
 // then rows; not the jump flood, whose ties differ in thin stems), and `style_stroke` turns it into the stroke's
 // smoothstep cover of the fill; `style_bevel_height` raises the signed distance through the shape's rise and profile, and
-// `style_bevel_light` leans its central-difference normal toward the light into highlight and shadow. Distances are
-// clamped to 1e30 before use, so no infinity reaches arithmetic. Grids may round up; every kernel bounds-checks.
+// `style_bevel_light` leans its central-difference normal toward the light into highlight and shadow (LE-9a2);
+// `style_composite` puts one layer on the canvas in place with the blend shaders' B(Cb, Cs), as CoreRaster's
+// `sourceOver`, or clipped to the layer's alpha as `compositeClipped` (LE-9b). Distances are clamped to 1e30 before
+// use, so no infinity reaches arithmetic. Grids may round up; every kernel bounds-checks.
 #if canImport(Metal)
+import CoreRaster
 import CoreRender
 
 enum StyleShader {
     /// The kernels' variants, for the warmup.
-    static let variants = ["pad", "light", "edge_seed", "edt_pass", "stroke", "bevel_height", "bevel_light"]
+    static let variants = ["pad", "light", "edge_seed", "edt_pass", "stroke", "bevel_height", "bevel_light", "composite"]
 
     /// The pipeline key of `variant`.
     static func key(_ variant: String) -> PipelineKey { PipelineKey(op: .style, variant: variant) }
 
+    /// The index `style_composite` takes for `mode`: its place in `BlendMode.allCases`.
+    static func modeIndex(_ mode: BlendMode) -> Int { BlendMode.allCases.firstIndex(of: mode) ?? 0 }
+
+    /// The blend shaders' B(Cb, Cs) (their source opens with the include), the light kernels and the composite.
+    static let source = BlendSeparableShader.functions + BlendNonSeparableShader.functions + kernels + composite
+
+    /// B(Cb, Cs) for a `modeIndex`: Cs for `.normal`, per channel for a separable mode, on the colour otherwise.
+    static let blend = "static float3 style_blend(int mode, float3 cb, float3 cs) {\n    switch (mode) {\n"
+        + BlendSeparableShader.modes.map { m in
+            let f = "blend_\(m.rawValue)"
+            return "    case \(modeIndex(m)): return float3(\(f)(cb.r, cs.r), \(f)(cb.g, cs.g), \(f)(cb.b, cs.b));\n"
+        }.joined()
+        + BlendNonSeparableShader.modes.map { "    case \(modeIndex($0)): return blend_\($0.rawValue)(cb, cs);\n" }.joined()
+        + "    default: return cs;\n    }\n}\n"
+
+    /// `style_over` is `sourceOver`; `style_composite` puts buffer 1 at `opacity` onto the canvas (buffer 0) in
+    /// place, with ints w, h, `modeIndex` and 1 to clip to buffer 2's alpha as `compositeClipped` does.
+    static let composite = blend + """
+    static float4 style_over(float4 src, float4 b, int mode, float opacity) {
+        float4 s = src * opacity;
+        float3 cs = s.a != 0.0f ? s.rgb / s.a : float3(0.0f), cb = b.a != 0.0f ? b.rgb / b.a : float3(0.0f);
+        float3 blended = mode == 0 ? cs : style_blend(mode, cb, cs);
+        float keep = 1.0f - s.a;
+        return float4((cs + b.a * (blended - cs)) * s.a + b.rgb * keep, s.a + b.a * keep);
+    }
+    kernel void style_composite(device float4 *canvas [[buffer(0)]], device const float4 *src [[buffer(1)]],
+                                device const float4 *clip [[buffer(2)]], constant int *p [[buffer(3)]],
+                                constant float &opacity [[buffer(4)]], uint2 gid [[thread_position_in_grid]]) {
+        int w = p[0], x = int(gid.x), y = int(gid.y), i = y * w + x;
+        if (x >= w || y >= p[1]) { return; }
+        float4 d = canvas[i], s = src[i];
+        if (p[3] == 0) { canvas[i] = style_over(s, d, p[2], opacity); return; }
+        float inside = clamp(clip[i].w, 0.0f, 1.0f);
+        if (inside <= 0) { return; }
+        float alpha = d.a;
+        float3 straight = alpha > 0 ? d.rgb / alpha : float3(0.0f);
+        float4 opaque = float4(select(float3(0.0f), straight, isfinite(straight)), 1.0f);
+        float4 blended = style_over(s, opaque, p[2], opacity);
+        float covered = min(alpha, inside), hole = max(inside - alpha, 0.0f) * opacity;
+        canvas[i] = float4(covered * blended.rgb + (alpha - covered) * opaque.rgb + hole * s.rgb, alpha + hole * s.a);
+    }
+
+    """
+
     /// Buffers 0, 1, 2 then 6, 7 as `styleDispatch` binds them; ints at 3, the float at 4, the float table at 5.
-    static let source = """
-    #include <metal_stdlib>
-    using namespace metal;
+    static let kernels = """
     constant float style_far = 1e30;
     kernel void style_pad(device const float4 *in [[buffer(0)]], device const float *field [[buffer(1)]],
                           device float4 *out [[buffer(2)]], constant int *p [[buffer(3)]],
@@ -66,6 +111,25 @@ enum StyleShader {
         int ix = x - 1, iy = y - 1;
         return (ix >= 0 && iy >= 0 && ix < w && iy < h) ? clamp(in[iy * w + ix].w, 0.0f, 1.0f) : 0.0f;
     }
+    // A positive subnormal alpha in units of 2^-149 (0 otherwise). The GPU flushes subnormals to 0 in arithmetic and
+    // compares, but CoreRaster reads them in Double, where they are above 0: an edge and part of the gradient.
+    static float style_edge_tiny(device const float4 *in, int w, int h, int x, int y) {
+        int ix = x - 1, iy = y - 1;
+        uint bits = (ix >= 0 && iy >= 0 && ix < w && iy < h) ? as_type<uint>(in[iy * w + ix].w) : 0u;
+        return (bits >> 23) == 0u ? float(bits) : 0.0f;
+    }
+    static bool style_edge_is(device const float4 *in, int w, int h, int x, int y, float opposite) {
+        return style_edge_alpha(in, w, h, x, y) == opposite && (opposite != 0 || style_edge_tiny(in, w, h, x, y) == 0);
+    }
+    static float2 style_edge_gradient(device const float4 *in, int w, int h, int x, int y, bool tiny) {
+        float a[9];
+        for (int k = 0; k < 9; k++) {
+            int ax = x + k % 3 - 1, ay = y + k / 3 - 1;
+            a[k] = tiny ? style_edge_tiny(in, w, h, ax, ay) : style_edge_alpha(in, w, h, ax, ay);
+        }
+        float r2 = sqrt(2.0);
+        return float2(a[2] + r2 * a[5] + a[8] - a[0] - r2 * a[3] - a[6], a[6] + r2 * a[7] + a[8] - a[0] - r2 * a[1] - a[2]);
+    }
     static float style_edge_offset(float alpha, float gx, float gy) {
         float u = max(gx, gy), v = min(gx, gy), a1 = 0.5 * v / u;
         if (alpha < a1) { return 0.5 * (u + v) - sqrt(2 * u * v * alpha); }
@@ -78,22 +142,19 @@ enum StyleShader {
         int w = p[0], h = p[1], pw = w + 2, x = int(gid.x), y = int(gid.y), i = y * pw + x;
         if (x >= pw || y >= h + 2) { return; }
         float v = style_edge_alpha(in, w, h, x, y), opposite = v >= 1 ? 0.0 : 1.0;
-        bool seed = (v > 0 && v < 1) || style_edge_alpha(in, w, h, x - 1, y) == opposite
-            || style_edge_alpha(in, w, h, x + 1, y) == opposite || style_edge_alpha(in, w, h, x, y - 1) == opposite
-            || style_edge_alpha(in, w, h, x, y + 1) == opposite;
+        bool seed = ((v > 0 || style_edge_tiny(in, w, h, x, y) > 0) && v < 1)
+            || style_edge_is(in, w, h, x - 1, y, opposite) || style_edge_is(in, w, h, x + 1, y, opposite)
+            || style_edge_is(in, w, h, x, y - 1, opposite) || style_edge_is(in, w, h, x, y + 1, opposite);
         if (!seed) { f[i] = -1; nearest[i] = -1; points[i] = float4(0); return; }
-        float r2 = sqrt(2.0);
-        float gx = style_edge_alpha(in, w, h, x + 1, y - 1) + r2 * style_edge_alpha(in, w, h, x + 1, y)
-            + style_edge_alpha(in, w, h, x + 1, y + 1) - style_edge_alpha(in, w, h, x - 1, y - 1)
-            - r2 * style_edge_alpha(in, w, h, x - 1, y) - style_edge_alpha(in, w, h, x - 1, y + 1);
-        float gy = style_edge_alpha(in, w, h, x - 1, y + 1) + r2 * style_edge_alpha(in, w, h, x, y + 1)
-            + style_edge_alpha(in, w, h, x + 1, y + 1) - style_edge_alpha(in, w, h, x - 1, y - 1)
-            - r2 * style_edge_alpha(in, w, h, x, y - 1) - style_edge_alpha(in, w, h, x + 1, y - 1);
-        float g = sqrt(gx * gx + gy * gy);
-        float d = g > 0 ? style_edge_offset(v, abs(gx) / g, abs(gy) / g) / g : 0.0;
+        // Where the normal alphas cancel (or are all 0), the subnormal ones set the direction, as in Double.
+        float2 grad = style_edge_gradient(in, w, h, x, y, false);
+        if (length(grad) == 0) { grad = style_edge_gradient(in, w, h, x, y, true); }
+        float g = length(grad);
+        float2 n = g > 0 ? grad / g : float2(0);
+        float off = g > 0 ? style_edge_offset(v, abs(n.x), abs(n.y)) : 0.0;
         f[i] = 0;
         nearest[i] = i;
-        points[i] = float4(float(x) + d * gx, float(y) + d * gy, 1, 0);
+        points[i] = float4(float(x) + off * n.x, float(y) + off * n.y, 1, 0);
     }
     // CoreRaster `DistanceField.envelopePass` (border off) for line gid.x: squared distances in `f` (-1 for none) and
     // their seeds, in exact int64, the breakpoints kept as fractions, so ties fall to the same seed as on the CPU.

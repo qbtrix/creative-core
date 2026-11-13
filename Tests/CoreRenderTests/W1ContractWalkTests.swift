@@ -21,7 +21,7 @@ import Testing
     static let cpuBuilt: Set<RenderOp> = [.affine, .color, .effect, .maskedComposite, .style]
 
     /// A fake preferring every family from before W1 and none of the new ones.
-    static let oldFamilies = Set(RenderOp.allCases).subtracting(RenderOp.notOnMetalYet)
+    static let oldFamilies = Set(RenderOp.allCases.prefix(9))
 
     let buffer: PixelBuffer
     let mask: Mask
