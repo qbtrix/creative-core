@@ -19,5 +19,12 @@
     "anchor": "throw RenderError.unsupported(.style)",
     "replacement": "throw RenderError.unsupported(.effect)",
     "filter": "W1ContractTests.defaultsNameTheirFamily"
+  },
+  {
+    "note": "affine goes back into notOnMetalYet although its Metal kernel and parity test landed",
+    "file": "Sources/CoreRender/RenderOp.swift",
+    "anchor": "public static let notOnMetalYet: Set<RenderOp> = [.maskedComposite, .effect, .color, .style]",
+    "replacement": "public static let notOnMetalYet: Set<RenderOp> = [.maskedComposite, .affine, .effect, .color, .style]",
+    "filter": "W1ContractTests.notOnMetalYetIsExactlyTheFour"
   }
 ]

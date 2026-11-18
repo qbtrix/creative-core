@@ -40,7 +40,7 @@ public enum RenderOp: String, CaseIterable, Codable, Sendable {
     /// whose coverage is scaled by a mask. CPU first (`notOnMetalYet`).
     case maskedComposite
     /// `transformed`, `flipped` and `composite(_:onto:through:mode:opacity:filter:)`:
-    /// an affine matrix or a mirror, filtered. CPU first (`notOnMetalYet`).
+    /// an affine matrix or a mirror, filtered. On Metal since #829 (the composite on the GPU, the other two through CoreRaster).
     case affine
     /// `applying(_:)`: every `LayerEffect`. CPU first (`notOnMetalYet`).
     case effect
@@ -55,7 +55,7 @@ extension RenderOp {
     /// The CPU-first families no Metal kernel implements yet. The Metal
     /// backend enables none of them, so RenderDispatcher sends each to the
     /// CPU; a family leaves this set when its kernel and parity test land.
-    public static let notOnMetalYet: Set<RenderOp> = [.maskedComposite, .affine, .effect, .color, .style]
+    public static let notOnMetalYet: Set<RenderOp> = [.maskedComposite, .effect, .color, .style]
 }
 
 extension RenderOp {

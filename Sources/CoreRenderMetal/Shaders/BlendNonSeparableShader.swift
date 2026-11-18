@@ -24,7 +24,7 @@ enum BlendNonSeparableShader {
     static let source = Self.functions + Self.modes.enumerated().map { Self.kernel($0.offset, $0.element) }.joined()
 
     /// The spec's helpers and B(Cb, Cs) per mode on straight colours, as BlendMode.swift computes them.
-    private static let functions = """
+    static let functions = """
     #include <metal_stdlib>
     using namespace metal;
     static float ns_lum(float3 c) { return 0.3f * c.r + 0.59f * c.g + 0.11f * c.b; }

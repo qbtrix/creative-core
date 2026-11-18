@@ -122,9 +122,12 @@ fields).
   gives each new `RenderBackend` method a default that throws
   `RenderError.unsupported(<its family>)`; `Sources/CoreRender/RenderDispatcher.swift`
   routes each new method by its family and each `ToneAdjustment` by `family`.
-- **CPU-first families.** `maskedComposite`, `affine`, `effect`, `color` and
-  `style` are in `RenderOp.notOnMetalYet`: Metal claims none of them, so the
-  dispatcher always sends them to the CPU. Their CPU code is one file per
+- **CPU-first families.** `maskedComposite`, `effect`, `color` and `style`
+  are in `RenderOp.notOnMetalYet`: Metal claims none of them, so the
+  dispatcher always sends them to the CPU. `affine` left it with #829: on a
+  read-write tier 2 device Metal runs the composite through a matrix on the
+  GPU (`MetalBackend+Affine.swift`; `transformed` and `flipped` still run
+  CoreRaster there). Their CPU code is one file per
   family: `Sources/CoreRender/CPU/CPUBackend+MaskedComposite.swift`,
   `CPUBackend+Affine.swift`, `CPUBackend+Effect.swift`,
   `CPUBackend+Color.swift` (`CPUBackend+Ops.swift` calls `+Color` for a
