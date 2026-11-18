@@ -1,6 +1,6 @@
 // AffineShader.swift: the composite through an AffineMatrix (#829), one kernel per blend mode, one thread per
 // backdrop pixel of one backdrop tile, in place. Each thread samples the source like CoreRaster's `sampled` for
-// `.bilinear` at stretch 1 (taps ceil(u - 1)...floor(u + 1) weighted by the tent, the sum over in-source taps
+// `.bilinear` at stretch 1 (taps floor(u) and floor(u) + 1, the CPU's ceil(u - 1)...floor(u + 1) less a tap of weight 0, weighted by the tent, the sum over in-source taps
 // divided by the weight of every tap, so the outside reads clear), then blends with the in-place composite's math:
 // BlendSeparableShader's and BlendNonSeparableShader's B(Cb, Cs), mixed by `separable_over` (`.normal` is that mix
 // with B = Cs). The source taps come from up to a 4 x 4 block of source tiles bound as a texture array; the host
@@ -45,8 +45,8 @@ enum AffineShader {
             float v = q.start.y + q.inv.y * float(g.x) + q.inv.w * float(g.y);
             float4 sum = float4(0.0f);
             float total = 0.0f;
-            int i0 = int(ceil(u - 1.0f)), i1 = max(i0, int(floor(u + 1.0f)));
-            int j0 = int(ceil(v - 1.0f)), j1 = max(j0, int(floor(v + 1.0f)));
+            int i0 = int(floor(u)), i1 = i0 + 1;  // the CPU's taps ceil(u - 1)...floor(u + 1) less one of weight 0
+            int j0 = int(floor(v)), j1 = j0 + 1;
             float tx = 0.0f, ty = 0.0f;
             for (int i = i0; i <= i1; i++) { tx += aff_tent(float(i) - u); }
             for (int j = j0; j <= j1; j++) { ty += aff_tent(float(j) - v); }
