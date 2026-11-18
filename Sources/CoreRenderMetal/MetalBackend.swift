@@ -81,6 +81,7 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
             state.enable(.composite)
             state.enable(.blendSeparable)  // MB-6
             state.enable(.blendNonSeparable)  // MB-10
+            state.enable(.affine)  // #829: the composite through a matrix
         }
         state.enable(.resample)
         state.enable(.adjust)  // MB-14

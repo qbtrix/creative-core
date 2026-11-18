@@ -22,7 +22,7 @@ enum BlendSeparableShader {
     static let source = Self.functions + Self.modes.map(Self.kernel).joined()
 
     /// B(Cb, Cs) per channel on straight colours, in BlendMode.swift's order of operations.
-    private static let functions = """
+    static let functions = """
     #include <metal_stdlib>
     using namespace metal;
     static float sep_screen(float cb, float cs) { return cb + cs - cb * cs; }
