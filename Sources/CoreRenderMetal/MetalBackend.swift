@@ -63,6 +63,8 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     /// and how many fields the style path has encoded; under the lock.
     var styleFields: [UUID: StyleField] = [:]
     var styleFieldEncodes = 0
+    /// Composites through a matrix that took the CPU path (MetalBackend+Affine.swift); under the lock.
+    var affineCPUComposites = 0
     /// One full tile's texture bytes (256 x 256 x 8): the floor of `budgetBytes`.
     private static let tileBytes = SurfaceTiling.tileSize * SurfaceTiling.tileSize * MetalSurface.bytesPerPixel
 

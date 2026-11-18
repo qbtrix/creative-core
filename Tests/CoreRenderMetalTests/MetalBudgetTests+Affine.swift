@@ -27,6 +27,7 @@ extension MetalBudgetTests {
         let times = try (0..<20).map { _ in try ContinuousClock().measure(run) }.sorted()
         let p95 = times[19]  // index 20 * 95 / 100, as the 4K row computes it
         #expect(p95 <= .milliseconds(4), "24 MP affine composite p95 \(p95), median \(times[10])")
+        #expect(backend.affineCPUCompositeCount == 0, "every run stayed on the GPU path")
         #expect(backend.evictedTileCount == 0, "both layers stay resident: nothing to read back")
         print("affine 24MP p95 \(p95) median \(times[10]) min \(times[0])")
     }

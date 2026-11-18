@@ -64,8 +64,22 @@ extension ParityTests {
             #expect(outside == 0, "\(mode): \(outside) pixels outside writeBounds changed")
             if result.passed, outside == 0 { passed += 1 }
         }
+        #expect(metal.affineCPUCompositeCount == 0, "every mode ran on the GPU path")
         #expect(passed == BlendMode.allCases.count, "\(passed) of \(BlendMode.allCases.count) modes match the CPU")
         #expect(metal.isHealthy)
+    }
+
+    /// A resident bilinear composite never reads back: the CPU path's counter stays 0, and a lanczos3 one moves it.
+    @Test(.enabled(if: MetalBackend.defaultDevice != nil)) func affineCompositeStaysOnTheGPU() throws {
+        let metal = try MetalBackend.onDefaultDevice()
+        guard metal.supports.contains(.affine) else { return }
+        let s = try metal.surface(try PixelBuffer.softAlpha(width: 300, height: 280, seed: 0x829E))
+        var b = try metal.surface(try PixelBuffer.seeded(width: 600, height: 520, seed: 0x829F))
+        defer { metal.release(s); metal.release(b) }
+        try metal.composite(s, onto: &b, through: turnAndScale(tx: 150.25, ty: 20.75), mode: .screen, opacity: 0.7, filter: .bilinear)
+        #expect(metal.affineCPUCompositeCount == 0, "a resident bilinear composite took the CPU path")
+        try metal.composite(s, onto: &b, through: turnAndScale(tx: 150.25, ty: 20.75), mode: .screen, opacity: 0.7, filter: .lanczos3)
+        #expect(metal.affineCPUCompositeCount == 1, "lanczos3 takes the CPU path and counts")
     }
 }
 #endif

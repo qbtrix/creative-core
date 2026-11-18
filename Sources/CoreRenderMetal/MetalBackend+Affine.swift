@@ -132,9 +132,13 @@ extension MetalBackend {
         try withLock {
             _ = try lookup(b)
             surfaces[b.id] = stored
+            affineCPUComposites += 1
         }
         evictIfNeeded()
     }
+
+    /// How many composites through a matrix took the CPU path (read back, CoreRaster, upload): a test hook.
+    package var affineCPUCompositeCount: Int { withLock { affineCPUComposites } }
 
     /// `s`'s pixels for `transformed` and `flipped`, gated by `.affine` like the CPU.
     private func affineInput(_ s: RenderSurface) throws -> PixelBuffer {
