@@ -44,21 +44,28 @@ enum AffineShader {
             float u = q.start.x + q.inv.x * float(g.x) + q.inv.z * float(g.y);
             float v = q.start.y + q.inv.y * float(g.x) + q.inv.w * float(g.y);
             float4 sum = float4(0.0f);
-            float total = 0.0f;
-            int i0 = int(floor(u)), i1 = i0 + 1;  // the CPU's taps ceil(u - 1)...floor(u + 1) less one of weight 0
-            int j0 = int(floor(v)), j1 = j0 + 1;
-            float tx = 0.0f, ty = 0.0f;
-            for (int i = i0; i <= i1; i++) { tx += aff_tent(float(i) - u); }
-            for (int j = j0; j <= j1; j++) { ty += aff_tent(float(j) - v); }
-            total = tx * ty;
+            float total = 1.0f;
+            int i0 = int(floor(u)), j0 = int(floor(v));  // the CPU's taps ceil(u - 1)...floor(u + 1) less one of weight 0
+            float fx = u - float(i0), fy = v - float(j0);
             bool inside = u > -2.0f - float(q.limits.z) && u < float(q.limits.x) + 1.0f
                 && v > -2.0f - float(q.limits.w) && v < float(q.limits.y) + 1.0f;
-            for (int j = max(max(j0, -q.limits.w), 0); inside && j <= min(min(j1, q.limits.y - 1), 1023); j++) {
-                float wy = aff_tent(float(j) - v);
-                if (wy == 0.0f) { continue; }
-                for (int i = max(max(i0, -q.limits.z), 0); i <= min(min(i1, q.limits.x - 1), 1023); i++) {
-                    float w = wy * aff_tent(float(i) - u);
-                    sum += w * float4(src[(j >> 8) * 4 + (i >> 8)].read(uint2(i & 255, j & 255)));
+            if (i0 >= 0 && j0 >= 0 && i0 + 1 < min(q.limits.x, 1024) && j0 + 1 < min(q.limits.y, 1024)
+                && (i0 >> 8) == ((i0 + 1) >> 8) && (j0 >> 8) == ((j0 + 1) >> 8)) {
+                // All four taps in one source tile, inside the source: the common case, one texture, no checks.
+                texture2d<half, access::read> t = src[(j0 >> 8) * 4 + (i0 >> 8)];
+                uint2 at0 = uint2(i0 & 255, j0 & 255);
+                float4 top = mix(float4(t.read(at0)), float4(t.read(at0 + uint2(1, 0))), fx);
+                float4 bottom = mix(float4(t.read(at0 + uint2(0, 1))), float4(t.read(at0 + uint2(1, 1))), fx);
+                sum = (1.0f - fy) * top + fy * bottom;
+            } else {
+                float tx = aff_tent(float(i0) - u) + aff_tent(float(i0 + 1) - u);
+                float ty = aff_tent(float(j0) - v) + aff_tent(float(j0 + 1) - v);
+                total = tx * ty;
+                for (int j = max(max(j0, -q.limits.w), 0); inside && j <= min(min(j0 + 1, q.limits.y - 1), 1023); j++) {
+                    float wy = aff_tent(float(j) - v);
+                    for (int i = max(max(i0, -q.limits.z), 0); i <= min(min(i0 + 1, q.limits.x - 1), 1023); i++) {
+                        sum += wy * aff_tent(float(i) - u) * float4(src[(j >> 8) * 4 + (i >> 8)].read(uint2(i & 255, j & 255)));
+                    }
                 }
             }
             float4 s = (inside && total != 0.0f ? sum / total : float4(0.0f)) * q.opacity;

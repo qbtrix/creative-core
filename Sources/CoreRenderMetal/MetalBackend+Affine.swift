@@ -87,12 +87,12 @@ extension MetalBackend {
 
     /// Runs every step's dispatch in one command buffer and waits; call with the lock free.
     private func encodeAffine(_ plan: AffinePlan, pipeline: any MTLComputePipelineState) throws {
-        guard let commands = plan.queue.makeCommandBuffer(), let encoder = commands.makeComputeCommandEncoder() else {
+        guard let commands = plan.queue.makeCommandBuffer(), let encoder = commands.makeComputeCommandEncoder(dispatchType: .concurrent) else {
             throw affineLost("composite through a matrix: no command buffer or encoder on \(device.name)")
         }
         encoder.setComputePipelineState(pipeline)
-        let width = max(pipeline.threadExecutionWidth, 1)
-        let group = MTLSize(width: width, height: max(pipeline.maxTotalThreadsPerThreadgroup / width, 1), depth: 1)
+        let width = max(pipeline.threadExecutionWidth, 1)  // 32 x 8: measured faster than 32 x 32 on 24 MP
+        let group = MTLSize(width: width, height: max(min(pipeline.maxTotalThreadsPerThreadgroup / width, 8), 1), depth: 1)
         for step in plan.steps {
             var parameters = step.parameters
             encoder.setTextures(step.block, range: 0..<16)
