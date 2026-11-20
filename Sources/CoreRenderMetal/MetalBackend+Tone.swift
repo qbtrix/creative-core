@@ -27,7 +27,7 @@ extension MetalBackend: ToneRendering {
         }
         let output: MetalSurface
         do {
-            output = try MetalSurface(device: device, width: tiling.width, height: tiling.height, clock: clock)
+            output = try MetalSurface(pool: texturePool, device: device, width: tiling.width, height: tiling.height, clock: clock)
         } catch RenderError.deviceLost(let reason) {
             throw toneLost(reason)
         }

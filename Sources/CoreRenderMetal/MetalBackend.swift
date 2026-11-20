@@ -68,6 +68,8 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     /// Tiles `surface`, `blank` and `copied` filled from the CPU (`MetalSurface.uploadedTiles`, and each
     /// evicted source tile `copied` stages from its shadow); under the lock.
     var cpuTileUploads = 0
+    /// Tile textures for surfaces the GPU fills whole (MetalTexturePool.swift); its own lock.
+    let texturePool = TexturePool()
     /// One full tile's texture bytes (256 x 256 x 8): the floor of `budgetBytes`.
     private static let tileBytes = SurfaceTiling.tileSize * SurfaceTiling.tileSize * MetalSurface.bytesPerPixel
 
@@ -121,6 +123,9 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     package var cpuTileUploadCount: Int { withLock { cpuTileUploads } }
     /// Waits for the last command buffer committed with no wait (`lastUnwaited`): a test hook for timing GPU work.
     package func waitForCommittedWork() { withLock { lastUnwaited }?.waitUntilCompleted() }
+    /// Tile textures the pool allocated new, and the bytes it holds for reuse: test hooks.
+    package var pooledTextureAllocationCount: Int { texturePool.allocationCount }
+    package var pooledTextureBytes: Int { texturePool.bytes }
     /// Pipelines built by compiling shader source since init, one per key (plus each custom probe).
     public var pipelineCompileCount: Int { withLock { pipelines.compileCount } }
     /// Pipeline requests answered from the in-process memo without a compile.
@@ -307,7 +312,13 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     }
 
     /// Frees a surface's textures; an unknown or already released id is a no-op.
-    public func release(_ surface: RenderSurface) { withLock { (surfaces[surface.id], styleFields[surface.id]) = (nil, nil) } }
+    public func release(_ surface: RenderSurface) {
+        withLock {
+            let tiles = surfaces[surface.id]?.tiles.compactMap { $0 } ?? []
+            (surfaces[surface.id], styleFields[surface.id]) = (nil, nil)
+            texturePool.put(tiles, room: budget - residentBytesLocked)
+        }
+    }
 
     /// Display encode through the DisplayTransfer tables (MB-3): see MetalBackend+Display.swift. Bytes over this
     /// GPU's `maxBufferLength` throw `unsupported(.display)`, backend still healthy: run it on the CPU backend.
