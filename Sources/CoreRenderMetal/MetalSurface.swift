@@ -41,6 +41,8 @@ final class MetalSurface {
     var lastUse: [UInt64]
     /// Bytes the resident tile textures hold: width x height x `bytesPerPixel` summed over `tiles`.
     var residentBytes: Int
+    /// Tiles this init filled from the CPU with `replace(region:...)`: the backend's upload counter adds it.
+    let uploadedTiles: Int
 
     /// Uploads `buffer` tile by tile as binary16 (components clamped to +-65504, so no tile holds an
     /// infinity) and stamps every tile's `lastUse` with `clock`. Throws `RenderError.raster` for a size
@@ -99,6 +101,7 @@ final class MetalSurface {
         self.shadows = Array(repeating: nil, count: tiling.tileCount)
         self.lastUse = Array(repeating: clock, count: tiling.tileCount)
         self.residentBytes = bytes
+        self.uploadedTiles = tiling.tileCount
     }
 
     /// Every tile into a new `PixelBuffer` of the surface's size: a resident tile is downloaded, an

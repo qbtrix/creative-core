@@ -30,7 +30,7 @@ extension MetalBackend {
             throw RenderError.deviceLost(reason)
         }
         let id = UUID()
-        withLock { surfaces[id] = stored }
+        withLock { (surfaces[id], cpuTileUploads) = (stored, cpuTileUploads + stored.uploadedTiles) }
         evictIfNeeded()
         return handle(id: id, width: width, height: height)
     }

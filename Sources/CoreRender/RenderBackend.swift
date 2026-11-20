@@ -65,6 +65,10 @@ public protocol RenderBackend: Sendable {
     /// A new `width` x `height` surface, every pixel clear. Not gated. The
     /// default uploads a clear `PixelBuffer`; a GPU backend clears on the device.
     func blank(width: Int, height: Int) throws -> RenderSurface
+    /// A new surface with exactly `s`'s pixels, which later ops on either
+    /// leave alone in the other. Not gated. The default reads `s` and uploads
+    /// the buffer; a GPU backend copies on the device.
+    func copied(_ s: RenderSurface) throws -> RenderSurface
     /// Blends each step's surface onto `b` in place, in order, as one
     /// `composite(_:onto:x:y:mode:opacity:)` per step does, gated by each
     /// step's family. The default makes exactly those calls; a GPU backend

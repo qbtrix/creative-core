@@ -65,6 +65,8 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     var styleFieldEncodes = 0
     /// Composites through a matrix that took the CPU path (MetalBackend+Affine.swift); under the lock.
     var affineCPUComposites = 0
+    /// Tiles `surface`, `blank` and `copied` filled from the CPU (`MetalSurface.uploadedTiles`); under the lock.
+    var cpuTileUploads = 0
     /// One full tile's texture bytes (256 x 256 x 8): the floor of `budgetBytes`.
     private static let tileBytes = SurfaceTiling.tileSize * SurfaceTiling.tileSize * MetalSurface.bytesPerPixel
 
@@ -114,6 +116,10 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     }
     /// `residentBytes` for a caller holding the lock.
     var residentBytesLocked: Int { surfaces.values.reduce(0) { $0 + $1.residentBytes } }
+    /// Tiles `surface`, `blank` and `copied` filled with a CPU `replace(region:...)`: a test hook.
+    package var cpuTileUploadCount: Int { withLock { cpuTileUploads } }
+    /// Waits for the last command buffer committed with no wait (`lastUnwaited`): a test hook for timing GPU work.
+    package func waitForCommittedWork() { withLock { lastUnwaited }?.waitUntilCompleted() }
     /// Pipelines built by compiling shader source since init, one per key (plus each custom probe).
     public var pipelineCompileCount: Int { withLock { pipelines.compileCount } }
     /// Pipeline requests answered from the in-process memo without a compile.
@@ -283,7 +289,7 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
             throw RenderError.deviceLost(reason)
         }
         let id = UUID()
-        withLock { surfaces[id] = stored }
+        withLock { (surfaces[id], cpuTileUploads) = (stored, cpuTileUploads + stored.uploadedTiles) }
         evictIfNeeded()
         return handle(id: id, width: stored.tiling.width, height: stored.tiling.height)
     }

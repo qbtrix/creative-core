@@ -5,7 +5,8 @@
 // rotate and resample give
 // CoreRaster's result so sizes are right, display gives `rgba8`, the filter
 // ops (blur, unsharp, adjust, clone) return a new surface with the pixels
-// unchanged, and composite checks both surfaces and leaves `b` alone. The W1
+// unchanged, `copied` stores the same buffer again, and composite checks both
+// surfaces and leaves `b` alone. The W1
 // calls (engine-contracts EC-3) follow the same rules: `transformed` gives a
 // blank surface of the asked size, `flipped`, `applying` and `styled` the
 // pixels unchanged, and both W1 composites leave `b` alone; each records its
@@ -45,6 +46,8 @@ public struct FakeBackend: RenderBackend {
         case applying(LayerEffect)
         /// `styled` (`.style`), with its stack.
         case styled(LayerStyleStack)
+        /// `copied(_:)` of this surface (not gated).
+        case copied(RenderSurface)
     }
 
     public let name: String
@@ -82,6 +85,12 @@ public struct FakeBackend: RenderBackend {
     public func release(_ surface: RenderSurface) {
         record(.release(surface))
         store.remove(surface)
+    }
+
+    /// A new surface holding `s`'s buffer, recorded as `.copied` (no `.read` or `.surface`).
+    public func copied(_ s: RenderSurface) throws -> RenderSurface {
+        record(.copied(s))
+        return store.insert(try store.buffer(for: s))
     }
 
     public func display(_ s: RenderSurface, colorSpace: ColorSpace) throws -> [UInt8] {

@@ -1,8 +1,8 @@
-// RenderBackend+Resident.swift: the two contract methods resident rendering
-// adds (`blank` and the batched `composite(_:onto:)`), with defaults built
+// RenderBackend+Resident.swift: the contract methods resident rendering
+// adds (`blank`, `copied` and the batched `composite(_:onto:)`), with defaults built
 // from the older methods, so the CPU backend and every test double run them
 // unchanged and give exactly the pixels of the calls they stand for. A GPU
-// backend replaces them to avoid a CPU upload and one command buffer per step.
+// backend replaces them to avoid a CPU upload (or readback) and one command buffer per step.
 // Invariant: the batched default checks every step's family before the first
 // blend, so an unsupported step leaves `b` untouched.
 import CoreRaster
@@ -28,6 +28,11 @@ extension RenderBackend {
     /// A clear `PixelBuffer` of the size, uploaded.
     public func blank(width: Int, height: Int) throws -> RenderSurface {
         try surface(RenderError.mapping { try PixelBuffer(width: width, height: height) })
+    }
+
+    /// `s` read back and uploaded as a new surface.
+    public func copied(_ s: RenderSurface) throws -> RenderSurface {
+        try surface(read(s))
     }
 
     /// One `composite(_:onto:x:y:mode:opacity:)` per step, after checking
