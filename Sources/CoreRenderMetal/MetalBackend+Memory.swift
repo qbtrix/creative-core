@@ -1,6 +1,7 @@
 // MetalBackend+Memory.swift: the memory budget (MB-16). After every upload and budget change, tiles
 // leave the GPU for their CPU shadows, least recently used first, until `residentBytes` is at or under
-// `budgetBytes`. Invariants: pixels survive eviction (`read` merges resident tiles and shadows); the victim
+// `budgetBytes`; first, when resident tiles and the texture pool together pass it, the pool is drained
+// (MetalTexturePool.swift). Invariants: pixels survive eviction (`read` merges resident tiles and shadows); the victim
 // order is `lastUse`, the surface's `created` clock, then the tile index; a failed eviction marks the
 // backend failed and stops, it never throws out of an upload.
 #if canImport(Metal)
@@ -10,12 +11,13 @@ extension MetalBackend {
     /// Tiles held in their CPU shadow with no texture, summed over the live surfaces.
     public var evictedTileCount: Int { withLock { surfaces.values.reduce(0) { $0 + $1.evictedTileCount } } }
 
-    /// Evicts least recently used tiles to their shadows until `residentBytes` is at or under
+    /// Drains the texture pool when it and the resident tiles pass the budget, then evicts least recently used tiles to their shadows until `residentBytes` is at or under
     /// `budgetBytes` or no resident tile is left. Takes the lock itself: call it with the lock free.
     /// An eviction that fails (a download with a non-finite component) marks the backend failed with
     /// "eviction: <reason>" and stops; nothing is thrown and every surface stays readable.
     func evictIfNeeded() {
         let failure: String? = withLock {
+            if residentBytesLocked + texturePool.bytes > budget { texturePool.drain() }
             while residentBytesLocked > budget {
                 guard let victim = leastRecentlyUsedTile() else { return nil }
                 do { try victim.surface.evict(tile: victim.index, queue: commandQueue) } catch { return "eviction: \(error)" }

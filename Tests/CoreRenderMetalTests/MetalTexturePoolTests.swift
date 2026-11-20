@@ -39,6 +39,7 @@ private let hasDevice = MetalBackend.defaultDevice != nil
         metal.release(try metal.copied(old))
         let copy = try metal.copied(source)
         #expect(try metal.read(copy) == metal.read(source))
+        metal.release(copy)
         metal.release(try metal.copied(old))
         let toned = try metal.adjusted(source, tone: ToneProgram([]))
         #expect(try metal.read(toned) == metal.read(source))
