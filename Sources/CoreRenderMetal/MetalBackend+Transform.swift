@@ -37,7 +37,7 @@ extension MetalBackend {
             }
         }
         // No fill: a crop lies inside its source and a turn covers it, so the pieces write every output pixel.
-        let output = try allocate { try MetalSurface(device: device, width: map.width, height: map.height, clock: clock) }
+        let output = try allocate { try MetalSurface(pool: texturePool, device: device, width: map.width, height: map.height, clock: clock) }
         let pairs = try pieces.map { piece in
             guard let from = textures[piece.sourceTile], let to = output.tiles[piece.destinationTile] else {
                 throw RenderError.raster("transform: tile \(piece.sourceTile) or \(piece.destinationTile) is missing")

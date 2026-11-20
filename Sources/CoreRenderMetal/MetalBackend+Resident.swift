@@ -26,7 +26,7 @@ extension MetalBackend {
     /// buffer or command buffer is unavailable.
     public func blank(width: Int, height: Int) throws -> RenderSurface {
         try storeUnwaited(label: "blank") { clock in
-            let output = try MetalSurface(device: device, width: width, height: height, clock: clock)
+            let output = try MetalSurface(pool: texturePool, device: device, width: width, height: height, clock: clock)
             return (output, { try output.encodeClear(into: $0, device: self.device) })
         }
     }
@@ -46,7 +46,7 @@ extension MetalBackend {
                 cpuTileUploads += 1  // the staged tile is a CPU upload
                 return try Self.makeTile(shadow, on: device)
             }
-            let output = try MetalSurface(device: device, width: tiling.width, height: tiling.height, clock: clock)
+            let output = try MetalSurface(pool: texturePool, device: device, width: tiling.width, height: tiling.height, clock: clock)
             return (output, { blit in
                 for (index, texture) in from.enumerated() {
                     guard let to = output.tiles[index] else { throw RenderError.raster("copy: tile \(index) is missing") }

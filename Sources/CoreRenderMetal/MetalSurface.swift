@@ -56,30 +56,38 @@ final class MetalSurface {
         }
     }
 
-    /// A `width` x `height` surface whose tiles are allocated with no fill: their pixels are undefined
-    /// until the GPU writes every one (a kernel, a blit copy, or `encodeClear`), so no CPU write happens.
-    /// Throws as `init(device:buffer:clock:)` does.
-    convenience init(device: any MTLDevice, width: Int, height: Int, clock: UInt64) throws {
-        try self.init(device: device, width: width, height: height, clock: clock, halves: nil)
+    /// A `width` x `height` surface whose tiles come from `pool` with no fill: their pixels are undefined
+    /// (a reused tile holds its last surface's) until the GPU writes every one (a kernel, a blit copy, or
+    /// `encodeClear`), so no CPU write happens. Throws as `init(device:buffer:clock:)` does.
+    convenience init(pool: TexturePool, device: any MTLDevice, width: Int, height: Int, clock: UInt64) throws {
+        try self.init(device: device, width: width, height: height, clock: clock, halves: nil, pool: pool)
     }
 
-    /// Allocates each tile of a `width` x `height` tiling and, unless `halves` is nil, fills it with
-    /// `halves(rect)`, that tile's row-major RGBA binary16 values; stamps every tile's `lastUse` with `clock`.
+    /// A new rgba16Float `width` x `height` tile texture in `MetalBackend.tileStorageMode`, read and written by
+    /// kernels. Throws `RenderError.deviceLost` when the device returns none (out of memory).
+    static func makeTexture(width: Int, height: Int, device: any MTLDevice) throws -> any MTLTexture {
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .rgba16Float, width: width, height: height, mipmapped: false)
+        descriptor.storageMode = MetalBackend.tileStorageMode(unifiedMemory: device.hasUnifiedMemory)
+        descriptor.usage = [.shaderRead, .shaderWrite]
+        guard let texture = device.makeTexture(descriptor: descriptor) else {
+            throw RenderError.deviceLost("texture allocation failed for \(width)x\(height) (device out of memory; release surfaces or lower budgetBytes)")
+        }
+        return texture
+    }
+
+    /// Allocates each tile of a `width` x `height` tiling (from `pool` when given, else new) and, unless `halves`
+    /// is nil, fills it with `halves(rect)`, that tile's row-major RGBA binary16 values; stamps every tile's
+    /// `lastUse` with `clock`.
     private init(device: any MTLDevice, width: Int, height: Int, clock: UInt64,
-                 halves: ((TileRect) throws -> [UInt16])?) throws {
+                 halves: ((TileRect) throws -> [UInt16])?, pool: TexturePool? = nil) throws {
         let tiling = try SurfaceTiling(width: width, height: height)
         var tiles: [(any MTLTexture)?] = []
         tiles.reserveCapacity(tiling.tileCount)
         var bytes = 0
         for index in 0..<tiling.tileCount {
             let rect = try tiling.rect(index)
-            let descriptor = MTLTextureDescriptor.texture2DDescriptor(
-                pixelFormat: .rgba16Float, width: rect.width, height: rect.height, mipmapped: false)
-            descriptor.storageMode = MetalBackend.tileStorageMode(unifiedMemory: device.hasUnifiedMemory)
-            descriptor.usage = [.shaderRead, .shaderWrite]
-            guard let texture = device.makeTexture(descriptor: descriptor) else {
-                throw RenderError.deviceLost("texture allocation failed for \(rect.width)x\(rect.height) (device out of memory; release surfaces or lower budgetBytes)")
-            }
+            let texture = try pool.map { try $0.texture(width: rect.width, height: rect.height, device: device) }
+                ?? Self.makeTexture(width: rect.width, height: rect.height, device: device)
             if let halves {
                 let region = MTLRegionMake2D(0, 0, rect.width, rect.height)
                 let bytesPerRow = rect.width * Self.bytesPerPixel
