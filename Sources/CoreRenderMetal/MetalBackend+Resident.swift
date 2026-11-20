@@ -1,13 +1,16 @@
-// MetalBackend+Resident.swift: the Metal side of resident rendering. `blank` makes a clear tiled surface
-// with no conversion, and the batched `composite(_:onto:)` encodes every step's tile pieces, through each
-// mode's kernel (MetalBackend+Composite.swift's), into one command buffer committed with no wait, so a frame
-// that composites three layers over a region and then displays them waits on the GPU once, in the display.
+// MetalBackend+Resident.swift: the Metal side of resident rendering. `blank` clears a new tiled surface with
+// blits from a zero buffer and `copied` blits every tile of its source into one, with no CPU tile write
+// (an evicted source tile is staged from its shadow); the batched `composite(_:onto:)` encodes every step's
+// tile pieces, through each mode's kernel (MetalBackend+Composite.swift's), into one command buffer. All three
+// commit with no wait, so a frame that copies its base, composites three layers over it and then displays
+// them waits on the GPU once, in the display.
 // Invariants: every step's family is checked, and every surface looked up, before anything changes; a step
 // whose surface is the backdrop runs the steps one at a time through `compositeInPlace`, which reads such a
 // source from a snapshot; evicted source tiles are staged from their shadows, evicted backdrop tiles restored
 // to textures under the lock; the command buffer is committed under the lock, so every later op on the
 // queue (a display, a `read`, an eviction's readback blit) is ordered after these writes by the tiles' hazard
-// tracking; a GPU failure is recorded from the completion handler (backend failed, nothing thrown); `recover`
+// tracking, and `blank` and `copied` commit and store the new surface in one locked span, so no op sees it
+// before its blits are queued; a GPU failure is recorded from the completion handler (backend failed, nothing thrown); `recover`
 // waits for the last one before it swaps queues; the budget holds after on every exit; dispatches in the one
 // serial compute encoder run in step order, so later steps blend over earlier.
 #if canImport(Metal)
@@ -17,22 +20,79 @@ import Foundation
 import Metal
 
 extension MetalBackend {
-    /// A clear `width` x `height` surface: tiles filled from zeros, no Float32 buffer or conversion. Then
-    /// evicts as `surface(_:)` does. Throws `RenderError.raster` for a size the tiling rejects and
-    /// `deviceLost` (backend failed) when a texture will not allocate.
+    /// A clear `width` x `height` surface: every tile cleared by a blit from a zero buffer, committed with no
+    /// wait (later ops on the queue see the zeros). Then evicts as `surface(_:)` does. Throws
+    /// `RenderError.raster` for a size the tiling rejects and `deviceLost` (backend failed) when a texture,
+    /// buffer or command buffer is unavailable.
     public func blank(width: Int, height: Int) throws -> RenderSurface {
-        let clock = withLock { tick() }
-        let stored: MetalSurface
-        do {
-            stored = try MetalSurface(device: device, width: width, height: height, clock: clock)
-        } catch RenderError.deviceLost(let reason) {
-            fail(reason)
-            throw RenderError.deviceLost(reason)
+        try storeUnwaited(label: "blank") { clock in
+            let output = try MetalSurface(device: device, width: width, height: height, clock: clock)
+            return (output, { try output.encodeClear(into: $0, device: self.device) })
         }
+    }
+
+    /// A new surface with `s`'s exact bits: a blit per tile from its texture (an evicted tile from a
+    /// temporary texture staged from its shadow), committed with no wait; `s` is unchanged and marked used.
+    /// Then evicts as `surface(_:)` does. Throws `surfaceMismatch` for a surface this backend does not hold
+    /// and `deviceLost` (backend failed) when a texture or command buffer is unavailable.
+    public func copied(_ s: RenderSurface) throws -> RenderSurface {
+        try storeUnwaited(label: "copy") { clock in
+            let source = try lookup(s)
+            source.touch(clock)
+            let tiling = source.tiling
+            let from = try (0..<tiling.tileCount).map { index -> any MTLTexture in
+                if let tile = source.tiles[index] { return tile }
+                guard let shadow = source.shadows[index] else { throw RenderError.raster("copy: tile \(index) has neither a texture nor a shadow") }
+                cpuTileUploads += 1  // the staged tile is a CPU upload
+                return try Self.makeTile(shadow, on: device)
+            }
+            let output = try MetalSurface(device: device, width: tiling.width, height: tiling.height, clock: clock)
+            return (output, { blit in
+                for (index, texture) in from.enumerated() {
+                    guard let to = output.tiles[index] else { throw RenderError.raster("copy: tile \(index) is missing") }
+                    let rect = try tiling.rect(index)
+                    blit.copy(from: texture, sourceSlice: 0, sourceLevel: 0, sourceOrigin: MTLOrigin(x: 0, y: 0, z: 0),
+                              sourceSize: MTLSize(width: rect.width, height: rect.height, depth: 1), to: to,
+                              destinationSlice: 0, destinationLevel: 0, destinationOrigin: MTLOrigin(x: 0, y: 0, z: 0))
+                }
+            })
+        }
+    }
+
+    /// Under the lock: `make` (given a fresh use stamp) returns a new surface and the blits that write every
+    /// pixel of it; they are encoded into one command buffer, the surface's managed tiles synchronized, the
+    /// buffer committed with no wait (as the batched composite is) and the surface stored. Then, lock free,
+    /// evicts and returns its handle. A `deviceLost` fails the backend lock free before it is rethrown.
+    private func storeUnwaited(label: String, _ make: (UInt64) throws -> (MetalSurface, (any MTLBlitCommandEncoder) throws -> Void))
+        throws -> RenderSurface {
         let id = UUID()
-        withLock { surfaces[id] = stored }
-        evictIfNeeded()
-        return handle(id: id, width: width, height: height)
+        let outcome = try withLock { () throws -> Result<MetalSurface, RenderError> in
+            do {
+                let (output, encode) = try make(tick())
+                guard let commands = commandQueue.makeCommandBuffer(), let blit = commands.makeBlitCommandEncoder() else {
+                    throw RenderError.deviceLost("\(label): no command buffer or blit encoder on \(device.name)")
+                }
+                try encode(blit)
+                #if os(macOS)
+                for case let tile? in output.tiles where tile.storageMode == .managed { blit.synchronize(resource: tile) }
+                #endif
+                blit.endEncoding()
+                commitUnwaited(commands, label: label)
+                surfaces[id] = output
+                cpuTileUploads += output.uploadedTiles
+                return .success(output)
+            } catch RenderError.deviceLost(let reason) {
+                return .failure(.deviceLost(reason))
+            }
+        }
+        switch outcome {
+        case .success(let output):
+            evictIfNeeded()
+            return handle(id: id, width: output.tiling.width, height: output.tiling.height)
+        case .failure(let error):
+            if case .deviceLost(let reason) = error { fail(reason) }
+            throw error
+        }
     }
 
     /// Every step composited onto `b` in order, in one command buffer: the pixels of one
@@ -137,11 +197,16 @@ extension MetalBackend {
             blitter.endEncoding()
         }
         #endif
-        // The handler runs on Metal's thread; `fail` takes the lock, which a readback may hold while it waits
-        // on a later buffer, so it goes to another queue rather than block Metal's completion delivery.
+        commitUnwaited(commands, label: "batched composite")
+    }
+
+    /// Commits `commands` with no wait and keeps it as `lastUnwaited`; call with the lock held. A GPU failure
+    /// fails the backend when the buffer completes. The handler runs on Metal's thread; `fail` takes the lock,
+    /// which a readback may hold while it waits on a later buffer, so it goes to another queue rather than
+    /// block Metal's completion delivery.
+    private func commitUnwaited(_ commands: any MTLCommandBuffer, label: String) {
         commands.addCompletedHandler { [self] done in
-            guard let reason = Self.commandBufferFailure(status: done.status, error: done.error, label: "batched composite")
-            else { return }
+            guard let reason = Self.commandBufferFailure(status: done.status, error: done.error, label: label) else { return }
             DispatchQueue.global().async { self.fail(reason) }
         }
         commands.commit()

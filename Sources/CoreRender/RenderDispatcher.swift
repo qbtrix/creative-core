@@ -135,6 +135,15 @@ public struct RenderDispatcher: Sendable {
         return try fallback.blank(width: width, height: height)
     }
 
+    /// A copy of `s` where `blank` would place one: on that backend itself when `s` is already there,
+    /// else `s` read from its owner and uploaded, the upload being the copy. A surface neither made throws
+    /// `surfaceMismatch` from the target.
+    public func copied(_ s: RenderSurface) throws -> RenderSurface {
+        let target: any RenderBackend = preferred.flatMap { $0.isHealthy ? $0 : nil } ?? fallback
+        let (input, uploaded) = try local(s, on: target)
+        return uploaded ? input : try target.copied(input)
+    }
+
     /// A batched composite on one backend: the preferred one when it is routed for every step's family,
     /// else the CPU. Each step's surface and `b` are uploaded there if needed and `b` moves as `composite`
     /// moves it, the old copy released unless a step also composites it.

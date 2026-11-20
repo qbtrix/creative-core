@@ -1,15 +1,16 @@
 // MetalSurface.swift: one RenderSurface's storage: a SurfaceTiling grid of rgba16Float
 // textures (linear, premultiplied, one per tile, row-major) filled from a PixelBuffer's components
-// a row at a time (Float16 on arm64, HalfFloat elsewhere, bit for bit the same), or from zeros for a
-// blank surface; a tile can leave the GPU for a CPU shadow (MB-16, MetalSurface+Eviction.swift).
+// a row at a time (Float16 on arm64, HalfFloat elsewhere, bit for bit the same), or allocated with no
+// fill for a GPU op to write every pixel (a kernel, a copy, or `encodeClear` for a blank surface); a
+// tile can leave the GPU for a CPU shadow (MB-16, MetalSurface+Eviction.swift).
 // Invariants: `tiles`, `shadows` and `lastUse` have `tiling.tileCount` entries; tile `i` is resident
 // (`tiles[i]` set, `shadows[i]` nil) or shadowed (`tiles[i]` nil, `shadows[i]` sized to `tiling.rect(i)`),
 // never neither; `residentBytes` is width x height x `bytesPerPixel` over the resident tiles; textures use
 // `MetalBackend.tileStorageMode` (shared on unified memory, managed on a discrete GPU); upload clamps every
 // component to the finite half range. GPU kernels write tiles: composite in place on the backdrop's, the
 // other ops into new surfaces' tiles. Each op synchronizes a managed tile it writes, and waits for its
-// command buffer before any `download`, except the batched composite, which leaves the wait to the readback
-// queued after it. Every CPU read of a tile (`read`, `download`, eviction) goes through `readback`: one
+// command buffer before any `download`, except the batched composite, `blank` and `copied`, which leave the
+// wait to the readback queued after them. Every CPU read of a tile (`read`, `download`, eviction) goes through `readback`: one
 // blit into shared staging buffers on the backend's queue, waited for, never `getBytes`, which returned stale
 // pixels right after a kernel's write on the macOS runners' paravirtual GPU (#453). A tile evicted while
 // composite writes it in place can be shadowed mid-write, so composite downloads it again once the GPU is
@@ -41,6 +42,8 @@ final class MetalSurface {
     var lastUse: [UInt64]
     /// Bytes the resident tile textures hold: width x height x `bytesPerPixel` summed over `tiles`.
     var residentBytes: Int
+    /// Tiles this init filled from the CPU with `replace(region:...)`: the backend's upload counter adds it.
+    let uploadedTiles: Int
 
     /// Uploads `buffer` tile by tile as binary16 (components clamped to +-65504, so no tile holds an
     /// infinity) and stamps every tile's `lastUse` with `clock`. Throws `RenderError.raster` for a size
@@ -53,28 +56,23 @@ final class MetalSurface {
         }
     }
 
-    /// A `width` x `height` surface with every pixel clear: each tile filled from zeros, no conversion.
+    /// A `width` x `height` surface whose tiles are allocated with no fill: their pixels are undefined
+    /// until the GPU writes every one (a kernel, a blit copy, or `encodeClear`), so no CPU write happens.
     /// Throws as `init(device:buffer:clock:)` does.
     convenience init(device: any MTLDevice, width: Int, height: Int, clock: UInt64) throws {
-        var zeros: [UInt16] = []
-        try self.init(device: device, width: width, height: height, clock: clock) { rect in
-            let count = rect.width * rect.height * Self.channels
-            if zeros.count != count { zeros = [UInt16](repeating: 0, count: count) }
-            return zeros
-        }
+        try self.init(device: device, width: width, height: height, clock: clock, halves: nil)
     }
 
-    /// Allocates each tile of a `width` x `height` tiling and fills it with `halves(rect)`, that tile's
-    /// row-major RGBA binary16 values; stamps every tile's `lastUse` with `clock`.
+    /// Allocates each tile of a `width` x `height` tiling and, unless `halves` is nil, fills it with
+    /// `halves(rect)`, that tile's row-major RGBA binary16 values; stamps every tile's `lastUse` with `clock`.
     private init(device: any MTLDevice, width: Int, height: Int, clock: UInt64,
-                 halves: (TileRect) throws -> [UInt16]) throws {
+                 halves: ((TileRect) throws -> [UInt16])?) throws {
         let tiling = try SurfaceTiling(width: width, height: height)
         var tiles: [(any MTLTexture)?] = []
         tiles.reserveCapacity(tiling.tileCount)
         var bytes = 0
         for index in 0..<tiling.tileCount {
             let rect = try tiling.rect(index)
-            let values = try halves(rect)
             let descriptor = MTLTextureDescriptor.texture2DDescriptor(
                 pixelFormat: .rgba16Float, width: rect.width, height: rect.height, mipmapped: false)
             descriptor.storageMode = MetalBackend.tileStorageMode(unifiedMemory: device.hasUnifiedMemory)
@@ -82,13 +80,15 @@ final class MetalSurface {
             guard let texture = device.makeTexture(descriptor: descriptor) else {
                 throw RenderError.deviceLost("texture allocation failed for \(rect.width)x\(rect.height) (device out of memory; release surfaces or lower budgetBytes)")
             }
-            let region = MTLRegionMake2D(0, 0, rect.width, rect.height)
-            let bytesPerRow = rect.width * Self.bytesPerPixel
-            try values.withUnsafeBytes { raw in
-                guard let base = raw.baseAddress, raw.count == bytesPerRow * rect.height else {
-                    throw RenderError.raster("upload of \(raw.count) bytes for tile \(index), \(rect.width)x\(rect.height)")
+            if let halves {
+                let region = MTLRegionMake2D(0, 0, rect.width, rect.height)
+                let bytesPerRow = rect.width * Self.bytesPerPixel
+                try halves(rect).withUnsafeBytes { raw in
+                    guard let base = raw.baseAddress, raw.count == bytesPerRow * rect.height else {
+                        throw RenderError.raster("upload of \(raw.count) bytes for tile \(index), \(rect.width)x\(rect.height)")
+                    }
+                    texture.replace(region: region, mipmapLevel: 0, withBytes: base, bytesPerRow: bytesPerRow)
                 }
-                texture.replace(region: region, mipmapLevel: 0, withBytes: base, bytesPerRow: bytesPerRow)
             }
             tiles.append(texture)
             bytes += Self.bytes(of: rect)
@@ -99,6 +99,26 @@ final class MetalSurface {
         self.shadows = Array(repeating: nil, count: tiling.tileCount)
         self.lastUse = Array(repeating: clock, count: tiling.tileCount)
         self.residentBytes = bytes
+        self.uploadedTiles = halves == nil ? 0 : tiling.tileCount
+    }
+
+    /// Encodes, into `blit`, a copy of zeros into every resident tile: one shared buffer the size of tile 0
+    /// (the largest), cleared on the CPU once, then a buffer-to-texture blit per tile. Throws
+    /// `RenderError.deviceLost` when the device gives no buffer.
+    func encodeClear(into blit: any MTLBlitCommandEncoder, device: any MTLDevice) throws {
+        let largest = try tiling.rect(0)
+        let length = Self.bytes(of: largest)
+        guard let zeros = device.makeBuffer(length: length, options: .storageModeShared) else {
+            throw RenderError.deviceLost("blank: no \(length)-byte zero buffer on \(device.name)")
+        }
+        zeros.contents().initializeMemory(as: UInt8.self, repeating: 0, count: length)
+        for (index, tile) in tiles.enumerated() {
+            guard let tile else { continue }
+            let rect = try tiling.rect(index), rowBytes = rect.width * Self.bytesPerPixel
+            blit.copy(from: zeros, sourceOffset: 0, sourceBytesPerRow: rowBytes, sourceBytesPerImage: rowBytes * rect.height,
+                      sourceSize: MTLSize(width: rect.width, height: rect.height, depth: 1), to: tile,
+                      destinationSlice: 0, destinationLevel: 0, destinationOrigin: MTLOrigin(x: 0, y: 0, z: 0))
+        }
     }
 
     /// Every tile into a new `PixelBuffer` of the surface's size: a resident tile is downloaded, an

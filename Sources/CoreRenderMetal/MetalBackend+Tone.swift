@@ -1,6 +1,7 @@
 // MetalBackend+Tone.swift: `ToneRendering` on Metal: a whole `ToneProgram` through `adjust_program`
 // (Shaders/ToneShader.swift), tile by tile into a new surface of the same tiling, in one command buffer.
-// Invariants: `unsupported(.adjust)` while unhealthy; the output is allocated from zeros (no Float32 buffer);
+// Invariants: `unsupported(.adjust)` while unhealthy; the output is allocated with no CPU fill (the kernel
+// writes every pixel);
 // an evicted source tile is read through a temporary texture from its shadow, never restored; the source is
 // unchanged; the lock is free across the GPU wait; a failed command buffer or allocation marks the backend failed.
 #if canImport(Metal)

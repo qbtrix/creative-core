@@ -1,7 +1,8 @@
 // MetalBackend+Transform.swift: crop as blits and quarter turns through `transform_rotate` (MB-7), piece
 // by piece from a TileMap into a new surface. Invariants: `unsupported(.transform)` while the backend is
 // unhealthy (its `supports` is empty), as display does; an invalid crop throws the CPU's exact error;
-// each output pixel is a bit-exact copy of one source half (evicted tiles via a temporary texture); the
+// the output is allocated with no CPU fill, and each output pixel is a bit-exact copy of one source half
+// (evicted tiles via a temporary texture); the
 // lock is never held across the GPU wait; a failed command buffer or allocation throws `deviceLost`.
 #if canImport(Metal)
 import CoreRaster
@@ -35,7 +36,8 @@ extension MetalBackend {
                 return texture
             }
         }
-        let output = try allocate { try MetalSurface(device: device, buffer: PixelBuffer(width: map.width, height: map.height), clock: clock) }
+        // No fill: a crop lies inside its source and a turn covers it, so the pieces write every output pixel.
+        let output = try allocate { try MetalSurface(device: device, width: map.width, height: map.height, clock: clock) }
         let pairs = try pieces.map { piece in
             guard let from = textures[piece.sourceTile], let to = output.tiles[piece.destinationTile] else {
                 throw RenderError.raster("transform: tile \(piece.sourceTile) or \(piece.destinationTile) is missing")
