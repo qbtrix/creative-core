@@ -77,13 +77,7 @@ extension MetalBackend {
                 for case let tile? in output.tiles where tile.storageMode == .managed { blit.synchronize(resource: tile) }
                 #endif
                 blit.endEncoding()
-                // As the batched composite's: `fail` takes the lock, so the handler hands it to another queue.
-                commands.addCompletedHandler { [self] done in
-                    guard let reason = Self.commandBufferFailure(status: done.status, error: done.error, label: label) else { return }
-                    DispatchQueue.global().async { self.fail(reason) }
-                }
-                commands.commit()
-                lastUnwaited = commands
+                commitUnwaited(commands, label: label)
                 surfaces[id] = output
                 cpuTileUploads += output.uploadedTiles
                 return .success(output)
@@ -203,11 +197,16 @@ extension MetalBackend {
             blitter.endEncoding()
         }
         #endif
-        // The handler runs on Metal's thread; `fail` takes the lock, which a readback may hold while it waits
-        // on a later buffer, so it goes to another queue rather than block Metal's completion delivery.
+        commitUnwaited(commands, label: "batched composite")
+    }
+
+    /// Commits `commands` with no wait and keeps it as `lastUnwaited`; call with the lock held. A GPU failure
+    /// fails the backend when the buffer completes. The handler runs on Metal's thread; `fail` takes the lock,
+    /// which a readback may hold while it waits on a later buffer, so it goes to another queue rather than
+    /// block Metal's completion delivery.
+    private func commitUnwaited(_ commands: any MTLCommandBuffer, label: String) {
         commands.addCompletedHandler { [self] done in
-            guard let reason = Self.commandBufferFailure(status: done.status, error: done.error, label: "batched composite")
-            else { return }
+            guard let reason = Self.commandBufferFailure(status: done.status, error: done.error, label: label) else { return }
             DispatchQueue.global().async { self.fail(reason) }
         }
         commands.commit()
