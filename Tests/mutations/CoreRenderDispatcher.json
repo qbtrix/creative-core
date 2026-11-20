@@ -34,5 +34,8 @@
    "replacement": "if let preferred { return try preferred.surface(buffer) }"},
   {"note": "dispatcher routes resample under the transform family", "filter": "RenderDispatcherTests", "file": "Sources/CoreRender/RenderDispatcher.swift",
    "anchor": "try run(.resample, s) { try $0.resampled(",
-   "replacement": "try run(.transform, s) { try $0.resampled("}
+   "replacement": "try run(.transform, s) { try $0.resampled("},
+  {"note": "dispatcher copies again after uploading a surface from the other backend, so a cross-backend copy pays twice", "filter": "CopiedSurfaceTests", "file": "Sources/CoreRender/RenderDispatcher.swift",
+   "anchor": "return uploaded ? input : try target.copied(input)",
+   "replacement": "return try target.copied(input)"}
 ]

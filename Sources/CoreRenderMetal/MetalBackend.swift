@@ -14,7 +14,7 @@
 // `recover` whose probe passes makes it healthy again. No probe's GPU wait or runtime compile of a
 // custom source runs under the lock: `supports` and `isHealthy` answer while a probe is in flight; only the short
 // blit of a tile readback (MetalSurface.readback, for `read` and eviction) waits on the GPU under it. The batched
-// composite alone commits without waiting; every later op on the queue is ordered after it. A backend from
+// composite, `blank` and `copied` commit without waiting; every later op on the queue is ordered after them. A backend from
 // `startingInBackground` (MetalBackend+Warmup.swift, MB-17) leaves each family out of `supports` until its
 // pipelines finish compiling off the caller's queue; the plain init compiles each on first use.
 #if canImport(Metal)
@@ -65,7 +65,8 @@ public final class MetalBackend: RenderBackend, @unchecked Sendable {
     var styleFieldEncodes = 0
     /// Composites through a matrix that took the CPU path (MetalBackend+Affine.swift); under the lock.
     var affineCPUComposites = 0
-    /// Tiles `surface`, `blank` and `copied` filled from the CPU (`MetalSurface.uploadedTiles`); under the lock.
+    /// Tiles `surface`, `blank` and `copied` filled from the CPU (`MetalSurface.uploadedTiles`, and each
+    /// evicted source tile `copied` stages from its shadow); under the lock.
     var cpuTileUploads = 0
     /// One full tile's texture bytes (256 x 256 x 8): the floor of `budgetBytes`.
     private static let tileBytes = SurfaceTiling.tileSize * SurfaceTiling.tileSize * MetalSurface.bytesPerPixel

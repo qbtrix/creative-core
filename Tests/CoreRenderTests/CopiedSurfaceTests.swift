@@ -48,7 +48,7 @@ private func uploads(_ fake: FakeBackend) -> Int {
         let onCPU = try cpu.surface(pixels())
         let moved = try dispatcher.copied(onCPU)
         #expect(moved.backend == "gpu" && uploads(fake) == 2)
-        #expect(!fake.calls.contains(where: { if case .copied(let s) = $0 { s == moved } else { false } }))
+        #expect(fake.calls.filter { if case .copied = $0 { true } else { false } }.count == 1, "the upload is the copy")
         #expect(try dispatcher.read(moved) == pixels())
     }
 
